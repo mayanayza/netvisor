@@ -20,6 +20,8 @@
 			? env.PUBLIC_SERVER_HOSTNAME
 			: parsedUrl.hostname;
 
+	const protocol = parsedUrl.protocol === 'https:' ? 'https' : 'http';
+
 	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
@@ -36,7 +38,7 @@
 			.split('\n')
 			.map((line) => {
 				if (line.includes('NETVISOR_SERVER_TARGET=')) {
-					return `      - NETVISOR_SERVER_TARGET=${serverTarget}`;
+					return `      - NETVISOR_SERVER_TARGET=${protocol}://${serverTarget}`;
 				}
 				if (line.includes('NETVISOR_SERVER_PORT=')) {
 					return `      - NETVISOR_SERVER_PORT=${serverPort}`;
