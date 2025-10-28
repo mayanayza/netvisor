@@ -19,8 +19,8 @@ services:
       - NETVISOR_NETWORK_ID=${NETVISOR_NETWORK_ID:-}
     volumes:
       - daemon-config:/root/.config/netvisor/daemon
-      # Uncomment this if you want the daemon to be able to run docker discovery on the host it's running on
-      # - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Comment out the line below to disable docker discovery
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
 volumes:
   daemon-config:

@@ -101,27 +101,6 @@ jobs:
       - name: Get release version
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Sync daemon compose template
-        run: cp docker-compose.daemon.yml ui/src/lib/templates/
-
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if git diff --quiet ui/src/lib/templates/docker-compose.daemon.yml; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit updated template
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ui/src/lib/templates/docker-compose.daemon.yml
-          git commit -m "chore: sync daemon compose template"
-          git push
       
       - name: Build and push UI image
         uses: docker/build-push-action@v5
