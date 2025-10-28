@@ -25,7 +25,7 @@
 	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	const runCommand = `netvisor-daemon --server-target ${serverTarget} --server-port ${serverPort} --network-id ${selectedNetworkId}`;
+	const runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} --network-id ${selectedNetworkId}`;
 
 	function populateDockerCompose(
 		template: string,
