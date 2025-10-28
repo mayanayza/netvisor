@@ -24,9 +24,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netvisor-daemon-darwin-arm64
-          # - os: windows-latest
-          #   target: x86_64-pc-windows-msvc
-          #   binary: netvisor-daemon-windows-amd64.exe
     
     steps:
       - uses: actions/checkout@v4
@@ -47,18 +44,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-
-      - name: Setup Perl on Windows
-        if: matrix.os == 'windows-latest'
-        uses: shogo82148/actions-setup-perl@v1
-        with:
-          perl-version: '5.38'
-      
-      - name: Install Perl dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          cpan -T Locale::Maketext::Simple
       
       - name: Build daemon
         working-directory: backend
@@ -116,27 +101,6 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Sync daemon compose template
-        run: cp docker-compose.daemon.yml ui/src/lib/templates/
-
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if git diff --quiet ui/src/lib/templates/docker-compose.daemon.yml; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit updated template
-        if: steps.check_changes.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ui/src/lib/templates/docker-compose.daemon.yml
-          git commit -m "chore: sync daemon compose template"
-          git push
-      
       # Build combined Server + UI image (NEW)
       - name: Build and push Server image (with embedded UI)
         uses: docker/build-push-action@v5
