@@ -114,8 +114,11 @@ impl<'a> TopologyOptimizer<'a> {
         //     final_quality.total_edge_length
         // );
 
-        // Step 4: Fix intra-subnet edge handles based on final positions
-        self.child_positioner.fix_intra_subnet_handles(edges, nodes)
+        // Step 4: Minimize vertical spacing between ndoes
+        self.child_positioner.compress_vertical_spacing(nodes);
+        
+        // Step 5: Fix intra-subnet edge handles based on final positions
+        self.child_positioner.fix_intra_subnet_handles(edges, &nodes)
 
         //     // Step 5: NEW - Optimize anchor positions to minimize crossings
         //     // This is a post-processing step that runs AFTER node layout is finalized

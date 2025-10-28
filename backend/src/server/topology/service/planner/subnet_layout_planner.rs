@@ -75,7 +75,6 @@ impl SubnetLayoutPlanner {
     fn determine_subnet_child_header_text(
         &self,
         ctx: &TopologyContext,
-        interface_bound_services: &Vec<&Service>,
         host: &Host,
         subnet_type: &SubnetType,
     ) -> Option<String> {
@@ -175,8 +174,14 @@ impl SubnetLayoutPlanner {
         }
 
         // P3: Show host if it differs from the first service name + isn't shown via interface edges
-        let first_service_name_matches_host_name = match interface_bound_services.first() {
-            Some(first_service) => first_service.base.name == host.base.name,
+        let first_service_name_matches_host_name = match host.base.services.first() {
+            Some(first_service_id) => {
+                if let Some(first_service) = ctx.get_service_by_id(*first_service_id) {
+                    first_service.base.name == host.base.name
+                } else {
+                    false
+                }
+            },
             None => false,
         };
 
@@ -244,7 +249,6 @@ impl SubnetLayoutPlanner {
 
                 let header_text = self.determine_subnet_child_header_text(
                     ctx,
-                    &interface_bound_services,
                     host,
                     &subnet_type,
                 );

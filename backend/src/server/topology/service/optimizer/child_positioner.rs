@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::topology::{
-    service::{context::TopologyContext, optimizer::utils::OptimizerUtils},
+    service::{context::TopologyContext, optimizer::utils::OptimizerUtils, planner::utils::NODE_PADDING},
     types::{
         base::Ixy,
         edges::{Edge, EdgeHandle, EdgeType},
@@ -493,6 +493,43 @@ impl<'a> ChildPositioner<'a> {
                         node.position.y = a_pos;
                     }
                 }
+            }
+        }
+    }
+
+    pub fn compress_vertical_spacing(&self, nodes: &mut [Node]) {
+        let mut nodes_by_subnet_and_x: HashMap<(Uuid, isize), Vec<usize>> = HashMap::new();
+
+        // Map node indices by subnet and x position
+        nodes.iter().enumerate().for_each(|(idx, n)| {
+            match n.node_type {
+                NodeType::InterfaceNode { subnet_id, .. } => {
+                    nodes_by_subnet_and_x
+                        .entry((subnet_id, n.position.x))
+                        .or_default()
+                        .push(idx);
+                },
+                _ => ()
+            }
+        });
+
+        for ((_, _), indices) in nodes_by_subnet_and_x.iter_mut() {
+            
+            indices.sort_by(|&a, &b| nodes[a].position.y.cmp(&nodes[b].position.y));
+
+            for i in 1..indices.len() {
+                let prev_idx = indices[i - 1];
+                let curr_idx = indices[i];
+                
+                let old_y = nodes[curr_idx].position.y;
+                
+                let above_bottom_padded = nodes[prev_idx].position.y 
+                    + nodes[prev_idx].size.y as isize 
+                    + NODE_PADDING.y as isize;
+                
+                nodes[curr_idx].position.y = above_bottom_padded;
+                
+                tracing::debug!("Node {}: y {} -> {}", curr_idx, old_y, above_bottom_padded);
             }
         }
     }
