@@ -52,7 +52,7 @@
 					</button>
 				</div>
 			{/if}
-			<Prism {language} source={code} showLineNumbers={true} showCopyButton />
+			<Prism {language} showCopyButton={false} source={code} showLineNumbers={true} />
 		</div>
 	{/if}
 </div>

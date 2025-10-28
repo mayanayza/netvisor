@@ -76,6 +76,8 @@ or, run the contents of `docker-compose.yml`
 
 The server collects data from the daemon(s) and generates the topology visualization. The server can support multiple daemon instances in case you want to collect data from the perspective of multiple hosts on your network (ie - mapping out vlans).
 
+**Note**: the daemon container assumes your default docker bridge network is 172.17.0.1. If this is not the case, update the address in the NETVISOR_INTEGRATED_DAEMON_URL env var.
+
 ### 2. Load the UI
 
 Navigate to `http://<your-ip>:60072` (or whichever port you configured) to load the UI.

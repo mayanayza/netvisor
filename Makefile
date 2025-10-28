@@ -5,9 +5,8 @@ help:
 	@echo ""
 	@echo "  make setup-db       - Set up database"
 	@echo "  make clean-db       - Clean up database"
-	@echo "  make clean-daemon       - Remove daemon config file"
-	@echo "  make dump-db       - Dump database to /netvisor"
-	@echo "  make dev-server     - Start server dev environment"
+	@echo "  make clean-daemon   - Remove daemon config file"
+	@echo "  make dump-db        - Dump database to /netvisor"
 	@echo "  make dev-server     - Start server dev environment"
 	@echo "  make dev-ui         - Start ui"
 	@echo "  make dev-daemon     - Start daemon dev environment"
@@ -15,7 +14,7 @@ help:
 	@echo "  make dev-container-rebuild  - Rebuild and start containerized dev environment"
 	@echo "  make dev-container-rebuild-clean  - Rebuild, clean, and start containerized dev environment"
 	@echo "  make dev-down       - Stop development containers"
-	@echo "  make build          - Build production Docker images (server + ui + daemon)"
+	@echo "  make build          - Build production Docker images (server + daemon)"
 	@echo "  make test           - Run all tests"
 	@echo "  make lint           - Run all linters"
 	@echo "  make format         - Format all code"
@@ -68,10 +67,12 @@ dev-down:
 	docker compose -f docker-compose.dev.yml down --volumes --rmi all
 
 build:
-	@echo "Building server Docker image..."
-	docker compose build
-	@echo "Building daemon Docker image..."
-	docker build -f backend/Dockerfile.daemon -t mayanayza/netvisor-daemon:latest server/
+	@echo "Building Server + UI Docker image..."
+	docker build -f backend/Dockerfile -t mayanayza/netvisor-server:latest .
+	@echo "✓ Server image built: mayanayza/netvisor-server:latest"
+	@echo ""
+	@echo "Building Daemon Docker image..."
+	docker build -f backend/Dockerfile.daemon -t mayanayza/netvisor-daemon:latest ./backend
 	@echo "✓ Daemon image built: mayanayza/netvisor-daemon:latest"
 
 test:

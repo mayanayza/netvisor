@@ -1,36 +1,32 @@
 name: Release
 
 on:
-  release:
-    types: [created]
-
-permissions:
-  contents: write
-  packages: write
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build-binaries:
-    name: Build ${{ matrix.target }}
+    name: Build Daemon Binaries
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary: netvisor-daemon-linux-x86_64
-            use_cross: false
+            binary: netvisor-daemon-linux-amd64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            binary: netvisor-daemon-linux-aarch64
-            use_cross: true
+            binary: netvisor-daemon-linux-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: netvisor-daemon-darwin-amd64
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netvisor-daemon-darwin-arm64
-            use_cross: false
-    
-    defaults:
-      run:
-        working-directory: ./backend
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: netvisor-daemon-windows-amd64.exe
     
     steps:
       - uses: actions/checkout@v4
@@ -39,33 +35,39 @@ jobs:
         uses: dtolnay/rust-toolchain@1.90.0
         with:
           targets: ${{ matrix.target }}
-
+      
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
           key: ${{ matrix.target }}
       
-      - name: Install OpenSSL (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
-      
-      - name: Install cross
-        if: matrix.use_cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
       
       - name: Build daemon
+        working-directory: backend
         run: |
-          if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --bin daemon --target ${{ matrix.target }}
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            cargo build --release --bin daemon --target ${{ matrix.target }}
           else
             cargo build --release --bin daemon --target ${{ matrix.target }}
           fi
+        shell: bash
       
       - name: Prepare binary
         run: |
-          cp target/${{ matrix.target }}/release/daemon ../${{ matrix.binary }}
-          chmod +x ../${{ matrix.binary }}
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp backend/target/${{ matrix.target }}/release/daemon.exe ${{ matrix.binary }}
+          else
+            cp backend/target/${{ matrix.target }}/release/daemon ${{ matrix.binary }}
+          fi
+          chmod +x ${{ matrix.binary }} || true
+        shell: bash
       
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -101,35 +103,46 @@ jobs:
       - name: Get release version
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Sync daemon compose template
+        run: cp docker-compose.daemon.yml ui/src/lib/templates/
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet ui/src/lib/templates/docker-compose.daemon.yml; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit updated template
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ui/src/lib/templates/docker-compose.daemon.yml
+          git commit -m "chore: sync daemon compose template"
+          git push
       
-      - name: Build and push UI image
+      # Build combined Server + UI image (NEW)
+      - name: Build and push Server image (with embedded UI)
         uses: docker/build-push-action@v5
         with:
-          context: ./ui
+          context: .  # Build from project root to access both backend/ and ui/
+          file: ./backend/Dockerfile  # Path to the new Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            mayanayza/netvisor-ui:${{ steps.version.outputs.version }}
-            mayanayza/netvisor-ui:latest
-            ghcr.io/${{ github.repository }}/ui:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/ui:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      
-      - name: Build and push Server image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          platforms: linux/amd64,linux/arm64
-          push: true
+          build-args: |
+            PUBLIC_SERVER_HOSTNAME=default
+            PUBLIC_SERVER_PORT=60072
           tags: |
             mayanayza/netvisor-server:${{ steps.version.outputs.version }}
-            mayanayza/netvisor-server:latest
             ghcr.io/${{ github.repository }}/server:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
+      # Build Daemon image (unchanged)
       - name: Build and push Daemon image
         uses: docker/build-push-action@v5
         with:
@@ -139,67 +152,32 @@ jobs:
           push: true
           tags: |
             mayanayza/netvisor-daemon:${{ steps.version.outputs.version }}
-            mayanayza/netvisor-daemon:latest
             ghcr.io/${{ github.repository }}/daemon:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/daemon:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  upload-binaries:
-    name: Upload ${{ matrix.binary }} to Release
+  create-release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: build-docker
-    strategy:
-      matrix:
-        binary:
-          - netvisor-daemon-linux-x86_64
-          - netvisor-daemon-linux-aarch64
-          - netvisor-daemon-darwin-arm64
+    needs: [build-binaries, build-docker]
     
     steps:
-      - name: Download binary artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.binary }}
-      
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ matrix.binary }}
-  
-
-  update-fixtures:
-    name: Update Test Fixtures
-    runs-on: ubuntu-latest
-    needs: upload-binaries
-    steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
       
       - name: Get release version
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
-      - name: Update fixtures for release
-        run: |
-          # Verify the new fixture was created by previous CI/local runs
-          if [ ! -f backend/src/tests/netvisor-next.sql ]; then
-            echo "Error: netvisor-next.sql not found. Run integration tests locally first."
-            exit 1
-          fi
-          
-          # Replace old fixture with new one
-          cd backend/src/tests
-          rm -f netvisor.sql
-          mv netvisor-next.sql netvisor.sql
-          
-          echo "✓ Replaced netvisor.sql with netvisor-next.sql"
-      
-      - name: Commit updated fixtures
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backend/src/tests/netvisor.sql
-          git commit -m "chore: update test fixtures for ${{ steps.version.outputs.version }}" || echo "No fixture changes"
-          git push origin HEAD:main || echo "No changes to push"
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            netvisor-daemon-*/netvisor-daemon-*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
