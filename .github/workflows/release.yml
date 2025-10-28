@@ -101,12 +101,11 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      # Build combined Server + UI image (NEW)
-      - name: Build and push Server image (with embedded UI)
+      - name: Build and push Server+UI image
         uses: docker/build-push-action@v5
         with:
           context: .  # Build from project root to access both backend/ and ui/
-          file: ./backend/Dockerfile  # Path to the new Dockerfile
+          file: ./backend/Dockerfile  
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
@@ -118,7 +117,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      # Build Daemon image (unchanged)
+      # Build Daemon image
       - name: Build and push Daemon image
         uses: docker/build-push-action@v5
         with:

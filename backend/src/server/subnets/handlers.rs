@@ -58,7 +58,7 @@ async fn update_subnet(
     let mut subnet = service
         .get_subnet(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found(&format!("Subnet '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Subnet '{}' not found", &id)))?;
 
     subnet.base = request.base;
 
@@ -75,7 +75,7 @@ async fn delete_subnet(
 
     // Check if host exists
     if service.get_subnet(&id).await?.is_none() {
-        return Err(ApiError::not_found(&format!("Subnet '{}' not found", &id)));
+        return Err(ApiError::not_found(format!("Subnet '{}' not found", &id)));
     }
 
     service.delete_subnet(&id).await?;

@@ -101,7 +101,7 @@ async fn initiate_discovery(
     let daemon = match daemon_service.get_daemon(&request.daemon_id).await? {
         Some(daemon) => daemon,
         None => {
-            return Err(ApiError::not_found(&format!(
+            return Err(ApiError::not_found(format!(
                 "Daemon '{}' not found",
                 &request.daemon_id
             )));
@@ -156,7 +156,7 @@ async fn cancel_discovery(
     let daemon_id = match state.discovery_manager.get_session(&session_id).await {
         Some(session) => session.daemon_id,
         None => {
-            return Err(ApiError::not_found(&format!(
+            return Err(ApiError::not_found(format!(
                 "Session '{}' not found",
                 session_id
             )));

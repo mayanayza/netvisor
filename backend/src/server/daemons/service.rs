@@ -50,11 +50,22 @@ impl DaemonService {
         self.daemon_storage.get_all(network_id).await
     }
 
+    /// Update daemon
+    pub async fn update_daemon(&self, daemon: Daemon) -> Result<Daemon> {
+        let daemon = self.daemon_storage.update(&daemon).await?;
+        Ok(daemon)
+    }
+
     /// Update daemon heartbeat
     pub async fn receive_heartbeat(&self, mut daemon: Daemon) -> Result<Daemon> {
         daemon.last_seen = chrono::Utc::now();
         let daemon = self.daemon_storage.update(&daemon).await?;
         Ok(daemon)
+    }
+
+    /// Delete daemon
+    pub async fn delete_daemon(&self, id: Uuid) -> Result<()> {
+        self.daemon_storage.delete(&id).await
     }
 
     /// Send discovery request to daemon

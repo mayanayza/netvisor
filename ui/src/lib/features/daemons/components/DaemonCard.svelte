@@ -8,8 +8,10 @@
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
+	import { Trash2 } from 'lucide-svelte';
 
 	export let daemon: Daemon;
+	export let onDelete: (daemon: Daemon) => void = () => {};
 	export let onDiscovery: (daemon: Daemon) => void = () => {};
 	export let discoveryIsRunning: boolean;
 
@@ -22,13 +24,17 @@
 
 	// Build card data
 	$: cardData = {
-		title: 'Daemon on ' + (host ? host.name : daemon.ip + ':' + daemon.port),
+		title: daemon.ip + ':' + daemon.port,
 		iconColor: entities.getColorHelper('Daemon').icon,
 		icon: entities.getIconComponent('Daemon'),
 		sections: [
 			{
 				label: 'Network',
 				value: $networks.find((n) => n.id == daemon.network_id)?.name || 'Unknown Network'
+			},
+			{
+				label: 'Host',
+				value: host ? host.name : "Unknown Host"
 			},
 			{
 				label: 'Registered',
@@ -48,7 +54,13 @@
 				onClick: !daemonIsRunningDiscovery ? () => onDiscovery(daemon) : () => {},
 				animation: daemonIsRunningDiscovery ? 'animate-spin' : '',
 				disabled: daemonIsRunningDiscovery
-			}
+			},
+			{
+				label: 'Delete Daemon',
+				icon: Trash2,
+				class: 'btn-icon-danger',
+				onClick: () => onDelete(daemon)
+			},
 		],
 
 		// Add footer when discovery is running

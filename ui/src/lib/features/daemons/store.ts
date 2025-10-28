@@ -15,6 +15,15 @@ export async function getDaemons() {
 	);
 }
 
+export async function deleteDaemon(id: string) {
+	return await api.request<void, Daemon[]>(
+		`/daemons/${id}`,
+		daemons,
+		(_, current) => current.filter((d) => d.id !== id),
+		{ method: 'DELETE' }
+	);
+}
+
 export function getDaemonIsRunningDiscovery(
 	daemon_id: string | null,
 	sessionsMap: Map<string, DiscoveryUpdatePayload>

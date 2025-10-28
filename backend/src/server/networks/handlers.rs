@@ -17,7 +17,6 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", post(create_network))
         .route("/", get(get_all_networks))
-        .route("/default", get(get_default_network))
         .route("/:id", put(update_network))
         .route("/:id", delete(delete_network))
 }
@@ -40,26 +39,6 @@ async fn create_network(
     let created_network = service.create_network(request).await?;
 
     Ok(Json(ApiResponse::success(created_network)))
-}
-
-async fn get_default_network(
-    State(state): State<Arc<AppState>>,
-) -> ApiResult<Json<ApiResponse<Network>>> {
-    // Remove Option<>
-
-    let user_service = &state.services.user_service;
-    let users = user_service.get_all_users().await?;
-    let first_user = users
-        .first()
-        .ok_or_else(|| ApiError::internal_error("No user found"))?;
-
-    let service = &state.services.network_service;
-    let network = service
-        .get_default_network(&first_user.id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("No default network found"))?;
-
-    Ok(Json(ApiResponse::success(network)))
 }
 
 async fn get_all_networks(
@@ -88,7 +67,7 @@ async fn update_network(
     let mut network = service
         .get_network(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found(&format!("Network '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Network '{}' not found", &id)))?;
 
     network.base = request.base;
 
@@ -105,7 +84,7 @@ async fn delete_network(
 
     // Check if network exists
     if service.get_network(&id).await?.is_none() {
-        return Err(ApiError::not_found(&format!("Network '{}' not found", &id)));
+        return Err(ApiError::not_found(format!("Network '{}' not found", &id)));
     }
 
     service.delete_network(&id).await?;

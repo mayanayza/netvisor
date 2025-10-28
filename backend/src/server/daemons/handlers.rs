@@ -7,10 +7,7 @@ use crate::server::{
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{
-    Router,
-    extract::{Path, Query, State},
-    response::Json,
-    routing::{get, post, put},
+    extract::{Path, Query, State}, response::Json, routing::{delete, get, post, put}, Router
 };
 use std::{collections::HashMap, sync::Arc};
 use tracing::info;
@@ -22,6 +19,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/:id/heartbeat", put(receive_heartbeat))
         .route("/", get(get_all_daemons))
         .route("/:id", get(get_daemon))
+        .route("/:id", delete(delete_daemon))
 }
 
 /// Register a new daemon
@@ -62,7 +60,7 @@ async fn receive_heartbeat(
         .get_daemon(&id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::not_found(&format!("Daemon '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
 
     service
         .receive_heartbeat(daemon)
@@ -103,7 +101,23 @@ async fn get_daemon(
         .get_daemon(&id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::not_found(&format!("Daemon '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
 
     Ok(Json(ApiResponse::success(DaemonResponse { daemon })))
+}
+
+async fn delete_daemon(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let service = &state.services.daemon_service;
+
+    // Check if host exists
+    if service.get_daemon(&id).await?.is_none() {
+        return Err(ApiError::not_found(format!("Daemon '{}' not found", &id)));
+    }
+
+    service.delete_daemon(id).await?;
+
+    Ok(Json(ApiResponse::success(())))
 }

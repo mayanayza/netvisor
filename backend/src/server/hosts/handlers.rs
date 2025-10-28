@@ -117,11 +117,11 @@ async fn consolidate_hosts(
     let destination_host = host_service
         .get_host(&destination_host_id)
         .await?
-        .ok_or_else(|| ApiError::not_found("Could not find host"))?;
+        .ok_or_else(|| ApiError::not_found(format!("Could not find destination host {}", destination_host_id)))?;
     let other_host = host_service
         .get_host(&other_host_id)
         .await?
-        .ok_or_else(|| ApiError::not_found("Could not find host to convert"))?;
+        .ok_or_else(|| ApiError::not_found(format!("Could not find host to consolidate {}", other_host_id)))?;
 
     let updated_host = host_service
         .consolidate_hosts(destination_host, other_host)
@@ -138,7 +138,7 @@ async fn delete_host(
 
     // Check if host exists
     if service.get_host(&id).await?.is_none() {
-        return Err(ApiError::not_found(&format!("Host '{}' not found", &id)));
+        return Err(ApiError::not_found(format!("Host '{}' not found", &id)));
     }
 
     service.delete_host(&id, true).await?;

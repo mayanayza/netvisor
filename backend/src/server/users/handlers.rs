@@ -49,7 +49,7 @@ async fn get_user(
 
     match service.get_user(&id).await? {
         Some(user) => Ok(Json(ApiResponse::success(user))),
-        None => Err(ApiError::not_found(&format!("Could not find user {}", id))),
+        None => Err(ApiError::not_found(format!("User '{}' not found", &id))),
     }
 }
 
@@ -63,7 +63,7 @@ async fn update_user(
     let mut user = service
         .get_user(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found(&format!("User '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("User '{}' not found", &id)))?;
 
     user.base = request.base;
 
@@ -80,7 +80,7 @@ async fn delete_user(
 
     // Check if network exists
     if service.get_user(&id).await?.is_none() {
-        return Err(ApiError::not_found(&format!("User '{}' not found", &id)));
+        return Err(ApiError::not_found(format!("User '{}' not found", &id)));
     }
 
     service.delete_user(&id).await?;

@@ -2,7 +2,7 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { daemons, getDaemons } from '$lib/features/daemons/store';
+	import { daemons, deleteDaemon, getDaemons } from '$lib/features/daemons/store';
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { initiateDiscovery, sessions } from '$lib/features/discovery/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
@@ -16,6 +16,12 @@
 	let showCreateDaemonModal = false;
 
 	$: discoveryIsRunning = $sessions.size > 0;
+
+	function handleDeleteDaemon(daemon: Daemon) {
+		if (confirm(`Are you sure you want to delete daemon @"${daemon.ip}"?`)) {
+			deleteDaemon(daemon.id);
+		}
+	}
 
 	function handleRunDiscovery(daemon: Daemon) {
 		initiateDiscovery({ daemon_id: daemon.id });
@@ -58,7 +64,7 @@
 		<!-- Daemons grid -->
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each $daemons as daemon (daemon.id)}
-				<DaemonCard {daemon} {discoveryIsRunning} onDiscovery={handleRunDiscovery} />
+				<DaemonCard {daemon} {discoveryIsRunning} onDiscovery={handleRunDiscovery} onDelete={handleDeleteDaemon}/>
 			{/each}
 		</div>
 	{/if}

@@ -55,8 +55,8 @@ impl ApiError {
         Self::new(StatusCode::BAD_REQUEST, message.to_string())
     }
 
-    pub fn not_found(resource: &str) -> Self {
-        Self::new(StatusCode::NOT_FOUND, format!("{} not found", resource))
+    pub fn not_found(message: String) -> Self {
+        Self::new(StatusCode::NOT_FOUND, message.to_string())
     }
 }
 
@@ -78,7 +78,7 @@ impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         tracing::error!("Database error: {}", err);
         match err {
-            sqlx::Error::RowNotFound => Self::not_found("Resource"),
+            sqlx::Error::RowNotFound => Self::not_found("Row not found".to_string()),
             _ => Self::internal_error("Database operation failed"),
         }
     }

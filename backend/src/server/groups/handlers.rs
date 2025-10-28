@@ -57,7 +57,7 @@ async fn update_group(
     let mut group = service
         .get_group(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found(&format!("Host group '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Group '{}' not found", &id)))?;
 
     group.base = request.base;
     let updated_group = service.update_group(group).await?;
