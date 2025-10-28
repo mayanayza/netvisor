@@ -64,7 +64,12 @@
 		<!-- Daemons grid -->
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each $daemons as daemon (daemon.id)}
-				<DaemonCard {daemon} {discoveryIsRunning} onDiscovery={handleRunDiscovery} onDelete={handleDeleteDaemon}/>
+				<DaemonCard
+					{daemon}
+					{discoveryIsRunning}
+					onDiscovery={handleRunDiscovery}
+					onDelete={handleDeleteDaemon}
+				/>
 			{/each}
 		</div>
 	{/if}

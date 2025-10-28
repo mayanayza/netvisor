@@ -253,8 +253,10 @@ impl SubnetLayoutPlanner {
                     id: interface.id,
                     host_id: host.id,
                     size: Uxy::subnet_child_size_from_service_count(
-                        interface_bound_services.len(),
+                        &interface_bound_services,
+                        interface.id,
                         header_text.is_some(),
+                        ctx.options.hide_ports,
                     ),
                     header: header_text,
                     interface_id: Some(interface.id),

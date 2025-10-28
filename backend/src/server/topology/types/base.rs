@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::server::topology::service::planner::utils::NODE_PADDING;
+use crate::server::{
+    services::types::{base::Service, bindings::Binding},
+    topology::service::planner::utils::NODE_PADDING,
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
 pub struct Uxy {
@@ -21,10 +25,37 @@ impl Uxy {
         }
     }
 
-    pub fn subnet_child_size_from_service_count(service_count: usize, has_header: bool) -> Self {
+    pub fn subnet_child_size_from_service_count(
+        services: &[&Service],
+        interface_id: Uuid,
+        has_header: bool,
+        hide_ports: bool,
+    ) -> Self {
+        let service_area_height: usize = services
+            .iter()
+            .map(|s| {
+                let bindings_with_ports = s
+                    .base
+                    .bindings
+                    .iter()
+                    .filter(|b| {
+                        b.interface_id().map(|i| i == interface_id).unwrap_or(true)
+                            && b.port_id().is_some()
+                    })
+                    .collect::<Vec<&Binding>>()
+                    .len();
+                HEIGHT_PER_SERVICE_IN_SUBNET_CHILD
+                    + if hide_ports && bindings_with_ports > 0 {
+                        0
+                    } else {
+                        25
+                    }
+            })
+            .sum();
+
         Self {
             x: SUBNET_CHILD_WIDTH,
-            y: HEIGHT_PER_SERVICE_IN_SUBNET_CHILD * service_count
+            y: service_area_height
                 + SUBNET_CHILD_FOOTER_HEIGHT
                 + if has_header {
                     SUBNET_CHILD_HEADER_HEIGHT

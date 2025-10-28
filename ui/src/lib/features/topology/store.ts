@@ -14,6 +14,7 @@ const defaultOptions: TopologyOptions = {
 	hide_edge_types: [],
 	request_options: {
 		group_docker_bridges_by_host: true,
+		hide_ports: false,
 		hide_vm_title_on_docker_container: false,
 		show_gateway_in_left_zone: true,
 		left_zone_service_categories: ['DNS', 'ReverseProxy'],

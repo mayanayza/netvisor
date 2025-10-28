@@ -7,7 +7,10 @@ use crate::server::{
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{
-    extract::{Path, Query, State}, response::Json, routing::{delete, get, post, put}, Router
+    Router,
+    extract::{Path, Query, State},
+    response::Json,
+    routing::{delete, get, post, put},
 };
 use std::{collections::HashMap, sync::Arc};
 use tracing::info;

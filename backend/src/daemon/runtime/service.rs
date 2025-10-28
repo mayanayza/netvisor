@@ -51,7 +51,7 @@ impl DaemonRuntimeService {
                     .send()
                     .await?;
 
-                tracing::info!("💓 Heartbeat sent successfully");
+                tracing::info!("💓 Heartbeat sent");
 
                 if !response.status().is_success() {
                     let api_response: ApiResponse<()> = response.json().await?;

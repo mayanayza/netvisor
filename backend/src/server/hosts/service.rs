@@ -310,9 +310,7 @@ impl HostService {
             .get_services_for_host(&other_host.id)
             .await?;
 
-        
-        let other_host_daemon = self.daemon_service
-            .get_host_daemon(&other_host.id).await?;
+        let other_host_daemon = self.daemon_service.get_host_daemon(&other_host.id).await?;
 
         if let Some(mut other_host_daemon) = other_host_daemon {
             other_host_daemon.base.host_id = destination_host.id;

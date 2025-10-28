@@ -112,8 +112,19 @@ export function getServicesForSubnet(subnet: Subnet): Readable<Service[]> {
 }
 
 export function getServicesForHost(host_id: string): Readable<Service[]> {
-	return derived([services], ([$services]) => {
-		return $services.filter((s) => s.host_id == host_id);
+	return derived([services, hosts], ([$services, $hosts]) => {
+		const host = $hosts.find((h) => h.id == host_id);
+
+		return $services
+			.filter((s) => s.host_id == host_id)
+			.sort((a, b) => {
+				if (host) {
+					const aIndex = host.services.indexOf(a.id);
+					const bIndex = host.services.indexOf(b.id);
+					return aIndex - bIndex;
+				}
+				return 0;
+			});
 	});
 }
 

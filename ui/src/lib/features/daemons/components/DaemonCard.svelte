@@ -34,7 +34,7 @@
 			},
 			{
 				label: 'Host',
-				value: host ? host.name : "Unknown Host"
+				value: host ? host.name : 'Unknown Host'
 			},
 			{
 				label: 'Registered',
@@ -60,7 +60,7 @@
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(daemon)
-			},
+			}
 		],
 
 		// Add footer when discovery is running

@@ -29,6 +29,7 @@ export interface NodeRenderData {
 	showServices: boolean;
 	isVirtualized: boolean;
 	services: Service[];
+	interface_id: string;
 }
 
 export interface SubnetRenderData {
@@ -65,6 +66,7 @@ export enum EdgeHandle {
 export interface TopologyRequestOptions {
 	group_docker_bridges_by_host: boolean;
 	hide_vm_title_on_docker_container: boolean;
+	hide_ports: boolean;
 	network_ids: string[];
 	show_gateway_in_left_zone: boolean;
 	left_zone_service_categories: string[];

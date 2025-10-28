@@ -114,6 +114,7 @@
 	function resetForm() {
 		formData = host ? { ...host } : createEmptyHostFormData();
 		if (host && host.id) {
+			// Sort as ordered for host to get high confidence services with logo first
 			currentHostServices = get(getServicesForHost(host.id));
 		} else {
 			currentHostServices = [];

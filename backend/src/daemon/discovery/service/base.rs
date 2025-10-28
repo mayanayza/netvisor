@@ -835,9 +835,16 @@ pub trait DiscoversNetworkedEntities:
         }
 
         services.sort_by_key(|a| {
-            std::cmp::Reverse(match &a.base.source {
-                EntitySource::DiscoveryWithMatch { details, .. } => details.confidence,
-                _ => MatchConfidence::NotApplicable,
+            -(match &a.base.source {
+                EntitySource::DiscoveryWithMatch { details, .. } => {
+                    (details.confidence as i32)
+                        + if a.base.service_definition.has_logo() {
+                            1
+                        } else {
+                            0
+                        }
+                }
+                _ => MatchConfidence::NotApplicable as i32,
             })
         });
 

@@ -101,6 +101,7 @@ pub trait ServiceDefinitionExt {
     fn is_netvisor(&self) -> bool;
     fn is_generic(&self) -> bool;
     fn is_gateway(&self) -> bool;
+    fn has_logo(&self) -> bool;
 }
 
 impl ServiceDefinitionExt for Box<dyn ServiceDefinition> {
@@ -118,6 +119,12 @@ impl ServiceDefinitionExt for Box<dyn ServiceDefinition> {
 
     fn is_gateway(&self) -> bool {
         self.discovery_pattern().contains_gateway_ip_pattern()
+    }
+
+    fn has_logo(&self) -> bool {
+        !self.vector_logo_zone_icons_path().is_empty()
+            || !self.dashboard_icons_path().is_empty()
+            || !self.simple_icons_path().is_empty()
     }
 
     fn manages_virtualization(&self) -> Option<&'static str> {

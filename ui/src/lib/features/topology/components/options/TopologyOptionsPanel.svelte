@@ -166,6 +166,11 @@
 				</OptionsSection>
 
 				<OptionsSection title="Hide Stuff">
+					<OptionsCheckbox
+						bind:topologyOption={$topologyOptions.request_options.hide_ports}
+						title="Hide Ports"
+						description="Don't show open ports next to services"
+					/>
 					<OptionsMultiSelect
 						bind:topologyOption={$topologyOptions.request_options.hide_service_categories}
 						onChange={handleHideServiceCategoryChange}

@@ -117,11 +117,21 @@ async fn consolidate_hosts(
     let destination_host = host_service
         .get_host(&destination_host_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(format!("Could not find destination host {}", destination_host_id)))?;
+        .ok_or_else(|| {
+            ApiError::not_found(format!(
+                "Could not find destination host {}",
+                destination_host_id
+            ))
+        })?;
     let other_host = host_service
         .get_host(&other_host_id)
         .await?
-        .ok_or_else(|| ApiError::not_found(format!("Could not find host to consolidate {}", other_host_id)))?;
+        .ok_or_else(|| {
+            ApiError::not_found(format!(
+                "Could not find host to consolidate {}",
+                other_host_id
+            ))
+        })?;
 
     let updated_host = host_service
         .consolidate_hosts(destination_host, other_host)
