@@ -181,7 +181,7 @@ impl SubnetLayoutPlanner {
                 } else {
                     false
                 }
-            },
+            }
             None => false,
         };
 
@@ -247,11 +247,7 @@ impl SubnetLayoutPlanner {
                 // Update source/target handles for edges
                 let edges = ChildAnchorPlanner::plan_anchors(interface.id, all_edges, ctx);
 
-                let header_text = self.determine_subnet_child_header_text(
-                    ctx,
-                    host,
-                    &subnet_type,
-                );
+                let header_text = self.determine_subnet_child_header_text(ctx, host, &subnet_type);
 
                 let child = SubnetChild {
                     id: interface.id,
