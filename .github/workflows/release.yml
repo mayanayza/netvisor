@@ -24,9 +24,9 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netvisor-daemon-darwin-arm64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            binary: netvisor-daemon-windows-amd64.exe
+          # - os: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   binary: netvisor-daemon-windows-amd64.exe
     
     steps:
       - uses: actions/checkout@v4
