@@ -56,7 +56,7 @@ Refer to [configuration](#configuration) for more setup options.
 
 #### Daemon
 - **Linux**: Docker with host networking support, OR binary installation
-- **Mac/Windows**: Binary installation only (Docker Desktop does not support host networking)
+- **Mac**: Binary installation only (Docker Desktop does not support host networking)
 
 #### Server (Docker - Recommended)
 - Docker
