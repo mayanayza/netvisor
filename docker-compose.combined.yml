@@ -2,15 +2,11 @@ x-netvisor-env: &netvisor-env
   NETVISOR_LOG_LEVEL: ${NETVISOR_LOG_LEVEL:-info}
   NETVISOR_SERVER_PORT: ${NETVISOR_SERVER_PORT:-60072}
   NETVISOR_DAEMON_PORT: ${NETVISOR_DAEMON_PORT:-60073}
-  NETVISOR_HEARTBEAT_INTERVAL: ${NETVISOR_HEARTBEAT_INTERVAL:-30}
 
 services:
   daemon:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.daemon
-    image: netvisor-daemon:local-test
-    container_name: netvisor-daemon-test
+    image: mayanayza/netvisor-daemon:latest
+    container_name: netvisor-daemon
     network_mode: host
     privileged: true
     restart: unless-stopped
@@ -19,25 +15,26 @@ services:
       NETVISOR_SERVER_TARGET: ${NETVISOR_SERVER_TARGET:-http://127.0.0.1}
       NETVISOR_PORT: ${NETVISOR_DAEMON_PORT:-60073}
       NETVISOR_BIND_ADDRESS: ${NETVISOR_BIND_ADDRESS:-0.0.0.0}
-      NETVISOR_NAME: ${NETVISOR_NAME:-netvisor-daemon-test}
+      NETVISOR_NAME: ${NETVISOR_NAME:-netvisor-daemon}
+      NETVISOR_HEARTBEAT_INTERVAL: ${NETVISOR_HEARTBEAT_INTERVAL:-30}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${NETVISOR_DAEMON_PORT:-60073}/api/health || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 15
     volumes:
-      - daemon-config-test:/root/.config/netvisor/daemon
+      - daemon-config:/root/.config/netvisor/daemon
+      # Comment out the line below to disable docker discovery
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   postgres:
     image: postgres:17-alpine
-    container_name: netvisor-postgres-test
     environment:
-      POSTGRES_DB: netvisor_test
+      POSTGRES_DB: netvisor
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
-      - postgres_data_test:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -45,23 +42,20 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - netvisor-test
+      - netvisor
 
   server:
-    build:
-      context: .  # Build from project root
-      dockerfile: backend/Dockerfile
-    image: netvisor-server:local-test
-    container_name: netvisor-server-test
+    image: mayanayza/netvisor-server:latest
     ports:
       - "${NETVISOR_SERVER_PORT:-60072}:${NETVISOR_SERVER_PORT:-60072}"
     environment:
       <<: *netvisor-env
-      NETVISOR_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/netvisor_test
+      NETVISOR_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/netvisor
       NETVISOR_WEB_EXTERNAL_PATH: /app/static
+      # 172.17.0.1 is Docker's default bridge gateway. If your's is different, make sure to change it.
       NETVISOR_INTEGRATED_DAEMON_URL: http://172.17.0.1:${NETVISOR_DAEMON_PORT:-60073}
     volumes:
-      - ./data-test:/data
+      - ./data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,14 +63,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - netvisor-test
+      - netvisor
 
 volumes:
-  postgres_data_test:
-  daemon-config-test:
+  postgres_data:
+  daemon-config:
 
 networks:
-  netvisor-test:
+  netvisor:
     driver: bridge
     ipam:
       config:

@@ -1,3 +1,5 @@
+# Editing these env vars will apply them to daemon, server, and UI. Recommend doing this over editing for each container.
+# Or, use a .env file
 x-netvisor-env: &netvisor-env
   NETVISOR_LOG_LEVEL: ${NETVISOR_LOG_LEVEL:-info}
   NETVISOR_SERVER_PORT: ${NETVISOR_SERVER_PORT:-60072}
@@ -27,8 +29,17 @@ services:
       # Comment out the line below to disable docker discovery
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+  ui:
+    image: mayanayza/netvisor-ui:latest
+    networks:
+      - netvisor
+    volumes:
+      - ui-build:/app/build
+
   postgres:
     image: postgres:17-alpine
+    networks:
+      - netvisor
     environment:
       POSTGRES_DB: netvisor
       POSTGRES_USER: postgres
@@ -41,33 +52,29 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    networks:
-      - netvisor
 
   server:
     image: mayanayza/netvisor-server:latest
+    networks:
+      - netvisor
     ports:
       - "${NETVISOR_SERVER_PORT:-60072}:${NETVISOR_SERVER_PORT:-60072}"
     environment:
       <<: *netvisor-env
       NETVISOR_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/netvisor
-      NETVISOR_WEB_EXTERNAL_PATH: /app/static
-      # 172.17.0.1 is Docker's default bridge gateway. If your's is different, make sure to change it.
+      NETVISOR_WEB_EXTERNAL_PATH: ${NETVISOR_WEB_EXTERNAL_PATH:-/app/static}
       NETVISOR_INTEGRATED_DAEMON_URL: http://172.17.0.1:${NETVISOR_DAEMON_PORT:-60073}
     volumes:
       - ./data:/data
+      - ui-build:/app/static:ro
     depends_on:
+      ui:
+        condition: service_started
       postgres:
         condition: service_healthy
       daemon:
         condition: service_healthy
     restart: unless-stopped
-    networks:
-      - netvisor
-
-volumes:
-  postgres_data:
-  daemon-config:
 
 networks:
   netvisor:
@@ -76,3 +83,8 @@ networks:
       config:
         - subnet: 172.31.0.0/16
           gateway: 172.31.0.1
+
+volumes:
+  ui-build:
+  postgres_data:
+  daemon-config:

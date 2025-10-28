@@ -47,6 +47,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Setup Perl on Windows
+        if: matrix.os == 'windows-latest'
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: '5.38'
+      
+      - name: Install Perl dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cpan -T Locale::Maketext::Simple
       
       - name: Build daemon
         working-directory: backend
