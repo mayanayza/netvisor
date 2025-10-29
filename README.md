@@ -262,21 +262,20 @@ The CONCURRENT_SCANS env var controls concurrent network scan operations. If too
 
 You can control this using the environment variable `NETVISOR_CONCURRENT_SCANS`.
 
-### Integrated Daemon Not Initializing
-
-If the integrated daemon (included in docker-compose.yml) fails to initialize after loading the UI:
-
-1. **Check daemon logs**: `docker logs netvisor-daemon`
-2. **Verify server is accessible**: The daemon must be able to reach the server. If using the default docker-compose, this should work automatically.
-3. **Check network configuration**: Ensure the daemon's `NETVISOR_INTEGRATED_DAEMON_URL` environment variable is correctly set in the server service (default: `http://172.17.0.1:60073`)
-
-For most setups, the default configuration should work. If you're using a custom Docker network, you may need to adjust the gateway IP.
-
 - **Recommended ranges**:
   - Low-resource systems (Raspberry Pi): 5-10
   - Developer laptops: 15-20
   - Docker containers: 10-30 (depends on container memory limits)
   - Servers: 25-50
+
+### Integrated Daemon Not Initializing
+
+If the integrated daemon (included in docker-compose.yml) fails to initialize after loading the UI:
+
+1. **Check daemon logs**: `docker logs netvisor-daemon`
+2. **Check server logs**: `docker logs netvisor-server`
+3. **Verify server can reach daemon**: Ensure the daemon's `NETVISOR_INTEGRATED_DAEMON_URL` environment variable is correctly set in the server service. For most setups, the default configuration ( `http://172.17.0.1:60073`) should work. If you're using a custom Docker network, or running in an environment like an LXC, you may need to adjust the gateway IP.
+4. **Verify server is accessible**: The daemon must be able to reach the server. If using the default docker-compose, this should work automatically.
 
 ## Uninstall Daemon
 
