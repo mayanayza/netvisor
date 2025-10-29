@@ -1,8 +1,9 @@
 name: Promote to Latest
 
 on:
-  release:
-    types: [released]
+    workflow_dispatch:
+    release:
+        types: [released]
 
 jobs:
   promote-to-latest:
