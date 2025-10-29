@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::{fmt::Display, net::IpAddr};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -32,3 +32,10 @@ impl Daemon {
         }
     }
 }
+
+impl Display for Daemon {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.base.ip, self.id)
+    }
+}
+

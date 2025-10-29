@@ -15,6 +15,7 @@ use validator::Validate;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(get_users))
         .route("/", post(create_user))
         .route("/:id", put(update_user))
         .route("/:id", delete(delete_user))
@@ -39,6 +40,14 @@ async fn create_user(
     let created_user = service.create_user(request).await?;
 
     Ok(Json(ApiResponse::success(created_user)))
+}
+
+async fn get_users(
+    State(state): State<Arc<AppState>>,
+) -> ApiResult<Json<ApiResponse<Vec<User>>>> {
+    let users = state.services.user_service.get_all_users().await?;
+
+    Ok(Json(ApiResponse::success(users)))
 }
 
 async fn get_user(

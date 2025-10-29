@@ -8,6 +8,7 @@ use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::types::base::Service;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
+use netvisor::server::users::types::User;
 use uuid::Uuid;
 
 struct ContainerManager {
@@ -135,13 +136,13 @@ where
     Err(last_error)
 }
 
-async fn check_network_created(client: &reqwest::Client) -> Result<Network, String> {
-    let network = retry_api_request("check default network exists", 15, 2, || {
+async fn check_user_created(client: &reqwest::Client) -> Result<User, String> {
+    let user = retry_api_request("check network exists", 15, 2, || {
         let client = client.clone();
 
         async move {
             let response = client
-                .get("http://localhost:60072/api/networks/default")
+                .get("http://localhost:60072/api/users")
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
@@ -156,7 +157,7 @@ async fn check_network_created(client: &reqwest::Client) -> Result<Network, Stri
             }
 
             let api_response = response
-                .json::<ApiResponse<Network>>()
+                .json::<ApiResponse<Vec<User>>>()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
 
@@ -167,17 +168,68 @@ async fn check_network_created(client: &reqwest::Client) -> Result<Network, Stri
                 return Err(format!("API returned success=false: {}", error));
             }
 
-            let network = api_response
+            let users = api_response
                 .data
                 .ok_or_else(|| "No data in response".to_string())?;
 
-            println!("✅ Found {}", network);
-            Ok(network)
+            if let Some(user) = users.first() {
+                println!("✅ Found {}", user);
+                return Ok(user.clone());
+            }
+            Err("Failed to find user".to_string())
         }
     })
     .await?;
 
-    Ok(network)
+    Ok(user.clone())
+}
+
+async fn check_network_created(client: &reqwest::Client, user_id: Uuid) -> Result<Network, String> {
+    let network = retry_api_request("check network exists", 15, 2, || {
+        let client = client.clone();
+
+        async move {
+            let response = client
+                .get(format!("http://localhost:60072/api/networks?user_id={}", user_id))
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+
+            let status = response.status();
+            if !status.is_success() {
+                let body = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Could not read body".to_string());
+                return Err(format!("Status {}: {}", status, body));
+            }
+
+            let api_response = response
+                .json::<ApiResponse<Vec<Network>>>()
+                .await
+                .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+            if !api_response.success {
+                let error = api_response
+                    .error
+                    .unwrap_or_else(|| "Unknown error".to_string());
+                return Err(format!("API returned success=false: {}", error));
+            }
+
+            let networks = api_response
+                .data
+                .ok_or_else(|| "No data in response".to_string())?;
+
+            if let Some(network) = networks.first() {
+                println!("✅ Found {}", network);
+                return Ok(network.clone());
+            }
+            Err("Failed to find network".to_string())
+        }
+    })
+    .await?;
+
+    Ok(network.clone())
 }
 
 /// Verify daemon is registered
@@ -407,7 +459,7 @@ async fn check_for_home_assistant_service(
                 return Err("No services found yet".to_string());
             }
 
-            println!("✅ Found {} service(s)", service_list.len());
+            println!("✅ Found {} service(s): {:?}", service_list.len(), service_list.iter().map(|s| s.base.name.clone()).collect::<Vec<String>>());
             Ok(service_list)
         }
     })
@@ -478,18 +530,24 @@ async fn test_container_daemon_server_integration() {
 
     let client = reqwest::Client::new();
 
-    println!("\n=== Step 1: Checking Network ===");
-    let network = check_network_created(&client)
+    println!("\n=== Step 0: Checking User ===");
+    let user = check_user_created(&client)
         .await
-        .expect("Failed to verify default network");
-    println!("Network ID: {}", network.id);
+        .expect("Failed to verify user");
+    println!("User: {}", user);
+
+    println!("\n=== Step 1: Checking Network ===");
+    let network = check_network_created(&client, user.id)
+        .await
+        .expect("Failed to verify network");
+    println!("Network: {}", network);
 
     // Step 1: Check daemon registration
     println!("\n=== Step 1: Checking Daemon Registration ===");
     let daemon = check_daemon_registered(&client, network.id)
         .await
         .expect("Failed to verify daemon registration");
-    println!("Daemon ID: {}", daemon.id);
+    println!("Daemon: {}", daemon);
 
     // Step 2: Run discovery and wait for completion
     println!("\n=== Step 2: Running Discovery ===");
