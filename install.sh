@@ -18,10 +18,20 @@ echo "Installing to /usr/local/bin (may require sudo)..."
 if [ -w "/usr/local/bin" ]; then
     mv netvisor-daemon /usr/local/bin/
 else
-    sudo mv netvisor-daemon /usr/local/bin/
+    sudo mv netvisor-daemon /usr/local/bin/ || {
+        echo "Error: Failed to install netvisor-daemon. Please check sudo permissions."
+        rm -f netvisor-daemon
+        exit 1
+    }
 fi
 
-echo "NetVisor daemon installed!"
+# Verify installation
+if [ ! -f "/usr/local/bin/netvisor-daemon" ]; then
+    echo "Error: Installation verification failed."
+    exit 1
+fi
+
+echo "NetVisor daemon installed successfully!"
 echo ""
 echo "To run daemon: netvisor-daemon --server-target YOUR_SERVER_IP --server-port 60072"
 echo ""
