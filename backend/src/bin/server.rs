@@ -4,7 +4,7 @@ use netvisor::server::{
     config::{AppState, CliArgs, ServerConfig},
     discovery::manager::DiscoverySessionManager,
     shared::handlers::create_router,
-    users::types::{User, UserBase},
+    users::types::base::{User, UserBase},
 };
 use tower::ServiceBuilder;
 use tower_http::{
@@ -78,7 +78,25 @@ async fn main() -> anyhow::Result<()> {
     let user_service = state.services.user_service.clone();
 
     // Create discovery cleanup task
-    let cleanup_state = state.clone();
+    let discovery_cleanup_state = state.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
+        loop {
+            interval.tick().await;
+
+            // Check for timeouts (fail sessions running > 10 minutes)
+            // discovery_cleanup_state.discovery_manager.check_timeouts(10).await;
+
+            // Clean up old sessions (remove completed sessions > 24 hours old)
+            discovery_cleanup_state
+                .discovery_manager
+                .cleanup_old_sessions(24)
+                .await;
+        }
+    });
+
+    // Create auth session cleanup task
+    let auth_cleanup_state = state.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
         loop {
@@ -88,9 +106,10 @@ async fn main() -> anyhow::Result<()> {
             // cleanup_state.discovery_manager.check_timeouts(10).await;
 
             // Clean up old sessions (remove completed sessions > 24 hours old)
-            cleanup_state
-                .discovery_manager
-                .cleanup_old_sessions(24)
+            auth_cleanup_state
+                .services
+                .auth_service
+                .cleanup_expired_sessions()
                 .await;
         }
     });

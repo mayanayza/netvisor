@@ -1,7 +1,7 @@
 use crate::server::{
     config::AppState,
     shared::types::api::{ApiError, ApiResponse, ApiResult},
-    users::types::User,
+    users::types::base::User,
 };
 use axum::{
     Router,
@@ -17,9 +17,9 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_users))
         .route("/", post(create_user))
-        .route("/:id", put(update_user))
-        .route("/:id", delete(delete_user))
-        .route("/:id", get(get_user))
+        .route("/{id}", put(update_user))
+        .route("/{id}", delete(delete_user))
+        .route("/{id}", get(get_user))
 }
 
 async fn create_user(

@@ -9,6 +9,7 @@
 	export let onCancel: (() => void) | null = null;
 	export let saveLabel: string = 'Save';
 	export let showSave: boolean = true;
+	export let showCloseButton: boolean = true;
 	export let showCancel: boolean = true;
 	export let cancelLabel: string = 'Cancel';
 	export let disableSave: boolean = false;
@@ -61,9 +62,19 @@
 
 	// Disable save button if form validation fails or explicitly disabled
 	$: actualDisableSave = disableSave || loading || deleting;
+
+	// Check if parent component is providing a custom footer
+	$: hasCustomFooter = $$slots.footer;
 </script>
 
-<GenericModal {isOpen} {title} {size} {preventCloseOnClickOutside} onClose={handleCancel}>
+<GenericModal
+	{isOpen}
+	{title}
+	{size}
+	{preventCloseOnClickOutside}
+	onClose={handleCancel}
+	{showCloseButton}
+>
 	<!-- Header icon slot -->
 	<svelte:fragment slot="header-icon">
 		<slot name="header-icon" />
@@ -81,45 +92,59 @@
 
 	<!-- Footer actions -->
 	<svelte:fragment slot="footer">
-		<div class="flex items-center justify-between">
-			<!-- Delete button (if editing) -->
-			<div>
-				{#if onDelete}
-					<button
-						type="button"
-						disabled={deleting || loading}
-						on:click={handleDelete}
-						class="btn-danger"
-					>
-						{deleting ? 'Deleting...' : 'Delete'}
-					</button>
-				{/if}
-			</div>
+		{#if hasCustomFooter}
+			<!-- Custom footer provided by parent -->
+			<slot
+				name="footer"
+				{handleFormSubmit}
+				{handleCancel}
+				{handleDelete}
+				{loading}
+				{deleting}
+				{actualDisableSave}
+			/>
+		{:else}
+			<!-- Default footer -->
+			<div class="flex items-center justify-between">
+				<!-- Delete button (if editing) -->
+				<div>
+					{#if onDelete}
+						<button
+							type="button"
+							disabled={deleting || loading}
+							on:click={handleDelete}
+							class="btn-danger"
+						>
+							{deleting ? 'Deleting...' : 'Delete'}
+						</button>
+					{/if}
+				</div>
 
-			<!-- Cancel and Save buttons -->
-			<div class="flex items-center gap-3">
-				{#if showCancel}
-					<button
-						type="button"
-						disabled={loading || deleting}
-						on:click={handleCancel}
-						class="btn-secondary"
-					>
-						{cancelLabel}
-					</button>
-				{/if}
+				<!-- Cancel and Save buttons -->
+				<div class="flex items-center gap-3">
+					{#if showCancel}
+						<button
+							type="button"
+							disabled={loading || deleting}
+							on:click={handleCancel}
+							class="btn-secondary"
+						>
+							{cancelLabel}
+						</button>
+					{/if}
 
-				{#if showSave}
-					<button
-						type="button"
-						disabled={actualDisableSave}
-						on:click={handleFormSubmit}
-						class="btn-primary"
-					>
-						{loading ? 'Saving...' : saveLabel}
-					</button>
-				{/if}
+					{#if showSave}
+						<button
+							type="button"
+							disabled={actualDisableSave}
+							on:click={handleFormSubmit}
+							class="btn-primary"
+						>
+							{loading ? 'Saving...' : saveLabel}
+						</button>
+					{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	</svelte:fragment>
 </GenericModal>

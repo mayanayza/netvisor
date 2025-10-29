@@ -5,6 +5,7 @@ use crate::server::shared::constants::Entity;
 use crate::server::shared::types::metadata::{MetadataProvider, MetadataRegistry};
 use crate::server::topology::types::edges::EdgeType;
 use crate::server::{
+    auth::handlers as auth_handlers,
     config::AppState,
     daemons::handlers as daemon_handlers,
     discovery::handlers as discovery_handlers,
@@ -33,6 +34,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .nest("/api/services", service_handlers::create_router())
         .nest("/api/networks", network_handlers::create_router())
         .nest("/api/users", user_handlers::create_router())
+        .nest("/api/auth", auth_handlers::create_router())
         .route("/api/health", get(get_health))
 }
 

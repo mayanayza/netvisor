@@ -21,7 +21,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use anyhow::{Error, Result};
-use axum::async_trait;
+use async_trait::async_trait;
 use cidr::IpCidr;
 use futures::{
     future::try_join_all,

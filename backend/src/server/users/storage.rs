@@ -5,8 +5,8 @@ use sqlx::{PgPool, Row};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::server::users::types::User;
-use crate::server::users::types::UserBase;
+use crate::server::users::types::base::User;
+use crate::server::users::types::base::UserBase;
 
 #[async_trait]
 pub trait UserStorage: Send + Sync {
@@ -33,14 +33,16 @@ impl UserStorage for PostgresUserStorage {
         sqlx::query(
             r#"
             INSERT INTO users (
-                id, name, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4)
+                id, name, created_at, updated_at, username, password_hash
+            ) VALUES ($1, $2, $3, $4, $5, $6)
             "#,
         )
         .bind(user.id)
         .bind(&user.base.name)
         .bind(chrono::Utc::now())
         .bind(chrono::Utc::now())
+        .bind(&user.base.username)
+        .bind(&user.base.password_hash)
         .execute(&self.pool)
         .await?;
 
@@ -80,13 +82,15 @@ impl UserStorage for PostgresUserStorage {
         sqlx::query(
             r#"
             UPDATE users SET 
-                name = $2, updated_at = $3
+                name = $2, updated_at = $3, username = $4, password_hash = $5
             WHERE id = $1
             "#,
         )
         .bind(user.id)
         .bind(&user.base.name)
         .bind(chrono::Utc::now())
+        .bind(&user.base.username)
+        .bind(&user.base.password_hash)
         .execute(&self.pool)
         .await?;
 
@@ -110,6 +114,8 @@ fn row_to_user(row: sqlx::postgres::PgRow) -> Result<User, Error> {
         updated_at: row.get("updated_at"),
         base: UserBase {
             name: row.get("name"),
+            username: row.get("username"),
+            password_hash: row.get("password_hash"),
         },
     })
 }

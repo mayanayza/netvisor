@@ -21,9 +21,9 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/", post(create_host))
         .route("/", get(get_all_hosts))
         .route("/", put(update_host))
-        .route("/:id", delete(delete_host))
+        .route("/{id}", delete(delete_host))
         .route(
-            "/:destination_host/consolidate/:other_host",
+            "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),
         )
 }

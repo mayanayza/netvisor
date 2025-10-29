@@ -19,10 +19,10 @@ use uuid::Uuid;
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/register", post(register_daemon))
-        .route("/:id/heartbeat", put(receive_heartbeat))
+        .route("/{id}/heartbeat", put(receive_heartbeat))
         .route("/", get(get_all_daemons))
-        .route("/:id", get(get_daemon))
-        .route("/:id", delete(delete_daemon))
+        .route("/{id}", get(get_daemon))
+        .route("/{id}", delete(delete_daemon))
 }
 
 /// Register a new daemon

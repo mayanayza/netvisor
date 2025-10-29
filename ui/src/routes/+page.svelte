@@ -13,8 +13,6 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { getServices, services } from '$lib/features/services/store';
 	import { watchStores } from '$lib/shared/utils/storeWatcher';
-	import { loadUser } from '$lib/features/users/store';
-	import { pushError } from '$lib/shared/stores/feedback';
 	import { getNetworks } from '$lib/features/networks/store';
 	import { startDiscoverySSE } from '$lib/features/discovery/store';
 	import DiscoveryTab from '$lib/features/daemons/components/DiscoveryTab.svelte';
@@ -29,9 +27,9 @@
 	function getInitialTab(): string {
 		if (typeof window !== 'undefined') {
 			const hash = window.location.hash.substring(1); // Remove the #
-			return validTabs.includes(hash) ? hash : 'discovery';
+			return validTabs.includes(hash) ? hash : 'hosts';
 		}
-		return 'discovery';
+		return 'hosts';
 	}
 
 	function handleTabChange(tab: string) {
@@ -64,12 +62,6 @@
 		// Listen for hash changes (browser back/forward)
 		if (typeof window !== 'undefined') {
 			window.addEventListener('hashchange', handleHashChange);
-		}
-
-		const user = await loadUser();
-		if (!user) {
-			pushError('Failed to load user');
-			return;
 		}
 
 		await getNetworks();

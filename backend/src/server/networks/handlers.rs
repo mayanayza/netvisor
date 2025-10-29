@@ -17,8 +17,8 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", post(create_network))
         .route("/", get(get_all_networks))
-        .route("/:id", put(update_network))
-        .route("/:id", delete(delete_network))
+        .route("/{id}", put(update_network))
+        .route("/{id}", delete(delete_network))
 }
 
 async fn create_network(

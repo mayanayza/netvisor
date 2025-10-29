@@ -4,6 +4,7 @@ import { type Node } from '@xyflow/svelte';
 import { EdgeHandle, type TopologyResponse, type TopologyOptions } from './types/base';
 import { networks } from '../networks/store';
 import deepmerge from 'deepmerge';
+import { browser } from '$app/environment';
 
 const OPTIONS_STORAGE_KEY = 'netvisor_topology_options';
 const EXPANDED_STORAGE_KEY = 'netvisor_topology_options_expanded_state';
@@ -29,38 +30,50 @@ export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage())
 
 // Initialize network_ids with the first network when networks are loaded
 let networksInitialized = false;
-networks.subscribe(($networks) => {
-	if (!networksInitialized && $networks.length > 0) {
-		networksInitialized = true;
-		topologyOptions.update((opts) => {
-			// Only set default if network_ids is empty
-			if (opts.request_options.network_ids.length === 0 && $networks[0]) {
-				opts.request_options.network_ids = [$networks[0].id];
-			}
-			return opts;
-		});
-	}
-});
 
-let lastRequestOptions = JSON.stringify(get(topologyOptions).request_options);
-
-// Subscribe to options changes and save to localStorage
-if (typeof window !== 'undefined') {
-	topologyOptions.subscribe((options) => {
-		saveOptionsToStorage(options);
-	});
-
-	optionsPanelExpanded.subscribe((expanded) => {
-		saveExpandedToStorage(expanded);
-	});
-
-	topologyOptions.subscribe(($options) => {
-		const current = JSON.stringify($options.request_options);
-		if (current !== lastRequestOptions) {
-			lastRequestOptions = current;
-			if (networksInitialized) getTopology();
+if (browser) {
+	networks.subscribe(($networks) => {
+		if (!networksInitialized && $networks.length > 0) {
+			networksInitialized = true;
+			topologyOptions.update((opts) => {
+				// Only set default if network_ids is empty
+				if (opts.request_options.network_ids.length === 0 && $networks[0]) {
+					opts.request_options.network_ids = [$networks[0].id];
+				}
+				return opts;
+			});
 		}
 	});
+
+	let lastRequestOptions = JSON.stringify(get(topologyOptions).request_options);
+
+	// Subscribe to options changes and save to localStorage
+	if (typeof window !== 'undefined') {
+		topologyOptions.subscribe((options) => {
+			saveOptionsToStorage(options);
+		});
+
+		optionsPanelExpanded.subscribe((expanded) => {
+			saveExpandedToStorage(expanded);
+		});
+
+		topologyOptions.subscribe(($options) => {
+			const current = JSON.stringify($options.request_options);
+			if (current !== lastRequestOptions) {
+				lastRequestOptions = current;
+				if (networksInitialized) getTopology();
+			}
+		});
+	}
+}
+
+export function resetTopologyOptions(): void {
+	networksInitialized = false;
+	topologyOptions.set(structuredClone(defaultOptions));
+	if (browser) {
+		localStorage.removeItem(OPTIONS_STORAGE_KEY);
+		localStorage.removeItem(EXPANDED_STORAGE_KEY);
+	}
 }
 
 // Load options from localStorage or use defaults
@@ -123,6 +136,8 @@ function saveExpandedToStorage(expanded: boolean): void {
 
 export async function getTopology() {
 	const options = get(topologyOptions);
+
+	console.log(options);
 
 	return await api.request<TopologyResponse>('/topology', topology, (topology) => topology, {
 		method: 'POST',

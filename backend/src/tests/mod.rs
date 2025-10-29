@@ -16,7 +16,7 @@ use crate::server::{
     },
     shared::{services::ServiceFactory, types::storage::StorageFactory},
     subnets::types::base::{Subnet, SubnetBase, SubnetType},
-    users::types::{User, UserBase},
+    users::types::base::{User, UserBase},
 };
 use axum::Router;
 use cidr::IpCidr;
@@ -64,9 +64,7 @@ pub async fn test_storage() -> (StorageFactory, ContainerAsync<GenericImage>) {
 }
 
 pub fn user() -> User {
-    User::new(UserBase {
-        name: "Test User".to_string(),
-    })
+    User::new(UserBase::new_seed())
 }
 
 pub fn network(user_id: &Uuid) -> Network {

@@ -27,7 +27,7 @@ use crate::{
     },
 };
 use anyhow::{Error, anyhow};
-use axum::async_trait;
+use async_trait::async_trait;
 use chrono::Utc;
 use dhcproto::v4::{self, Decodable, Encodable, Encoder, Message, MessageType};
 use rand::{Rng, SeedableRng};

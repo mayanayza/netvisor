@@ -25,7 +25,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/initiate", post(user_initiate_discovery))
         .route("/daemon-initiate", post(daemon_initiate_discovery))
-        .route("/:session_id/cancel", post(cancel_discovery))
+        .route("/{session_id}/cancel", post(cancel_discovery))
         .route("/update", post(receive_discovery_update))
         .route("/stream", get(discovery_stream))
 }

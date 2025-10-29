@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use anyhow::{Error, Result};
-use axum::async_trait;
+use async_trait::async_trait;
 use bollard::{
     Docker,
     query_parameters::{InspectContainerOptions, ListContainersOptions, ListNetworksOptions},

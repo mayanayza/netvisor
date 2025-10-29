@@ -16,8 +16,8 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", post(create_subnet))
         .route("/", get(get_all_subnets))
-        .route("/:id", put(update_subnet))
-        .route("/:id", delete(delete_subnet))
+        .route("/{id}", put(update_subnet))
+        .route("/{id}", delete(delete_subnet))
 }
 
 async fn create_subnet(

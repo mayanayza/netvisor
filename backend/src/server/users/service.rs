@@ -3,7 +3,7 @@ use crate::server::{
         service::NetworkService,
         types::{Network, NetworkBase},
     },
-    users::{storage::UserStorage, types::User},
+    users::{storage::UserStorage, types::base::User},
 };
 use anyhow::Result;
 use std::sync::Arc;

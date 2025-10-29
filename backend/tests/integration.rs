@@ -8,7 +8,7 @@ use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::types::base::Service;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
-use netvisor::server::users::types::User;
+use netvisor::server::users::types::base::User;
 use uuid::Uuid;
 
 struct ContainerManager {

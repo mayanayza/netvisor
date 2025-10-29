@@ -58,6 +58,10 @@ impl ApiError {
     pub fn not_found(message: String) -> Self {
         Self::new(StatusCode::NOT_FOUND, message.to_string())
     }
+
+    pub fn unauthorized(message: String) -> Self {
+        Self::new(StatusCode::UNAUTHORIZED, message.to_string())
+    }
 }
 
 impl IntoResponse for ApiError {

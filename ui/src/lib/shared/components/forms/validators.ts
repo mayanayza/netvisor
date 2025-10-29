@@ -108,3 +108,60 @@ export const portRange = (): Validator => (value: number | string) => {
 		message: 'Port must be between 1 and 65535'
 	};
 };
+
+// Minimum length validator
+export const minLength =
+	(min: number): Validator =>
+	(value: string) => {
+		if (!value)
+			return { valid: false, name: 'minLength', message: `Must be at least ${min} characters` };
+
+		return {
+			valid: value.length >= min,
+			name: `Must be at least ${min} characters`,
+			message: `Must be at least ${min} characters`
+		};
+	};
+
+// Username pattern validator (alphanumeric and underscore only)
+export const usernamePattern = (): Validator => (value: string) => {
+	if (!value) return { valid: true, name: 'usernamePattern' };
+
+	const usernameRegex = /^[a-zA-Z0-9_]+$/;
+	return {
+		valid: usernameRegex.test(value),
+		name: 'Username can only contain letters, numbers, and underscores',
+		message: 'Username can only contain letters, numbers, and underscores'
+	};
+};
+
+// Password complexity validator
+export const passwordComplexity = (): Validator => (value: string) => {
+	if (!value) return { valid: false, name: 'passwordComplexity', message: 'Password is required' };
+
+	const hasUppercase = /[A-Z]/.test(value);
+	const hasLowercase = /[a-z]/.test(value);
+	const hasNumber = /[0-9]/.test(value);
+	const hasSpecial = /[^A-Za-z0-9]/.test(value);
+
+	if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+		return {
+			valid: false,
+			name: 'Password must contain uppercase, lowercase, number, and special character',
+			message: 'Password must contain uppercase, lowercase, number, and special character'
+		};
+	}
+
+	return { valid: true, name: 'passwordComplexity' };
+};
+
+// Password match validator (for confirm password)
+export const passwordMatch =
+	(getPasswordValue: () => string): Validator =>
+	(value: string) => {
+		return {
+			valid: value === getPasswordValue(),
+			name: 'Passwords do not match',
+			message: 'Passwords do not match'
+		};
+	};

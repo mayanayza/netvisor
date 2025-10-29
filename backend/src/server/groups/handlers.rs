@@ -16,8 +16,8 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", post(create_group))
         .route("/", get(get_all_groups))
-        .route("/:id", put(update_group))
-        .route("/:id", delete(delete_group))
+        .route("/{id}", put(update_group))
+        .route("/{id}", delete(delete_group))
 }
 
 async fn create_group(
