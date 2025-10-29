@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *netvisor-env
-      NETVISOR_SERVER_TARGET: ${NETVISOR_SERVER_TARGET:-http://127.0.0.1}
+      NETVISOR_SERVER_TARGET: ${NETVISOR_SERVER_TARGET:-127.0.0.1}
       NETVISOR_PORT: ${NETVISOR_DAEMON_PORT:-60073}
       NETVISOR_BIND_ADDRESS: ${NETVISOR_BIND_ADDRESS:-0.0.0.0}
       NETVISOR_NAME: ${NETVISOR_NAME:-netvisor-daemon}
