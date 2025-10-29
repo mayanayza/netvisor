@@ -9,11 +9,12 @@
 	export let onTabChange: (tab: string) => void;
 
 	const navItems = [
+		{ id: 'discovery', label: 'Discovery', icon: entities.getIconComponent('Discovery') },
+		{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
 		{ id: 'hosts', label: 'Hosts', icon: entities.getIconComponent('Host') },
 		{ id: 'subnets', label: 'Subnets', icon: entities.getIconComponent('Subnet') },
 		{ id: 'groups', label: 'Groups', icon: entities.getIconComponent('Group') },
 		{ id: 'topology', label: 'Topology', icon: entities.getIconComponent('Topology') },
-		{ id: 'discovery', label: 'Discovery', icon: entities.getIconComponent('Discovery') }
 	];
 
 	async function onLogoutClick() {

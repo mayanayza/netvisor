@@ -5,10 +5,7 @@
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
 
--- Step 2: Add index for case-insensitive name lookup (used as username)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_lower ON users(LOWER(name));
-
--- Step 3: Merge multiple legacy users (users without passwords) into one seed user
+-- Step 2: Merge multiple legacy users FIRST (before creating unique index)
 -- This only affects existing users created before this migration
 DO $$
 DECLARE
@@ -63,3 +60,6 @@ BEGIN
         RAISE NOTICE 'No legacy users found. All users already have passwords.';
     END IF;
 END $$;
+
+-- Step 3: Create the unique index (after duplicates are merged)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_lower ON users(LOWER(name));
