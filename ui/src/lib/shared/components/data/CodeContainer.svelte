@@ -11,6 +11,7 @@
 	export let expandable: boolean = true;
 	export let expanded: boolean = true;
 	export let language: string = 'json';
+	export let expandLabel: string = 'Expand';
 
 	// Copy JSON to clipboard
 	async function copyJson() {
@@ -39,7 +40,7 @@
 			{:else}
 				<ChevronRight class="h-4 w-4" />
 			{/if}
-			<span class="ml-1">JSON</span>
+			<span class="ml-1">{expandLabel}</span>
 		</button>
 	{/if}
 

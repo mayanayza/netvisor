@@ -38,4 +38,3 @@ impl Display for Daemon {
         write!(f, "{}: {}", self.base.ip, self.id)
     }
 }
-

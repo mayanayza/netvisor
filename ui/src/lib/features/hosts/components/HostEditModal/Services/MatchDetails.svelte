@@ -7,6 +7,7 @@
 	} from '$lib/shared/types';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
+	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
 
 	let { details }: { details: MatchDetails } = $props();
 
@@ -62,5 +63,10 @@
 		<div class="pl-1">
 			{@render matchReasonNode(details.reason)}
 		</div>
+		<CodeContainer
+			language="json"
+			expandable={false}
+			code={JSON.stringify(details.reason, null, 2)}
+		/>
 	{/if}
 </div>

@@ -190,7 +190,10 @@ async fn check_network_created(client: &reqwest::Client, user_id: Uuid) -> Resul
 
         async move {
             let response = client
-                .get(format!("http://localhost:60072/api/networks?user_id={}", user_id))
+                .get(format!(
+                    "http://localhost:60072/api/networks?user_id={}",
+                    user_id
+                ))
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
@@ -459,7 +462,14 @@ async fn check_for_home_assistant_service(
                 return Err("No services found yet".to_string());
             }
 
-            println!("✅ Found {} service(s): {:?}", service_list.len(), service_list.iter().map(|s| s.base.name.clone()).collect::<Vec<String>>());
+            println!(
+                "✅ Found {} service(s): {:?}",
+                service_list.len(),
+                service_list
+                    .iter()
+                    .map(|s| s.base.name.clone())
+                    .collect::<Vec<String>>()
+            );
             Ok(service_list)
         }
     })

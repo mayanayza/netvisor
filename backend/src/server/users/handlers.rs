@@ -42,9 +42,7 @@ async fn create_user(
     Ok(Json(ApiResponse::success(created_user)))
 }
 
-async fn get_users(
-    State(state): State<Arc<AppState>>,
-) -> ApiResult<Json<ApiResponse<Vec<User>>>> {
+async fn get_users(State(state): State<Arc<AppState>>) -> ApiResult<Json<ApiResponse<Vec<User>>>> {
     let users = state.services.user_service.get_all_users().await?;
 
     Ok(Json(ApiResponse::success(users)))
