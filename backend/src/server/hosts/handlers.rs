@@ -1,4 +1,4 @@
-use crate::server::auth::extractor::{AuthenticatedEntity, AuthenticatedUser};
+use crate::server::auth::middleware::{AuthenticatedEntity, AuthenticatedUser};
 use crate::server::{
     config::AppState,
     hosts::types::{api::HostWithServicesRequest, base::Host},

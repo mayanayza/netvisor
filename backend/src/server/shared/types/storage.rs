@@ -26,7 +26,7 @@ pub struct StorageFactory {
 }
 
 pub async fn create_session_store(
-    db_pool: Pool<Postgres>,
+    db_pool: Pool<Postgres>, use_secure: bool
 ) -> Result<SessionManagerLayer<PostgresStore>> {
     let session_store = PostgresStore::new(db_pool.clone());
 
@@ -35,17 +35,18 @@ pub async fn create_session_store(
     Ok(SessionManagerLayer::new(session_store)
         .with_expiry(Expiry::OnInactivity(time::Duration::days(30))) // 30 days
         .with_name("session_id")
+        .with_secure(use_secure)
         .with_http_only(true)
         .with_same_site(tower_sessions::cookie::SameSite::Lax))
 }
 
 impl StorageFactory {
-    pub async fn new(database_url: &str) -> Result<Self> {
+    pub async fn new(database_url: &str, use_secure_session_cookies: bool) -> Result<Self> {
         let pool = PgPool::connect(database_url).await?;
 
         sqlx::migrate!("./migrations").run(&pool).await?;
 
-        let sessions = create_session_store(pool.clone()).await?;
+        let sessions = create_session_store(pool.clone(), use_secure_session_cookies).await?;
 
         Ok(Self {
             sessions,

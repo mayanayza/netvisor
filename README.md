@@ -223,6 +223,7 @@ The server supports the following configuration options:
 | Log Level | `--log-level` | `NETVISOR_LOG_LEVEL` | `info` | Logging verbosity (`trace`, `debug`, `info`, `warn`, `error`) |
 | Rust Log | `--rust-log` | `NETVISOR_RUST_LOG` | `""` | Low-level Rust framework logging |
 | Database URL | `--database-url` | `NETVISOR_DATABASE_URL` | `postgresql://postgres:password@localhost:5432/netvisor` | PostgreSQL connection string |
+| Use Secure Cookies | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Set `true` when running behind HTTPS. Set `false` for HTTP/internal networks |
 
 ### UI Configuration
 
