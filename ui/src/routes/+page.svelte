@@ -17,9 +17,11 @@
 	import { startDiscoverySSE } from '$lib/features/discovery/store';
 	import DiscoveryTab from '$lib/features/daemons/components/DiscoveryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
+	import { isAuthenticated } from '$lib/features/auth/store';
 
 	let activeTab = 'hosts';
 	let appInitialized = false;
+	let dataLoadingStarted = false;
 
 	// Valid tab names for validation
 	const validTabs = ['discovery', 'networks', 'hosts', 'subnets', 'groups', 'topology'];
@@ -56,14 +58,10 @@
 
 	let storeWatcherUnsubs: (() => void)[] = [];
 
-	onMount(async () => {
-		// Set initial tab from URL hash
-		activeTab = getInitialTab();
-
-		// Listen for hash changes (browser back/forward)
-		if (typeof window !== 'undefined') {
-			window.addEventListener('hashchange', handleHashChange);
-		}
+	// Load data only when authenticated
+	async function loadData() {
+		if (dataLoadingStarted) return;
+		dataLoadingStarted = true;
 
 		await getNetworks();
 
@@ -83,6 +81,21 @@
 		startDiscoverySSE();
 
 		await getMetadata().then(() => (appInitialized = true));
+	}
+
+	// Reactive effect: load data when authenticated
+	$: if ($isAuthenticated && !dataLoadingStarted) {
+		loadData();
+	}
+
+	onMount(() => {
+		// Set initial tab from URL hash
+		activeTab = getInitialTab();
+
+		// Listen for hash changes (browser back/forward)
+		if (typeof window !== 'undefined') {
+			window.addEventListener('hashchange', handleHashChange);
+		}
 	});
 
 	onDestroy(() => {
@@ -96,7 +109,7 @@
 	});
 </script>
 
-{#if appInitialized}
+{#if appInitialized && $isAuthenticated}
 	<div class="flex min-h-screen">
 		<!-- Sidebar -->
 		<Sidebar {activeTab} onTabChange={handleTabChange} />
@@ -124,4 +137,6 @@
 			<Toast />
 		</main>
 	</div>
+{:else if $isAuthenticated}
+	<Loading />
 {/if}
