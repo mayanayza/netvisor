@@ -3,7 +3,7 @@ use crate::server::{
         service::NetworkService,
         types::{Network, NetworkBase},
     },
-    users::{storage::UserStorage, types::User},
+    users::{storage::UserStorage, types::base::User},
 };
 use anyhow::Result;
 use std::sync::Arc;
@@ -23,7 +23,7 @@ impl UserService {
     }
 
     /// Create a new user
-    pub async fn create_user(&self, user: User) -> Result<User> {
+    pub async fn create_user(&self, user: User) -> Result<(User, Network)> {
         let created_user = self.user_storage.create(&User::new(user.base)).await?;
 
         tracing::info!(
@@ -35,9 +35,13 @@ impl UserService {
         let mut network = Network::new(NetworkBase::new(created_user.id));
         network.base.is_default = true;
 
-        self.network_service.create_network(network).await?;
+        let created_network = self.network_service.create_network(network).await?;
 
-        Ok(created_user)
+        self.network_service
+            .seed_default_data(created_network.id)
+            .await?;
+
+        Ok((created_user, created_network))
     }
 
     /// Get user by ID

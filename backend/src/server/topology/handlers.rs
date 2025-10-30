@@ -1,4 +1,5 @@
 use crate::server::{
+    auth::extractor::AuthenticatedUser,
     config::AppState,
     shared::types::api::{ApiResponse, ApiResult},
     topology::types::api::TopologyRequestOptions,
@@ -12,6 +13,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn get_topology(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Json(request): Json<TopologyRequestOptions>,
 ) -> ApiResult<Json<ApiResponse<serde_json::Value>>> {
     let service = &state.services.topology_service;

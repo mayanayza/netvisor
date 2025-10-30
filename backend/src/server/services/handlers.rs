@@ -1,15 +1,11 @@
 use crate::server::{
+    auth::extractor::AuthenticatedUser,
     config::AppState,
     services::types::base::Service,
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    shared::types::api::{ApiResponse, ApiResult},
 };
-use axum::{
-    Router,
-    extract::{Query, State},
-    response::Json,
-    routing::get,
-};
-use std::{collections::HashMap, sync::Arc};
+use axum::{Router, extract::State, response::Json, routing::get};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
@@ -18,16 +14,20 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn get_all_services(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<HashMap<String, String>>,
+    user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Service>>>> {
-    let network_id = params
-        .get("network_id")
-        .and_then(|id| Uuid::parse_str(id).ok())
-        .ok_or_else(|| ApiError::bad_request("network_id query parameter required"))?;
-
     let service_service = &state.services.service_service;
 
-    let subnets = service_service.get_all_services(&network_id).await?;
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
+        .get_all_networks(&user.0)
+        .await?
+        .iter()
+        .map(|n| n.id)
+        .collect();
+
+    let subnets = service_service.get_all_services(&network_ids).await?;
 
     Ok(Json(ApiResponse::success(subnets)))
 }

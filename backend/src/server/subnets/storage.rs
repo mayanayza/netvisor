@@ -13,7 +13,7 @@ pub trait SubnetStorage: Send + Sync {
     async fn create(&self, subnet: &Subnet) -> Result<()>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Subnet>>;
     async fn get_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Subnet>>;
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Subnet>>;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Subnet>>;
     async fn update(&self, subnet: &Subnet) -> Result<()>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
@@ -95,10 +95,10 @@ impl SubnetStorage for PostgresSubnetStorage {
             .collect::<Result<Vec<_>, _>>()
     }
 
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Subnet>> {
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Subnet>> {
         let rows =
-            sqlx::query("SELECT * FROM subnets WHERE network_id = $1 ORDER BY created_at DESC")
-                .bind(network_id)
+            sqlx::query("SELECT * FROM subnets WHERE network_id = ANY($1) ORDER BY created_at ASC")
+                .bind(network_ids)
                 .fetch_all(&self.pool)
                 .await?;
 
@@ -119,7 +119,7 @@ impl SubnetStorage for PostgresSubnetStorage {
             r#"
             UPDATE subnets SET 
                 name = $2, description = $3, cidr = $4,
-                subnet_type = $5, source = $6, updated_at = $7
+                subnet_type = $5, source = $6, updated_at = $7, network_id = $8
             WHERE id = $1
             "#,
         )
@@ -130,6 +130,7 @@ impl SubnetStorage for PostgresSubnetStorage {
         .bind(subnet_type_str)
         .bind(subnet_source_str)
         .bind(subnet.updated_at)
+        .bind(subnet.base.network_id)
         .execute(&self.pool)
         .await?;
 

@@ -7,16 +7,16 @@ services:
     restart: unless-stopped
     environment:
       # Server connection
-      - NETVISOR_SERVER_TARGET=${NETVISOR_SERVER_TARGET:-127.0.0.1}
-      - NETVISOR_SERVER_PORT=${NETVISOR_SERVER_PORT:-60072}
+      - NETVISOR_SERVER_TARGET=http://127.0.0.1
+      - NETVISOR_SERVER_PORT=60072
 
       # Daemon configuration
-      - NETVISOR_PORT=${NETVISOR_PORT:-60073}
-      - NETVISOR_BIND_ADDRESS=${NETVISOR_BIND_ADDRESS:-0.0.0.0}
-      - NETVISOR_NAME=${NETVISOR_NAME:-netvisor-daemon}
-      - NETVISOR_LOG_LEVEL=${NETVISOR_LOG_LEVEL:-info}
-      - NETVISOR_HEARTBEAT_INTERVAL=${NETVISOR_HEARTBEAT_INTERVAL:-30}
-      - NETVISOR_NETWORK_ID=${NETVISOR_NETWORK_ID:-}
+      - NETVISOR_PORT=60073
+      - NETVISOR_BIND_ADDRESS=0.0.0.0
+      - NETVISOR_NAME=netvisor-daemon
+      - NETVISOR_LOG_LEVEL=info
+      - NETVISOR_HEARTBEAT_INTERVAL=30
+      - NETVISOR_NETWORK_ID=0
     volumes:
       - daemon-config:/root/.config/netvisor/daemon
       # Comment out the line below to disable docker discovery

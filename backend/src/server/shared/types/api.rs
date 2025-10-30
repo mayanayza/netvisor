@@ -1,8 +1,4 @@
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
+use axum::{Json, http::StatusCode, response::Response};
 use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
 
 pub type ApiResult<T> = Result<T, ApiError>;
@@ -58,9 +54,13 @@ impl ApiError {
     pub fn not_found(message: String) -> Self {
         Self::new(StatusCode::NOT_FOUND, message.to_string())
     }
+
+    pub fn unauthorized(message: String) -> Self {
+        Self::new(StatusCode::UNAUTHORIZED, message.to_string())
+    }
 }
 
-impl IntoResponse for ApiError {
+impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let response = ApiResponse::<()>::error(self.message);
         (self.status, Json(response)).into_response()

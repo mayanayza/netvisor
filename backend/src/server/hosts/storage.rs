@@ -17,7 +17,7 @@ use uuid::Uuid;
 pub trait HostStorage: Send + Sync {
     async fn create(&self, host: &Host) -> Result<()>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Host>>;
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Host>>;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Host>>;
     async fn update(&self, host: &Host) -> Result<()>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
@@ -82,10 +82,10 @@ impl HostStorage for PostgresHostStorage {
         }
     }
 
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Host>> {
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Host>> {
         let rows =
-            sqlx::query("SELECT * FROM hosts WHERE network_id = $1 ORDER BY created_at DESC")
-                .bind(network_id)
+            sqlx::query("SELECT * FROM hosts WHERE network_id = ANY($1) ORDER BY created_at ASC")
+                .bind(network_ids)
                 .fetch_all(&self.pool)
                 .await?;
 
@@ -110,7 +110,7 @@ impl HostStorage for PostgresHostStorage {
             UPDATE hosts SET 
                 name = $2, hostname = $3, description = $4,
                 target = $5, interfaces = $6, ports = $7, source = $8, services = $9, virtualization = $10,
-                updated_at = $11
+                updated_at = $11, network_id = $12
             WHERE id = $1
             "#,
         )
@@ -125,6 +125,7 @@ impl HostStorage for PostgresHostStorage {
         .bind(services_str)
         .bind(virtualization_str)
         .bind(host.updated_at)
+        .bind(host.base.network_id)
         .execute(&self.pool)
         .await?;
 

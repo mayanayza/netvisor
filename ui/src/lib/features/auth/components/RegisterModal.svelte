@@ -1,0 +1,94 @@
+<script lang="ts">
+	import type { RegisterRequest } from '../types/base';
+	import { UserPlus } from 'lucide-svelte';
+	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
+	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
+	import RegisterForm from './RegisterForm.svelte';
+
+	export let isOpen = false;
+	export let onRegister: (data: RegisterRequest) => Promise<void> | void;
+	export let onClose: () => void;
+	export let onSwitchToLogin: (() => void) | null = null;
+
+	let loading = false;
+
+	let formData: RegisterRequest & { confirmPassword: string } = {
+		username: '',
+		password: '',
+		confirmPassword: ''
+	};
+
+	// Reset form when modal opens
+	$: if (isOpen) {
+		resetForm();
+	}
+
+	function resetForm() {
+		formData = {
+			username: '',
+			password: '',
+			confirmPassword: ''
+		};
+	}
+
+	async function handleSubmit() {
+		loading = true;
+		try {
+			// Only pass username and password to onRegister
+			await onRegister({
+				username: formData.username,
+				password: formData.password
+			});
+		} finally {
+			loading = false;
+		}
+	}
+</script>
+
+<EditModal
+	{isOpen}
+	title="Create your account"
+	{loading}
+	saveLabel="Create Account"
+	showCancel={false}
+	showCloseButton={false}
+	onSave={handleSubmit}
+	onCancel={onClose}
+	size="md"
+	preventCloseOnClickOutside={true}
+	let:formApi
+>
+	<!-- Header icon -->
+	<svelte:fragment slot="header-icon">
+		<ModalHeaderIcon Icon={UserPlus} color="#10b981" />
+	</svelte:fragment>
+
+	<!-- Content -->
+	<RegisterForm {formApi} bind:formData />
+
+	<!-- Custom footer with login link -->
+	<svelte:fragment slot="footer">
+		<div class="flex w-full flex-col gap-4">
+			<!-- Create Account Button -->
+			<button type="button" disabled={loading} on:click={handleSubmit} class="btn-primary w-full">
+				{loading ? 'Creating account...' : 'Create Account'}
+			</button>
+
+			<!-- Login Link -->
+			{#if onSwitchToLogin}
+				<div class="text-center">
+					<p class="text-sm text-gray-400">
+						Already have an account?
+						<button
+							type="button"
+							on:click={onSwitchToLogin}
+							class="font-medium text-blue-400 hover:text-blue-300"
+						>
+							Sign in here
+						</button>
+					</p>
+				</div>
+			{/if}
+		</div>
+	</svelte:fragment>
+</EditModal>

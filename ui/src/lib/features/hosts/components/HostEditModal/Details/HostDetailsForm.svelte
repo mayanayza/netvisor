@@ -11,6 +11,7 @@
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
+	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 
 	export let host: Host | null = null;
 	export let formApi: FormApi;
@@ -27,6 +28,10 @@
 	$: formData.name = $name.value;
 	$: formData.description = $description.value;
 	$: formData.hostname = $hostname.value;
+
+	// Track network_id separately to force reactivity
+	let selectedNetworkId = formData.network_id;
+	$: formData.network_id = selectedNetworkId;
 </script>
 
 <div class="space-y-6 p-6">
@@ -48,6 +53,8 @@
 			field={hostname}
 		/>
 	</div>
+
+	<SelectNetwork bind:selectedNetworkId />
 
 	<TextArea
 		label="Description"

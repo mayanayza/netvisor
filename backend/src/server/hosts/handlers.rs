@@ -1,3 +1,4 @@
+use crate::server::auth::extractor::{AuthenticatedEntity, AuthenticatedUser};
 use crate::server::{
     config::AppState,
     hosts::types::{api::HostWithServicesRequest, base::Host},
@@ -6,13 +7,13 @@ use crate::server::{
 };
 use axum::{
     Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     response::Json,
     routing::{delete, get, post, put},
 };
 use futures::future::try_join_all;
 use itertools::{Either, Itertools};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -21,15 +22,16 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/", post(create_host))
         .route("/", get(get_all_hosts))
         .route("/", put(update_host))
-        .route("/:id", delete(delete_host))
+        .route("/{id}", delete(delete_host))
         .route(
-            "/:destination_host/consolidate/:other_host",
+            "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),
         )
 }
 
 async fn create_host(
     State(state): State<Arc<AppState>>,
+    _authenticated: AuthenticatedEntity,
     Json(request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<HostWithServicesRequest>>> {
     let host_service = &state.services.host_service;
@@ -64,21 +66,27 @@ async fn create_host(
 
 async fn get_all_hosts(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<HashMap<String, String>>,
+    user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Host>>>> {
-    let network_id = params
-        .get("network_id")
-        .and_then(|id| Uuid::parse_str(id).ok())
-        .ok_or_else(|| ApiError::bad_request("network_id query parameter required"))?;
-
     let service = &state.services.host_service;
-    let hosts = service.get_all_hosts(&network_id).await?;
+
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
+        .get_all_networks(&user.0)
+        .await?
+        .iter()
+        .map(|n| n.id)
+        .collect();
+
+    let hosts = service.get_all_hosts(&network_ids).await?;
 
     Ok(Json(ApiResponse::success(hosts)))
 }
 
 async fn update_host(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Json(mut request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<Host>>> {
     let host_service = &state.services.host_service;
@@ -110,6 +118,7 @@ async fn update_host(
 
 async fn consolidate_hosts(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path((destination_host_id, other_host_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<Json<ApiResponse<Host>>> {
     let host_service = &state.services.host_service;
@@ -142,6 +151,7 @@ async fn consolidate_hosts(
 
 async fn delete_host(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.host_service;

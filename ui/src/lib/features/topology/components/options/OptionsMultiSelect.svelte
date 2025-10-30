@@ -1,6 +1,8 @@
-<script lang="ts">
+<script lang="ts" generics="T">
 	export let topologyOption: string[];
-	export let options: string[];
+	export let getOptionLabel: (option: T) => string = (option: T) => option as string;
+	export let getOptionValue: (option: T) => string = (option: T) => option as string;
+	export let options: T[];
 	export let onChange: (event: Event) => void;
 	export let title: string;
 	export let description: string;
@@ -19,9 +21,12 @@
 		on:change={onChange}
 		class="text-primary w-full rounded-md border border-gray-600 bg-gray-700 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 	>
-		{#each options as option (option)}
-			<option value={option} selected={topologyOption.includes(option)}>
-				{option}
+		{#each options as option (getOptionValue(option))}
+			<option
+				value={getOptionValue(option)}
+				selected={topologyOption.includes(getOptionValue(option))}
+			>
+				{getOptionLabel(option)}
 			</option>
 		{/each}
 	</select>

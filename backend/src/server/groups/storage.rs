@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub trait GroupStorage: Send + Sync {
     async fn create(&self, group: &Group) -> Result<Group>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Group>>;
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Group>>;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Group>>;
     async fn update(&self, group: &Group) -> Result<()>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
@@ -67,11 +67,12 @@ impl GroupStorage for PostgresGroupStorage {
         }
     }
 
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Group>> {
-        let rows = sqlx::query("SELECT * FROM groups WHERE network_id = $1 ORDER BY name ")
-            .bind(network_id)
-            .fetch_all(&self.pool)
-            .await?;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Group>> {
+        let rows =
+            sqlx::query("SELECT * FROM groups WHERE network_id = ANY($1) ORDER BY created_at ASC ")
+                .bind(network_ids)
+                .fetch_all(&self.pool)
+                .await?;
 
         let mut groups = Vec::new();
         for row in rows {
@@ -89,7 +90,7 @@ impl GroupStorage for PostgresGroupStorage {
             r#"
             UPDATE groups SET 
                 name = $2, description = $3, group_type = $4, source = $5,
-                updated_at = $6, color = $7
+                updated_at = $6, color = $7, network_id = $8
             WHERE id = $1
             "#,
         )
@@ -100,6 +101,7 @@ impl GroupStorage for PostgresGroupStorage {
         .bind(source_json)
         .bind(chrono::Utc::now())
         .bind(&group.base.color)
+        .bind(group.base.network_id)
         .execute(&self.pool)
         .await?;
 

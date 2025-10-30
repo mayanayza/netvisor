@@ -27,7 +27,7 @@ use crate::{
     },
 };
 use anyhow::{Error, anyhow};
-use axum::async_trait;
+use async_trait::async_trait;
 use chrono::Utc;
 use dhcproto::v4::{self, Decodable, Encodable, Encoder, Message, MessageType};
 use rand::{Rng, SeedableRng};
@@ -899,12 +899,20 @@ pub trait DiscoversNetworkedEntities:
         let server_target = self.as_ref().config_store.get_server_endpoint().await?;
         let session = self.as_ref().get_session().await?;
 
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
         let payload = DiscoveryUpdatePayload::from_state_and_update(session.info.clone(), update);
 
         let response = self
             .as_ref()
             .client
             .post(format!("{}/api/discovery/update", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&payload)
             .send()
             .await?;
@@ -932,6 +940,13 @@ pub trait InitiatesOwnDiscovery:
         let server_target = self.as_ref().config_store.get_server_endpoint().await?;
         let daemon_id = self.as_ref().config_store.get_id().await?;
 
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
         tracing::info!("Initiating discovery");
 
         let url = format!("{}/api/discovery/daemon-initiate", server_target);
@@ -941,6 +956,7 @@ pub trait InitiatesOwnDiscovery:
             .as_ref()
             .client
             .post(format!("{}/api/discovery/daemon-initiate", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&InitiateDiscoveryRequest { daemon_id })
             .send()
             .await?;
@@ -984,10 +1000,18 @@ pub trait CreatesDiscoveredEntities:
 
         tracing::info!("Creating host {}", host.base.name);
 
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
         let response = self
             .as_ref()
             .client
             .post(format!("{}/api/hosts", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&HostWithServicesRequest { host, services })
             .send()
             .await?;
@@ -1018,10 +1042,18 @@ pub trait CreatesDiscoveredEntities:
     async fn create_subnet(&self, subnet: &Subnet) -> Result<Subnet, Error> {
         let server_target = self.as_ref().config_store.get_server_endpoint().await?;
 
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
         let response = self
             .as_ref()
             .client
             .post(format!("{}/api/subnets", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&subnet)
             .send()
             .await?;
@@ -1052,10 +1084,18 @@ pub trait CreatesDiscoveredEntities:
     async fn create_service(&self, service: &Service) -> Result<Service, Error> {
         let server_target = self.as_ref().config_store.get_server_endpoint().await?;
 
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
         let response = self
             .as_ref()
             .client
             .post(format!("{}/api/services", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&service)
             .send()
             .await?;
@@ -1086,10 +1126,18 @@ pub trait CreatesDiscoveredEntities:
     async fn create_group(&self, group: &Group) -> Result<Group, Error> {
         let server_target = self.as_ref().config_store.get_server_endpoint().await?;
 
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
         let response = self
             .as_ref()
             .client
             .post(format!("{}/api/groups", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&group)
             .send()
             .await?;

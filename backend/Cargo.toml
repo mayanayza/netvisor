@@ -34,7 +34,7 @@ incremental = true  # Enable incremental compilation
 # Dependencies grouped by purpose for better maintainability
 [dependencies]
 # === Web Server Framework ===
-axum = "0.7.9"
+axum = "0.8.6"
 tower = "0.4.13" 
 tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "net", "time", "fs", "signal", "process"] }
@@ -53,7 +53,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # === Networking ===
-reqwest = { version = "0.11", default-features = false, features = ["json", "stream", "rustls-tls"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "stream", "rustls-tls", "cookies"] }
 trust-dns-resolver = { version = "0.23", default-features = false, features = ["tokio-runtime", "dns-over-rustls"] }
 snmp2 = { version = "0.4.8", features = ["tokio"] }
 pnet = "0.35.0"
@@ -124,6 +124,19 @@ httparse = "1.10.1"
 async-stream = "0.3.6"
 serial_test = "3.2.0"
 postgres = "0.19.12"
+tower-sessions = "0.14.0"
+tower-sessions-core = "0.14.0"
+tower-sessions-memory-store = "0.14.0"
+argon2 = "0.5.3"
+password-hash = "0.5.0"
+lazy_static = "1.5.0"
+rand_core = "0.9.3"
+axum-extra = {version = "0.10.3", features = ["cookie"]}
+time = "0.3.44"
+tower-sessions-sqlx-store = { version = "0.15", features = ["postgres"] }
+secrecy = "0.10.3"
+sha2 = "0.10.9"
+hex = "0.4.3"
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]

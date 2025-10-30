@@ -19,7 +19,7 @@ use crate::server::{
         },
     },
     subnets::types::base::{Subnet, SubnetBase, SubnetType},
-    users::types::{User, UserBase},
+    users::types::base::{User, UserBase},
 };
 
 pub fn create_user() -> User {

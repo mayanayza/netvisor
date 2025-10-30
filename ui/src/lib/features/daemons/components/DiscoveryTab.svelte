@@ -14,6 +14,7 @@
 	const loading = loadData([getNetworks, getDaemons, getHosts]);
 
 	let showCreateDaemonModal = false;
+	let daemon: Daemon | null = null;
 
 	$: discoveryIsRunning = $sessions.size > 0;
 
@@ -29,10 +30,17 @@
 
 	function handleCreateDaemon() {
 		showCreateDaemonModal = true;
+		daemon = null;
 	}
 
 	function handleCloseCreateDaemon() {
 		showCreateDaemonModal = false;
+		daemon = null;
+	}
+
+	function handleGenerateApiKey(generateApiDaemon: Daemon) {
+		showCreateDaemonModal = true;
+		daemon = generateApiDaemon;
 	}
 </script>
 
@@ -69,10 +77,11 @@
 					{discoveryIsRunning}
 					onDiscovery={handleRunDiscovery}
 					onDelete={handleDeleteDaemon}
+					onGenerateApi={handleGenerateApiKey}
 				/>
 			{/each}
 		</div>
 	{/if}
 </div>
 
-<CreateDaemonModal isOpen={showCreateDaemonModal} onClose={handleCloseCreateDaemon} />
+<CreateDaemonModal isOpen={showCreateDaemonModal} onClose={handleCloseCreateDaemon} {daemon} />

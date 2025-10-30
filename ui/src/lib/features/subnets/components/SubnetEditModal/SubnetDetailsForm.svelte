@@ -9,6 +9,7 @@
 	import { isContainerSubnet } from '../../store';
 	import type { Subnet } from '../../types/base';
 	import { get } from 'svelte/store';
+	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Subnet;
@@ -22,6 +23,10 @@
 	$: formData.name = $name.value;
 	$: formData.description = $description.value;
 	$: formData.cidr = $cidr.value;
+
+	// Track network_id separately to force reactivity
+	let selectedNetworkId = formData.network_id;
+	$: formData.network_id = selectedNetworkId;
 </script>
 
 <!-- Basic Information -->
@@ -48,15 +53,19 @@
 		field={cidr}
 	/>
 
+	<SelectNetwork bind:selectedNetworkId />
+
 	<!-- Subnet Type -->
-	<label for="subnet_type" class="text-secondary mb-2 block text-sm font-medium">
-		Network Type
-	</label>
-	<select id="subnet_type" bind:value={formData.subnet_type} class="input-field">
-		{#each subnetTypes.getItems() as subnet_type (subnet_type.id)}
-			<option class="select-option" value={subnet_type.id}>{subnet_type.name}</option>
-		{/each}
-	</select>
+	<div>
+		<label for="subnet_type" class="text-secondary mb-2 block text-sm font-medium">
+			Subnet Type
+		</label>
+		<select id="subnet_type" bind:value={formData.subnet_type} class="input-field">
+			{#each subnetTypes.getItems() as subnet_type (subnet_type.id)}
+				<option class="select-option" value={subnet_type.id}>{subnet_type.name}</option>
+			{/each}
+		</select>
+	</div>
 
 	<TextArea
 		label="Description"

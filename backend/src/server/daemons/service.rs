@@ -45,9 +45,14 @@ impl DaemonService {
         self.daemon_storage.get_by_host_id(host_id).await
     }
 
+    /// Get daemon by API key hash
+    pub async fn get_daemon_by_api_key(&self, api_key: &str) -> Result<Option<Daemon>> {
+        self.daemon_storage.get_by_api_key(api_key).await
+    }
+
     /// Get all registered daemons
-    pub async fn get_all_daemons(&self, network_id: &Uuid) -> Result<Vec<Daemon>> {
-        self.daemon_storage.get_all(network_id).await
+    pub async fn get_all_daemons(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>> {
+        self.daemon_storage.get_all(network_ids).await
     }
 
     /// Update daemon

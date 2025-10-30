@@ -1,18 +1,25 @@
-import { derived, get, writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
-import type { Daemon } from './types/base';
+import type { Daemon, GenerateApiRequest } from './types/base';
 import type { DiscoveryUpdatePayload } from '../discovery/types/api';
-import { currentNetwork } from '../networks/store';
 
 export const daemons = writable<Daemon[]>([]);
 
 export async function getDaemons() {
-	return await api.request<Daemon[]>(
-		`/daemons?network_id=${get(currentNetwork).id}`,
-		daemons,
+	return await api.request<Daemon[]>(`/daemons`, daemons, (daemons) => daemons, { method: 'GET' });
+}
+
+export async function generateApiKey(data: GenerateApiRequest) {
+	const response = await api.request<string, void>(
+		`/daemons/generate_api_key`,
+		null,
 		(daemons) => daemons,
-		{ method: 'GET' }
+		{ method: 'POST', body: JSON.stringify(data) }
 	);
+
+	if (response && response?.success && response.data) {
+		return response.data;
+	}
 }
 
 export async function deleteDaemon(id: string) {

@@ -2,8 +2,8 @@
 	import { X, Loader2 } from 'lucide-svelte';
 	import { cancelDiscovery, cancelling, sessions } from '$lib/features/discovery/store';
 	import type { DiscoveryUpdatePayload } from '$lib/features/discovery/types/api';
-	import type { Daemon } from '../daemons/types/base';
-	import { getDaemonIsRunningDiscovery } from '../daemons/store';
+	import type { Daemon } from '../types/base';
+	import { getDaemonIsRunningDiscovery } from '../store';
 
 	export let daemon: Daemon;
 	export let discoveryData: DiscoveryUpdatePayload | null = null;

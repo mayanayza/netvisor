@@ -1,14 +1,16 @@
 use crate::server::{
-    daemons::service::DaemonService, groups::service::GroupService, hosts::service::HostService,
-    networks::service::NetworkService, services::service::ServiceService,
-    shared::types::storage::StorageFactory, subnets::service::SubnetService,
-    topology::service::main::TopologyService, users::service::UserService,
+    auth::service::AuthService, daemons::service::DaemonService, groups::service::GroupService,
+    hosts::service::HostService, networks::service::NetworkService,
+    services::service::ServiceService, shared::types::storage::StorageFactory,
+    subnets::service::SubnetService, topology::service::main::TopologyService,
+    users::service::UserService,
 };
 use anyhow::Result;
 use std::sync::Arc;
 
 pub struct ServiceFactory {
     pub user_service: Arc<UserService>,
+    pub auth_service: Arc<AuthService>,
     pub network_service: Arc<NetworkService>,
     pub host_service: Arc<HostService>,
     pub group_service: Arc<GroupService>,
@@ -19,10 +21,7 @@ pub struct ServiceFactory {
 }
 
 impl ServiceFactory {
-    pub async fn new(
-        storage: &StorageFactory,
-        integrated_daemon_url: Option<String>,
-    ) -> Result<Self> {
+    pub async fn new(storage: &StorageFactory) -> Result<Self> {
         let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
         let group_service = Arc::new(GroupService::new(storage.host_groups.clone()));
 
@@ -55,15 +54,16 @@ impl ServiceFactory {
             storage.networks.clone(),
             host_service.clone(),
             subnet_service.clone(),
-            integrated_daemon_url,
         ));
         let user_service = Arc::new(UserService::new(
             storage.users.clone(),
             network_service.clone(),
         ));
+        let auth_service = Arc::new(AuthService::new(user_service.clone()));
 
         Ok(Self {
             user_service,
+            auth_service,
             network_service,
             host_service,
             group_service,

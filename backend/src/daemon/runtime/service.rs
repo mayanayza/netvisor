@@ -31,6 +31,11 @@ impl DaemonRuntimeService {
 
     pub async fn heartbeat(&self) -> Result<()> {
         let daemon_id = self.config_store.get_id().await?;
+        let api_key = self
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
         let interval = Duration::from_secs(self.config_store.get_heartbeat_interval().await?);
 
         let mut interval_timer = tokio::time::interval(interval);
@@ -48,6 +53,7 @@ impl DaemonRuntimeService {
                         "{}/api/daemons/{}/heartbeat",
                         server_target, daemon_id
                     ))
+                    .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
 
@@ -83,14 +89,6 @@ impl DaemonRuntimeService {
         // Ensure network_id is stored
         self.config_store.set_network_id(network_id).await?;
 
-        tracing::info!("Verifying server connectivity...");
-        let server_endpoint = self.config_store.get_server_endpoint().await?;
-        let test_response = reqwest::Client::new()
-            .get(format!("{}/api/health", server_endpoint))
-            .send()
-            .await?;
-        tracing::info!("Server health check: {}", test_response.status());
-
         let daemon_id = self.config_store.get_id().await?;
         let has_docker_client = self.utils.get_own_docker_socket().await?;
 
@@ -102,6 +100,8 @@ impl DaemonRuntimeService {
 
         tracing::info!("Registering with server...");
 
+        self.register_with_server(daemon_id, network_id).await?;
+
         // Run self-discovery
         let discovery = Discovery::new(
             discovery_service.clone(),
@@ -109,16 +109,6 @@ impl DaemonRuntimeService {
             SelfReportDiscovery::default(),
         );
         discovery.run_self_report_discovery().await?;
-
-        let host_id = self
-            .config_store
-            .get_host_id()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Host ID not set after self-report"))?;
-
-        // Register with server
-        self.register_with_server(host_id, daemon_id, network_id)
-            .await?;
 
         // If has Docker, discover Docker services
         if has_docker_client {
@@ -131,22 +121,12 @@ impl DaemonRuntimeService {
     }
 
     /// Register daemon with server and return assigned ID
-    pub async fn register_with_server(
-        &self,
-        host_id: Uuid,
-        daemon_id: Uuid,
-        network_id: Uuid,
-    ) -> Result<()> {
+    pub async fn register_with_server(&self, daemon_id: Uuid, network_id: Uuid) -> Result<()> {
         let daemon_ip = self.utils.get_own_ip_address()?;
         let daemon_port = self.config_store.get_port().await?;
-        tracing::info!(
-            "Registering daemon with ID: {}, host ID: {:?}",
-            daemon_id,
-            host_id
-        );
+        tracing::info!("Registering daemon with ID: {}", daemon_id,);
         let registration_request = DaemonRegistrationRequest {
             daemon_id,
-            host_id,
             network_id,
             daemon_ip,
             daemon_port,
@@ -178,15 +158,16 @@ impl DaemonRuntimeService {
             anyhow::bail!("Registration failed: {}", error_msg);
         }
 
-        let daemon_id = api_response
+        let response = api_response
             .data
-            .ok_or_else(|| anyhow::anyhow!("No daemon data in successful response"))?
-            .daemon
-            .id;
+            .ok_or_else(|| anyhow::anyhow!("No daemon data in successful response"))?;
+
+        self.config_store.set_api_key(response.api_key).await?;
+        self.config_store.set_host_id(response.host_id).await?;
 
         tracing::info!(
             "Successfully registered with server, assigned ID: {}",
-            daemon_id
+            response.daemon.id
         );
 
         Ok(())

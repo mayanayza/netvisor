@@ -22,6 +22,7 @@ pub struct CliArgs {
     pub log_level: Option<String>,
     pub heartbeat_interval: Option<u64>,
     pub concurrent_scans: Option<usize>,
+    pub daemon_api_key: Option<String>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
@@ -44,6 +45,7 @@ pub struct AppConfig {
     pub id: Uuid,
     pub last_heartbeat: Option<chrono::DateTime<chrono::Utc>>,
     pub host_id: Option<Uuid>,
+    pub daemon_api_key: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -60,6 +62,7 @@ impl Default for AppConfig {
             id: Uuid::new_v4(),
             last_heartbeat: None,
             host_id: None,
+            daemon_api_key: None,
             concurrent_scans: 15,
         }
     }
@@ -114,6 +117,9 @@ impl AppConfig {
         }
         if let Some(concurrent_scans) = cli_args.concurrent_scans {
             figment = figment.merge(("concurrent_scans", concurrent_scans));
+        }
+        if let Some(daemon_api_key) = cli_args.daemon_api_key {
+            figment = figment.merge(("daemon_api_key", daemon_api_key));
         }
 
         let config: AppConfig = figment
@@ -197,6 +203,17 @@ impl ConfigStore {
     pub async fn set_id(&self, id: Uuid) -> Result<()> {
         let mut config = self.config.write().await;
         config.id = id;
+        self.save(&config.clone()).await
+    }
+
+    pub async fn get_api_key(&self) -> Result<Option<String>> {
+        let config = self.config.read().await;
+        Ok(config.daemon_api_key.clone())
+    }
+
+    pub async fn set_api_key(&self, api_key: String) -> Result<()> {
+        let mut config = self.config.write().await;
+        config.daemon_api_key = Some(api_key);
         self.save(&config.clone()).await
     }
 

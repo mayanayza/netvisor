@@ -1,5 +1,4 @@
-use std::process::{Child, Command};
-
+use netvisor::server::auth::types::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::types::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::types::base::Daemon;
 use netvisor::server::discovery::types::api::InitiateDiscoveryRequest;
@@ -8,14 +7,18 @@ use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::types::base::Service;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
-use netvisor::server::users::types::User;
+use netvisor::server::users::types::base::User;
+use std::process::{Child, Command};
 use uuid::Uuid;
+
+const BASE_URL: &str = "http://localhost:60072";
+const TEST_USERNAME: &str = "testuser";
+const TEST_PASSWORD: &str = "TestPassword123!";
 
 struct ContainerManager {
     container_process: Option<Child>,
 }
 
-/// Container lifecycle management
 impl ContainerManager {
     fn new() -> Self {
         Self {
@@ -26,8 +29,6 @@ impl ContainerManager {
     fn start(&mut self) -> Result<(), String> {
         println!("Starting containers with docker compose...");
 
-        // Start containers and wait for them to be healthy
-        // Don't use -d, let docker compose wait for health before returning
         let status = Command::new("docker")
             .args([
                 "compose",
@@ -35,7 +36,7 @@ impl ContainerManager {
                 "docker-compose.dev.yml",
                 "up",
                 "--build",
-                "--wait", // Wait for services to be healthy before returning
+                "--wait",
             ])
             .current_dir("..")
             .status()
@@ -52,46 +53,22 @@ impl ContainerManager {
     fn cleanup(&mut self) {
         println!("\nCleaning up containers...");
 
-        // Kill the spawned process
         if let Some(mut process) = self.container_process.take() {
             let _ = process.kill();
             let _ = process.wait();
         }
 
-        // Stop all containers with make dev-down
-        let cleanup_output = Command::new("make")
+        let _ = Command::new("make")
             .arg("dev-down")
             .current_dir("..")
-            .output()
-            .expect("Failed to run make dev-down");
+            .output();
 
-        if !cleanup_output.status.success() {
-            eprintln!(
-                "make dev-down failed: {}",
-                String::from_utf8_lossy(&cleanup_output.stderr)
-            );
-        }
-
-        // Additional safety: force kill any remaining containers
-        let docker_cleanup = Command::new("docker")
+        let _ = Command::new("docker")
             .args(["compose", "down", "-v", "--remove-orphans"])
             .current_dir("..")
             .output();
 
-        match docker_cleanup {
-            Ok(output) if output.status.success() => {
-                println!("✅ All containers cleaned up successfully");
-            }
-            Ok(output) => {
-                eprintln!(
-                    "docker compose down warning: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                );
-            }
-            Err(e) => {
-                eprintln!("Failed to run docker compose down: {}", e);
-            }
-        }
+        println!("✅ All containers cleaned up successfully");
     }
 }
 
@@ -101,12 +78,131 @@ impl Drop for ContainerManager {
     }
 }
 
+/// Test client with authentication
+struct TestClient {
+    client: reqwest::Client,
+}
+
+impl TestClient {
+    fn new() -> Self {
+        Self {
+            client: reqwest::Client::builder()
+                .cookie_store(true)
+                .build()
+                .unwrap(),
+        }
+    }
+
+    /// Register a new user and automatically login
+    async fn register(&self, username: &str, password: &str) -> Result<User, String> {
+        let register_request = RegisterRequest {
+            username: username.to_string(),
+            password: password.to_string(),
+        };
+
+        let response = self
+            .client
+            .post(format!("{}/api/auth/register", BASE_URL))
+            .json(&register_request)
+            .send()
+            .await
+            .map_err(|e| format!("Registration request failed: {}", e))?;
+
+        self.parse_response(response, "register user").await
+    }
+
+    /// Login with existing credentials
+    async fn login(&self, username: &str, password: &str) -> Result<User, String> {
+        let login_request = LoginRequest {
+            name: username.to_string(),
+            password: password.to_string(),
+        };
+
+        let response = self
+            .client
+            .post(format!("{}/api/auth/login", BASE_URL))
+            .json(&login_request)
+            .send()
+            .await
+            .map_err(|e| format!("Login request failed: {}", e))?;
+
+        self.parse_response(response, "login").await
+    }
+
+    /// Generic GET request
+    async fn get<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T, String> {
+        let response = self
+            .client
+            .get(format!("{}{}", BASE_URL, path))
+            .send()
+            .await
+            .map_err(|e| format!("GET {} failed: {}", path, e))?;
+
+        self.parse_response(response, &format!("GET {}", path))
+            .await
+    }
+
+    /// Generic POST request
+    async fn post<T: serde::de::DeserializeOwned, B: serde::Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, String> {
+        let response = self
+            .client
+            .post(format!("{}{}", BASE_URL, path))
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| format!("POST {} failed: {}", path, e))?;
+
+        self.parse_response(response, &format!("POST {}", path))
+            .await
+    }
+
+    /// Parse API response
+    async fn parse_response<T: serde::de::DeserializeOwned>(
+        &self,
+        response: reqwest::Response,
+        operation: &str,
+    ) -> Result<T, String> {
+        let status = response.status();
+
+        if !status.is_success() {
+            let body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Could not read body".to_string());
+            return Err(format!(
+                "{} failed with status {}: {}",
+                operation, status, body
+            ));
+        }
+
+        let api_response = response
+            .json::<ApiResponse<T>>()
+            .await
+            .map_err(|e| format!("Failed to parse {} response: {}", operation, e))?;
+
+        if !api_response.success {
+            let error = api_response
+                .error
+                .unwrap_or_else(|| "Unknown error".to_string());
+            return Err(format!("{} returned error: {}", operation, error));
+        }
+
+        api_response
+            .data
+            .ok_or_else(|| format!("No data in {} response", operation))
+    }
+}
+
 /// Generic retry helper with exponential backoff
-async fn retry_api_request<T, F, Fut>(
+async fn retry<T, F, Fut>(
     description: &str,
     max_retries: u32,
-    initial_delay_secs: u64,
-    request_fn: F,
+    delay_secs: u64,
+    operation: F,
 ) -> Result<T, String>
 where
     F: Fn() -> Fut,
@@ -115,243 +211,100 @@ where
     let mut last_error = String::new();
 
     for attempt in 1..=max_retries {
-        println!("Attempt {}/{} to {}...", attempt, max_retries, description);
-
-        match request_fn().await {
+        match operation().await {
             Ok(result) => {
-                println!("✅ Successfully {}", description);
+                println!("✅ {}", description);
                 return Ok(result);
             }
             Err(e) => {
-                println!("⏳ {}: {}", description, e);
+                if attempt < max_retries {
+                    println!(
+                        "⏳ Attempt {}/{}: {} - {}",
+                        attempt, max_retries, description, e
+                    );
+                    tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+                }
                 last_error = e;
             }
         }
-
-        if attempt < max_retries {
-            tokio::time::sleep(tokio::time::Duration::from_secs(initial_delay_secs)).await;
-        }
     }
 
-    Err(last_error)
+    Err(format!("{}: {}", description, last_error))
 }
 
-async fn check_user_created(client: &reqwest::Client) -> Result<User, String> {
-    let user = retry_api_request("check network exists", 15, 2, || {
-        let client = client.clone();
+async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
+    println!("\n=== Authenticating Test User ===");
 
-        async move {
-            let response = client
-                .get("http://localhost:60072/api/users")
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let body = response
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Could not read body".to_string());
-                return Err(format!("Status {}: {}", status, body));
-            }
-
-            let api_response = response
-                .json::<ApiResponse<Vec<User>>>()
-                .await
-                .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-            if !api_response.success {
-                let error = api_response
-                    .error
-                    .unwrap_or_else(|| "Unknown error".to_string());
-                return Err(format!("API returned success=false: {}", error));
-            }
-
-            let users = api_response
-                .data
-                .ok_or_else(|| "No data in response".to_string())?;
-
-            if let Some(user) = users.first() {
-                println!("✅ Found {}", user);
-                return Ok(user.clone());
-            }
-            Err("Failed to find user".to_string())
+    // Try to register (will fail if user exists, which is fine)
+    match client.register(TEST_USERNAME, TEST_PASSWORD).await {
+        Ok(user) => {
+            println!("✅ Registered new user: {}", user.base.username);
+            Ok(user)
         }
-    })
-    .await?;
-
-    Ok(user.clone())
-}
-
-async fn check_network_created(client: &reqwest::Client, user_id: Uuid) -> Result<Network, String> {
-    let network = retry_api_request("check network exists", 15, 2, || {
-        let client = client.clone();
-
-        async move {
-            let response = client
-                .get(format!(
-                    "http://localhost:60072/api/networks?user_id={}",
-                    user_id
-                ))
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let body = response
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Could not read body".to_string());
-                return Err(format!("Status {}: {}", status, body));
-            }
-
-            let api_response = response
-                .json::<ApiResponse<Vec<Network>>>()
-                .await
-                .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-            if !api_response.success {
-                let error = api_response
-                    .error
-                    .unwrap_or_else(|| "Unknown error".to_string());
-                return Err(format!("API returned success=false: {}", error));
-            }
-
-            let networks = api_response
-                .data
-                .ok_or_else(|| "No data in response".to_string())?;
-
-            if let Some(network) = networks.first() {
-                println!("✅ Found {}", network);
-                return Ok(network.clone());
-            }
-            Err("Failed to find network".to_string())
+        Err(e) if e.contains("already taken") => {
+            // User exists, just login
+            println!("User already exists, logging in...");
+            client.login(TEST_USERNAME, TEST_PASSWORD).await
         }
-    })
-    .await?;
-
-    Ok(network.clone())
-}
-
-/// Verify daemon is registered
-async fn check_daemon_registered(
-    client: &reqwest::Client,
-    network_id: Uuid,
-) -> Result<Daemon, String> {
-    let daemons = retry_api_request("check daemon registration", 15, 2, || {
-        let client = client.clone();
-        async move {
-            let response = client
-                .get(format!(
-                    "http://localhost:60072/api/daemons?network_id={}",
-                    network_id
-                ))
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            let status = response.status();
-            if !status.is_success() {
-                let body = response
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Could not read body".to_string());
-                return Err(format!("Status {}: {}", status, body));
-            }
-
-            let api_response = response
-                .json::<ApiResponse<Vec<Daemon>>>()
-                .await
-                .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-            if !api_response.success {
-                let error = api_response
-                    .error
-                    .unwrap_or_else(|| "Unknown error".to_string());
-                return Err(format!("API returned success=false: {}", error));
-            }
-
-            let daemon_list = api_response
-                .data
-                .ok_or_else(|| "No data in response".to_string())?;
-
-            if daemon_list.is_empty() {
-                return Err("No daemons registered yet".to_string());
-            }
-
-            println!("✅ Found {} daemon(s) registered", daemon_list.len());
-            Ok(daemon_list)
-        }
-    })
-    .await?;
-
-    if daemons.len() != 1 {
-        return Err(format!(
-            "Expected 1 daemon to be registered, found {}",
-            daemons.len()
-        ));
+        Err(e) => Err(e),
     }
-
-    Ok(daemons.into_iter().next().unwrap())
 }
 
-/// Start discovery and wait for it to complete using SSE
-async fn run_discovery_and_wait(client: &reqwest::Client, daemon_id: Uuid) -> Result<(), String> {
-    // Initiate discovery
+async fn wait_for_network(client: &TestClient) -> Result<Network, String> {
+    retry("wait for network to be created", 15, 2, || async {
+        let networks: Vec<Network> = client.get("/api/networks").await?;
+
+        networks
+            .first()
+            .cloned()
+            .ok_or_else(|| "No networks found yet".to_string())
+    })
+    .await
+}
+
+async fn wait_for_daemon(client: &TestClient, network_id: Uuid) -> Result<Daemon, String> {
+    retry("wait for daemon registration", 15, 2, || async {
+        let daemons: Vec<Daemon> = client
+            .get(&format!("/api/daemons?network_id={}", network_id))
+            .await?;
+
+        if daemons.is_empty() {
+            return Err("No daemons registered yet".to_string());
+        }
+
+        if daemons.len() != 1 {
+            return Err(format!("Expected 1 daemon, found {}", daemons.len()));
+        }
+
+        Ok(daemons.into_iter().next().unwrap())
+    })
+    .await
+}
+
+async fn run_discovery(client: &TestClient, daemon_id: Uuid) -> Result<(), String> {
     println!("\n=== Starting Discovery ===");
-    let response = client
-        .post("http://localhost:60072/api/discovery/initiate")
-        .json(&InitiateDiscoveryRequest { daemon_id })
-        .send()
-        .await
-        .map_err(|e| format!("Failed to initiate discovery: {}", e))?;
 
-    let status = response.status();
-
-    if !status.is_success() {
-        let body = &response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Could not read body".to_string());
-        return Err(format!(
-            "Discovery initiation failed with status {}: {}",
-            status, body
-        ));
-    }
-
-    let api_response = response
-        .json::<ApiResponse<DiscoveryUpdatePayload>>()
-        .await
-        .map_err(|e| format!("Failed to parse discovery response: {}", e))?;
-
-    if !api_response.success {
-        let error = api_response
-            .error
-            .unwrap_or_else(|| "Unknown error".to_string());
-        return Err(format!("Discovery initiation returned error: {}", error));
-    }
-
-    let initial_update = api_response
-        .data
-        .ok_or_else(|| "No session data in response".to_string())?;
+    let initial_update: DiscoveryUpdatePayload = client
+        .post(
+            "/api/discovery/initiate",
+            &InitiateDiscoveryRequest { daemon_id },
+        )
+        .await?;
 
     let session_id = initial_update.session_id;
     println!("✅ Discovery session started: {}", session_id);
 
-    // Connect to SSE stream and wait for completion
+    // Connect to SSE stream
     println!("🔌 Connecting to SSE stream...");
 
     let mut event_source = client
-        .get("http://localhost:60072/api/discovery/stream")
+        .client
+        .get(format!("{}/api/discovery/stream", BASE_URL))
         .send()
         .await
-        .map_err(|e| format!("Failed to connect to SSE stream: {}", e))?;
+        .map_err(|e| format!("Failed to connect to SSE: {}", e))?;
 
-    // Set a timeout for the entire discovery process
-    let timeout_duration = tokio::time::Duration::from_secs(300); // 5 minutes
-    let timeout = tokio::time::sleep(timeout_duration);
+    let timeout = tokio::time::sleep(tokio::time::Duration::from_secs(300));
     tokio::pin!(timeout);
 
     loop {
@@ -359,146 +312,73 @@ async fn run_discovery_and_wait(client: &reqwest::Client, daemon_id: Uuid) -> Re
             _ = &mut timeout => {
                 return Err("Discovery timed out after 5 minutes".to_string());
             }
-
             chunk = event_source.chunk() => {
                 match chunk {
                     Ok(Some(bytes)) => {
-                        // Parse SSE data
                         let text = String::from_utf8_lossy(&bytes);
 
-                        // SSE format: "data: {json}\n\n"
                         for line in text.lines() {
                             if let Some(data) = line.strip_prefix("data: ") {
-                                match serde_json::from_str::<DiscoveryUpdatePayload>(data) {
-                                    Ok(update) => {
-                                        // Only process updates for our session
-                                        if update.session_id != session_id {
-                                            continue;
-                                        }
-
-                                        println!(
-                                            "📊 Discovery progress: {} - {}/{} scanned, {} discovered",
-                                            update.phase,
-                                            update.completed,
-                                            update.total,
-                                            update.discovered_count
-                                        );
-
-                                        // Check if discovery is complete
-                                        if update.finished_at.is_some() {
-                                            if let Some(error) = &update.error {
-                                                return Err(format!("Discovery failed: {}", error));
-                                            }
-                                            println!("✅ Discovery completed successfully!");
-                                            println!("   Total scanned: {}", update.completed);
-                                            println!("   Hosts discovered: {}", update.discovered_count);
-                                            return Ok(());
-                                        }
+                                if let Ok(update) = serde_json::from_str::<DiscoveryUpdatePayload>(data) {
+                                    if update.session_id != session_id {
+                                        continue;
                                     }
-                                    Err(e) => {
-                                        eprintln!("⚠️  Failed to parse SSE update: {} - Data: {}", e, data);
+
+                                    println!(
+                                        "📊 Discovery: {} - {}/{} scanned, {} discovered",
+                                        update.phase,
+                                        update.completed,
+                                        update.total,
+                                        update.discovered_count
+                                    );
+
+                                    if update.finished_at.is_some() {
+                                        if let Some(error) = &update.error {
+                                            return Err(format!("Discovery failed: {}", error));
+                                        }
+                                        println!("✅ Discovery completed!");
+                                        println!("   Total scanned: {}", update.completed);
+                                        println!("   Hosts discovered: {}", update.discovered_count);
+                                        return Ok(());
                                     }
                                 }
                             }
                         }
                     }
-                    Ok(None) => {
-                        return Err("SSE stream ended unexpectedly".to_string());
-                    }
-                    Err(e) => {
-                        return Err(format!("Error reading SSE stream: {}", e));
-                    }
+                    Ok(None) => return Err("SSE stream ended unexpectedly".to_string()),
+                    Err(e) => return Err(format!("Error reading SSE: {}", e)),
                 }
             }
         }
     }
 }
 
-/// Check for Home Assistant service
-async fn check_for_home_assistant_service(
-    client: &reqwest::Client,
+async fn verify_home_assistant_discovered(
+    client: &TestClient,
     network_id: Uuid,
 ) -> Result<Service, String> {
-    println!("\n=== Checking for Home Assistant Service ===");
+    println!("\n=== Verifying Home Assistant Discovery ===");
 
-    let services = retry_api_request("fetch services", 10, 2, || {
-        let client = client.clone();
-        async move {
-            let response = client
-                .get(format!(
-                    "http://localhost:60072/api/services?network_id={}",
-                    network_id
-                ))
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
+    retry("find Home Assistant service", 10, 2, || async {
+        let services: Vec<Service> = client
+            .get(&format!("/api/services?network_id={}", network_id))
+            .await?;
 
-            let status = response.status();
-            if !status.is_success() {
-                let body = response
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Could not read body".to_string());
-                return Err(format!("Status {}: {}", status, body));
-            }
-
-            let api_response = response
-                .json::<ApiResponse<Vec<Service>>>()
-                .await
-                .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-            if !api_response.success {
-                let error = api_response
-                    .error
-                    .unwrap_or_else(|| "Unknown error".to_string());
-                return Err(format!("API returned success=false: {}", error));
-            }
-
-            let service_list = api_response
-                .data
-                .ok_or_else(|| "No data in response".to_string())?;
-
-            if service_list.is_empty() {
-                return Err("No services found yet".to_string());
-            }
-
-            println!(
-                "✅ Found {} service(s): {:?}",
-                service_list.len(),
-                service_list
-                    .iter()
-                    .map(|s| s.base.name.clone())
-                    .collect::<Vec<String>>()
-            );
-            Ok(service_list)
+        if services.is_empty() {
+            return Err("No services found yet".to_string());
         }
+
+        println!("✅ Found {} service(s)", services.len());
+
+        services
+            .into_iter()
+            .find(|s| s.base.service_definition.id() == HomeAssistant.id())
+            .ok_or_else(|| "Home Assistant service not found".to_string())
     })
-    .await?;
-
-    // Find Home Assistant service
-    let home_assistant_service = services
-        .clone()
-        .into_iter()
-        .find(|s| s.base.service_definition.id() == HomeAssistant.id())
-        .ok_or_else(|| {
-            format!(
-                "Home Assistant service not found. Available services: {:?}",
-                services.iter().map(|s| &s.base.name).collect::<Vec<_>>()
-            )
-        })?;
-
-    println!(
-        "✅ Found Home Assistant service: {:?}",
-        home_assistant_service.base.name
-    );
-
-    Ok(home_assistant_service)
+    .await
 }
 
-async fn generate_fixtures_from_test_data() -> Result<(), Box<dyn std::error::Error>> {
-    // This test should run AFTER all other integration tests
-    // The database now contains all the data created during test runs
-
+async fn generate_fixtures() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
             "exec",
@@ -525,60 +405,59 @@ async fn generate_fixtures_from_test_data() -> Result<(), Box<dyn std::error::Er
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tests/netvisor-next.sql");
     std::fs::write(&fixture_path, output.stdout)?;
 
-    println!("✓ Generated netvisor-next.sql from integration test database");
-
+    println!("✅ Generated netvisor-next.sql from test data");
     Ok(())
 }
 
 #[tokio::test]
-async fn test_container_daemon_server_integration() {
+async fn test_full_integration() {
     // Start containers
     let mut container_manager = ContainerManager::new();
     container_manager
         .start()
         .expect("Failed to start containers");
 
-    let client = reqwest::Client::new();
+    let client = TestClient::new();
 
-    println!("\n=== Step 0: Checking User ===");
-    let user = check_user_created(&client)
+    // Authenticate
+    let user = setup_authenticated_user(&client)
         .await
-        .expect("Failed to verify user");
-    println!("User: {}", user);
+        .expect("Failed to authenticate user");
+    println!("✅ Authenticated as: {}", user.base.username);
 
-    println!("\n=== Step 1: Checking Network ===");
-    let network = check_network_created(&client, user.id)
+    // Wait for network
+    println!("\n=== Waiting for Network ===");
+    let network = wait_for_network(&client)
         .await
-        .expect("Failed to verify network");
-    println!("Network: {}", network);
+        .expect("Failed to find network");
+    println!("✅ Network: {}", network.base.name);
 
-    // Step 1: Check daemon registration
-    println!("\n=== Step 1: Checking Daemon Registration ===");
-    let daemon = check_daemon_registered(&client, network.id)
+    // Wait for daemon
+    println!("\n=== Waiting for Daemon ===");
+    let daemon = wait_for_daemon(&client, network.id)
         .await
-        .expect("Failed to verify daemon registration");
-    println!("Daemon: {}", daemon);
+        .expect("Failed to find daemon");
+    println!("✅ Daemon registered: {}", daemon.id);
 
-    // Step 2: Run discovery and wait for completion
-    println!("\n=== Step 2: Running Discovery ===");
-    run_discovery_and_wait(&client, daemon.id)
+    // Run discovery
+    run_discovery(&client, daemon.id)
         .await
         .expect("Discovery failed");
 
-    // Step 3: Verify Home Assistant service was discovered
-    println!("\n=== Step 3: Verifying Service Discovery ===");
-    let _service = check_for_home_assistant_service(&client, network.id)
+    // Verify service discovered
+    let _service = verify_home_assistant_discovered(&client, network.id)
         .await
-        .expect("Failed to find Home Assistant service");
+        .expect("Failed to find Home Assistant");
 
-    generate_fixtures_from_test_data()
+    // Generate fixtures
+    generate_fixtures()
         .await
-        .expect("Failed to generate test fixtures");
+        .expect("Failed to generate fixtures");
 
     println!("\n✅ All integration tests passed!");
-    println!("   ✓ Daemon registered successfully");
-    println!("   ✓ Discovery completed successfully");
-    println!("   ✓ Home Assistant service discovered");
-
-    // Cleanup happens automatically via Drop trait
+    println!("   ✓ User authenticated");
+    println!("   ✓ Network created");
+    println!("   ✓ Daemon registered");
+    println!("   ✓ Discovery completed");
+    println!("   ✓ Home Assistant discovered");
 }

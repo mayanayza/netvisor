@@ -1,7 +1,7 @@
 use std::{fmt::Display, net::IpAddr};
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,6 +10,19 @@ pub struct DaemonBase {
     pub network_id: Uuid,
     pub ip: IpAddr,
     pub port: u16,
+    #[serde(serialize_with = "serialize_api_key_status")]
+    pub api_key: Option<String>,
+}
+
+fn serialize_api_key_status<S>(key: &Option<String>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if key.is_none() {
+        serializer.serialize_none()
+    } else {
+        serializer.serialize_str("***REDACTED***")
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

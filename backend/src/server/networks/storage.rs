@@ -10,7 +10,7 @@ use crate::server::networks::types::NetworkBase;
 
 #[async_trait]
 pub trait NetworkStorage: Send + Sync {
-    async fn create(&self, network: &Network) -> Result<()>;
+    async fn create(&self, network: &Network) -> Result<Network>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Network>>;
     async fn get_all(&self, user_id: &Uuid) -> Result<Vec<Network>>;
     async fn update(&self, group: &Network) -> Result<()>;
@@ -29,7 +29,7 @@ impl PostgresNetworkStorage {
 
 #[async_trait]
 impl NetworkStorage for PostgresNetworkStorage {
-    async fn create(&self, network: &Network) -> Result<()> {
+    async fn create(&self, network: &Network) -> Result<Network> {
         sqlx::query(
             r#"
             INSERT INTO networks (
@@ -46,7 +46,7 @@ impl NetworkStorage for PostgresNetworkStorage {
         .execute(&self.pool)
         .await?;
 
-        Ok(())
+        Ok(network.clone())
     }
 
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Network>> {
@@ -62,7 +62,7 @@ impl NetworkStorage for PostgresNetworkStorage {
     }
 
     async fn get_all(&self, user_id: &Uuid) -> Result<Vec<Network>> {
-        let rows = sqlx::query("SELECT * FROM networks WHERE user_id = $1")
+        let rows = sqlx::query("SELECT * FROM networks WHERE user_id = $1 ORDER BY created_at ASC")
             .bind(user_id)
             .fetch_all(&self.pool)
             .await

@@ -105,22 +105,17 @@
 				</div>
 
 				<!-- Network Selection -->
-				<div class="space-y-1.5" style="display: none">
-					<label for="network-select" class="text-primary text-s block font-medium">
-						Networks
-					</label>
-					<select id="network-select" multiple on:change={handleNetworkChange} class="input-field">
-						{#each $networks as network (network.id)}
-							<option
-								class="select-option"
-								value={network.id}
-								selected={$topologyOptions.request_options.network_ids.includes(network.id)}
-							>
-								{network.name}{network.is_default ? ' (Default)' : ''}
-							</option>
-						{/each}
-					</select>
-				</div>
+				<OptionsSection title="General">
+					<OptionsMultiSelect
+						bind:topologyOption={$topologyOptions.request_options.network_ids}
+						getOptionLabel={(option) => option.name}
+						getOptionValue={(option) => option.id}
+						options={$networks}
+						onChange={handleNetworkChange}
+						title="Networks"
+						description="Select networks to show in diagram"
+					/>
+				</OptionsSection>
 
 				<OptionsSection title="Docker">
 					<OptionsCheckbox
