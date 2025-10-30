@@ -106,13 +106,13 @@
 
 			<SelectNetwork bind:selectedNetworkId></SelectNetwork>
 			
-			<div class="text-secondary mt-3">Option 1. Run the install script, then start the daemon</div>
+			<div class="text-secondary mt-3"><b>Option 1.</b> Run the install script, then start the daemon</div>
 
 			<CodeContainer language="bash" expandable={false} code={installCommand} />
 
 			<CodeContainer language="bash" expandable={false} code={runCommand} />
 
-			<div class="text-secondary mt-3">Option 2. Run this docker-compose</div>
+			<div class="text-secondary mt-3"><b>Option 2.</b> Run this docker-compose</div>
 
 			<CodeContainer
 				language="yaml"
@@ -136,7 +136,7 @@
 				/>
 			{/if}
 
-			<div class="pb-4">
+			<div class="pb-2">
 				<div class="flex items-start gap-2">
 					<button class="btn-primary flex-shrink-0 self-stretch m-1" on:click={handleGenerateApiKey}>
 						<RotateCcwKey />
@@ -147,16 +147,17 @@
 						<CodeContainer language="bash" expandable={false} code={apiKey ? apiKey : "Press Generate Key..."} />
 					</div>
 				</div>
-				<div class="text-secondary mt-2">Any existing API key will be invalidated when you generate a new key.</div>
 			</div>
+				{#if daemon.api_key && !apiKey}
+					<InlineWarning title="Any existing API key will be invalidated when you generate a new key."/>
+				{:else if apiKey}
+					<InlineWarning title="This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below."/>
 
-			{#if apiKey}
-				<span class="text-secondary">This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below.</span>
-				<div class="text-secondary mt-3">Option 1. Stop the daemon process, and use this start command</div>
-				<CodeContainer language="bash" expandable={false} code={runCommand} />
-				<div class="text-secondary mt-3">Option 2. Stop the daemon container, and add this environment variable</div>
-				<CodeContainer language="bash" expandable={false} code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`} />
-			{/if}
+					<div class="text-secondary mt-3"><b>Option 1.</b> Stop the daemon process, and use this command to start it</div>
+					<CodeContainer language="bash" expandable={false} code={runCommand} />
+					<div class="text-secondary mt-3"><b>Option 2.</b> Stop the daemon container, and add this environment variable</div>
+					<CodeContainer language="bash" expandable={false} code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`} />
+				{/if}
 		{/if}
 		
 	</div>
