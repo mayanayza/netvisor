@@ -124,10 +124,14 @@ async fn main() -> anyhow::Result<()> {
     // Create router
     let api_router = if let Some(static_path) = &web_external_path {
         Router::new()
-            .nest_service("/", 
-        ServeDir::new(&static_path)
+            .nest_service(
+                "/",
+                ServeDir::new(static_path)
                     .append_index_html_on_directories(true)
-                    .fallback(ServeFile::new(format!("{}/index.html", static_path.display())))
+                    .fallback(ServeFile::new(format!(
+                        "{}/index.html",
+                        static_path.display()
+                    ))),
             )
             .merge(create_router())
             .layer(session_store)
