@@ -62,7 +62,7 @@ impl NetworkStorage for PostgresNetworkStorage {
     }
 
     async fn get_all(&self, user_id: &Uuid) -> Result<Vec<Network>> {
-        let rows = sqlx::query("SELECT * FROM networks WHERE user_id = $1")
+        let rows = sqlx::query("SELECT * FROM networks WHERE user_id = $1 ORDER BY created_at DESC")
             .bind(user_id)
             .fetch_all(&self.pool)
             .await

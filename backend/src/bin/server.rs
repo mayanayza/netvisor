@@ -159,24 +159,27 @@ async fn main() -> anyhow::Result<()> {
         axum::serve(listener, app).await.unwrap();
     });
 
-    // First load
-    if user_service.get_all_users().await?.is_empty() {
+    let all_users = user_service.get_all_users().await?;
+
+    // First load - populate seed data
+    if all_users.is_empty() {
         tracing::info!("Populating seed data...");
         let (_, network) = user_service
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
-        notify_local_daemon(integrated_daemon_url, network.id).await?;
+        initialize_local_daemon(integrated_daemon_url, network.id).await?;
+
     } else {
         tracing::debug!("Server already has data, skipping seed data");
-    }
+    }    
 
     tokio::signal::ctrl_c().await?;
 
     Ok(())
 }
 
-pub async fn notify_local_daemon(daemon_url: String, network_id: Uuid) -> Result<(), Error> {
+pub async fn initialize_local_daemon(daemon_url: String, network_id: Uuid) -> Result<(), Error> {
     let client = reqwest::Client::new();
 
     match client

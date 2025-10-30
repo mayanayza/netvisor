@@ -4,16 +4,8 @@ use axum::{
     http::request::Parts,
     response::{IntoResponse, Response},
 };
-use sha2::{Digest, Sha256};
 use tower_sessions::Session;
 use uuid::Uuid;
-
-pub fn hash_api_key(key: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(key.as_bytes());
-    let result = hasher.finalize();
-    hex::encode(result)
-}
 
 pub struct AuthError(ApiError);
 
@@ -73,11 +65,11 @@ where
             && let Ok(auth_str) = auth_header.to_str()
             && let Some(api_key) = auth_str.strip_prefix("Bearer ")
         {
-            // Look up daemon by API key hash
+            // Look up daemon by API key
             if let Ok(Some(daemon)) = app_state
                 .services
                 .daemon_service
-                .get_daemon_by_api_key_hash(&hash_api_key(api_key))
+                .get_daemon_by_api_key(&api_key)
                 .await
             {
                 return Ok(AuthenticatedEntity::Daemon(daemon.base.network_id));

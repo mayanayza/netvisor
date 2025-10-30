@@ -8,11 +8,12 @@
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
-	import { Trash2 } from 'lucide-svelte';
+	import { AlertTriangle, Trash2 } from 'lucide-svelte';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
 	export let onDiscovery: (daemon: Daemon) => void = () => {};
+	export let onGenerateApi: (daemon: Daemon) => void = () => {};
 	export let discoveryIsRunning: boolean;
 
 	$: hostStore = getHostFromId(daemon.host_id);
@@ -55,6 +56,15 @@
 				animation: daemonIsRunningDiscovery ? 'animate-spin' : '',
 				disabled: daemonIsRunningDiscovery
 			},
+			...(!daemon.api_key 
+				? [{
+					label: 'Generate API Key',
+					icon: AlertTriangle,
+					class: 'btn-icon',
+					onClick: () => onGenerateApi(daemon)
+				}]
+				:[]
+			),
 			{
 				label: 'Delete Daemon',
 				icon: Trash2,

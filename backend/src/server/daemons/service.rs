@@ -46,8 +46,8 @@ impl DaemonService {
     }
 
     /// Get daemon by API key hash
-    pub async fn get_daemon_by_api_key_hash(&self, api_key: &str) -> Result<Option<Daemon>> {
-        self.daemon_storage.get_by_api_key_hash(api_key).await
+    pub async fn get_daemon_by_api_key(&self, api_key: &str) -> Result<Option<Daemon>> {
+        self.daemon_storage.get_by_api_key(api_key).await
     }
 
     /// Get all registered daemons

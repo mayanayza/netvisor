@@ -2,15 +2,38 @@
 	import { env } from '$env/dynamic/public';
 	import { networks } from '$lib/features/networks/store';
 	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
+	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
+	import { pushError } from '$lib/shared/stores/feedback';
 	import { entities } from '$lib/shared/stores/metadata';
 	import dockerTemplate from '$lib/templates/docker-compose.daemon.yml?raw';
+	import { writable, type Writable } from 'svelte/store';
+	import { generateApiKey } from '../store';
+	import type { Daemon } from '../types/base';
+	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
+	import { RotateCcwKey } from 'lucide-svelte';
 
 	export let isOpen = false;
 	export let onClose: () => void;
+	export let daemon: Daemon | null = null;
 
-	let selectedNetworkId: string = $networks[0].id;
+	let apiKeyStore: Writable<string | null> = writable(null)
+	$: apiKey = $apiKeyStore;
+	$: selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
+
+	async function handleGenerateApiKey() {
+		if (daemon) {
+			const generatedKey = await generateApiKey({daemon_id: daemon.id, network_id: daemon.network_id});
+			if (generatedKey) {
+				apiKeyStore.set(generatedKey)
+			} else {
+				pushError("Failed to generate API key")
+			}
+		} else {
+			pushError("No daemon provided to generate API key for")
+		}
+	}
 
 	const baseUrl = window.location.origin;
 	const parsedUrl = new URL(baseUrl);
@@ -70,16 +93,30 @@
 	<div class="space-y-4">
 		<h3 class="text-primary text-lg font-medium">Daemon Installation</h3>
 
+		{#if daemon && !daemon?.api_key}
+			<InlineWarning 
+				title="Daemon missing API key" 
+				body="This daemon does not have an API key set in its config file. \
+					Please press the button below to generate one, then use the daemon start command or relaunch\
+					the docker compose."/>
+			<button
+				class="btn-primary"
+				on:click={handleGenerateApiKey}>
+				<RotateCcwKey/>
+				<span>Generate Key</span>
+			</button>
+
+			{#if apiKey}
+				<CodeContainer language="bash" expandable={false} code={apiKey}/>
+			{/if}
+		{/if}
+
 		<!-- Network Type -->
 		{#if false}
 			<label for="group_type" class="text-secondary mb-2 block text-sm font-medium">
 				Network
 			</label>
-			<select id="network" bind:value={selectedNetworkId} class="input-field">
-				{#each $networks as network (network.id)}
-					<option class="select-option" value={network.id}>{network.name}</option>
-				{/each}
-			</select>
+			<SelectNetwork selectedNetworkId={selectedNetworkId}></SelectNetwork>
 			<p class="text-tertiary text-xs">Select the network that this daemon will report data to</p>
 		{/if}
 

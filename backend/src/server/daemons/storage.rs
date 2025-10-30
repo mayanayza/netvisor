@@ -12,7 +12,7 @@ pub trait DaemonStorage: Send + Sync {
     async fn create(&self, daemon: &Daemon) -> Result<()>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Daemon>>;
     async fn get_by_host_id(&self, host_id: &Uuid) -> Result<Option<Daemon>>;
-    async fn get_by_api_key_hash(&self, api_key: &str) -> Result<Option<Daemon>>;
+    async fn get_by_api_key(&self, api_key: &str) -> Result<Option<Daemon>>;
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>>;
     async fn update(&self, group: &Daemon) -> Result<Daemon>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
@@ -37,7 +37,7 @@ impl DaemonStorage for PostgresDaemonStorage {
             r#"
             INSERT INTO daemons (
                 id, host_id, ip, port,
-                last_seen, registered_at, network_id, api_key_hash
+                last_seen, registered_at, network_id, api_key
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
         )
@@ -48,7 +48,7 @@ impl DaemonStorage for PostgresDaemonStorage {
         .bind(chrono::Utc::now())
         .bind(chrono::Utc::now())
         .bind(daemon.base.network_id)
-        .bind(&daemon.base.api_key_hash)
+        .bind(&daemon.base.api_key)
         .execute(&self.pool)
         .await?;
 
@@ -67,9 +67,9 @@ impl DaemonStorage for PostgresDaemonStorage {
         }
     }
 
-    async fn get_by_api_key_hash(&self, api_key_hash: &str) -> Result<Option<Daemon>> {
-        let row = sqlx::query("SELECT * FROM daemons WHERE api_key_hash = $1")
-            .bind(api_key_hash)
+    async fn get_by_api_key(&self, api_key: &str) -> Result<Option<Daemon>> {
+        let row = sqlx::query("SELECT * FROM daemons WHERE api_key = $1")
+            .bind(api_key)
             .fetch_optional(&self.pool)
             .await?;
 
@@ -92,7 +92,7 @@ impl DaemonStorage for PostgresDaemonStorage {
     }
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>> {
-        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = ANY($1)")
+        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = ANY($1) ORDER BY created_at DESC")
             .bind(network_ids)
             .fetch_all(&self.pool)
             .await
@@ -153,7 +153,7 @@ fn row_to_daemon(row: sqlx::postgres::PgRow) -> Result<Daemon, Error> {
             port: row.get::<i32, _>("port").try_into().unwrap(),
             host_id: row.get("host_id"),
             network_id: row.get("network_id"),
-            api_key_hash: row.get("api_key_hash"),
+            api_key: row.get("api_key"),
         },
     })
 }

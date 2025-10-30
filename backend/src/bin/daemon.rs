@@ -60,6 +60,10 @@ struct Cli {
     /// Concurrent scans for discovery
     #[arg(long)]
     concurrent_scans: Option<usize>,
+
+    /// API key
+    #[arg(long)]
+    daemon_api_key: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -74,6 +78,7 @@ impl From<Cli> for CliArgs {
             log_level: cli.log_level,
             heartbeat_interval: cli.heartbeat_interval,
             concurrent_scans: cli.concurrent_scans,
+            daemon_api_key: cli.daemon_api_key
         }
     }
 }
@@ -107,6 +112,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server_addr = &config_store.get_server_endpoint().await?;
     let network_id = &config_store.get_network_id().await?;
+    let api_key = &config_store.get_api_key().await?;
 
     let state = DaemonAppState::new(config_store, utils).await?;
     let runtime_service = state.services.runtime_service.clone();
@@ -139,14 +145,14 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("📁 Config file: {:?}", path_str);
     tracing::info!("🔗 Server at {}", server_addr);
 
-    if let Some(network_id) = network_id {
+    if let Some(network_id) = network_id && api_key.is_some() {
         tracing::info!("Network ID available: {}", network_id);
         runtime_service
             .initialize_services(*network_id, discovery_service, discovery_manager)
             .await?;
     } else {
         tracing::info!(
-            "No network ID - waiting for request to hit /api/initialize with network_id..."
+            "Missing network ID or API key - waiting for server to hit /api/initialize..."
         );
     }
 

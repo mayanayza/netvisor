@@ -1,8 +1,8 @@
 use crate::server::{
-    auth::extractor::{AuthenticatedDaemon, AuthenticatedUser, hash_api_key},
+    auth::extractor::{AuthenticatedDaemon, AuthenticatedUser},
     config::AppState,
     daemons::types::{
-        api::{DaemonRegistrationRequest, DaemonRegistrationResponse, DaemonResponse},
+        api::{DaemonRegistrationRequest, DaemonRegistrationResponse, GenerateKeyRequest},
         base::{Daemon, DaemonBase},
     },
     hosts::types::base::{Host, HostBase},
@@ -21,10 +21,34 @@ use uuid::Uuid;
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/register", post(register_daemon))
+        .route("/generate_api_key", post(generate_api_key))
         .route("/{id}/heartbeat", put(receive_heartbeat))
         .route("/", get(get_all_daemons))
         .route("/{id}", get(get_daemon))
         .route("/{id}", delete(delete_daemon))
+}
+
+async fn generate_api_key(
+    State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
+    Json(request): Json<GenerateKeyRequest>,
+) -> ApiResult<Json<ApiResponse<String>>> {
+
+    let service = &state.services.daemon_service;
+
+    if let Some(mut daemon) = service
+        .get_daemon(&request.daemon_id).await? {
+
+            let api_key = Uuid::new_v4().simple().to_string();
+            daemon.base.api_key = Some(api_key.clone());
+            service.update_daemon(daemon.clone()).await?;
+
+            Ok(Json(ApiResponse::success(api_key)))
+    } else {
+
+        Err(ApiError::not_found(format!("Could not find daemon {}. Unable to generate API key.", request.daemon_id)))
+
+    }
 }
 
 /// Register a new daemon
@@ -54,7 +78,7 @@ async fn register_daemon(
             network_id: request.network_id,
             ip: request.daemon_ip,
             port: request.daemon_port,
-            api_key_hash: hash_api_key(&api_key),
+            api_key: Some(api_key.clone()),
         },
     );
 
@@ -121,7 +145,7 @@ async fn get_daemon(
     State(state): State<Arc<AppState>>,
     _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<DaemonResponse>>> {
+) -> ApiResult<Json<ApiResponse<Daemon>>> {
     let service = &state.services.daemon_service;
 
     let daemon = service
@@ -130,7 +154,7 @@ async fn get_daemon(
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
         .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
 
-    Ok(Json(ApiResponse::success(DaemonResponse { daemon })))
+    Ok(Json(ApiResponse::success( daemon)))
 }
 
 async fn delete_daemon(

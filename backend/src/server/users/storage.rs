@@ -62,7 +62,7 @@ impl UserStorage for PostgresUserStorage {
     }
 
     async fn get_all(&self) -> Result<Vec<User>> {
-        let rows = sqlx::query("SELECT * FROM users")
+        let rows = sqlx::query("SELECT * FROM users ORDER BY created_at DESC")
             .fetch_all(&self.pool)
             .await
             .map_err(|e| {
