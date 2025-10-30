@@ -10,7 +10,6 @@ use crate::server::{
     hosts::storage::{HostStorage, PostgresHostStorage},
     networks::storage::{NetworkStorage, PostgresNetworkStorage},
     services::storage::{PostgresServiceStorage, ServiceStorage},
-    shared::storage::DatabaseMigrations,
     subnets::storage::{PostgresSubnetStorage, SubnetStorage},
     users::storage::{PostgresUserStorage, UserStorage},
 };
@@ -44,8 +43,7 @@ impl StorageFactory {
     pub async fn new(database_url: &str) -> Result<Self> {
         let pool = PgPool::connect(database_url).await?;
 
-        // Initialize database schema
-        DatabaseMigrations::initialize(&pool).await?;
+        sqlx::migrate!("./migrations").run(&pool).await?;
 
         let sessions = create_session_store(pool.clone()).await?;
 

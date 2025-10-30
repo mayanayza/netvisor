@@ -1,4 +1,4 @@
-use crate::{server::shared::storage::DatabaseMigrations, tests::setup_test_db};
+use crate::{tests::setup_test_db};
 use std::path::Path;
 use std::process::Command;
 
@@ -93,8 +93,7 @@ async fn test_database_schema_backward_compatibility() {
 
         println!("Successfully read all tables from latest release database");
 
-        DatabaseMigrations::initialize(&pool)
-            .await
+        sqlx::migrate!("./migrations").run(&pool).await
             .expect("Failed to apply current schema to old database");
 
         println!("Successfully applied current schema to old database");

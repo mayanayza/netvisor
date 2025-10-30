@@ -56,9 +56,15 @@ BEGIN
         RAISE NOTICE 'Migration complete. All data now belongs to seed user.';
     ELSIF legacy_user_count = 1 THEN
         RAISE NOTICE 'Found 1 legacy user. This is the seed user - no merge needed.';
+
+        UPDATE users 
+        SET username = COALESCE(NULLIF(name, 'default'), 'default'),
+            updated_at = NOW()
+        WHERE password_hash IS NULL;
     ELSE
         RAISE NOTICE 'No legacy users found. All users already have passwords.';
     END IF;
+
 END $$;
 
 -- Step 3: Create the unique index (after duplicates are merged)
