@@ -1,7 +1,7 @@
 use axum::{
     Json,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{Response},
 };
 use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
 
@@ -64,7 +64,7 @@ impl ApiError {
     }
 }
 
-impl IntoResponse for ApiError {
+impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let response = ApiResponse::<()>::error(self.message);
         (self.status, Json(response)).into_response()

@@ -45,8 +45,8 @@ impl HostService {
         self.storage.get_by_id(id).await
     }
 
-    pub async fn get_all_hosts(&self, network_id: &Uuid) -> Result<Vec<Host>> {
-        self.storage.get_all(network_id).await
+    pub async fn get_all_hosts(&self, network_ids: &[Uuid]) -> Result<Vec<Host>> {
+        self.storage.get_all(network_ids).await
     }
 
     pub async fn create_host_with_services(
@@ -58,10 +58,10 @@ impl HostService {
 
         // Manually created and needs actual UUID
         let mut created_host = if host.id == Uuid::nil() {
-            self.create_host(Host::new(host.base.clone()), &host.base.network_id)
+            self.create_host(Host::new(host.base.clone()), &vec!(host.base.network_id))
                 .await?
         } else {
-            self.create_host(host.clone(), &host.base.network_id)
+            self.create_host(host.clone(), &vec!(host.base.network_id))
                 .await?
         };
 
@@ -94,13 +94,13 @@ impl HostService {
     }
 
     /// Create a new host
-    async fn create_host(&self, host: Host, network_id: &Uuid) -> Result<Host> {
+    async fn create_host(&self, host: Host, network_ids: &[Uuid]) -> Result<Host> {
         let lock = self.get_host_lock(&host.id).await;
         let _guard = lock.lock().await;
 
         tracing::debug!("Creating host {:?}", host);
 
-        let all_hosts = self.storage.get_all(network_id).await?;
+        let all_hosts = self.storage.get_all(network_ids).await?;
 
         let host_from_storage = match all_hosts.into_iter().find(|h| host.eq(h)) {
             // If both are from discovery, or if they have the same ID, upsert data

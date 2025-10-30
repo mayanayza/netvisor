@@ -16,9 +16,6 @@ pub struct LoginRequest {
 
     #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
     pub password: String,
-
-    #[serde(default)]
-    pub remember_me: bool,
 }
 
 /// Registration request from client

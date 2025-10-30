@@ -1,15 +1,13 @@
 use crate::server::{
-    config::AppState,
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
-    subnets::types::base::Subnet,
+    auth::extractor::AuthenticatedUser, config::AppState, shared::types::api::{ApiError, ApiResponse, ApiResult}, subnets::types::base::Subnet
 };
 use axum::{
     Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     response::Json,
     routing::{delete, get, post, put},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::Arc};
 use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
@@ -22,6 +20,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn create_subnet(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Json(request): Json<Subnet>,
 ) -> ApiResult<Json<ApiResponse<Subnet>>> {
     tracing::info!("Received subnet creation request: {:?}", request);
@@ -34,16 +33,19 @@ async fn create_subnet(
 
 async fn get_all_subnets(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<HashMap<String, String>>,
+    user: AuthenticatedUser
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
-    let network_id = params
-        .get("network_id")
-        .and_then(|id| Uuid::parse_str(id).ok())
-        .ok_or_else(|| ApiError::bad_request("network_id query parameter required"))?;
 
     let service = &state.services.subnet_service;
 
-    let subnets = service.get_all_subnets(&network_id).await?;
+    let network_ids: Vec<Uuid> = state.services.network_service
+        .get_all_networks(&user.user_id)
+        .await?
+        .iter()
+        .map(|n| n.id)
+        .collect();
+
+    let subnets = service.get_all_subnets(&network_ids).await?;
 
     Ok(Json(ApiResponse::success(subnets)))
 }
@@ -51,6 +53,7 @@ async fn get_all_subnets(
 async fn update_subnet(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
+    _user: AuthenticatedUser,
     Json(request): Json<Subnet>,
 ) -> ApiResult<Json<ApiResponse<Subnet>>> {
     let service = &state.services.subnet_service;
@@ -69,6 +72,7 @@ async fn update_subnet(
 
 async fn delete_subnet(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.subnet_service;

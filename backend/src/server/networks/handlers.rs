@@ -1,15 +1,13 @@
 use crate::server::{
-    config::AppState,
-    networks::types::Network,
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    auth::extractor::AuthenticatedUser, config::AppState, networks::types::Network, shared::types::api::{ApiError, ApiResponse, ApiResult}
 };
 use axum::{
     Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     response::Json,
     routing::{delete, get, post, put},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::Arc};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -23,6 +21,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn create_network(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Json(request): Json<Network>,
 ) -> ApiResult<Json<ApiResponse<Network>>> {
     tracing::info!("Received network creation request: {:?}", request);
@@ -43,22 +42,19 @@ async fn create_network(
 
 async fn get_all_networks(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<HashMap<String, String>>,
+    user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Network>>>> {
-    let user_id = params
-        .get("user_id")
-        .and_then(|id| Uuid::parse_str(id).ok())
-        .ok_or_else(|| ApiError::bad_request("user_id query parameter required"))?;
 
     let service = &state.services.network_service;
 
-    let networks = service.get_all_networks(&user_id).await?;
+    let networks = service.get_all_networks(&user.user_id).await?;
 
     Ok(Json(ApiResponse::success(networks)))
 }
 
 async fn update_network(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
     Json(request): Json<Network>,
 ) -> ApiResult<Json<ApiResponse<Network>>> {
@@ -78,6 +74,7 @@ async fn update_network(
 
 async fn delete_network(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.network_service;

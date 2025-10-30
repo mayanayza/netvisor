@@ -109,7 +109,7 @@ impl AppState {
         discovery_manager: DiscoverySessionManager,
     ) -> Result<Arc<Self>, Error> {
         let storage = StorageFactory::new(&config.database_url()).await?;
-        let services = ServiceFactory::new(&storage, config.integrated_daemon_url.clone()).await?;
+        let services = ServiceFactory::new(&storage).await?;
 
         Ok(Arc::new(Self {
             config,

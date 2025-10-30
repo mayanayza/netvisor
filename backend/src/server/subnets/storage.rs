@@ -13,7 +13,7 @@ pub trait SubnetStorage: Send + Sync {
     async fn create(&self, subnet: &Subnet) -> Result<()>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Subnet>>;
     async fn get_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Subnet>>;
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Subnet>>;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Subnet>>;
     async fn update(&self, subnet: &Subnet) -> Result<()>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
@@ -95,10 +95,10 @@ impl SubnetStorage for PostgresSubnetStorage {
             .collect::<Result<Vec<_>, _>>()
     }
 
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Subnet>> {
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Subnet>> {
         let rows =
-            sqlx::query("SELECT * FROM subnets WHERE network_id = $1 ORDER BY created_at DESC")
-                .bind(network_id)
+            sqlx::query("SELECT * FROM subnets WHERE network_id = ANY($1) ORDER BY created_at DESC")
+                .bind(network_ids)
                 .fetch_all(&self.pool)
                 .await?;
 

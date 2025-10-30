@@ -1,6 +1,8 @@
 use anyhow::Result;
-use sqlx::PgPool;
-use std::sync::Arc;
+use sqlx::{PgPool, Pool, Postgres};
+use tower_sessions::{Expiry, SessionManagerLayer};
+use tower_sessions_sqlx_store::PostgresStore;
+use std::{sync::Arc};
 
 use crate::server::{
     daemons::storage::{DaemonStorage, PostgresDaemonStorage},
@@ -14,6 +16,7 @@ use crate::server::{
 };
 
 pub struct StorageFactory {
+    pub sessions: SessionManagerLayer<PostgresStore>,
     pub users: Arc<dyn UserStorage>,
     pub networks: Arc<dyn NetworkStorage>,
     pub hosts: Arc<dyn HostStorage>,
@@ -23,6 +26,18 @@ pub struct StorageFactory {
     pub services: Arc<dyn ServiceStorage>,
 }
 
+pub async fn create_session_store(db_pool: Pool<Postgres>) -> Result<SessionManagerLayer<PostgresStore>> {
+    let session_store = PostgresStore::new(db_pool.clone());
+
+    session_store.migrate().await?;
+
+    Ok(SessionManagerLayer::new(session_store)
+        .with_expiry(Expiry::OnInactivity(time::Duration::days(30))) // 30 days
+        .with_name("session_id")
+        .with_http_only(true)
+        .with_same_site(tower_sessions::cookie::SameSite::Lax))
+}
+
 impl StorageFactory {
     pub async fn new(database_url: &str) -> Result<Self> {
         let pool = PgPool::connect(database_url).await?;
@@ -30,7 +45,10 @@ impl StorageFactory {
         // Initialize database schema
         DatabaseMigrations::initialize(&pool).await?;
 
+        let sessions = create_session_store(pool.clone()).await?;
+
         Ok(Self {
+            sessions,
             users: Arc::new(PostgresUserStorage::new(pool.clone())),
             networks: Arc::new(PostgresNetworkStorage::new(pool.clone())),
             hosts: Arc::new(PostgresHostStorage::new(pool.clone())),

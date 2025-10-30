@@ -23,7 +23,6 @@ pub struct ServiceFactory {
 impl ServiceFactory {
     pub async fn new(
         storage: &StorageFactory,
-        integrated_daemon_url: Option<String>,
     ) -> Result<Self> {
         let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
         let group_service = Arc::new(GroupService::new(storage.host_groups.clone()));
@@ -57,7 +56,6 @@ impl ServiceFactory {
             storage.networks.clone(),
             host_service.clone(),
             subnet_service.clone(),
-            integrated_daemon_url,
         ));
         let user_service = Arc::new(UserService::new(
             storage.users.clone(),

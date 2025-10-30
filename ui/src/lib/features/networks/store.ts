@@ -19,7 +19,6 @@ export async function getNetworks() {
 		);
 
 		if (result && result.success && result.data) {
-			console.log(result.data);
 			const current = get(networks).find((n) => n.is_default) || get(networks)[0];
 			currentNetwork.set(current);
 		}

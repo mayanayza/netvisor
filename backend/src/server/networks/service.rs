@@ -1,5 +1,4 @@
 use crate::{
-    daemon::runtime::types::InitializeDaemonRequest,
     server::{
         hosts::service::HostService,
         networks::{storage::NetworkStorage, types::Network},
@@ -18,7 +17,6 @@ pub struct NetworkService {
     network_storage: Arc<dyn NetworkStorage>,
     host_service: Arc<HostService>,
     subnet_service: Arc<SubnetService>,
-    integrated_daemon_url: Option<String>,
 }
 
 impl NetworkService {
@@ -26,13 +24,11 @@ impl NetworkService {
         network_storage: Arc<dyn NetworkStorage>,
         host_service: Arc<HostService>,
         subnet_service: Arc<SubnetService>,
-        integrated_daemon_url: Option<String>,
     ) -> Self {
         Self {
             network_storage,
             host_service,
             subnet_service,
-            integrated_daemon_url,
         }
     }
 
@@ -40,59 +36,13 @@ impl NetworkService {
     pub async fn create_network(&self, network: Network) -> Result<Network> {
         self.network_storage.create(&network).await?;
 
-        self.seed_default_data(network.id).await?;
-
-        self.notify_local_daemon(network.id).await?;
-
         tracing::info!("Created network {}: {}", network.base.name, network.id);
         Ok(network)
-    }
-
-    async fn notify_local_daemon(&self, network_id: Uuid) -> Result<()> {
-        let daemon_url = self
-            .integrated_daemon_url
-            .clone()
-            .unwrap_or("http://daemon:60073".to_string());
-
-        let client = reqwest::Client::new();
-
-        match client
-            .post(format!("{}/api/initialize", daemon_url))
-            .json(&InitializeDaemonRequest { network_id })
-            .send()
-            .await
-        {
-            Ok(resp) => {
-                let status = resp.status();
-
-                if status.is_success() {
-                    tracing::info!("Successfully initialized daemon");
-                } else {
-                    let body = resp
-                        .text()
-                        .await
-                        .unwrap_or_else(|_| "Could not read body".to_string());
-                    tracing::warn!("Daemon returned error. Status: {}, Body: {}", status, body);
-                }
-            }
-            Err(e) => {
-                tracing::warn!("Failed to reach daemon: {:?}", e);
-            }
-        }
-
-        Ok(())
     }
 
     /// Get network by ID
     pub async fn get_network(&self, id: &Uuid) -> Result<Option<Network>> {
         self.network_storage.get_by_id(id).await
-    }
-
-    pub async fn get_default_network(&self, user_id: &Uuid) -> Result<Option<Network>> {
-        let all_networks = self.get_all_networks(user_id).await?;
-        Ok(all_networks
-            .into_iter()
-            .find(|n| n.base.is_default && n.base.user_id == *user_id))
     }
 
     /// Get all networks

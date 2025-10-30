@@ -13,7 +13,7 @@ pub trait DaemonStorage: Send + Sync {
     async fn create(&self, daemon: &Daemon) -> Result<()>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Daemon>>;
     async fn get_by_host_id(&self, host_id: &Uuid) -> Result<Option<Daemon>>;
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Daemon>>;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>>;
     async fn update(&self, group: &Daemon) -> Result<Daemon>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
@@ -78,9 +78,9 @@ impl DaemonStorage for PostgresDaemonStorage {
         }
     }
 
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Daemon>> {
-        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = $1")
-            .bind(network_id)
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>> {
+        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = ANY($1)")
+            .bind(network_ids)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| {

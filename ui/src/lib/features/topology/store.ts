@@ -136,9 +136,6 @@ function saveExpandedToStorage(expanded: boolean): void {
 
 export async function getTopology() {
 	const options = get(topologyOptions);
-
-	console.log(options);
-
 	return await api.request<TopologyResponse>('/topology', topology, (topology) => topology, {
 		method: 'POST',
 		body: JSON.stringify(options.request_options)

@@ -222,8 +222,8 @@ impl ServiceService {
         self.storage.get_by_id(id).await
     }
 
-    pub async fn get_all_services(&self, network_id: &Uuid) -> Result<Vec<Service>> {
-        self.storage.get_all(network_id).await
+    pub async fn get_all_services(&self, network_ids: &[Uuid]) -> Result<Vec<Service>> {
+        self.storage.get_all(network_ids).await
     }
 
     pub async fn get_services_for_host(&self, host_id: &Uuid) -> Result<Vec<Service>> {
@@ -269,7 +269,7 @@ impl ServiceService {
 
         let groups = self
             .group_service
-            .get_all_groups(&current_service.base.network_id)
+            .get_all_groups(&vec!(current_service.base.network_id))
             .await?;
 
         let _guard = self.group_update_lock.lock().await;

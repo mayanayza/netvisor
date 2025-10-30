@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub trait GroupStorage: Send + Sync {
     async fn create(&self, group: &Group) -> Result<Group>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Group>>;
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Group>>;
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Group>>;
     async fn update(&self, group: &Group) -> Result<()>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
@@ -67,9 +67,9 @@ impl GroupStorage for PostgresGroupStorage {
         }
     }
 
-    async fn get_all(&self, network_id: &Uuid) -> Result<Vec<Group>> {
-        let rows = sqlx::query("SELECT * FROM groups WHERE network_id = $1 ORDER BY name ")
-            .bind(network_id)
+    async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Group>> {
+        let rows = sqlx::query("SELECT * FROM groups WHERE network_id = ANY($1) ORDER BY name ")
+            .bind(network_ids)
             .fetch_all(&self.pool)
             .await?;
 

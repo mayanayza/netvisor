@@ -7,8 +7,9 @@
 	import type { Service } from '$lib/features/services/types/base';
 	import { pushWarning } from '$lib/shared/stores/feedback';
 	import CodeContainer from '../data/CodeContainer.svelte';
+	import type { Network } from '$lib/features/networks/types';
 
-	export let entities: (Group | Host | Subnet | Service | null)[] = [null];
+	export let entities: (Group | Host | Subnet | Service | Network | null)[] = [null];
 	export let showSummary: boolean = true;
 
 	let id = entities.length == 1 ? entities[0]?.id : null;

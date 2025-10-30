@@ -1,18 +1,16 @@
 use crate::server::{
-    config::AppState,
-    daemons::types::{
+    auth::extractor::{AuthenticatedUser}, config::AppState, daemons::types::{
         api::{DaemonRegistrationRequest, DaemonRegistrationResponse, DaemonResponse},
         base::{Daemon, DaemonBase},
-    },
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    }, shared::types::api::{ApiError, ApiResponse, ApiResult}
 };
 use axum::{
     Router,
-    extract::{Path, Query, State},
+    extract::{Path, State},
     response::Json,
     routing::{delete, get, post, put},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::Arc};
 use tracing::info;
 use uuid::Uuid;
 
@@ -76,16 +74,19 @@ async fn receive_heartbeat(
 /// Get all registered daemons
 async fn get_all_daemons(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<HashMap<String, String>>,
+    user: AuthenticatedUser
 ) -> ApiResult<Json<ApiResponse<Vec<Daemon>>>> {
-    let network_id = params
-        .get("network_id")
-        .and_then(|id| Uuid::parse_str(id).ok())
-        .ok_or_else(|| ApiError::bad_request("network_id query parameter required"))?;
 
     let service = &state.services.daemon_service;
 
-    let daemons = service.get_all_daemons(&network_id).await.map_err(|e| {
+    let network_ids: Vec<Uuid> = state.services.network_service
+        .get_all_networks(&user.user_id)
+        .await?
+        .iter()
+        .map(|n| n.id)
+        .collect();
+
+    let daemons = service.get_all_daemons(&network_ids).await.map_err(|e| {
         info!("Error getting daemons: {}", e);
         ApiError::internal_error(&format!("Failed to get daemons: {}", e))
     })?;
@@ -96,6 +97,7 @@ async fn get_all_daemons(
 /// Get specific daemon by ID
 async fn get_daemon(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<DaemonResponse>>> {
     let service = &state.services.daemon_service;
@@ -111,6 +113,7 @@ async fn get_daemon(
 
 async fn delete_daemon(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.daemon_service;

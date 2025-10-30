@@ -1,11 +1,14 @@
+use std::time::Duration;
+
+use anyhow::Error;
 use axum::{Router, http::Method};
 use clap::Parser;
-use netvisor::server::{
+use netvisor::{daemon::runtime::types::InitializeDaemonRequest, server::{
     config::{AppState, CliArgs, ServerConfig},
     discovery::manager::DiscoverySessionManager,
     shared::handlers::create_router,
     users::types::base::{User, UserBase},
-};
+}};
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -13,6 +16,7 @@ use tower_http::{
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use uuid::Uuid;
 
 #[derive(Parser)]
 #[command(name = "netvisor-server")]
@@ -61,8 +65,8 @@ async fn main() -> anyhow::Result<()> {
     // Load configuration using figment
     let config = ServerConfig::load(cli_args)?;
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
-    let seed_test_user = config.seed_test_user;
     let web_external_path = config.web_external_path.clone();
+    let integrated_daemon_url = config.integrated_daemon_url.clone().unwrap_or("http://daemon:60073".to_string());
 
     // Initialize tracing
     tracing_subscriber::registry()
@@ -98,31 +102,25 @@ async fn main() -> anyhow::Result<()> {
     // Create auth session cleanup task
     let auth_cleanup_state = state.clone();
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
+        let mut interval = tokio::time::interval(Duration::from_secs(15*60)); // 15 minutes
         loop {
             interval.tick().await;
-
-            // Check for timeouts (fail sessions running > 10 minutes)
-            // cleanup_state.discovery_manager.check_timeouts(10).await;
-
-            // Clean up old sessions (remove completed sessions > 24 hours old)
-            auth_cleanup_state
-                .services
-                .auth_service
-                .cleanup_expired_sessions()
-                .await;
+            auth_cleanup_state.services.auth_service.cleanup_old_login_attempts().await;
         }
     });
+
+    let session_store = state.storage.sessions.clone();
 
     // Create router
     let api_router = if let Some(static_path) = &web_external_path {
         Router::new()
             .nest_service("/", ServeDir::new(static_path))
             .merge(create_router())
+            .layer(session_store)
             .with_state(state)
     } else {
         tracing::info!("Server is not serving web assets due to no web_external_path");
-        create_router().with_state(state)
+        create_router().layer(session_store).with_state(state)
     };
 
     // Create main app
@@ -151,13 +149,44 @@ async fn main() -> anyhow::Result<()> {
         axum::serve(listener, app).await.unwrap();
     });
 
-    if seed_test_user {
-        user_service
-            .create_user(User::new(UserBase::default()))
+    let (_, network) = user_service
+            .create_user(User::new(UserBase::new_seed()))
             .await?;
-    }
+
+    notify_local_daemon(integrated_daemon_url, network.id).await?;
 
     tokio::signal::ctrl_c().await?;
+
+    Ok(())
+}
+
+pub async fn notify_local_daemon(daemon_url: String, network_id: Uuid) -> Result<(), Error> {
+
+    let client = reqwest::Client::new();
+
+    match client
+        .post(format!("{}/api/initialize", daemon_url))
+        .json(&InitializeDaemonRequest { network_id })
+        .send()
+        .await
+    {
+        Ok(resp) => {
+            let status = resp.status();
+
+            if status.is_success() {
+                tracing::info!("Successfully initialized daemon");
+            } else {
+                let body = resp
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Could not read body".to_string());
+                tracing::warn!("Daemon returned error. Status: {}, Body: {}", status, body);
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to reach daemon: {:?}", e);
+        }
+    }
 
     Ok(())
 }

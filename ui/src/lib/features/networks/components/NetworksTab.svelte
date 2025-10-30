@@ -2,41 +2,60 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { daemons, deleteDaemon, getDaemons } from '$lib/features/daemons/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getNetworks, networks } from '$lib/features/networks/store';
-	import { getHosts } from '$lib/features/hosts/store';
+	import { deleteNetwork, getNetworks, networks, updateNetwork } from '$lib/features/networks/store';
 	import type { Network } from '../types';
 	import NetworkCard from './NetworkCard.svelte';
+	import { getHosts } from '$lib/features/hosts/store';
+	import { getDaemons } from '$lib/features/daemons/store';
+	import { getSubnets } from '$lib/features/subnets/store';
+	import { getGroups } from '$lib/features/groups/store';
+	import NetworkEditModal from './NetworkEditModal.svelte';
 
-	const loading = loadData([getNetworks, getDaemons, getHosts]);
+	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
-	let showCreateDaemonModal = false;
+	let showCreateNetworkModal = false;
+	let editingNetwork: Network | null = null
 
 	function handleDeleteNetwork(network: Network) {
 		if (confirm(`Are you sure you want to delete network "${network.name}"?`)) {
-			deleteDaemon(network.id);
+			deleteNetwork(network.id);
 		}
 	}
 
-	function handleCreateDaemon() {
-		showCreateDaemonModal = true;
+	function handleCreateNetwork() {
+		editingNetwork = null;
+		showCreateNetworkModal = true;
 	}
 
-	function handleCloseCreateDaemon() {
-		showCreateDaemonModal = false;
+	function handleEditNetwork(network: Network) {
+		editingNetwork = network;
+		showCreateNetworkModal = true;
+	}
+
+	async function handleNetworkUpdate(id: string, data: Network) {
+		const result = await updateNetwork(data);
+		if (result?.success) {
+			showCreateNetworkModal = false;
+			editingNetwork = null;
+		}
+	}
+
+	function handleCloseNetworkEditor() {
+		showCreateNetworkModal = false;
+		editingNetwork = null;
 	}
 </script>
 
 <div class="space-y-6">
 	<!-- Header -->
 	<TabHeader
-		title="Discovery"
-		subtitle="Run discovery and manage daemons"
+		title="Networks"
+		subtitle="Manage networks"
 		buttons={[
 			{
-				onClick: handleCreateDaemon,
-				cta: 'Create Daemon'
+				onClick: handleCreateNetwork,
+				cta: 'Create Network'
 			}
 		]}
 	/>
@@ -44,13 +63,13 @@
 	<!-- Loading state -->
 	{#if $loading}
 		<Loading />
-	{:else if $daemons.length === 0}
+	{:else if $networks.length === 0}
 		<!-- Empty state -->
 		<EmptyState
-			title="No daemons configured yet"
+			title="No networks configured yet"
 			subtitle=""
-			onClick={handleCreateDaemon}
-			cta="Create your first daemon"
+			onClick={handleCreateNetwork}
+			cta="Create your first network"
 		/>
 	{:else}
 		<!-- Daemons grid -->
@@ -59,8 +78,16 @@
 				<NetworkCard
 					{network}
 					onDelete={handleDeleteNetwork}
+					onEdit={handleEditNetwork}
 				/>
 			{/each}
 		</div>
 	{/if}
 </div>
+
+<NetworkEditModal
+	isOpen={showCreateNetworkModal}
+	network={editingNetwork}
+	onCreate={handleCreateNetwork}
+	onUpdate={handleNetworkUpdate}
+	onClose={handleCloseNetworkEditor}/>

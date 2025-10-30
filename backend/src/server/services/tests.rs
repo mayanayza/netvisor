@@ -14,12 +14,7 @@ use crate::{
 async fn test_service_deduplication_on_create() {
     let (_, services, _container) = test_services().await;
 
-    let user = services.user_service.create_user(user()).await.unwrap();
-    let network = services
-        .network_service
-        .create_network(network(&user.id))
-        .await
-        .unwrap();
+    let (_, network) = services.user_service.create_user(user()).await.unwrap();
 
     let subnet_obj = subnet(&network.id);
     services
@@ -86,12 +81,7 @@ async fn test_service_deduplication_on_create() {
 async fn test_service_deletion_cleans_up_relationships() {
     let (_, services, _container) = test_services().await;
 
-    let user = services.user_service.create_user(user()).await.unwrap();
-    let network = services
-        .network_service
-        .create_network(network(&user.id))
-        .await
-        .unwrap();
+    let (_, network) = services.user_service.create_user(user()).await.unwrap();
 
     let subnet_obj = subnet(&network.id);
     let created_subnet = services
