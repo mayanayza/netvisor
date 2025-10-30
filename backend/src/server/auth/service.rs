@@ -122,16 +122,16 @@ impl AuthService {
     /// Check if user is locked out due to too many login attempts
     async fn check_login_lockout(&self, name: &str) -> Result<()> {
         let attempts = self.login_attempts.read().await;
-        if let Some((count, last_attempt)) = attempts.get(name) {
-            if *count >= Self::MAX_LOGIN_ATTEMPTS {
-                let elapsed = last_attempt.elapsed().as_secs();
-                if elapsed < Self::LOCKOUT_DURATION_SECS {
-                    let remaining = (Self::LOCKOUT_DURATION_SECS - elapsed) / 60;
-                    return Err(anyhow!(
-                        "Too many failed login attempts. Try again in {} minutes.",
-                        remaining + 1
-                    ));
-                }
+        if let Some((count, last_attempt)) = attempts.get(name)
+            && *count >= Self::MAX_LOGIN_ATTEMPTS
+        {
+            let elapsed = last_attempt.elapsed().as_secs();
+            if elapsed < Self::LOCKOUT_DURATION_SECS {
+                let remaining = (Self::LOCKOUT_DURATION_SECS - elapsed) / 60;
+                return Err(anyhow!(
+                    "Too many failed login attempts. Try again in {} minutes.",
+                    remaining + 1
+                ));
             }
         }
         Ok(())

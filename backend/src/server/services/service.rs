@@ -269,7 +269,7 @@ impl ServiceService {
 
         let groups = self
             .group_service
-            .get_all_groups(&vec![current_service.base.network_id])
+            .get_all_groups(&[current_service.base.network_id])
             .await?;
 
         let _guard = self.group_update_lock.lock().await;

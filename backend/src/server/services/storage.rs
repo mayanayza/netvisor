@@ -129,7 +129,7 @@ impl ServiceStorage for PostgresServiceStorage {
         .bind(virtualization_str)
         .bind(source_str)
         .bind(service.updated_at)
-        .bind(&service.base.network_id)
+        .bind(service.base.network_id)
         .execute(&self.pool)
         .await?;
 

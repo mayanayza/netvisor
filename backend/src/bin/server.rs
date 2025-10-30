@@ -160,7 +160,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // First load
-    if user_service.get_all_users().await?.len() == 0 {
+    if user_service.get_all_users().await?.is_empty() {
         let (_, network) = user_service
             .create_user(User::new(UserBase::new_seed()))
             .await?;

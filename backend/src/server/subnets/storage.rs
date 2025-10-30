@@ -131,7 +131,7 @@ impl SubnetStorage for PostgresSubnetStorage {
         .bind(subnet_type_str)
         .bind(subnet_source_str)
         .bind(subnet.updated_at)
-        .bind(&subnet.base.network_id)
+        .bind(subnet.base.network_id)
         .execute(&self.pool)
         .await?;
 

@@ -58,10 +58,10 @@ impl HostService {
 
         // Manually created and needs actual UUID
         let mut created_host = if host.id == Uuid::nil() {
-            self.create_host(Host::new(host.base.clone()), &vec![host.base.network_id])
+            self.create_host(Host::new(host.base.clone()), &[host.base.network_id])
                 .await?
         } else {
-            self.create_host(host.clone(), &vec![host.base.network_id])
+            self.create_host(host.clone(), &[host.base.network_id])
                 .await?
         };
 

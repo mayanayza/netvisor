@@ -23,7 +23,7 @@ impl SubnetService {
 
     /// Create a new subnet
     pub async fn create_subnet(&self, subnet: Subnet) -> Result<Subnet> {
-        let all_subnets = self.storage.get_all(&vec![subnet.base.network_id]).await?;
+        let all_subnets = self.storage.get_all(&[subnet.base.network_id]).await?;
 
         let subnet = if subnet.id == Uuid::nil() {
             Subnet::new(subnet.base)
@@ -121,7 +121,7 @@ impl SubnetService {
 
         let hosts = self
             .host_service
-            .get_all_hosts(&vec![subnet.base.network_id])
+            .get_all_hosts(&[subnet.base.network_id])
             .await?;
         let update_futures = hosts.into_iter().filter_map(|mut host| {
             let has_subnet = host.base.interfaces.iter().any(|i| &i.base.subnet_id == id);

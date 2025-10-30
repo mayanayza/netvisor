@@ -100,7 +100,7 @@ impl GroupStorage for PostgresGroupStorage {
         .bind(source_json)
         .bind(chrono::Utc::now())
         .bind(&group.base.color)
-        .bind(&group.base.network_id)
+        .bind(group.base.network_id)
         .execute(&self.pool)
         .await?;
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Edit, Star, Trash2 } from 'lucide-svelte';
+	import { Edit, Trash2 } from 'lucide-svelte';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import type { Network } from '../types';
