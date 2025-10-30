@@ -1,8 +1,11 @@
 use crate::server::{
-    auth::extractor::{AuthenticatedUser}, config::AppState, daemons::types::{
+    auth::extractor::AuthenticatedUser,
+    config::AppState,
+    daemons::types::{
         api::{DaemonRegistrationRequest, DaemonRegistrationResponse, DaemonResponse},
         base::{Daemon, DaemonBase},
-    }, shared::types::api::{ApiError, ApiResponse, ApiResult}
+    },
+    shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{
     Router,
@@ -10,7 +13,7 @@ use axum::{
     response::Json,
     routing::{delete, get, post, put},
 };
-use std::{sync::Arc};
+use std::sync::Arc;
 use tracing::info;
 use uuid::Uuid;
 
@@ -74,12 +77,13 @@ async fn receive_heartbeat(
 /// Get all registered daemons
 async fn get_all_daemons(
     State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser
+    user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Daemon>>>> {
-
     let service = &state.services.daemon_service;
 
-    let network_ids: Vec<Uuid> = state.services.network_service
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
         .get_all_networks(&user.user_id)
         .await?
         .iter()

@@ -1,5 +1,8 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser, config::AppState, networks::types::Network, shared::types::api::{ApiError, ApiResponse, ApiResult}
+    auth::extractor::AuthenticatedUser,
+    config::AppState,
+    networks::types::Network,
+    shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{
     Router,
@@ -7,7 +10,7 @@ use axum::{
     response::Json,
     routing::{delete, get, post, put},
 };
-use std::{sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -44,7 +47,6 @@ async fn get_all_networks(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Network>>>> {
-
     let service = &state.services.network_service;
 
     let networks = service.get_all_networks(&user.user_id).await?;

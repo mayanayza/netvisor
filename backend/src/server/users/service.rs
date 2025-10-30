@@ -37,7 +37,9 @@ impl UserService {
 
         let created_network = self.network_service.create_network(network).await?;
 
-        self.network_service.seed_default_data(created_network.id).await?;
+        self.network_service
+            .seed_default_data(created_network.id)
+            .await?;
 
         Ok((created_user, created_network))
     }

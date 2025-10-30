@@ -14,8 +14,13 @@ async fn test_host_deduplication_on_create() {
     let (storage, services, _container) = test_services().await;
 
     let (_, network) = services.user_service.create_user(user()).await.unwrap();
-    
-    let start_host_count = storage.hosts.get_all(&vec!(network.id)).await.unwrap().len();
+
+    let start_host_count = storage
+        .hosts
+        .get_all(&vec![network.id])
+        .await
+        .unwrap()
+        .len();
 
     // Create first host
     let mut host1 = host(&network.id);
@@ -43,7 +48,12 @@ async fn test_host_deduplication_on_create() {
     assert_eq!(created1.id, created2.id);
 
     // Verify only one host in DB
-    let end_host_count = storage.hosts.get_all(&vec!(network.id)).await.unwrap().len();
+    let end_host_count = storage
+        .hosts
+        .get_all(&vec![network.id])
+        .await
+        .unwrap()
+        .len();
     assert_eq!(start_host_count + 1, end_host_count);
 }
 

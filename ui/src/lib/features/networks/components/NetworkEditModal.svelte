@@ -35,7 +35,7 @@
 		// Clean up the data before sending
 		const networkData: Network = {
 			...formData,
-			name: formData.name.trim(),
+			name: formData.name.trim()
 		};
 
 		loading = true;
@@ -90,8 +90,6 @@
 		<div class="flex-1 overflow-y-auto">
 			<div class="space-y-8 p-6">
 				<NetworkDetailsForm {formApi} bind:formData />
-
-
 
 				{#if isEditing}
 					<EntityMetadataSection entities={[network]} />

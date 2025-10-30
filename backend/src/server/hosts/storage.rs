@@ -125,6 +125,7 @@ impl HostStorage for PostgresHostStorage {
         .bind(services_str)
         .bind(virtualization_str)
         .bind(host.updated_at)
+        .bind(&host.base.network_id)
         .execute(&self.pool)
         .await?;
 

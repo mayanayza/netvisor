@@ -1,5 +1,8 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser, config::AppState, shared::types::api::{ApiError, ApiResponse, ApiResult}, subnets::types::base::Subnet
+    auth::extractor::AuthenticatedUser,
+    config::AppState,
+    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    subnets::types::base::Subnet,
 };
 use axum::{
     Router,
@@ -7,7 +10,7 @@ use axum::{
     response::Json,
     routing::{delete, get, post, put},
 };
-use std::{sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
@@ -33,12 +36,13 @@ async fn create_subnet(
 
 async fn get_all_subnets(
     State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser
+    user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
-
     let service = &state.services.subnet_service;
 
-    let network_ids: Vec<Uuid> = state.services.network_service
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
         .get_all_networks(&user.user_id)
         .await?
         .iter()

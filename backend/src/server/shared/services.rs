@@ -21,9 +21,7 @@ pub struct ServiceFactory {
 }
 
 impl ServiceFactory {
-    pub async fn new(
-        storage: &StorageFactory,
-    ) -> Result<Self> {
+    pub async fn new(storage: &StorageFactory) -> Result<Self> {
         let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
         let group_service = Arc::new(GroupService::new(storage.host_groups.clone()));
 

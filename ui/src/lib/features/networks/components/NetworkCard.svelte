@@ -12,21 +12,21 @@
 	export let onDelete: (network: Network) => void = () => {};
 	export let onEdit: (network: Network) => void = () => {};
 
-	$: networkHosts = $hosts.filter(h => h.network_id == network.id)
-	$: networkDaemons = $daemons.filter(d => d.network_id == network.id)
-	$: networkSubnets = $subnets.filter(s => s.network_id == network.id)
-	$: networkGroups = $groups.filter(g => g.network_id == network.id)
+	$: networkHosts = $hosts.filter((h) => h.network_id == network.id);
+	$: networkDaemons = $daemons.filter((d) => d.network_id == network.id);
+	$: networkSubnets = $subnets.filter((s) => s.network_id == network.id);
+	$: networkGroups = $groups.filter((g) => g.network_id == network.id);
 
 	// Build card data
 	$: cardData = {
 		title: network.name,
-		iconColor: entities.getColorHelper("Network").icon,
-		icon: entities.getIconComponent("Network"),
+		iconColor: entities.getColorHelper('Network').icon,
+		icon: entities.getIconComponent('Network'),
 
 		sections: [],
 		lists: [
 			{
-				label: "Daemons",
+				label: 'Daemons',
 				items: networkDaemons.map((d) => {
 					return {
 						id: d.id,
@@ -36,7 +36,7 @@
 				})
 			},
 			{
-				label: "Hosts",
+				label: 'Hosts',
 				items: networkHosts.map((h) => {
 					return {
 						id: h.id,
@@ -46,7 +46,7 @@
 				})
 			},
 			{
-				label: "Subnets",
+				label: 'Subnets',
 				items: networkSubnets.map((s) => {
 					return {
 						id: s.id,
@@ -56,7 +56,7 @@
 				})
 			},
 			{
-				label: "Groups",
+				label: 'Groups',
 				items: networkGroups.map((g) => {
 					return {
 						id: g.id,

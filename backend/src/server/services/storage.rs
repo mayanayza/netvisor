@@ -78,11 +78,12 @@ impl ServiceStorage for PostgresServiceStorage {
     }
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Service>> {
-        let rows =
-            sqlx::query("SELECT * FROM services WHERE network_id = ANY($1) ORDER BY created_at DESC")
-                .bind(network_ids)
-                .fetch_all(&self.pool)
-                .await?;
+        let rows = sqlx::query(
+            "SELECT * FROM services WHERE network_id = ANY($1) ORDER BY created_at DESC",
+        )
+        .bind(network_ids)
+        .fetch_all(&self.pool)
+        .await?;
 
         let mut services = Vec::new();
         for row in rows {
@@ -116,7 +117,7 @@ impl ServiceStorage for PostgresServiceStorage {
             r#"
             UPDATE services SET 
                 name = $2, host_id = $3, service_definition = $4, bindings = $5, virtualization = $6, source = $7, 
-                updated_at = $8
+                updated_at = $8, network_id = $9
             WHERE id = $1
             "#,
         )
@@ -128,6 +129,7 @@ impl ServiceStorage for PostgresServiceStorage {
         .bind(virtualization_str)
         .bind(source_str)
         .bind(service.updated_at)
+        .bind(&service.base.network_id)
         .execute(&self.pool)
         .await?;
 

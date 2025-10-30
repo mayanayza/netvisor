@@ -1,8 +1,8 @@
 use anyhow::Result;
 use sqlx::{PgPool, Pool, Postgres};
+use std::sync::Arc;
 use tower_sessions::{Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
-use std::{sync::Arc};
 
 use crate::server::{
     daemons::storage::{DaemonStorage, PostgresDaemonStorage},
@@ -26,7 +26,9 @@ pub struct StorageFactory {
     pub services: Arc<dyn ServiceStorage>,
 }
 
-pub async fn create_session_store(db_pool: Pool<Postgres>) -> Result<SessionManagerLayer<PostgresStore>> {
+pub async fn create_session_store(
+    db_pool: Pool<Postgres>,
+) -> Result<SessionManagerLayer<PostgresStore>> {
     let session_store = PostgresStore::new(db_pool.clone());
 
     session_store.migrate().await?;

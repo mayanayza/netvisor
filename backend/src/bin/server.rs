@@ -3,12 +3,15 @@ use std::time::Duration;
 use anyhow::Error;
 use axum::{Router, http::Method};
 use clap::Parser;
-use netvisor::{daemon::runtime::types::InitializeDaemonRequest, server::{
-    config::{AppState, CliArgs, ServerConfig},
-    discovery::manager::DiscoverySessionManager,
-    shared::handlers::create_router,
-    users::types::base::{User, UserBase},
-}};
+use netvisor::{
+    daemon::runtime::types::InitializeDaemonRequest,
+    server::{
+        config::{AppState, CliArgs, ServerConfig},
+        discovery::manager::DiscoverySessionManager,
+        shared::handlers::create_router,
+        users::types::base::{User, UserBase},
+    },
+};
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -66,7 +69,10 @@ async fn main() -> anyhow::Result<()> {
     let config = ServerConfig::load(cli_args)?;
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
     let web_external_path = config.web_external_path.clone();
-    let integrated_daemon_url = config.integrated_daemon_url.clone().unwrap_or("http://daemon:60073".to_string());
+    let integrated_daemon_url = config
+        .integrated_daemon_url
+        .clone()
+        .unwrap_or("http://daemon:60073".to_string());
 
     // Initialize tracing
     tracing_subscriber::registry()
@@ -102,10 +108,14 @@ async fn main() -> anyhow::Result<()> {
     // Create auth session cleanup task
     let auth_cleanup_state = state.clone();
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(15*60)); // 15 minutes
+        let mut interval = tokio::time::interval(Duration::from_secs(15 * 60)); // 15 minutes
         loop {
             interval.tick().await;
-            auth_cleanup_state.services.auth_service.cleanup_old_login_attempts().await;
+            auth_cleanup_state
+                .services
+                .auth_service
+                .cleanup_old_login_attempts()
+                .await;
         }
     });
 
@@ -149,11 +159,14 @@ async fn main() -> anyhow::Result<()> {
         axum::serve(listener, app).await.unwrap();
     });
 
-    let (_, network) = user_service
+    // First load
+    if user_service.get_all_users().await?.len() == 0 {
+        let (_, network) = user_service
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
-    notify_local_daemon(integrated_daemon_url, network.id).await?;
+        notify_local_daemon(integrated_daemon_url, network.id).await?;
+    }
 
     tokio::signal::ctrl_c().await?;
 
@@ -161,7 +174,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 pub async fn notify_local_daemon(daemon_url: String, network_id: Uuid) -> Result<(), Error> {
-
     let client = reqwest::Client::new();
 
     match client

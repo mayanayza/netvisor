@@ -7,6 +7,7 @@
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
 	import { groupTypes } from '$lib/shared/stores/metadata';
+	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Group;
@@ -18,6 +19,10 @@
 	// Update formData when field values change
 	$: formData.name = $name.value;
 	$: formData.description = $description.value;
+
+	// Track network_id separately to force reactivity
+	let selectedNetworkId = formData.network_id;
+	$: formData.network_id = selectedNetworkId;
 </script>
 
 <!-- Basic Information -->
@@ -33,10 +38,10 @@
 		field={name}
 	/>
 
-	<!-- Network Type -->
-	<label for="group_type" class="text-secondary mb-2 block text-sm font-medium">
-		Network Type
-	</label>
+	<SelectNetwork bind:selectedNetworkId />
+
+	<!-- Group Type -->
+	<label for="group_type" class="text-secondary mb-2 block text-sm font-medium"> Group Type </label>
 	<select id="group_type" bind:value={formData.group_type} class="input-field">
 		{#each groupTypes.getItems() as group_type (group_type.id)}
 			<option class="select-option" value={group_type.id}>{group_type.name}</option>
@@ -48,7 +53,7 @@
 		label="Description"
 		id="description"
 		{formApi}
-		placeholder="Describe the data flow or purpose of this service chain..."
+		placeholder="Describe the data flow or purpose of this group..."
 		field={description}
 	/>
 </div>

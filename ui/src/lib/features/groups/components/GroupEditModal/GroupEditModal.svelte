@@ -126,9 +126,9 @@
 						<div class="rounded-lg bg-gray-800/50 p-4">
 							<ListManager
 								label="Service Bindings"
-								helpText="Select service bindings to create an ordered path of network traffic"
+								helpText="Select service bindings for this group"
 								placeholder="Select a binding to add..."
-								emptyMessage="No bindings in this request path yet."
+								emptyMessage="No bindings in this group yet."
 								allowReorder={true}
 								showSearch={true}
 								options={availableServiceBindings}

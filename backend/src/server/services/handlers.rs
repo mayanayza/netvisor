@@ -1,13 +1,11 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser, config::AppState, services::types::base::Service, shared::types::api::{ApiResponse, ApiResult}
+    auth::extractor::AuthenticatedUser,
+    config::AppState,
+    services::types::base::Service,
+    shared::types::api::{ApiResponse, ApiResult},
 };
-use axum::{
-    Router,
-    extract::{State},
-    response::Json,
-    routing::get,
-};
-use std::{sync::Arc};
+use axum::{Router, extract::State, response::Json, routing::get};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
@@ -18,10 +16,11 @@ async fn get_all_services(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Service>>>> {
-
     let service_service = &state.services.service_service;
 
-    let network_ids: Vec<Uuid> = state.services.network_service
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
         .get_all_networks(&user.user_id)
         .await?
         .iter()

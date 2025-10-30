@@ -1,13 +1,11 @@
-use crate::{
-    server::{
-        hosts::service::HostService,
-        networks::{storage::NetworkStorage, types::Network},
-        shared::storage::seed_data::{
-            create_internet_connectivity_host, create_public_dns_host, create_remote_host,
-            create_remote_subnet, create_wan_subnet,
-        },
-        subnets::service::SubnetService,
+use crate::server::{
+    hosts::service::HostService,
+    networks::{storage::NetworkStorage, types::Network},
+    shared::storage::seed_data::{
+        create_internet_connectivity_host, create_public_dns_host, create_remote_host,
+        create_remote_subnet, create_wan_subnet,
     },
+    subnets::service::SubnetService,
 };
 use anyhow::Result;
 use std::sync::Arc;

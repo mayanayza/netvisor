@@ -1,5 +1,9 @@
+use crate::server::auth::extractor::AuthenticatedUser;
 use crate::server::{
-    config::AppState, hosts::types::{api::HostWithServicesRequest, base::Host}, services::types::base::Service, shared::types::api::{ApiError, ApiResponse, ApiResult}
+    config::AppState,
+    hosts::types::{api::HostWithServicesRequest, base::Host},
+    services::types::base::Service,
+    shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{
     Router,
@@ -9,10 +13,9 @@ use axum::{
 };
 use futures::future::try_join_all;
 use itertools::{Either, Itertools};
-use std::{sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
-use crate::server::auth::extractor::AuthenticatedUser;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -63,12 +66,13 @@ async fn create_host(
 
 async fn get_all_hosts(
     State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser
+    user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<Host>>>> {
-
     let service = &state.services.host_service;
 
-    let network_ids: Vec<Uuid> = state.services.network_service
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
         .get_all_networks(&user.user_id)
         .await?
         .iter()

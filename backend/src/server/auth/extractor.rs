@@ -1,3 +1,4 @@
+use crate::server::shared::types::api::ApiError;
 use axum::{
     extract::FromRequestParts,
     http::request::Parts,
@@ -6,9 +7,6 @@ use axum::{
 use std::future::Future;
 use tower_sessions::Session;
 use uuid::Uuid;
-use crate::server::{
-    shared::types::api::ApiError,
-};
 
 pub struct AuthError(ApiError);
 
@@ -39,14 +37,22 @@ where
                 Ok(s) => s,
                 Err(_) => return Err(AuthError(ApiError::internal_error("Failed to get session"))),
             };
-            
+
             // Get user_id from session
             let user_id: Uuid = match session.get("user_id").await {
                 Ok(Some(id)) => id,
-                Ok(None) => return Err(AuthError(ApiError::unauthorized("Not authenticated".to_string()))),
-                Err(_) => return Err(AuthError(ApiError::internal_error("Failed to read session"))),
+                Ok(None) => {
+                    return Err(AuthError(ApiError::unauthorized(
+                        "Not authenticated".to_string(),
+                    )));
+                }
+                Err(_) => {
+                    return Err(AuthError(ApiError::internal_error(
+                        "Failed to read session",
+                    )));
+                }
             };
-            
+
             Ok(AuthenticatedUser { user_id })
         }
     }

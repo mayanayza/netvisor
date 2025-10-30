@@ -10,11 +10,7 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::Instant,
-};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 use tokio::sync::RwLock;
 use validator::Validate;
 
@@ -90,7 +86,7 @@ impl AuthService {
     /// Returns User (session management handled by tower-sessions)
     pub async fn login(&self, request: LoginRequest) -> Result<User> {
         tracing::debug!("Login request received: {:?}", request);
-        
+
         // Validate request
         request
             .validate()
@@ -175,11 +171,11 @@ impl AuthService {
     /// Cleanup old login attempts (called periodically from background task)
     pub async fn cleanup_old_login_attempts(&self) {
         let mut attempts = self.login_attempts.write().await;
-        
+
         attempts.retain(|_, (_, last_attempt)| {
             last_attempt.elapsed().as_secs() < Self::LOCKOUT_DURATION_SECS
         });
-        
+
         tracing::debug!("Cleaned up old login attempts");
     }
 }

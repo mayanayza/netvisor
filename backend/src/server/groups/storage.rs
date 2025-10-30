@@ -89,7 +89,7 @@ impl GroupStorage for PostgresGroupStorage {
             r#"
             UPDATE groups SET 
                 name = $2, description = $3, group_type = $4, source = $5,
-                updated_at = $6, color = $7
+                updated_at = $6, color = $7, network_id = $8
             WHERE id = $1
             "#,
         )
@@ -100,6 +100,7 @@ impl GroupStorage for PostgresGroupStorage {
         .bind(source_json)
         .bind(chrono::Utc::now())
         .bind(&group.base.color)
+        .bind(&group.base.network_id)
         .execute(&self.pool)
         .await?;
 

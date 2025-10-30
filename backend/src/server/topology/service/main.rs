@@ -46,9 +46,18 @@ impl TopologyService {
         options: TopologyRequestOptions,
     ) -> Result<Graph<Node, Edge>, Error> {
         // Fetch all data
-        let hosts = self.host_service.get_all_hosts(&options.network_ids).await?;
-        let subnets = self.subnet_service.get_all_subnets(&options.network_ids).await?;
-        let groups = self.group_service.get_all_groups(&options.network_ids).await?;
+        let hosts = self
+            .host_service
+            .get_all_hosts(&options.network_ids)
+            .await?;
+        let subnets = self
+            .subnet_service
+            .get_all_subnets(&options.network_ids)
+            .await?;
+        let groups = self
+            .group_service
+            .get_all_groups(&options.network_ids)
+            .await?;
         let services: Vec<Service> = self
             .service_service
             .get_all_services(&options.network_ids)

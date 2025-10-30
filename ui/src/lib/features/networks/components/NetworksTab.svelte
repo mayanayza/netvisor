@@ -3,7 +3,12 @@
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { deleteNetwork, getNetworks, networks, updateNetwork } from '$lib/features/networks/store';
+	import {
+		deleteNetwork,
+		getNetworks,
+		networks,
+		updateNetwork
+	} from '$lib/features/networks/store';
 	import type { Network } from '../types';
 	import NetworkCard from './NetworkCard.svelte';
 	import { getHosts } from '$lib/features/hosts/store';
@@ -15,10 +20,14 @@
 	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
 	let showCreateNetworkModal = false;
-	let editingNetwork: Network | null = null
+	let editingNetwork: Network | null = null;
 
 	function handleDeleteNetwork(network: Network) {
-		if (confirm(`Are you sure you want to delete network "${network.name}"?`)) {
+		if (
+			confirm(
+				`Are you sure you want to delete network "${network.name}"? All hosts, groups, and subnets will be deleted along with it.`
+			)
+		) {
 			deleteNetwork(network.id);
 		}
 	}
@@ -75,11 +84,7 @@
 		<!-- Daemons grid -->
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each $networks as network (network.id)}
-				<NetworkCard
-					{network}
-					onDelete={handleDeleteNetwork}
-					onEdit={handleEditNetwork}
-				/>
+				<NetworkCard {network} onDelete={handleDeleteNetwork} onEdit={handleEditNetwork} />
 			{/each}
 		</div>
 	{/if}
@@ -90,4 +95,5 @@
 	network={editingNetwork}
 	onCreate={handleCreateNetwork}
 	onUpdate={handleNetworkUpdate}
-	onClose={handleCloseNetworkEditor}/>
+	onClose={handleCloseNetworkEditor}
+/>

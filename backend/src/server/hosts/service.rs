@@ -58,10 +58,10 @@ impl HostService {
 
         // Manually created and needs actual UUID
         let mut created_host = if host.id == Uuid::nil() {
-            self.create_host(Host::new(host.base.clone()), &vec!(host.base.network_id))
+            self.create_host(Host::new(host.base.clone()), &vec![host.base.network_id])
                 .await?
         } else {
-            self.create_host(host.clone(), &vec!(host.base.network_id))
+            self.create_host(host.clone(), &vec![host.base.network_id])
                 .await?
         };
 
@@ -280,17 +280,6 @@ impl HostService {
             return Err(anyhow!("Can't consolidate a host with itself"));
         }
 
-        if self
-            .daemon_service
-            .get_host_daemon(&other_host.id)
-            .await?
-            .is_some()
-        {
-            return Err(anyhow!(
-                "Can't consolidate a host that has a daemon. Consolidate the other host into the daemon host."
-            ));
-        }
-
         let lock = self.get_host_lock(&destination_host.id).await;
         let _guard1 = lock.lock().await;
 
@@ -322,7 +311,7 @@ impl HostService {
             .upsert_host(destination_host.clone(), other_host.clone())
             .await?;
 
-        // Update host_id and interface/port binding IDs to what's available on new host
+        // Update host_id, network_id, and interface/port binding IDs to what's available on new host
         // bindings IDs from old host may no longer exist if new host already had the port / interface
         let service_transfer_futures: Vec<_> = other_host_services
             .into_iter()
