@@ -20,6 +20,7 @@
 
 	let activeTab = 'hosts';
 	let appInitialized = false;
+	let sidebarCollapsed = false;
 
 	// Valid tab names for validation
 	const validTabs = ['discovery', 'networks', 'hosts', 'subnets', 'groups', 'topology'];
@@ -99,10 +100,16 @@
 {#if appInitialized}
 	<div class="flex min-h-screen">
 		<!-- Sidebar -->
-		<Sidebar {activeTab} onTabChange={handleTabChange} />
+		<div class="flex-shrink-0">
+			<Sidebar {activeTab} onTabChange={handleTabChange} bind:collapsed={sidebarCollapsed} />
+		</div>
 
 		<!-- Main Content -->
-		<main class="ml-64 flex-1 overflow-auto">
+		<main
+			class="flex-1 overflow-auto transition-all duration-300"
+			class:ml-16={sidebarCollapsed}
+			class:ml-64={!sidebarCollapsed}
+		>
 			<div class="p-8">
 				{#if !appInitialized}
 					<Loading />

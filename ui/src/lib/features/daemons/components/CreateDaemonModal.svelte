@@ -62,7 +62,7 @@
 		template: string,
 		serverTarget: string,
 		serverPort: string,
-		networkId: string,
+		networkId: string
 	): string {
 		// Replace lines that contain env vars
 
@@ -118,12 +118,7 @@
 			<CodeContainer
 				language="yaml"
 				expandable={false}
-				code={populateDockerCompose(
-					dockerTemplate,
-					serverTarget,
-					serverPort,
-					selectedNetworkId,
-				)}
+				code={populateDockerCompose(dockerTemplate, serverTarget, serverPort, selectedNetworkId)}
 			/>
 		{:else if daemon}
 			<h3 class="text-primary text-lg font-medium">Update API Key</h3>
