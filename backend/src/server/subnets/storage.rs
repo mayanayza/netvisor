@@ -96,12 +96,11 @@ impl SubnetStorage for PostgresSubnetStorage {
     }
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Subnet>> {
-        let rows = sqlx::query(
-            "SELECT * FROM subnets WHERE network_id = ANY($1) ORDER BY created_at ASC",
-        )
-        .bind(network_ids)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows =
+            sqlx::query("SELECT * FROM subnets WHERE network_id = ANY($1) ORDER BY created_at ASC")
+                .bind(network_ids)
+                .fetch_all(&self.pool)
+                .await?;
 
         let mut subnets = Vec::new();
         for row in rows {

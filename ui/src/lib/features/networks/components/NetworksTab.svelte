@@ -4,7 +4,7 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import {
-	createNetwork,
+		createNetwork,
 		deleteNetwork,
 		getNetworks,
 		networks,

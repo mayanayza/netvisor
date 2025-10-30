@@ -15,5 +15,5 @@
 			<option class="select-option" value={network.id}>{network.name}</option>
 		{/each}
 	</select>
-	<p class="mt-2 text-tertiary text-xs">Select network</p>
+	<p class="text-tertiary mt-2 text-xs">Select network</p>
 </div>

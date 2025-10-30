@@ -33,12 +33,18 @@ impl NetworkService {
     /// Create a new network
     pub async fn create_network(&self, network: Network) -> Result<Network> {
         let created_network = if network.id == Uuid::nil() {
-            self.network_storage.create(&Network::new(network.base)).await?
+            self.network_storage
+                .create(&Network::new(network.base))
+                .await?
         } else {
             self.network_storage.create(&network).await?
         };
 
-        tracing::info!("Created network {}: {}", created_network.base.name, created_network.id);
+        tracing::info!(
+            "Created network {}: {}",
+            created_network.base.name,
+            created_network.id
+        );
         Ok(created_network)
     }
 

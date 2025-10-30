@@ -62,15 +62,14 @@ impl NetworkStorage for PostgresNetworkStorage {
     }
 
     async fn get_all(&self, user_id: &Uuid) -> Result<Vec<Network>> {
-        let rows =
-            sqlx::query("SELECT * FROM networks WHERE user_id = $1 ORDER BY created_at ASC")
-                .bind(user_id)
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| {
-                    info!("SQLx error in get_all: {:?}", e);
-                    e
-                })?;
+        let rows = sqlx::query("SELECT * FROM networks WHERE user_id = $1 ORDER BY created_at ASC")
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| {
+                info!("SQLx error in get_all: {:?}", e);
+                e
+            })?;
 
         let mut networks = Vec::new();
         for row in rows {

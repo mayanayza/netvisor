@@ -54,8 +54,8 @@
 				loading = false;
 			}
 		} else {
-			pushError("Could not load ID for current user")
-			onClose()
+			pushError('Could not load ID for current user');
+			onClose();
 		}
 	}
 

@@ -20,7 +20,7 @@
 
 	let apiKeyStore: Writable<string | null> = writable(null);
 	$: apiKey = $apiKeyStore;
-	$: selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
+	let selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
 
 	function handleOnClose() {
 		apiKeyStore.set(null);
@@ -134,7 +134,7 @@
 		{/if}
 
 		<!-- Network Type -->
-		<SelectNetwork bind:selectedNetworkId={selectedNetworkId}></SelectNetwork>
+		<SelectNetwork bind:selectedNetworkId></SelectNetwork>
 
 		{#if !daemon}
 			<div class="text-secondary mt-3">Option 1. Run the install script, then start the daemon</div>
