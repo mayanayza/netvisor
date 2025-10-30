@@ -40,11 +40,7 @@
 		.filter((sb) => !formData.service_bindings.some((binding) => binding === sb.id));
 
 	$: selectedServiceBindings = formData.service_bindings
-		.map(bindingId => 
-			$services
-				.flatMap(s => s.bindings)
-				.find(sb => sb.id === bindingId)
-		)
+		.map((bindingId) => $services.flatMap((s) => s.bindings).find((sb) => sb.id === bindingId))
 		.filter(Boolean);
 
 	// Handlers for service bindings
