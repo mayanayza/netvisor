@@ -26,7 +26,8 @@ pub struct StorageFactory {
 }
 
 pub async fn create_session_store(
-    db_pool: Pool<Postgres>, use_secure: bool
+    db_pool: Pool<Postgres>,
+    use_secure: bool,
 ) -> Result<SessionManagerLayer<PostgresStore>> {
     let session_store = PostgresStore::new(db_pool.clone());
 

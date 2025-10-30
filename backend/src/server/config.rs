@@ -17,7 +17,7 @@ pub struct CliArgs {
     pub rust_log: Option<String>,
     pub database_url: Option<String>,
     pub integrated_daemon_url: Option<String>,
-    pub use_secure_session_cookies: Option<bool>
+    pub use_secure_session_cookies: Option<bool>,
 }
 
 /// Flattened server configuration struct
@@ -112,7 +112,8 @@ impl AppState {
         config: ServerConfig,
         discovery_manager: DiscoverySessionManager,
     ) -> Result<Arc<Self>, Error> {
-        let storage = StorageFactory::new(&config.database_url(), config.use_secure_session_cookies).await?;
+        let storage =
+            StorageFactory::new(&config.database_url(), config.use_secure_session_cookies).await?;
         let services = ServiceFactory::new(&storage).await?;
 
         Ok(Arc::new(Self {
