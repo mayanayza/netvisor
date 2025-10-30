@@ -59,7 +59,7 @@ pub async fn setup_test_db() -> (PgPool, String, ContainerAsync<GenericImage>) {
 pub async fn test_storage() -> (StorageFactory, ContainerAsync<GenericImage>) {
     let (pool, database_url, _container) = setup_test_db().await;
     pool.close().await;
-    let factory = StorageFactory::new(&database_url).await.unwrap();
+    let factory = StorageFactory::new(&database_url, false).await.unwrap();
     (factory, _container)
 }
 

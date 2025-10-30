@@ -44,6 +44,10 @@ struct Cli {
     /// Override integrated daemon url
     #[arg(long)]
     integrated_daemon_url: Option<String>,
+
+    /// Use secure session cookies (if serving UI behind HTTPS)
+    #[arg(long)]
+    use_secure_session_cookies: Option<bool>,
 }
 
 impl From<Cli> for CliArgs {
@@ -54,6 +58,7 @@ impl From<Cli> for CliArgs {
             rust_log: cli.rust_log,
             database_url: cli.database_url,
             integrated_daemon_url: cli.integrated_daemon_url,
+            use_secure_session_cookies: cli.use_secure_session_cookies
         }
     }
 }
