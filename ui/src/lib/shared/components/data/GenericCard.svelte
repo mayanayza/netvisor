@@ -39,7 +39,7 @@
 			</div>
 		</div>
 		{#if status}
-			<Tag {...status}/>
+			<Tag {...status} />
 		{/if}
 	</div>
 

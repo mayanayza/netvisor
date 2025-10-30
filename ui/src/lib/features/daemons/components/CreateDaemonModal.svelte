@@ -63,7 +63,6 @@
 		serverTarget: string,
 		serverPort: string,
 		networkId: string,
-		apiKey: string | null
 	): string {
 		// Replace lines that contain env vars
 
@@ -105,8 +104,10 @@
 			<h3 class="text-primary text-lg font-medium">Daemon Installation</h3>
 
 			<SelectNetwork bind:selectedNetworkId></SelectNetwork>
-			
-			<div class="text-secondary mt-3"><b>Option 1.</b> Run the install script, then start the daemon</div>
+
+			<div class="text-secondary mt-3">
+				<b>Option 1.</b> Run the install script, then start the daemon
+			</div>
 
 			<CodeContainer language="bash" expandable={false} code={installCommand} />
 
@@ -122,11 +123,9 @@
 					serverTarget,
 					serverPort,
 					selectedNetworkId,
-					apiKey
 				)}
 			/>
 		{:else if daemon}
-
 			<h3 class="text-primary text-lg font-medium">Update API Key</h3>
 
 			{#if !daemon.api_key}
@@ -138,27 +137,45 @@
 
 			<div class="pb-2">
 				<div class="flex items-start gap-2">
-					<button class="btn-primary flex-shrink-0 self-stretch m-1" on:click={handleGenerateApiKey}>
+					<button
+						class="btn-primary m-1 flex-shrink-0 self-stretch"
+						on:click={handleGenerateApiKey}
+					>
 						<RotateCcwKey />
 						<span>Generate Key</span>
 					</button>
 
 					<div class="flex-1">
-						<CodeContainer language="bash" expandable={false} code={apiKey ? apiKey : "Press Generate Key..."} />
+						<CodeContainer
+							language="bash"
+							expandable={false}
+							code={apiKey ? apiKey : 'Press Generate Key...'}
+						/>
 					</div>
 				</div>
 			</div>
-				{#if daemon.api_key && !apiKey}
-					<InlineWarning title="Any existing API key will be invalidated when you generate a new key."/>
-				{:else if apiKey}
-					<InlineWarning title="This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below."/>
+			{#if daemon.api_key && !apiKey}
+				<InlineWarning
+					title="Any existing API key will be invalidated when you generate a new key."
+				/>
+			{:else if apiKey}
+				<InlineWarning
+					title="This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below."
+				/>
 
-					<div class="text-secondary mt-3"><b>Option 1.</b> Stop the daemon process, and use this command to start it</div>
-					<CodeContainer language="bash" expandable={false} code={runCommand} />
-					<div class="text-secondary mt-3"><b>Option 2.</b> Stop the daemon container, and add this environment variable</div>
-					<CodeContainer language="bash" expandable={false} code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`} />
-				{/if}
+				<div class="text-secondary mt-3">
+					<b>Option 1.</b> Stop the daemon process, and use this command to start it
+				</div>
+				<CodeContainer language="bash" expandable={false} code={runCommand} />
+				<div class="text-secondary mt-3">
+					<b>Option 2.</b> Stop the daemon container, and add this environment variable
+				</div>
+				<CodeContainer
+					language="bash"
+					expandable={false}
+					code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`}
+				/>
+			{/if}
 		{/if}
-		
 	</div>
 </EditModal>

@@ -8,7 +8,7 @@
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
-	import { AlertTriangle, Radar, RotateCcwKey, Trash2 } from 'lucide-svelte';
+	import { RotateCcwKey, Trash2 } from 'lucide-svelte';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
@@ -26,13 +26,14 @@
 	// Build card data
 	$: cardData = {
 		title: daemon.ip + ':' + daemon.port,
-		...(!daemon.api_key ?
-			{status: {
-				label: "⚠ API key missing",
-				color: "yellow"
-			}}
-			: {}
-		),
+		...(!daemon.api_key
+			? {
+					status: {
+						label: '⚠ API key missing',
+						color: 'yellow'
+					}
+				}
+			: {}),
 		iconColor: entities.getColorHelper('Daemon').icon,
 		icon: entities.getIconComponent('Daemon'),
 		sections: [
@@ -66,12 +67,11 @@
 							disabled: daemonIsRunningDiscovery
 						}
 					]
-				: []
-				),
+				: []),
 			{
 				label: 'Update API Key',
 				icon: RotateCcwKey,
-				class: `btn-icon ${!daemon.api_key ? 'text-yellow-500':''}`,
+				class: `btn-icon ${!daemon.api_key ? 'text-yellow-500' : ''}`,
 				onClick: () => onGenerateApi(daemon)
 			},
 			{

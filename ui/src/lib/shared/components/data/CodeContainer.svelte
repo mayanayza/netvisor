@@ -58,7 +58,7 @@
 	{/if}
 </div>
 
-<style>	
+<style>
 	:global(.prism--code-container) {
 		margin: 0 !important;
 		border: 2px solid #6b7280 !important;

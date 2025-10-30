@@ -145,22 +145,19 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("📁 Config file: {:?}", path_str);
     tracing::info!("🔗 Server at {}", server_addr);
 
-    if let Some(network_id) = network_id
-    {
-        
+    if let Some(network_id) = network_id {
         if api_key.is_some() {
             tracing::info!("Network ID available: {}", network_id);
             runtime_service
                 .initialize_services(*network_id, discovery_service, discovery_manager)
                 .await?;
         } else {
-            tracing::warn!("Daemon is missing an API key. Go to discovery tab in UI to generate an API key.");
+            tracing::warn!(
+                "Daemon is missing an API key. Go to discovery tab in UI to generate an API key."
+            );
         }
-        
     } else {
-        tracing::info!(
-            "Missing network ID - waiting for server to hit /api/initialize..."
-        );
+        tracing::info!("Missing network ID - waiting for server to hit /api/initialize...");
     }
 
     // Spawn heartbeat task in background
