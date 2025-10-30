@@ -17,7 +17,7 @@
 	import { startDiscoverySSE } from '$lib/features/discovery/store';
 	import DiscoveryTab from '$lib/features/daemons/components/DiscoveryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
-	import { isAuthenticated } from '$lib/features/auth/store';
+	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
 
 	let activeTab = 'hosts';
 	let appInitialized = false;
@@ -84,7 +84,8 @@
 	}
 
 	// Reactive effect: load data when authenticated
-	$: if ($isAuthenticated && !dataLoadingStarted) {
+	// The layout handles checkAuth(), so we just wait for it to complete
+	$: if ($isAuthenticated && !$isCheckingAuth && !dataLoadingStarted) {
 		loadData();
 	}
 
@@ -109,7 +110,7 @@
 	});
 </script>
 
-{#if appInitialized && $isAuthenticated}
+{#if appInitialized}
 	<div class="flex min-h-screen">
 		<!-- Sidebar -->
 		<Sidebar {activeTab} onTabChange={handleTabChange} />
@@ -117,9 +118,7 @@
 		<!-- Main Content -->
 		<main class="ml-64 flex-1 overflow-auto">
 			<div class="p-8">
-				{#if !appInitialized}
-					<Loading />
-				{:else if activeTab === 'discovery'}
+				{#if activeTab === 'discovery'}
 					<DiscoveryTab />
 				{:else if activeTab === 'networks'}
 					<NetworksTab />
@@ -137,6 +136,7 @@
 			<Toast />
 		</main>
 	</div>
-{:else if $isAuthenticated}
+{:else}
+	<!-- Data still loading -->
 	<Loading />
 {/if}

@@ -15,7 +15,7 @@ use netvisor::{
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
-    services::ServeDir,
+    services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -124,7 +124,11 @@ async fn main() -> anyhow::Result<()> {
     // Create router
     let api_router = if let Some(static_path) = &web_external_path {
         Router::new()
-            .fallback_service(ServeDir::new(static_path))
+            .nest_service("/", 
+        ServeDir::new(&static_path)
+                    .append_index_html_on_directories(true)
+                    .fallback(ServeFile::new(format!("{}/index.html", static_path.display())))
+            )
             .merge(create_router())
             .layer(session_store)
             .with_state(state)
