@@ -8,7 +8,7 @@
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
-	import { AlertTriangle, Radar, Trash2 } from 'lucide-svelte';
+	import { AlertTriangle, Radar, RotateCcwKey, Trash2 } from 'lucide-svelte';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
@@ -55,16 +55,8 @@
 		],
 		lists: [],
 		actions: [
-			...(!daemon.api_key
+			...(daemon.api_key
 				? [
-						{
-							label: 'Generate API Key',
-							icon: AlertTriangle,
-							class: 'btn-icon',
-							onClick: () => onGenerateApi(daemon)
-						}
-					]
-				: [
 						{
 							label: 'Run Discovery',
 							icon: entities.getIconComponent('Discovery'),
@@ -73,7 +65,15 @@
 							animation: daemonIsRunningDiscovery ? 'animate-spin' : '',
 							disabled: daemonIsRunningDiscovery
 						}
-					]),
+					]
+				: []
+				),
+			{
+				label: 'Update API Key',
+				icon: RotateCcwKey,
+				class: `btn-icon ${!daemon.api_key ? 'text-yellow-500':''}`,
+				onClick: () => onGenerateApi(daemon)
+			},
 			{
 				label: 'Delete Daemon',
 				icon: Trash2,

@@ -101,36 +101,11 @@
 	</svelte:fragment>
 
 	<div class="space-y-4">
-		<h3 class="text-primary text-lg font-medium">Daemon Installation</h3>
-
-		{#if daemon && !daemon.api_key}
-			<InlineWarning
-				title="Daemon missing API key"
-				body="This daemon does not have an API key set in its config file. Please press the button below to generate one, then use the daemon start command or relaunch the docker compose."
-			/>
-			<div class="flex items-center gap-2">
-				<button class="btn-primary flex-shrink-0" on:click={handleGenerateApiKey}>
-					<RotateCcwKey />
-					<span>Generate Key</span>
-				</button>
-
-				<div class="flex min-h-[3rem] flex-1 items-center">
-					{#if apiKey}
-						<div class="w-full">
-							<CodeContainer language="bash" expandable={false} code={apiKey} />
-						</div>
-					{/if}
-				</div>
-			</div>
-			{#if apiKey}
-				<span class="text-secondary">This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below.</span>
-			{/if}
-		{/if}
-
-		<!-- Network Type -->
-		<SelectNetwork bind:selectedNetworkId></SelectNetwork>
-
 		{#if !daemon}
+			<h3 class="text-primary text-lg font-medium">Daemon Installation</h3>
+
+			<SelectNetwork bind:selectedNetworkId></SelectNetwork>
+			
 			<div class="text-secondary mt-3">Option 1. Run the install script, then start the daemon</div>
 
 			<CodeContainer language="bash" expandable={false} code={installCommand} />
@@ -150,11 +125,38 @@
 					apiKey
 				)}
 			/>
-		{:else if apiKey}
-			<div class="text-secondary mt-3">Option 1. Stop the daemon process, and use this start command</div>
-			<CodeContainer language="bash" expandable={false} code={runCommand} />
-			<div class="text-secondary mt-3">Option 2. Stop the daemon container, and add this env var</div>
-			<CodeContainer language="bash" expandable={false} code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`} />
+		{:else if daemon}
+
+			<h3 class="text-primary text-lg font-medium">Update API Key</h3>
+
+			{#if !daemon.api_key}
+				<InlineWarning
+					title="Daemon missing API key"
+					body="This daemon does not have an API key set in its config file. Please press the button below to generate one, then use the daemon start command or relaunch the docker compose."
+				/>
+			{/if}
+
+			<div class="flex items-center gap-2">
+				<button class="btn-primary flex-shrink-0 h-full" on:click={handleGenerateApiKey}>
+					<RotateCcwKey />
+					<span>Generate Key</span>
+				</button>
+
+				<div class="flex flex-1 items-center">
+					{#if apiKey}
+						<div class="w-full">
+							<CodeContainer language="bash" expandable={false} code={apiKey} />
+						</div>
+					{/if}
+				</div>
+			</div>
+			{#if apiKey}
+				<span class="text-secondary">This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below.</span>
+				<div class="text-secondary mt-3">Option 1. Stop the daemon process, and use this start command</div>
+				<CodeContainer language="bash" expandable={false} code={runCommand} />
+				<div class="text-secondary mt-3">Option 2. Stop the daemon container, and add this env var</div>
+				<CodeContainer language="bash" expandable={false} code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`} />
+			{/if}
 		{/if}
 		
 	</div>
