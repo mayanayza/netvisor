@@ -14,7 +14,7 @@ pub trait DaemonStorage: Send + Sync {
     async fn get_by_host_id(&self, host_id: &Uuid) -> Result<Option<Daemon>>;
     async fn get_by_api_key(&self, api_key: &str) -> Result<Option<Daemon>>;
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>>;
-    async fn update(&self, group: &Daemon) -> Result<Daemon>;
+    async fn update(&self, daemon: &Daemon) -> Result<Daemon>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
 }
 
@@ -92,14 +92,16 @@ impl DaemonStorage for PostgresDaemonStorage {
     }
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>> {
-        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = ANY($1) ORDER BY registered_at DESC")
-            .bind(network_ids)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| {
-                tracing::info!("SQLx error in get_all: {:?}", e);
-                e
-            })?;
+        let rows = sqlx::query(
+            "SELECT * FROM daemons WHERE network_id = ANY($1) ORDER BY registered_at DESC",
+        )
+        .bind(network_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| {
+            tracing::info!("SQLx error in get_all: {:?}", e);
+            e
+        })?;
 
         let mut daemons = Vec::new();
         for row in rows {
@@ -115,7 +117,7 @@ impl DaemonStorage for PostgresDaemonStorage {
         sqlx::query(
             r#"
             UPDATE daemons SET 
-                host_id = $2, ip = $3, port = $4, last_seen = $5
+                host_id = $2, ip = $3, port = $4, last_seen = $5, api_key = $6
             WHERE id = $1
             "#,
         )
@@ -124,6 +126,7 @@ impl DaemonStorage for PostgresDaemonStorage {
         .bind(ip_str)
         .bind(daemon.base.port as i32)
         .bind(daemon.last_seen)
+        .bind(&daemon.base.api_key)
         .execute(&self.pool)
         .await?;
 

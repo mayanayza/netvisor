@@ -79,7 +79,7 @@ impl ServiceStorage for PostgresServiceStorage {
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Service>> {
         let rows = sqlx::query(
-            "SELECT * FROM services WHERE network_id = ANY($1) ORDER BY created_at DESC",
+            "SELECT * FROM services WHERE network_id = ANY($1) ORDER BY created_at ASC",
         )
         .bind(network_ids)
         .fetch_all(&self.pool)

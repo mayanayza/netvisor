@@ -4,6 +4,7 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import {
+	createNetwork,
 		deleteNetwork,
 		getNetworks,
 		networks,
@@ -40,6 +41,14 @@
 	function handleEditNetwork(network: Network) {
 		editingNetwork = network;
 		showCreateNetworkModal = true;
+	}
+
+	async function handleNetworkCreate(data: Network) {
+		const result = await createNetwork(data);
+		if (result?.success) {
+			showCreateNetworkModal = false;
+			editingNetwork = null;
+		}
 	}
 
 	async function handleNetworkUpdate(id: string, data: Network) {
@@ -93,7 +102,7 @@
 <NetworkEditModal
 	isOpen={showCreateNetworkModal}
 	network={editingNetwork}
-	onCreate={handleCreateNetwork}
+	onCreate={handleNetworkCreate}
 	onUpdate={handleNetworkUpdate}
 	onClose={handleCloseNetworkEditor}
 />

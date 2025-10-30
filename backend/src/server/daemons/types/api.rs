@@ -14,9 +14,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerateKeyRequest {
     pub daemon_id: Uuid,
-    pub network_id: Uuid
+    pub network_id: Uuid,
 }
-
 
 /// Daemon registration request from daemon to server
 #[derive(Debug, Clone, Serialize, Deserialize)]

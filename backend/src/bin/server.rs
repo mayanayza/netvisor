@@ -169,10 +169,9 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
         initialize_local_daemon(integrated_daemon_url, network.id).await?;
-
     } else {
         tracing::debug!("Server already has data, skipping seed data");
-    }    
+    }
 
     tokio::signal::ctrl_c().await?;
 

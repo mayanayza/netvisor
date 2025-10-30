@@ -4,4 +4,5 @@ export interface Network {
 	updated_at: string;
 	name: string;
 	is_default: boolean;
+	user_id: string;
 }

@@ -35,13 +35,12 @@
 
 	function handleCloseCreateDaemon() {
 		showCreateDaemonModal = false;
-		daemon = null
+		daemon = null;
 	}
 
-	function handleGenerateApiKey(daemon: Daemon) {
+	function handleGenerateApiKey(generateApiDaemon: Daemon) {
 		showCreateDaemonModal = true;
-		daemon = daemon;
-
+		daemon = generateApiDaemon;
 	}
 </script>
 
@@ -85,4 +84,4 @@
 	{/if}
 </div>
 
-<CreateDaemonModal isOpen={showCreateDaemonModal} onClose={handleCloseCreateDaemon} {daemon}/>
+<CreateDaemonModal isOpen={showCreateDaemonModal} onClose={handleCloseCreateDaemon} {daemon} />

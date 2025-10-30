@@ -8,7 +8,7 @@
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
-	import { AlertTriangle, Trash2 } from 'lucide-svelte';
+	import { Radar, Trash2 } from 'lucide-svelte';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
@@ -48,23 +48,25 @@
 		],
 		lists: [],
 		actions: [
-			{
-				label: 'Run Discovery',
-				icon: entities.getIconComponent('Discovery'),
-				class: daemonIsRunningDiscovery ? 'btn-icon-success' : 'btn-icon',
-				onClick: !daemonIsRunningDiscovery ? () => onDiscovery(daemon) : () => {},
-				animation: daemonIsRunningDiscovery ? 'animate-spin' : '',
-				disabled: daemonIsRunningDiscovery
-			},
-			...(!daemon.api_key 
-				? [{
-					label: 'Generate API Key',
-					icon: AlertTriangle,
-					class: 'btn-icon',
-					onClick: () => onGenerateApi(daemon)
-				}]
-				:[]
-			),
+			...(!daemon.api_key
+				? [
+						{
+							label: 'Generate API Key',
+							icon: Radar,
+							class: 'btn-icon',
+							onClick: () => onGenerateApi(daemon)
+						}
+					]
+				: [
+						{
+							label: 'Run Discovery',
+							icon: entities.getIconComponent('Discovery'),
+							class: daemonIsRunningDiscovery ? 'btn-icon-success' : 'btn-icon',
+							onClick: !daemonIsRunningDiscovery ? () => onDiscovery(daemon) : () => {},
+							animation: daemonIsRunningDiscovery ? 'animate-spin' : '',
+							disabled: daemonIsRunningDiscovery
+						}
+					]),
 			{
 				label: 'Delete Daemon',
 				icon: Trash2,

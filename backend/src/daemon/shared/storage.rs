@@ -22,7 +22,7 @@ pub struct CliArgs {
     pub log_level: Option<String>,
     pub heartbeat_interval: Option<u64>,
     pub concurrent_scans: Option<usize>,
-    pub daemon_api_key: Option<String>
+    pub daemon_api_key: Option<String>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config

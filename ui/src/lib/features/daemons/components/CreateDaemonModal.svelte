@@ -18,20 +18,28 @@
 	export let onClose: () => void;
 	export let daemon: Daemon | null = null;
 
-	let apiKeyStore: Writable<string | null> = writable(null)
+	let apiKeyStore: Writable<string | null> = writable(null);
 	$: apiKey = $apiKeyStore;
 	$: selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
 
+	function handleOnClose() {
+		apiKeyStore.set(null);
+		onClose();
+	}
+
 	async function handleGenerateApiKey() {
 		if (daemon) {
-			const generatedKey = await generateApiKey({daemon_id: daemon.id, network_id: daemon.network_id});
+			const generatedKey = await generateApiKey({
+				daemon_id: daemon.id,
+				network_id: daemon.network_id
+			});
 			if (generatedKey) {
-				apiKeyStore.set(generatedKey)
+				apiKeyStore.set(generatedKey);
 			} else {
-				pushError("Failed to generate API key")
+				pushError('Failed to generate API key');
 			}
 		} else {
-			pushError("No daemon provided to generate API key for")
+			pushError('No daemon provided to generate API key for');
 		}
 	}
 
@@ -48,15 +56,26 @@
 	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	const runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} --network-id ${selectedNetworkId}`;
+	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} \\ \n--network-id ${selectedNetworkId} ${apiKey ? `--daemon-api-key ${apiKey}` : ''}`;
 
 	function populateDockerCompose(
 		template: string,
 		serverTarget: string,
 		serverPort: string,
-		networkId: string
+		networkId: string,
+		apiKey: string | null
 	): string {
-		// Replace lines that contain these env vars
+		// Replace lines that contain env vars + add API key if applicable
+
+		if (apiKey) {
+			let [beforeApiKey, afterApiKey] = template.split('# Daemon configuration\n');
+
+			template =
+				beforeApiKey +
+				`# Daemon configuration\n      - NETVISOR_DAEMON_API_KEY=${apiKey}\n` +
+				afterApiKey;
+		}
+
 		return template
 			.split('\n')
 			.map((line) => {
@@ -81,7 +100,7 @@
 	{isOpen}
 	title="Create Daemon"
 	cancelLabel="Cancel"
-	onCancel={onClose}
+	onCancel={handleOnClose}
 	showSave={false}
 	size="xl"
 >
@@ -93,45 +112,52 @@
 	<div class="space-y-4">
 		<h3 class="text-primary text-lg font-medium">Daemon Installation</h3>
 
-		{#if daemon && !daemon?.api_key}
-			<InlineWarning 
-				title="Daemon missing API key" 
-				body="This daemon does not have an API key set in its config file. \
-					Please press the button below to generate one, then use the daemon start command or relaunch\
-					the docker compose."/>
-			<button
-				class="btn-primary"
-				on:click={handleGenerateApiKey}>
-				<RotateCcwKey/>
-				<span>Generate Key</span>
-			</button>
+		{#if daemon && !daemon.api_key}
+			<InlineWarning
+				title="Daemon missing API key"
+				body="This daemon does not have an API key set in its config file. Please press the button below to generate one, then use the daemon start command or relaunch the docker compose."
+			/>
+			<div class="flex items-center gap-2">
+				<button class="btn-primary flex-shrink-0" on:click={handleGenerateApiKey}>
+					<RotateCcwKey />
+					<span>Generate Key</span>
+				</button>
 
-			{#if apiKey}
-				<CodeContainer language="bash" expandable={false} code={apiKey}/>
-			{/if}
+				<div class="flex min-h-[3rem] flex-1 items-center">
+					{#if apiKey}
+						<div class="w-full">
+							<CodeContainer language="bash" expandable={false} code={apiKey} />
+						</div>
+					{/if}
+				</div>
+			</div>
 		{/if}
 
 		<!-- Network Type -->
-		{#if false}
-			<label for="group_type" class="text-secondary mb-2 block text-sm font-medium">
-				Network
-			</label>
-			<SelectNetwork selectedNetworkId={selectedNetworkId}></SelectNetwork>
-			<p class="text-tertiary text-xs">Select the network that this daemon will report data to</p>
+		<SelectNetwork bind:selectedNetworkId={selectedNetworkId}></SelectNetwork>
+
+		{#if !daemon}
+			<div class="text-secondary mt-3">Option 1. Run the install script, then start the daemon</div>
+
+			<CodeContainer language="bash" expandable={false} code={installCommand} />
 		{/if}
-
-		<div class="text-secondary mt-3">Option 1. Run the install script, then start the daemon</div>
-
-		<CodeContainer language="bash" expandable={false} code={installCommand} />
 
 		<CodeContainer language="bash" expandable={false} code={runCommand} />
 
-		<div class="text-secondary mt-3">Option 2. Run this docker-compose</div>
+		{#if !daemon}
+			<div class="text-secondary mt-3">Option 2. Run this docker-compose</div>
+		{/if}
 
 		<CodeContainer
 			language="yaml"
 			expandable={false}
-			code={populateDockerCompose(dockerTemplate, serverTarget, serverPort, selectedNetworkId)}
+			code={populateDockerCompose(
+				dockerTemplate,
+				serverTarget,
+				serverPort,
+				selectedNetworkId,
+				apiKey
+			)}
 		/>
 	</div>
 </EditModal>

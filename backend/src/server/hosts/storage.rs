@@ -84,7 +84,7 @@ impl HostStorage for PostgresHostStorage {
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Host>> {
         let rows =
-            sqlx::query("SELECT * FROM hosts WHERE network_id = ANY($1) ORDER BY created_at DESC")
+            sqlx::query("SELECT * FROM hosts WHERE network_id = ANY($1) ORDER BY created_at ASC")
                 .bind(network_ids)
                 .fetch_all(&self.pool)
                 .await?;
@@ -110,7 +110,7 @@ impl HostStorage for PostgresHostStorage {
             UPDATE hosts SET 
                 name = $2, hostname = $3, description = $4,
                 target = $5, interfaces = $6, ports = $7, source = $8, services = $9, virtualization = $10,
-                updated_at = $11
+                updated_at = $11, network_id = $12
             WHERE id = $1
             "#,
         )

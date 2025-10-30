@@ -1,18 +1,12 @@
-import { derived, get, writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { Daemon, GenerateApiRequest } from './types/base';
 import type { DiscoveryUpdatePayload } from '../discovery/types/api';
-import { currentNetwork } from '../networks/store';
 
 export const daemons = writable<Daemon[]>([]);
 
 export async function getDaemons() {
-	return await api.request<Daemon[]>(
-		`/daemons`,
-		daemons,
-		(daemons) => daemons,
-		{ method: 'GET' }
-	);
+	return await api.request<Daemon[]>(`/daemons`, daemons, (daemons) => daemons, { method: 'GET' });
 }
 
 export async function generateApiKey(data: GenerateApiRequest) {
@@ -24,7 +18,7 @@ export async function generateApiKey(data: GenerateApiRequest) {
 	);
 
 	if (response && response?.success && response.data) {
-		return response.data
+		return response.data;
 	}
 }
 

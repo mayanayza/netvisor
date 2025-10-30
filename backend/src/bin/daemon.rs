@@ -78,7 +78,7 @@ impl From<Cli> for CliArgs {
             log_level: cli.log_level,
             heartbeat_interval: cli.heartbeat_interval,
             concurrent_scans: cli.concurrent_scans,
-            daemon_api_key: cli.daemon_api_key
+            daemon_api_key: cli.daemon_api_key,
         }
     }
 }
@@ -145,7 +145,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("📁 Config file: {:?}", path_str);
     tracing::info!("🔗 Server at {}", server_addr);
 
-    if let Some(network_id) = network_id && api_key.is_some() {
+    if let Some(network_id) = network_id
+        && api_key.is_some()
+    {
         tracing::info!("Network ID available: {}", network_id);
         runtime_service
             .initialize_services(*network_id, discovery_service, discovery_manager)

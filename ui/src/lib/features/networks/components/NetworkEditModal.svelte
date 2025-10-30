@@ -6,6 +6,8 @@
 	import type { Network } from '../types';
 	import { createEmptyNetworkFormData } from '../store';
 	import NetworkDetailsForm from './NetworkDetailsForm.svelte';
+	import { currentUser } from '$lib/features/auth/store';
+	import { pushError } from '$lib/shared/stores/feedback';
 
 	export let network: Network | null = null;
 	export let isOpen = false;
@@ -33,20 +35,27 @@
 
 	async function handleSubmit() {
 		// Clean up the data before sending
-		const networkData: Network = {
-			...formData,
-			name: formData.name.trim()
-		};
 
-		loading = true;
-		try {
-			if (isEditing && network) {
-				await onUpdate(network.id, networkData);
-			} else {
-				await onCreate(networkData);
+		if ($currentUser) {
+			const networkData: Network = {
+				...formData,
+				name: formData.name.trim(),
+				user_id: $currentUser.id
+			};
+
+			loading = true;
+			try {
+				if (isEditing && network) {
+					await onUpdate(network.id, networkData);
+				} else {
+					await onCreate(networkData);
+				}
+			} finally {
+				loading = false;
 			}
-		} finally {
-			loading = false;
+		} else {
+			pushError("Could not load ID for current user")
+			onClose()
 		}
 	}
 
@@ -82,7 +91,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Group')} color={colorHelper.string} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('Network')} color={colorHelper.string} />
 	</svelte:fragment>
 
 	<!-- Content -->

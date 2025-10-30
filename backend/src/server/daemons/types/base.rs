@@ -25,7 +25,6 @@ where
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Daemon {
     pub id: Uuid,

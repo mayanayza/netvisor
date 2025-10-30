@@ -33,21 +33,19 @@ async fn generate_api_key(
     _user: AuthenticatedUser,
     Json(request): Json<GenerateKeyRequest>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
-
     let service = &state.services.daemon_service;
 
-    if let Some(mut daemon) = service
-        .get_daemon(&request.daemon_id).await? {
+    if let Some(mut daemon) = service.get_daemon(&request.daemon_id).await? {
+        let api_key = Uuid::new_v4().simple().to_string();
+        daemon.base.api_key = Some(api_key.clone());
+        service.update_daemon(daemon.clone()).await?;
 
-            let api_key = Uuid::new_v4().simple().to_string();
-            daemon.base.api_key = Some(api_key.clone());
-            service.update_daemon(daemon.clone()).await?;
-
-            Ok(Json(ApiResponse::success(api_key)))
+        Ok(Json(ApiResponse::success(api_key)))
     } else {
-
-        Err(ApiError::not_found(format!("Could not find daemon {}. Unable to generate API key.", request.daemon_id)))
-
+        Err(ApiError::not_found(format!(
+            "Could not find daemon {}. Unable to generate API key.",
+            request.daemon_id
+        )))
     }
 }
 
@@ -154,7 +152,7 @@ async fn get_daemon(
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
         .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
 
-    Ok(Json(ApiResponse::success( daemon)))
+    Ok(Json(ApiResponse::success(daemon)))
 }
 
 async fn delete_daemon(

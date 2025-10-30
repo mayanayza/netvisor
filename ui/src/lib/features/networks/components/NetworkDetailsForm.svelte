@@ -20,7 +20,7 @@
 
 <!-- Basic Information -->
 <div class="space-y-4">
-	<h3 class="text-primary text-lg font-medium">Group Details</h3>
+	<h3 class="text-primary text-lg font-medium">Network Details</h3>
 
 	<TextInput
 		label="Network Name"
