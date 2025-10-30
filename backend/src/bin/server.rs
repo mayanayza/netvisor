@@ -121,21 +121,17 @@ async fn main() -> anyhow::Result<()> {
 
     let session_store = state.storage.sessions.clone();
 
-    // Create router
     let api_router = if let Some(static_path) = &web_external_path {
-        Router::new()
-            .nest_service(
-                "/",
-                ServeDir::new(static_path)
+        // First create the API router
+        let router = create_router().layer(session_store).with_state(state);
+        
+        // Then add static file serving with SPA fallback
+        router
+            .fallback_service(
+                ServeDir::new(&static_path)
                     .append_index_html_on_directories(true)
-                    .fallback(ServeFile::new(format!(
-                        "{}/index.html",
-                        static_path.display()
-                    ))),
+                    .fallback(ServeFile::new(format!("{}/index.html", static_path.display())))
             )
-            .merge(create_router())
-            .layer(session_store)
-            .with_state(state)
     } else {
         tracing::info!("Server is not serving web assets due to no web_external_path");
         create_router().layer(session_store).with_state(state)
