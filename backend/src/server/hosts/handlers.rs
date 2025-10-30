@@ -1,4 +1,4 @@
-use crate::server::auth::extractor::AuthenticatedUser;
+use crate::server::auth::extractor::{AuthenticatedEntity, AuthenticatedUser};
 use crate::server::{
     config::AppState,
     hosts::types::{api::HostWithServicesRequest, base::Host},
@@ -31,7 +31,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn create_host(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    _authenticated: AuthenticatedEntity,
     Json(request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<HostWithServicesRequest>>> {
     let host_service = &state.services.host_service;
@@ -73,7 +73,7 @@ async fn get_all_hosts(
     let network_ids: Vec<Uuid> = state
         .services
         .network_service
-        .get_all_networks(&user.user_id)
+        .get_all_networks(&user.0)
         .await?
         .iter()
         .map(|n| n.id)

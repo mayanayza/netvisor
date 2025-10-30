@@ -44,6 +44,7 @@ pub struct AppConfig {
     pub id: Uuid,
     pub last_heartbeat: Option<chrono::DateTime<chrono::Utc>>,
     pub host_id: Option<Uuid>,
+    pub api_key: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -60,6 +61,7 @@ impl Default for AppConfig {
             id: Uuid::new_v4(),
             last_heartbeat: None,
             host_id: None,
+            api_key: None,
             concurrent_scans: 15,
         }
     }
@@ -197,6 +199,17 @@ impl ConfigStore {
     pub async fn set_id(&self, id: Uuid) -> Result<()> {
         let mut config = self.config.write().await;
         config.id = id;
+        self.save(&config.clone()).await
+    }
+
+    pub async fn get_api_key(&self) -> Result<Option<String>> {
+        let config = self.config.read().await;
+        Ok(config.api_key.clone())
+    }
+
+    pub async fn set_api_key(&self, api_key: String) -> Result<()> {
+        let mut config = self.config.write().await;
+        config.api_key = Some(api_key);
         self.save(&config.clone()).await
     }
 

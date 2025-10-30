@@ -124,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
     // Create router
     let api_router = if let Some(static_path) = &web_external_path {
         Router::new()
-            .nest_service("/", ServeDir::new(static_path))
+            .fallback_service(ServeDir::new(static_path))
             .merge(create_router())
             .layer(session_store)
             .with_state(state)
@@ -161,11 +161,14 @@ async fn main() -> anyhow::Result<()> {
 
     // First load
     if user_service.get_all_users().await?.is_empty() {
+        tracing::info!("Populating seed data...");
         let (_, network) = user_service
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
         notify_local_daemon(integrated_daemon_url, network.id).await?;
+    } else {
+        tracing::debug!("Server already has data, skipping seed data");
     }
 
     tokio::signal::ctrl_c().await?;

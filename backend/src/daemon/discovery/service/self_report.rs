@@ -79,10 +79,14 @@ impl Discovery<SelfReportDiscovery> {
         Ok(())
     }
 
-    pub async fn run_self_report_discovery(&self) -> Result<(), Error> {
+    pub async fn run_self_report_discovery(&self) -> Result<(Host, Vec<Service>), Error> {
         let config_store = &self.as_ref().config_store;
         let utils = &self.as_ref().utils;
 
+        let host_id = config_store
+            .get_host_id()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Host ID not set"))?;
         let daemon_id = config_store.get_id().await?;
         let network_id = self
             .as_ref()
@@ -157,7 +161,9 @@ impl Discovery<SelfReportDiscovery> {
             virtualization: None,
         };
 
-        let host = Host::new(host_base);
+        let mut host = Host::new(host_base);
+
+        host.id = host_id;
 
         let mut services = Vec::new();
         let daemon_service_definition = NetvisorDaemon;
@@ -185,15 +191,12 @@ impl Discovery<SelfReportDiscovery> {
 
         services.push(daemon_service);
 
-        let (created_host, _) = self.create_host(host, services).await?;
-
         tracing::info!(
-            "Created host with local IP: {}, Hostname: {:?}",
+            "Collected information about own host with local IP: {}, Hostname: {:?}",
             local_ip,
-            created_host.base.hostname
+            host.base.hostname
         );
 
-        config_store.set_host_id(created_host.id).await?;
-        Ok(())
+        Ok((host, services))
     }
 }

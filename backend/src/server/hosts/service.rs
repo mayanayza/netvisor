@@ -280,6 +280,17 @@ impl HostService {
             return Err(anyhow!("Can't consolidate a host with itself"));
         }
 
+        if self
+            .daemon_service
+            .get_host_daemon(&other_host.id)
+            .await?
+            .is_some()
+        {
+            return Err(anyhow!(
+                "Can't consolidate a host with an associated daemon. Delete the daemon first."
+            ));
+        }
+
         let lock = self.get_host_lock(&destination_host.id).await;
         let _guard1 = lock.lock().await;
 
@@ -407,6 +418,12 @@ impl HostService {
     }
 
     pub async fn delete_host(&self, id: &Uuid, delete_services: bool) -> Result<()> {
+        if self.daemon_service.get_host_daemon(id).await?.is_some() {
+            return Err(anyhow!(
+                "Can't delete a host with an associated daemon. Delete the daemon first."
+            ));
+        }
+
         let host = self
             .get_host(id)
             .await?

@@ -42,7 +42,7 @@ async fn get_all_groups(
     let network_ids: Vec<Uuid> = state
         .services
         .network_service
-        .get_all_networks(&user.user_id)
+        .get_all_networks(&user.0)
         .await?
         .iter()
         .map(|n| n.id)

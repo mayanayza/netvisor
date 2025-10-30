@@ -42,7 +42,6 @@ services:
       - RUST_LOG=debug,sqlx=off,tower_http=off
       - NETVISOR_DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/netvisor
       - NETVISOR_WEB_EXTERNAL_PATH=/app/static
-      - NETVISOR_SEED_TEST_USER=true
       - NETVISOR_LOG_LEVEL=${NETVISOR_LOG_LEVEL:-debug}
       - NETVISOR_INTEGRATED_DAEMON_URL=${NETVISOR_INTEGRATED_DAEMON_URL:-http://daemon:60073}
     volumes:

@@ -10,6 +10,7 @@ pub struct DaemonBase {
     pub network_id: Uuid,
     pub ip: IpAddr,
     pub port: u16,
+    pub api_key_hash: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

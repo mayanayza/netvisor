@@ -38,9 +38,6 @@ pub struct ServerConfig {
     /// Where static web assets are located for serving
     pub web_external_path: Option<PathBuf>,
 
-    /// Whether to seed a test user, used for headless integration testing
-    pub seed_test_user: bool,
-
     /// URL for daemon running in same docker stack or in other local context
     pub integrated_daemon_url: Option<String>,
 }
@@ -53,7 +50,6 @@ impl Default for ServerConfig {
             rust_log: "".to_string(),
             database_url: "postgresql://postgres:password@localhost:5432/netvisor".to_string(),
             web_external_path: None,
-            seed_test_user: false,
             integrated_daemon_url: None,
         }
     }

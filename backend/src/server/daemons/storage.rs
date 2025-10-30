@@ -5,7 +5,6 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
-use tracing::info;
 use uuid::Uuid;
 
 #[async_trait]
@@ -13,6 +12,7 @@ pub trait DaemonStorage: Send + Sync {
     async fn create(&self, daemon: &Daemon) -> Result<()>;
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Daemon>>;
     async fn get_by_host_id(&self, host_id: &Uuid) -> Result<Option<Daemon>>;
+    async fn get_by_api_key_hash(&self, api_key: &str) -> Result<Option<Daemon>>;
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>>;
     async fn update(&self, group: &Daemon) -> Result<Daemon>;
     async fn delete(&self, id: &Uuid) -> Result<()>;
@@ -37,8 +37,8 @@ impl DaemonStorage for PostgresDaemonStorage {
             r#"
             INSERT INTO daemons (
                 id, host_id, ip, port,
-                last_seen, registered_at, network_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                last_seen, registered_at, network_id, api_key_hash
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
         )
         .bind(daemon.id)
@@ -48,6 +48,7 @@ impl DaemonStorage for PostgresDaemonStorage {
         .bind(chrono::Utc::now())
         .bind(chrono::Utc::now())
         .bind(daemon.base.network_id)
+        .bind(&daemon.base.api_key_hash)
         .execute(&self.pool)
         .await?;
 
@@ -57,6 +58,18 @@ impl DaemonStorage for PostgresDaemonStorage {
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<Daemon>> {
         let row = sqlx::query("SELECT * FROM daemons WHERE id = $1")
             .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        match row {
+            Some(row) => Ok(Some(row_to_daemon(row)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn get_by_api_key_hash(&self, api_key_hash: &str) -> Result<Option<Daemon>> {
+        let row = sqlx::query("SELECT * FROM daemons WHERE api_key_hash = $1")
+            .bind(api_key_hash)
             .fetch_optional(&self.pool)
             .await?;
 
@@ -84,7 +97,7 @@ impl DaemonStorage for PostgresDaemonStorage {
             .fetch_all(&self.pool)
             .await
             .map_err(|e| {
-                info!("SQLx error in get_all: {:?}", e);
+                tracing::info!("SQLx error in get_all: {:?}", e);
                 e
             })?;
 
@@ -140,6 +153,7 @@ fn row_to_daemon(row: sqlx::postgres::PgRow) -> Result<Daemon, Error> {
             port: row.get::<i32, _>("port").try_into().unwrap(),
             host_id: row.get("host_id"),
             network_id: row.get("network_id"),
+            api_key_hash: row.get("api_key_hash"),
         },
     })
 }

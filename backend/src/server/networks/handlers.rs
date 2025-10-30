@@ -49,7 +49,7 @@ async fn get_all_networks(
 ) -> ApiResult<Json<ApiResponse<Vec<Network>>>> {
     let service = &state.services.network_service;
 
-    let networks = service.get_all_networks(&user.user_id).await?;
+    let networks = service.get_all_networks(&user.0).await?;
 
     Ok(Json(ApiResponse::success(networks)))
 }

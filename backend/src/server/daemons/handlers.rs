@@ -1,10 +1,11 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser,
+    auth::extractor::{AuthenticatedDaemon, AuthenticatedUser, hash_api_key},
     config::AppState,
     daemons::types::{
         api::{DaemonRegistrationRequest, DaemonRegistrationResponse, DaemonResponse},
         base::{Daemon, DaemonBase},
     },
+    hosts::types::base::{Host, HostBase},
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{
@@ -33,13 +34,27 @@ async fn register_daemon(
 ) -> ApiResult<Json<ApiResponse<DaemonRegistrationResponse>>> {
     let service = &state.services.daemon_service;
 
+    let api_key = Uuid::new_v4().simple().to_string();
+
+    // Create a dummy host to return a host_id to the daemon
+    let mut dummy_host = Host::new(HostBase::default());
+    dummy_host.base.network_id = request.network_id;
+    dummy_host.base.name = request.daemon_ip.to_string();
+
+    let (host, _) = state
+        .services
+        .host_service
+        .create_host_with_services(dummy_host, Vec::new())
+        .await?;
+
     let daemon = Daemon::new(
         request.daemon_id,
         DaemonBase {
-            host_id: request.host_id,
+            host_id: host.id,
             network_id: request.network_id,
             ip: request.daemon_ip,
             port: request.daemon_port,
+            api_key_hash: hash_api_key(&api_key),
         },
     );
 
@@ -50,12 +65,15 @@ async fn register_daemon(
 
     Ok(Json(ApiResponse::success(DaemonRegistrationResponse {
         daemon: registered_daemon,
+        api_key,
+        host_id: host.id,
     })))
 }
 
 /// Receive heartbeat from daemon
 async fn receive_heartbeat(
     State(state): State<Arc<AppState>>,
+    _daemon: AuthenticatedDaemon,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.daemon_service;
@@ -84,7 +102,7 @@ async fn get_all_daemons(
     let network_ids: Vec<Uuid> = state
         .services
         .network_service
-        .get_all_networks(&user.user_id)
+        .get_all_networks(&user.0)
         .await?
         .iter()
         .map(|n| n.id)

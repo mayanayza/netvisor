@@ -142,6 +142,7 @@ pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
             network_id: *network_id,
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)),
             port: 60073,
+            api_key_hash: String::new(),
         },
     )
 }

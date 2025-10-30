@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser,
+    auth::extractor::{AuthenticatedEntity, AuthenticatedUser},
     config::AppState,
     shared::types::api::{ApiError, ApiResponse, ApiResult},
     subnets::types::base::Subnet,
@@ -23,7 +23,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn create_subnet(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    _authenticated: AuthenticatedEntity,
     Json(request): Json<Subnet>,
 ) -> ApiResult<Json<ApiResponse<Subnet>>> {
     tracing::info!("Received subnet creation request: {:?}", request);
@@ -43,7 +43,7 @@ async fn get_all_subnets(
     let network_ids: Vec<Uuid> = state
         .services
         .network_service
-        .get_all_networks(&user.user_id)
+        .get_all_networks(&user.0)
         .await?
         .iter()
         .map(|n| n.id)
