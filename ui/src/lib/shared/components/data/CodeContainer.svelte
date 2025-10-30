@@ -45,7 +45,7 @@
 	{/if}
 
 	{#if expanded}
-		<div class="relative mt-3">
+		<div class="relative">
 			{#if isSecureContext}
 				<div class="absolute right-2 top-2 z-10">
 					<button type="button" class="btn-icon" title="Copy JSON to clipboard" on:click={copyJson}>
@@ -57,3 +57,11 @@
 		</div>
 	{/if}
 </div>
+
+<style>	
+	:global(.prism--code-container) {
+		margin: 0 !important;
+		border: 2px solid #6b7280 !important;
+		/* uses text-muted as color */
+	}
+</style>
