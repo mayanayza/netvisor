@@ -735,6 +735,7 @@ pub trait DiscoversNetworkedEntities:
                 metadata: vec![DiscoveryMetadata::new(discovery_type, daemon_id)],
             },
             virtualization: None,
+            hidden: false
         });
 
         let services = self.discover_services(
@@ -1012,7 +1013,7 @@ pub trait CreatesDiscoveredEntities:
             .client
             .post(format!("{}/api/hosts", server_target))
             .header("Authorization", format!("Bearer {}", api_key))
-            .json(&HostWithServicesRequest { host, services })
+            .json(&HostWithServicesRequest { host, services: Some(services) })
             .send()
             .await?;
 
@@ -1035,6 +1036,8 @@ pub trait CreatesDiscoveredEntities:
         let HostWithServicesRequest { host, services } = api_response
             .data
             .ok_or_else(|| anyhow::anyhow!("No host data in successful response"))?;
+
+        let services = services.unwrap_or(vec!());
 
         Ok((host, services))
     }

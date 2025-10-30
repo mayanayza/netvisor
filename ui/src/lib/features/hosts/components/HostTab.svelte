@@ -12,6 +12,9 @@
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getServices, services } from '$lib/features/services/store';
 	import { getSubnets } from '$lib/features/subnets/store';
+	import DataControls from '$lib/shared/components/data/DataControls.svelte';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { networks } from '$lib/features/networks/store';
 
 	const loading = loadData([getHosts, getGroups, getServices, getSubnets, getDaemons]);
 
@@ -21,9 +24,69 @@
 	let otherHost: Host | null = null;
 	let showHostConsolidationModal = false;
 
-	$: sortedHosts = [...$hosts].sort((a, b) =>
-		a.created_at.localeCompare(b.created_at, undefined, { sensitivity: 'base' })
-	);
+	// Define field configuration for the DataTableControls
+	const hostFields: FieldConfig<Host>[] = [
+		{
+			key: 'name',
+			label:'Name',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'hostname',
+			label: 'Hostname',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'description',
+			label: 'Description',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: false
+		},
+		{
+			key: 'virtualization',
+			label: 'Is Virtualized',
+			type: 'boolean',
+			searchable: false,
+			filterable: true,
+			sortable: true,
+			getValue: (host) => host.virtualization !== null
+		},
+		{
+			key: 'created_at',
+			label: 'Created',
+			type: 'date',
+			searchable: false,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'hidden',
+			label: 'Hidden',
+			type: 'boolean',
+			searchable: false,
+			filterable: true,
+			sortable: false
+		},
+		{
+			key: 'network_id',
+			type: 'string',
+			label: "Network",
+			searchable: false,
+			filterable: true,
+			sortable: false,
+			getValue(item) {
+				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
+			},
+		}
+	];
 
 	$: hostGroups = new Map(
 		$hosts.map((host) => {
@@ -85,6 +148,11 @@
 		}
 	}
 
+	async function handleHostHide(host: Host) {
+		host.hidden = !host.hidden;
+		await updateHost({host, services:[]})
+	}
+
 	function handleCloseHostEditor() {
 		showHostEditor = false;
 		editingHost = null;
@@ -116,18 +184,18 @@
 			cta="Create your first host"
 		/>
 	{:else}
-		<!-- Hosts grid -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each sortedHosts as host (host.id)}
-				<HostCard
-					{host}
-					hostGroups={hostGroups.get(host.id)}
+		<DataControls items={$hosts} fields={hostFields} storageKey="netvisor-hosts-table-state">
+			{#snippet children(item: Host)}
+				<HostCard 
+					host={item} 
+					hostGroups={hostGroups.get(item.id)}
 					onEdit={handleEditHost}
 					onDelete={handleDeleteHost}
 					onConsolidate={handleStartConsolidate}
-				/>
-			{/each}
-		</div>
+					onHide={handleHostHide} 
+					/>
+			{/snippet}
+		</DataControls>
 	{/if}
 </div>
 

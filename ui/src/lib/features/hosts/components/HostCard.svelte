@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Edit, Replace, Trash2 } from 'lucide-svelte';
+	import { Edit, Eye, Replace, Trash2 } from 'lucide-svelte';
 	import { formatInterface, getHostTargetString, hosts } from '../store';
 	import type { Host } from '../types/base';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
@@ -12,6 +12,7 @@
 	export let hostGroups: Group[] = [];
 	export let onEdit: (host: Host) => void = () => {};
 	export let onDelete: (host: Host) => void = () => {};
+	export let onHide: (host: Host) => void = () => {};
 	export let onConsolidate: (host: Host) => void = () => {};
 
 	$: hostServicesStore = getServicesForHost(host.id);
@@ -144,6 +145,12 @@
 				label: 'Consolidate',
 				icon: Replace,
 				onClick: () => onConsolidate(host)
+			},
+			{
+				label: 'Hide Host',
+				icon: Eye,
+				class: host.hidden ? 'text-blue-400' : '',
+				onClick: () => onHide(host)
 			},
 			{
 				label: 'Edit Host',

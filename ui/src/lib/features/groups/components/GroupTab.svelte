@@ -8,6 +8,9 @@
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getServices } from '$lib/features/services/store';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
+	import DataControls from '$lib/shared/components/data/DataControls.svelte';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { networks } from '$lib/features/networks/store';
 
 	const loading = loadData([getServices, getGroups]);
 
@@ -50,6 +53,53 @@
 		showGroupEditor = false;
 		editingGroup = null;
 	}
+
+	// Define field configuration for the DataTableControls
+	const groupFields: FieldConfig<Group>[] = [
+		{
+			key: 'name',
+			label:'Name',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'description',
+			label: 'Description',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: false
+		},
+		{
+			key: 'created_at',
+			label: 'Created',
+			type: 'date',
+			searchable: false,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'group_type',
+			label: 'Group Type',
+			type: 'string',
+			searchable: true,
+			filterable: true,
+			sortable: true
+		},
+		{
+			key: 'network_id',
+			type: 'string',
+			label: "Network",
+			searchable: false,
+			filterable: true,
+			sortable: false,
+			getValue(item) {
+				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
+			},
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -75,16 +125,15 @@
 			cta="Create your first group"
 		/>
 	{:else}
-		<!-- Groups Grid -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each $groups as group (group.id)}
-				<GroupCard
-					{group}
-					onEdit={() => handleEditGroup(group)}
-					onDelete={() => handleDeleteGroup(group)}
-				/>
-			{/each}
-		</div>
+		<DataControls items={$groups} fields={groupFields} storageKey="netvisor-groups-table-state">
+			{#snippet children(item: Group)}
+				<GroupCard 
+					group={item}
+					onEdit={() => handleEditGroup(item)}
+					onDelete={() => handleDeleteGroup(item)}
+					/>
+			{/snippet}
+		</DataControls>
 	{/if}
 </div>
 

@@ -9,6 +9,9 @@
 	import { getHosts } from '$lib/features/hosts/store';
 	import { getServices } from '$lib/features/services/store';
 	import type { Subnet } from '../types/base';
+	import DataControls from '$lib/shared/components/data/DataControls.svelte';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { networks } from '$lib/features/networks/store';
 
 	let showSubnetEditor = false;
 	let editingSubnet: Subnet | null = null;
@@ -55,6 +58,53 @@
 		showSubnetEditor = false;
 		editingSubnet = null;
 	}
+
+	// Define field configuration for the DataTableControls
+	const subnetFields: FieldConfig<Subnet>[] = [
+		{
+			key: 'name',
+			label:'Name',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'description',
+			label: 'Description',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: false
+		},
+		{
+			key: 'created_at',
+			label: 'Created',
+			type: 'date',
+			searchable: false,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'subnet_type',
+			label: 'Subnet Type',
+			type: 'string',
+			searchable: true,
+			filterable: true,
+			sortable: true
+		},
+		{
+			key: 'network_id',
+			type: 'string',
+			label: "Network",
+			searchable: false,
+			filterable: true,
+			sortable: false,
+			getValue(item) {
+				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
+			},
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -82,12 +132,15 @@
 			cta="Create your first subnet"
 		/>
 	{:else}
-		<!-- Subnets grid -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each sortedSubnets as subnet (subnet.id)}
-				<SubnetCard {subnet} onEdit={handleEditSubnet} onDelete={handleDeleteSubnet} />
-			{/each}
-		</div>
+		<DataControls items={$subnets} fields={subnetFields} storageKey="netvisor-subnets-table-state">
+			{#snippet children(item: Subnet)}
+				<SubnetCard 
+					subnet={item} 
+					onEdit={handleEditSubnet} 
+					onDelete={handleDeleteSubnet}
+					/>
+			{/snippet}
+		</DataControls>
 	{/if}
 </div>
 
