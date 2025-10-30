@@ -39,9 +39,13 @@
 		.flatMap((s) => s.bindings)
 		.filter((sb) => !formData.service_bindings.some((binding) => binding === sb.id));
 
-	$: selectedServiceBindings = $services
-		.flatMap((s) => s.bindings)
-		.filter((sb) => formData.service_bindings.some((binding) => binding === sb.id));
+	$: selectedServiceBindings = formData.service_bindings
+		.map(bindingId => 
+			$services
+				.flatMap(s => s.bindings)
+				.find(sb => sb.id === bindingId)
+		)
+		.filter(Boolean);
 
 	// Handlers for service bindings
 	function handleAdd(bindingId: string) {
@@ -50,13 +54,6 @@
 
 	function handleRemove(index: number) {
 		formData.service_bindings = formData.service_bindings.filter((_, i) => i !== index);
-	}
-
-	function handleReorder(fromIndex: number, toIndex: number) {
-		const newBindings = [...formData.service_bindings];
-		const [movedBinding] = newBindings.splice(fromIndex, 1);
-		newBindings.splice(toIndex, 0, movedBinding);
-		formData.service_bindings = newBindings;
 	}
 
 	async function handleSubmit() {
@@ -88,6 +85,20 @@
 				deleting = false;
 			}
 		}
+	}
+
+	function handleServiceBindingsReorder(fromIndex: number, toIndex: number) {
+		if (fromIndex === toIndex) return;
+
+		const updatedServiceBindings = [...formData.service_bindings];
+		const [movedBinding] = updatedServiceBindings.splice(fromIndex, 1);
+		updatedServiceBindings.splice(toIndex, 0, movedBinding);
+
+		// Trigger reactivity by reassigning the entire formData object
+		formData = {
+			...formData,
+			service_bindings: updatedServiceBindings
+		};
 	}
 
 	// Dynamic labels based on create/edit mode
@@ -137,8 +148,8 @@
 								itemDisplayComponent={BindingWithServiceDisplay}
 								onAdd={handleAdd}
 								onRemove={handleRemove}
-								onMoveUp={handleReorder}
-								onMoveDown={handleReorder}
+								onMoveUp={(index) => handleServiceBindingsReorder(index, index - 1)}
+								onMoveDown={(index) => handleServiceBindingsReorder(index, index + 1)}
 							/>
 						</div>
 					</div>
