@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CardAction, CardSection, CardList } from './types';
+	import type { CardAction, CardSection, CardList, TagProps } from './types';
 	import Tag from './Tag.svelte';
 	import type { Component } from 'svelte';
 	import { type IconComponent } from '$lib/shared/utils/types';
@@ -7,6 +7,7 @@
 	export let title: string;
 	export let link: string = '';
 	export let subtitle: string = '';
+	export let status: TagProps | null = null;
 	export let icon: IconComponent | null = null; // Expects Svelte component, not string
 	export let iconColor: string = 'text-blue-400';
 	export let actions: CardAction[] = [];
@@ -37,6 +38,9 @@
 				{/if}
 			</div>
 		</div>
+		{#if status}
+			<Tag {...status}/>
+		{/if}
 	</div>
 
 	<!-- Content - grows to fill available space -->

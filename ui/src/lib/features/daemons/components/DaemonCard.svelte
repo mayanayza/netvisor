@@ -8,7 +8,7 @@
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
-	import { Radar, Trash2 } from 'lucide-svelte';
+	import { AlertTriangle, Radar, Trash2 } from 'lucide-svelte';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
@@ -26,6 +26,13 @@
 	// Build card data
 	$: cardData = {
 		title: daemon.ip + ':' + daemon.port,
+		...(!daemon.api_key ?
+			{status: {
+				label: "⚠ API key missing",
+				color: "yellow"
+			}}
+			: {}
+		),
 		iconColor: entities.getColorHelper('Daemon').icon,
 		icon: entities.getIconComponent('Daemon'),
 		sections: [
@@ -52,7 +59,7 @@
 				? [
 						{
 							label: 'Generate API Key',
-							icon: Radar,
+							icon: AlertTriangle,
 							class: 'btn-icon',
 							onClick: () => onGenerateApi(daemon)
 						}

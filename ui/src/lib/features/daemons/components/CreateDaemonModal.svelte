@@ -65,16 +65,7 @@
 		networkId: string,
 		apiKey: string | null
 	): string {
-		// Replace lines that contain env vars + add API key if applicable
-
-		if (apiKey) {
-			let [beforeApiKey, afterApiKey] = template.split('# Daemon configuration\n');
-
-			template =
-				beforeApiKey +
-				`# Daemon configuration\n      - NETVISOR_DAEMON_API_KEY=${apiKey}\n` +
-				afterApiKey;
-		}
+		// Replace lines that contain env vars
 
 		return template
 			.split('\n')
@@ -131,6 +122,9 @@
 					{/if}
 				</div>
 			</div>
+			{#if apiKey}
+				<span class="text-secondary">This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below.</span>
+			{/if}
 		{/if}
 
 		<!-- Network Type -->
@@ -140,24 +134,28 @@
 			<div class="text-secondary mt-3">Option 1. Run the install script, then start the daemon</div>
 
 			<CodeContainer language="bash" expandable={false} code={installCommand} />
-		{/if}
 
-		<CodeContainer language="bash" expandable={false} code={runCommand} />
+			<CodeContainer language="bash" expandable={false} code={runCommand} />
 
-		{#if !daemon}
 			<div class="text-secondary mt-3">Option 2. Run this docker-compose</div>
-		{/if}
 
-		<CodeContainer
-			language="yaml"
-			expandable={false}
-			code={populateDockerCompose(
-				dockerTemplate,
-				serverTarget,
-				serverPort,
-				selectedNetworkId,
-				apiKey
-			)}
-		/>
+			<CodeContainer
+				language="yaml"
+				expandable={false}
+				code={populateDockerCompose(
+					dockerTemplate,
+					serverTarget,
+					serverPort,
+					selectedNetworkId,
+					apiKey
+				)}
+			/>
+		{:else if apiKey}
+			<div class="text-secondary mt-3">Option 1. Stop the daemon process, and use this start command</div>
+			<CodeContainer language="bash" expandable={false} code={runCommand} />
+			<div class="text-secondary mt-3">Option 2. Stop the daemon container, and add this env var</div>
+			<CodeContainer language="bash" expandable={false} code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`} />
+		{/if}
+		
 	</div>
 </EditModal>
