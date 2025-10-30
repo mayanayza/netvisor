@@ -5,7 +5,7 @@ x-netvisor-env: &netvisor-env
 
 services:
   daemon:
-    image: mayanayza/netvisor-daemon:v0.7.0
+    image: mayanayza/netvisor-daemon:latest
     container_name: netvisor-daemon
     network_mode: host
     privileged: true
@@ -45,7 +45,7 @@ services:
       - netvisor
 
   server:
-    image: mayanayza/netvisor-server:v0.7.0
+    image: mayanayza/netvisor-server:latest
     ports:
       - "${NETVISOR_SERVER_PORT:-60072}:${NETVISOR_SERVER_PORT:-60072}"
     environment:
