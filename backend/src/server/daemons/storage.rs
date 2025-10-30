@@ -92,7 +92,7 @@ impl DaemonStorage for PostgresDaemonStorage {
     }
 
     async fn get_all(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>> {
-        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = ANY($1) ORDER BY created_at DESC")
+        let rows = sqlx::query("SELECT * FROM daemons WHERE network_id = ANY($1) ORDER BY registered_at DESC")
             .bind(network_ids)
             .fetch_all(&self.pool)
             .await
