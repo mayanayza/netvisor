@@ -5,7 +5,7 @@ use strum::IntoDiscriminant;
 use uuid::Uuid;
 
 use crate::server::{
-    groups::types::GroupType,
+    groups::types::{Group, GroupType},
     hosts::types::virtualization::HostVirtualization,
     services::types::virtualization::ServiceVirtualization,
     subnets::types::base::{SubnetType, SubnetTypeDiscriminants},
@@ -25,71 +25,30 @@ impl EdgeBuilder {
     pub fn create_group_edges(ctx: &TopologyContext) -> Vec<Edge> {
         ctx.groups
             .iter()
-            .flat_map(|group| {
-                match &group.base.group_type {
-                    GroupType::RequestPath { service_bindings } => {
-                        service_bindings
-                            .windows(2)
-                            .filter_map(|window| {
-                                let interface_0 = ctx.services.iter().find_map(|s| {
-                                    if let Some(binding) = s.get_binding(window[0]) {
-                                        return Some(binding.interface_id());
-                                    }
-                                    None
-                                });
-
-                                let interface_1 = ctx.services.iter().find_map(|s| {
-                                    if let Some(binding) = s.get_binding(window[1]) {
-                                        return Some(binding.interface_id());
-                                    }
-                                    None
-                                });
-
-                                if let (Some(Some(interface_0)), Some(Some(interface_1))) =
-                                    (interface_0, interface_1)
-                                    && ctx.interface_will_have_node(&interface_0)
-                                    && ctx.interface_will_have_node(&interface_1)
-                                {
-                                    let is_multi_hop =
-                                        ctx.edge_is_multi_hop(&interface_0, &interface_1);
-
-                                    let (source_handle, target_handle) =
-                                        EdgeBuilder::determine_interface_handles(
-                                            ctx,
-                                            &interface_0,
-                                            &interface_1,
-                                            is_multi_hop,
-                                        )?;
-
-                                    // If edge is intra-subnet, don't label - gets too messy
-                                    let label = if ctx
-                                        .get_subnet_from_interface_id(interface_0)
-                                        .map(|s| s.id)
-                                        == ctx
-                                            .get_subnet_from_interface_id(interface_1)
-                                            .map(|s| s.id)
-                                    {
-                                        None
-                                    } else {
-                                        Some(group.base.name.to_string())
-                                    };
-
-                                    return Some(Edge {
-                                        source: interface_0,
-                                        target: interface_1,
-                                        edge_type: EdgeType::Group(
-                                            group.base.group_type.discriminant(),
-                                        ),
-                                        label,
-                                        source_handle,
-                                        target_handle,
-                                        is_multi_hop,
-                                    });
-                                }
-                                None
+            .flat_map(|group| match &group.base.group_type {
+                GroupType::RequestPath { service_bindings } => service_bindings
+                    .windows(2)
+                    .filter_map(|window| {
+                        EdgeBuilder::edge_from_service_bindings(ctx, window[0], window[1], group)
+                    })
+                    .collect::<Vec<Edge>>(),
+                GroupType::HubAndSpoke { service_bindings } => {
+                    let mut service_bindings = service_bindings.clone();
+                    service_bindings.reverse();
+                    if let Some(hub_binding_id) = service_bindings.pop() {
+                        return service_bindings
+                            .iter()
+                            .filter_map(|spoke_binding| {
+                                EdgeBuilder::edge_from_service_bindings(
+                                    ctx,
+                                    hub_binding_id,
+                                    *spoke_binding,
+                                    group,
+                                )
                             })
-                            .collect::<Vec<Edge>>()
+                            .collect::<Vec<Edge>>();
                     }
+                    Vec::new()
                 }
             })
             .collect()
@@ -436,5 +395,65 @@ impl EdgeBuilder {
                 graph.add_edge(src_idx, tgt_idx, edge);
             }
         }
+    }
+
+    pub fn edge_from_service_bindings(
+        ctx: &TopologyContext,
+        source_binding_id: Uuid,
+        target_binding_id: Uuid,
+        group: &Group,
+    ) -> Option<Edge> {
+        let source_interface = ctx.services.iter().find_map(|s| {
+            if let Some(source_binding) = s.get_binding(source_binding_id) {
+                return Some(source_binding.interface_id());
+            }
+            None
+        });
+
+        let target_interface = ctx.services.iter().find_map(|s| {
+            if let Some(target_binding) = s.get_binding(target_binding_id) {
+                return Some(target_binding.interface_id());
+            }
+            None
+        });
+
+        if let (Some(Some(source_interface)), Some(Some(target_interface))) =
+            (source_interface, target_interface)
+            && ctx.interface_will_have_node(&source_interface)
+            && ctx.interface_will_have_node(&target_interface)
+        {
+            let is_multi_hop = ctx.edge_is_multi_hop(&source_interface, &target_interface);
+
+            let (source_handle, target_handle) = EdgeBuilder::determine_interface_handles(
+                ctx,
+                &source_interface,
+                &target_interface,
+                is_multi_hop,
+            )?;
+
+            // If edge is intra-subnet, don't label - gets too messy
+            let label = if ctx
+                .get_subnet_from_interface_id(source_interface)
+                .map(|s| s.id)
+                == ctx
+                    .get_subnet_from_interface_id(target_interface)
+                    .map(|s| s.id)
+            {
+                None
+            } else {
+                Some(group.base.name.to_string())
+            };
+
+            return Some(Edge {
+                source: source_interface,
+                target: target_interface,
+                edge_type: EdgeType::Group(group.base.group_type.discriminant()),
+                label,
+                source_handle,
+                target_handle,
+                is_multi_hop,
+            });
+        }
+        None
     }
 }

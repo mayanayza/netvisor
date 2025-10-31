@@ -24,6 +24,7 @@ use validator::Validate;
 #[serde(tag = "group_type")]
 pub enum GroupType {
     RequestPath { service_bindings: Vec<Uuid> },
+    HubAndSpoke { service_bindings: Vec<Uuid> },
 }
 
 #[derive(Debug, Clone, Serialize, Validate, Deserialize)]
@@ -71,12 +72,14 @@ impl EntityMetadataProvider for GroupTypeDiscriminants {
     fn color(&self) -> &'static str {
         match self {
             GroupTypeDiscriminants::RequestPath => Entity::Group.color(),
+            GroupTypeDiscriminants::HubAndSpoke => Entity::Group.color(),
         }
     }
 
     fn icon(&self) -> &'static str {
         match self {
             GroupTypeDiscriminants::RequestPath => "Route",
+            GroupTypeDiscriminants::HubAndSpoke => "Share2",
         }
     }
 }
@@ -85,6 +88,7 @@ impl TypeMetadataProvider for GroupTypeDiscriminants {
     fn name(&self) -> &'static str {
         match self {
             GroupTypeDiscriminants::RequestPath => "Request Path",
+            GroupTypeDiscriminants::HubAndSpoke => "Hub and Spoke",
         }
     }
 
@@ -92,6 +96,9 @@ impl TypeMetadataProvider for GroupTypeDiscriminants {
         match self {
             GroupTypeDiscriminants::RequestPath => {
                 "Ordered path of network traffic through service bindings. Represents how requests flow through your infrastructure from one service to another."
+            }
+            GroupTypeDiscriminants::HubAndSpoke => {
+                "Central service connecting to multiple dependent services in a hub-and-spoke pattern. The first binding in the list will be used as the hub."
             }
         }
     }

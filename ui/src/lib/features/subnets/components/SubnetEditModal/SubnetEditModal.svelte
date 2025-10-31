@@ -91,7 +91,7 @@
 	<div class="flex h-full flex-col overflow-hidden">
 		<div class="flex-1 overflow-y-auto">
 			<div class="space-y-8 p-6">
-				<SubnetDetailsForm {formApi} bind:formData />
+				<SubnetDetailsForm {formApi} bind:formData {isEditing} />
 
 				{#if isEditing}
 					<EntityMetadataSection entities={[subnet]} />
