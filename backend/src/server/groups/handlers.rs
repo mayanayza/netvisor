@@ -1,4 +1,4 @@
-use crate::server::auth::extractor::AuthenticatedUser;
+use crate::server::auth::middleware::AuthenticatedUser;
 use crate::server::{
     config::AppState,
     groups::types::Group,

@@ -15,7 +15,7 @@ use netvisor::{
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
-    services::ServeDir,
+    services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -44,6 +44,10 @@ struct Cli {
     /// Override integrated daemon url
     #[arg(long)]
     integrated_daemon_url: Option<String>,
+
+    /// Use secure session cookies (if serving UI behind HTTPS)
+    #[arg(long)]
+    use_secure_session_cookies: Option<bool>,
 }
 
 impl From<Cli> for CliArgs {
@@ -54,6 +58,7 @@ impl From<Cli> for CliArgs {
             rust_log: cli.rust_log,
             database_url: cli.database_url,
             integrated_daemon_url: cli.integrated_daemon_url,
+            use_secure_session_cookies: cli.use_secure_session_cookies,
         }
     }
 }
@@ -121,13 +126,19 @@ async fn main() -> anyhow::Result<()> {
 
     let session_store = state.storage.sessions.clone();
 
-    // Create router
     let api_router = if let Some(static_path) = &web_external_path {
-        Router::new()
-            .fallback_service(ServeDir::new(static_path))
-            .merge(create_router())
-            .layer(session_store)
-            .with_state(state)
+        // First create the API router
+        let router = create_router().layer(session_store).with_state(state);
+
+        // Then add static file serving with SPA fallback
+        router.fallback_service(
+            ServeDir::new(static_path)
+                .append_index_html_on_directories(true)
+                .fallback(ServeFile::new(format!(
+                    "{}/index.html",
+                    static_path.display()
+                ))),
+        )
     } else {
         tracing::info!("Server is not serving web assets due to no web_external_path");
         create_router().layer(session_store).with_state(state)

@@ -17,10 +17,12 @@
 	import { startDiscoverySSE } from '$lib/features/discovery/store';
 	import DiscoveryTab from '$lib/features/daemons/components/DiscoveryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
+	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
 
 	let activeTab = 'hosts';
 	let appInitialized = false;
 	let sidebarCollapsed = false;
+	let dataLoadingStarted = false;
 
 	// Valid tab names for validation
 	const validTabs = ['discovery', 'networks', 'hosts', 'subnets', 'groups', 'topology'];
@@ -57,14 +59,10 @@
 
 	let storeWatcherUnsubs: (() => void)[] = [];
 
-	onMount(async () => {
-		// Set initial tab from URL hash
-		activeTab = getInitialTab();
-
-		// Listen for hash changes (browser back/forward)
-		if (typeof window !== 'undefined') {
-			window.addEventListener('hashchange', handleHashChange);
-		}
+	// Load data only when authenticated
+	async function loadData() {
+		if (dataLoadingStarted) return;
+		dataLoadingStarted = true;
 
 		await getNetworks();
 
@@ -84,6 +82,22 @@
 		startDiscoverySSE();
 
 		await getMetadata().then(() => (appInitialized = true));
+	}
+
+	// Reactive effect: load data when authenticated
+	// The layout handles checkAuth(), so we just wait for it to complete
+	$: if ($isAuthenticated && !$isCheckingAuth && !dataLoadingStarted) {
+		loadData();
+	}
+
+	onMount(() => {
+		// Set initial tab from URL hash
+		activeTab = getInitialTab();
+
+		// Listen for hash changes (browser back/forward)
+		if (typeof window !== 'undefined') {
+			window.addEventListener('hashchange', handleHashChange);
+		}
 	});
 
 	onDestroy(() => {
@@ -111,9 +125,7 @@
 			class:ml-64={!sidebarCollapsed}
 		>
 			<div class="p-8">
-				{#if !appInitialized}
-					<Loading />
-				{:else if activeTab === 'discovery'}
+				{#if activeTab === 'discovery'}
 					<DiscoveryTab />
 				{:else if activeTab === 'networks'}
 					<NetworksTab />
@@ -131,4 +143,7 @@
 			<Toast />
 		</main>
 	</div>
+{:else}
+	<!-- Data still loading -->
+	<Loading />
 {/if}

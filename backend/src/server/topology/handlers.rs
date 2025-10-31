@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser,
+    auth::middleware::AuthenticatedUser,
     config::AppState,
     shared::types::api::{ApiResponse, ApiResult},
     topology::types::api::TopologyRequestOptions,

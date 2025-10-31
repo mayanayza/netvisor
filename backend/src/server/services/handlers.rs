@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::extractor::AuthenticatedUser,
+    auth::middleware::AuthenticatedUser,
     config::AppState,
     services::types::base::Service,
     shared::types::api::{ApiResponse, ApiResult},

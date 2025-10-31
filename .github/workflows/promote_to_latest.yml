@@ -1,26 +1,30 @@
-name: Promote to Latest
+name: Promote Release to Latest
 
 on:
-    workflow_dispatch:
-    release:
-        types: [released]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to promote to latest (e.g., v1.0.0)'
+        required: true
+        type: string
 
 jobs:
-  promote-to-latest:
-    name: Promote Release Images to :latest
+  retag-as-latest:
+    name: Retag Images as Latest
     runs-on: ubuntu-latest
     
     steps:
-      - name: Get release version
-        id: version
+      - name: Validate release exists
         run: |
-          # Extract version from release tag (e.g., v1.0.0)
-          VERSION="${{ github.event.release.tag_name }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Promoting $VERSION to :latest"
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+          RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }}")
+          
+          if [ "$(echo $RELEASE | jq -r '.message')" = "Not Found" ]; then
+            echo "Release ${{ inputs.release_tag }} not found"
+            exit 1
+          fi
+          
+          echo "Release found: ${{ inputs.release_tag }}"
       
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -35,42 +39,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      # Promote Docker Hub images to :latest
-      - name: Promote server to :latest on Docker Hub
+      - name: Pull and retag Server image (Docker Hub)
         run: |
-          docker buildx imagetools create \
-            --tag mayanayza/netvisor-server:latest \
-            mayanayza/netvisor-server:${{ steps.version.outputs.version }}
+          docker pull mayanayza/netvisor-server:${{ inputs.release_tag }}
+          docker tag mayanayza/netvisor-server:${{ inputs.release_tag }} mayanayza/netvisor-server:latest
+          docker push mayanayza/netvisor-server:latest
       
-      - name: Promote daemon to :latest on Docker Hub
+      - name: Pull and retag Server image (GHCR)
         run: |
-          docker buildx imagetools create \
-            --tag mayanayza/netvisor-daemon:latest \
-            mayanayza/netvisor-daemon:${{ steps.version.outputs.version }}
+          docker pull ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
+          docker tag ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }} ghcr.io/${{ github.repository }}/server:latest
+          docker push ghcr.io/${{ github.repository }}/server:latest
       
-      # Promote GHCR images to :latest
-      - name: Promote server to :latest on GHCR
+      - name: Pull and retag Daemon image (Docker Hub)
         run: |
-          docker buildx imagetools create \
-            --tag ghcr.io/${{ github.repository }}/server:latest \
-            ghcr.io/${{ github.repository }}/server:${{ steps.version.outputs.version }}
+          docker pull mayanayza/netvisor-daemon:${{ inputs.release_tag }}
+          docker tag mayanayza/netvisor-daemon:${{ inputs.release_tag }} mayanayza/netvisor-daemon:latest
+          docker push mayanayza/netvisor-daemon:latest
       
-      - name: Promote daemon to :latest on GHCR
+      - name: Pull and retag Daemon image (GHCR)
         run: |
-          docker buildx imagetools create \
-            --tag ghcr.io/${{ github.repository }}/daemon:latest \
-            ghcr.io/${{ github.repository }}/daemon:${{ steps.version.outputs.version }}
-      
-      - name: Verify promotion
-        run: |
-          echo "✓ Successfully promoted ${{ steps.version.outputs.version }} to :latest"
-          echo ""
-          echo "Docker Hub:"
-          docker buildx imagetools inspect mayanayza/netvisor-server:latest
-          echo ""
-          docker buildx imagetools inspect mayanayza/netvisor-daemon:latest
-          echo ""
-          echo "GitHub Container Registry:"
-          docker buildx imagetools inspect ghcr.io/${{ github.repository }}/server:latest
-          echo ""
-          docker buildx imagetools inspect ghcr.io/${{ github.repository }}/daemon:latest
+          docker pull ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
+          docker tag ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }} ghcr.io/${{ github.repository }}/daemon:latest
+          docker push ghcr.io/${{ github.repository }}/daemon:latest

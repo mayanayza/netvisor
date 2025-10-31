@@ -17,6 +17,7 @@ pub struct CliArgs {
     pub rust_log: Option<String>,
     pub database_url: Option<String>,
     pub integrated_daemon_url: Option<String>,
+    pub use_secure_session_cookies: Option<bool>,
 }
 
 /// Flattened server configuration struct
@@ -40,6 +41,9 @@ pub struct ServerConfig {
 
     /// URL for daemon running in same docker stack or in other local context
     pub integrated_daemon_url: Option<String>,
+
+    /// URL for daemon running in same docker stack or in other local context
+    pub use_secure_session_cookies: bool,
 }
 
 impl Default for ServerConfig {
@@ -50,6 +54,7 @@ impl Default for ServerConfig {
             rust_log: "".to_string(),
             database_url: "postgresql://postgres:password@localhost:5432/netvisor".to_string(),
             web_external_path: None,
+            use_secure_session_cookies: false,
             integrated_daemon_url: None,
         }
     }
@@ -79,6 +84,9 @@ impl ServerConfig {
         if let Some(integrated_daemon_url) = cli_args.integrated_daemon_url {
             figment = figment.merge(("integrated_daemon_url", integrated_daemon_url));
         }
+        if let Some(use_secure_session_cookies) = cli_args.use_secure_session_cookies {
+            figment = figment.merge(("use_secure_session_cookies", use_secure_session_cookies));
+        }
 
         let config: ServerConfig = figment
             .extract()
@@ -104,7 +112,8 @@ impl AppState {
         config: ServerConfig,
         discovery_manager: DiscoverySessionManager,
     ) -> Result<Arc<Self>, Error> {
-        let storage = StorageFactory::new(&config.database_url()).await?;
+        let storage =
+            StorageFactory::new(&config.database_url(), config.use_secure_session_cookies).await?;
         let services = ServiceFactory::new(&storage).await?;
 
         Ok(Arc::new(Self {
