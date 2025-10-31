@@ -25,6 +25,7 @@
 		renderInlineEdit: (
 			binding: InterfaceBinding,
 			onUpdate: (updates: Partial<InterfaceBinding>) => void,
+			formApi: FormApi,
 			context: { service?: Service; host?: Host }
 		) => {
 			return {
@@ -32,6 +33,7 @@
 				props: {
 					binding,
 					onUpdate,
+					formApi,
 					service: context?.service,
 					host: context?.host
 				}
@@ -49,6 +51,7 @@
 	import type { Host } from '$lib/features/hosts/types/base';
 	import InterfaceBindingInlineEditor from './InterfaceBindingInlineEditor.svelte';
 	import { get } from 'svelte/store';
+	import type { FormApi } from '../../types';
 
 	export let item: InterfaceBinding;
 </script>

@@ -63,6 +63,7 @@
 			placeholder="Select subnet to create interface with..."
 			emptyMessage="No interfaces configured. Add one to get started."
 			allowReorder={false}
+			{formApi}
 			options={$subnets}
 			{items}
 			optionDisplayComponent={SubnetDisplay}

@@ -3,6 +3,7 @@
 	import RichSelect from './RichSelect.svelte';
 	import ListSelectItem from './ListSelectItem.svelte';
 	import type { EntityDisplayComponent } from './types';
+	import type { FormApi } from '../types';
 
 	// Global
 	export let label: string;
@@ -27,6 +28,7 @@
 	export let items: T[] = [];
 	export let itemDisplayComponent: EntityDisplayComponent<T>;
 	export let getItemContext: ((item: T, index: number) => Record<string, unknown>) | null = null;
+	export let formApi: FormApi;
 
 	// Item interaction
 	export let allowDuplicates: boolean = false;
@@ -171,6 +173,7 @@
 									const updatedItem = { ...item, ...updates };
 									onEdit(updatedItem, index);
 								},
+								formApi,
 								context
 							)}
 							<svelte:component this={inlineEditConfig.component} {...inlineEditConfig.props} />

@@ -5,9 +5,11 @@
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { get } from 'svelte/store';
+	import type { FormApi } from '$lib/shared/components/forms/types';
 
 	export let service: Service;
 	export let onChange: (updatedService: Service) => void;
+	export let formApi: FormApi;
 
 	$: serviceMetadata = serviceDefinitions.getItem(service.service_definition);
 
@@ -62,6 +64,7 @@
 		emptyMessage="No containers managed by this service yet. Add services that run in containers on this host."
 		allowReorder={false}
 		allowDuplicates={false}
+		{formApi}
 		allowItemEdit={() => false}
 		showSearch={true}
 		options={selectableContainers}

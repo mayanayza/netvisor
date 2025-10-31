@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { form as createForm } from 'svelte-forms';
 	import GenericModal from '../layout/GenericModal.svelte';
-	import type { FieldType, FormApi } from './types';
+	import type { TextFieldType, FormApi, NumberFieldType } from './types';
 
 	export let title: string = 'Edit';
 	export let isOpen: boolean = false;
@@ -20,13 +20,13 @@
 	export let onDelete: (() => void) | null = null;
 
 	// Create a container for fields that child components will populate
-	let formFields: Record<string, FieldType> = {};
+	let formFields: Record<string, TextFieldType | NumberFieldType> = {};
 
 	// Create the actual form reactively based on registered fields
 	$: form = createForm(...Object.values(formFields));
 
 	const formApi: FormApi = {
-		registerField: (id: string, field: FieldType) => {
+		registerField: (id: string, field: TextFieldType | NumberFieldType) => {
 			if (!Object.prototype.hasOwnProperty.call(formFields, id)) {
 				formFields = { ...formFields, [id]: field };
 			}

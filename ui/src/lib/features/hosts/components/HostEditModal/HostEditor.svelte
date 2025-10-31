@@ -10,7 +10,7 @@
 	import type { Service } from '$lib/features/services/types/base';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { getServicesForHost } from '$lib/features/services/store';
-	import PortsDisplay from './Ports/PortsForm.svelte';
+	import PortsForm from './Ports/PortsForm.svelte';
 	import VirtualizationForm from './Virtualization/VirtualizationForm.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { get } from 'svelte/store';
@@ -113,6 +113,7 @@
 
 	function resetForm() {
 		formData = host ? { ...host } : createEmptyHostFormData();
+
 		if (host && host.id) {
 			// Sort as ordered for host to get high confidence services with logo first
 			currentHostServices = get(getServicesForHost(host.id));
@@ -252,7 +253,7 @@
 			{#if activeTab === 'ports'}
 				<div class="h-full">
 					<div class="relative flex-1">
-						<PortsDisplay bind:formData currentServices={currentHostServices} />
+						<PortsForm {formApi} bind:formData currentServices={currentHostServices} />
 					</div>
 				</div>
 			{/if}
@@ -276,6 +277,7 @@
 				<div class="h-full">
 					<div class="relative flex-1">
 						<VirtualizationForm
+							{formApi}
 							virtualizationManagerServices={vmManagerServices}
 							onServiceChange={handleVirtualizationServiceChange}
 							onVirtualizedHostChange={handleVirtualizationHostChange}

@@ -5,9 +5,13 @@
 	import type { PortBinding, Service } from '$lib/features/services/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { get } from 'svelte/store';
+	import { field } from 'svelte-forms';
+	import type { FormApi } from '$lib/shared/components/forms/types';
+	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 
 	export let binding: PortBinding;
 	export let onUpdate: (updates: Partial<PortBinding>) => void = () => {};
+	export let formApi: FormApi;
 	export let service: Service | undefined = undefined;
 	export let host: Host | undefined = undefined;
 
@@ -104,21 +108,77 @@
 		}) || [];
 
 	// Convert binding.interface_id to select value (null -> sentinel string)
-	$: selectValue = binding.interface_id === null ? ALL_INTERFACES.name : binding.interface_id;
+	$: selectInterfaceValue =
+		binding.interface_id === null ? ALL_INTERFACES.name : binding.interface_id;
 
-	function handlePortChange(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		const portId = target.value;
-		onUpdate({ port_id: portId });
+	// Create svelte-forms fields
+	const getInterfaceField = () => {
+		return field(`binding_${binding.id}_interface`, selectInterfaceValue, [], {
+			checkOnInit: false
+		});
+	};
+
+	const getPortField = () => {
+		return field(`binding_${binding.id}_port`, binding.port_id, [], {
+			checkOnInit: false
+		});
+	};
+
+	let currentBindingId: string = binding.id;
+	let interfaceField = getInterfaceField();
+	let portField = getPortField();
+
+	// Reinitialize fields when binding changes
+	$: if (binding.id !== currentBindingId) {
+		currentBindingId = binding.id;
+		interfaceField = getInterfaceField();
+		portField = getPortField();
 	}
 
-	function handleInterfaceChange(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		const value = target.value;
-		// Convert sentinel string back to null
-		const interfaceId: string | null = value === ALL_INTERFACES.name ? null : value;
-		onUpdate({ interface_id: interfaceId });
+	// Update binding when field values change
+	$: if ($interfaceField && $portField) {
+		// Convert sentinel string back to null for interface
+		const interfaceId: string | null =
+			$interfaceField.value === ALL_INTERFACES.name ? null : $interfaceField.value;
+
+		const portId: string = $portField.value;
+
+		// Only trigger onUpdate if values actually changed
+		if (interfaceId !== binding.interface_id || portId !== binding.port_id) {
+			onUpdate({
+				interface_id: interfaceId,
+				port_id: portId
+			});
+		}
 	}
+
+	// Build select options for interfaces
+	$: interfaceSelectOptions = [
+		...interfaceOptions.map(({ iface, disabled, reason }) => ({
+			value: iface.id,
+			label: formatInterface(iface) + (disabled && reason ? ` - ${reason}` : ''),
+			id: iface.id,
+			disabled
+		})),
+		{
+			value: ALL_INTERFACES.name,
+			label:
+				formatInterface(ALL_INTERFACES) +
+				(allInterfacesOption.disabled && allInterfacesOption.reason
+					? ` - ${allInterfacesOption.reason}`
+					: ''),
+			id: ALL_INTERFACES.name,
+			disabled: allInterfacesOption.disabled
+		}
+	];
+
+	// Build select options for ports
+	$: portSelectOptions = portOptions.map(({ port, disabled, reason }) => ({
+		value: port.id,
+		label: formatPort(port) + (disabled && reason ? ` - ${reason}` : ''),
+		id: port.id,
+		disabled
+	}));
 </script>
 
 <div class="flex-1">
@@ -134,51 +194,41 @@
 		</div>
 	{:else}
 		<div class="flex gap-3">
-			<div class="flex-1">
-				{#if host.interfaces && host.interfaces.length === 0}
+			{#if host.interfaces && host.interfaces.length === 0}
+				<div class="flex-1">
 					<div
 						class="rounded border border-yellow-600 bg-yellow-900/20 px-2 py-1 text-xs text-warning"
 					>
 						No interfaces configured on host
 					</div>
-				{:else if host.interfaces.length > 0}
-					<!-- Multiple interfaces - show as dropdown -->
-					<select value={selectValue} on:change={handleInterfaceChange} class="input-field">
-						<option class="select-option" value="" disabled>Select interface...</option>
-						{#each interfaceOptions as { iface, disabled, reason } (iface.id)}
-							<option value={iface.id} {disabled}>
-								{formatInterface(iface)}{disabled && reason ? ` - ${reason}` : ''}
-							</option>
-						{/each}
-						<option value={ALL_INTERFACES.name} disabled={allInterfacesOption.disabled}>
-							{formatInterface(ALL_INTERFACES)}{allInterfacesOption.disabled &&
-							allInterfacesOption.reason
-								? ` - ${allInterfacesOption.reason}`
-								: ''}
-						</option>
-					</select>
-				{/if}
-			</div>
+				</div>
+			{:else if host.interfaces.length > 0 && $interfaceField}
+				<SelectInput
+					label="Interface"
+					id="binding_{binding.id}_interface"
+					{formApi}
+					field={interfaceField}
+					options={interfaceSelectOptions}
+				/>
+			{/if}
 
-			<div class="flex-1">
-				{#if host.ports.length === 0}
+			{#if host.ports.length === 0}
+				<div class="flex-1">
 					<div
 						class="rounded border border-yellow-600 bg-yellow-900/20 px-2 py-1 text-xs text-warning"
 					>
 						No ports configured on host
 					</div>
-				{:else}
-					<!-- Always show dropdown when there are ports, so users can see disabled options -->
-					<select value={binding.port_id} on:change={handlePortChange} class="input-field">
-						<option class="select-option" value="" disabled>Select port...</option>
-						{#each portOptions as { port, disabled, reason } (port.id)}
-							<option value={port.id} {disabled}>
-								{formatPort(port)}{disabled && reason ? ` - ${reason}` : ''}
-							</option>
-						{/each}
-					</select>
-				{/if}
-			</div>
+				</div>
+			{:else if $portField}
+				<SelectInput
+					label="Port"
+					id="binding_{binding.id}_port"
+					{formApi}
+					field={portField}
+					options={portSelectOptions}
+				/>
+			{/if}
 		</div>
 	{/if}
 </div>

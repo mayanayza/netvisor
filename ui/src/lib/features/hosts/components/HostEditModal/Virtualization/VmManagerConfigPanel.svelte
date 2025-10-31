@@ -6,9 +6,11 @@
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Host } from '$lib/features/hosts/types/base';
 	import { get } from 'svelte/store';
+	import type { FormApi } from '$lib/shared/components/forms/types';
 
 	export let service: Service;
 	export let onChange: (updatedHost: Host) => void;
+	export let formApi: FormApi;
 
 	$: serviceMetadata = serviceDefinitions.getItem(service.service_definition);
 
@@ -68,6 +70,7 @@
 		emptyMessage="No VMs managed by this service yet. Add hosts that are VMs running on this hypervisor."
 		allowReorder={false}
 		allowDuplicates={false}
+		{formApi}
 		showSearch={true}
 		allowItemEdit={() => false}
 		options={selectableVms}
