@@ -17,12 +17,7 @@ export interface CardAction {
 	animation?: string;
 }
 
-export interface CardSection {
-	label: string;
-	value: string;
-}
-
-export interface CardListItem {
+export interface CardFieldItem {
 	id: string;
 	label: string;
 	icon?: Component; // Svelte component instead of HTML
@@ -35,10 +30,11 @@ export interface CardListItem {
 	badgeColor?: string;
 }
 
-export interface CardList {
-	label?: string;
-	items: CardListItem[];
-	emptyText?: string;
+export interface CardField {
+	label: string;
+	value: string | CardFieldItem[] | undefined | null;
+	color?: string; // Used for tags when value is an array
+	emptyText?: string; // Used when value is empty array
 }
 
 // Field configuration for data controls

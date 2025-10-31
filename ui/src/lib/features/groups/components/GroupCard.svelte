@@ -20,20 +20,14 @@
 		title: group.name,
 		iconColor: groupTypes.getColorHelper(group.group_type).icon,
 		icon: groupTypes.getIconComponent(group.group_type),
-
-		sections: group.description
-			? [
-					{
-						label: 'Description',
-						value: group.description
-					}
-				]
-			: [],
-
-		lists: [
+		fields: [
+			{
+				label: 'Description',
+				value: group.description
+			},
 			{
 				label: 'Group Type',
-				items: [
+				value: [
 					{
 						id: 'type',
 						label: groupTypes.getName(group.group_type),
@@ -44,7 +38,7 @@
 			},
 			{
 				label: 'Services',
-				items: groupServiceLabels.map(({ id, label }, i) => {
+				value: groupServiceLabels.map(({ id, label }, i) => {
 					return {
 						id: id + i,
 						label,

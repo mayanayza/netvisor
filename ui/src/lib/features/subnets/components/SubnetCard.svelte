@@ -22,20 +22,14 @@
 		subtitle: get(isContainerSubnet(subnet.id)) ? '' : subnet.cidr,
 		iconColor: subnetTypes.getColorHelper(subnet.subnet_type).icon,
 		icon: subnetTypes.getIconComponent(subnet.subnet_type),
-
-		sections: subnet.description
-			? [
-					{
-						label: 'Description',
-						value: subnet.description
-					}
-				]
-			: [],
-
-		lists: [
+		fields: [
+			{
+				label: 'Description',
+				value: subnet.description
+			},
 			{
 				label: 'Network Type',
-				items: [
+				value: [
 					{
 						id: 'type',
 						label: subnetTypes.getName(subnet.subnet_type),
@@ -46,7 +40,7 @@
 			},
 			// {
 			// 	label: 'DNS Resolvers',
-			// 	items: dnsLabels.map(({ id, label }) => ({
+			// 	value: dnsLabels.map(({ id, label }) => ({
 			// 		id,
 			// 		label,
 			// 		color: entities.getColorString('Dns')
@@ -55,7 +49,7 @@
 			// },
 			// {
 			// 	label: 'Gateways',
-			// 	items: gatewayLabels.map(({ id, label }) => ({
+			// 	value: gatewayLabels.map(({ id, label }) => ({
 			// 		id,
 			// 		label,
 			// 		color: entities.getColorString('Gateway')
@@ -64,7 +58,7 @@
 			// },
 			// {
 			// 	label: 'Reverse Proxies',
-			// 	items: reverseProxyLabels.map(({ id, label }) => ({
+			// 	value: reverseProxyLabels.map(({ id, label }) => ({
 			// 		id,
 			// 		label,
 			// 		color: entities.getColorString('ReverseProxy')
@@ -73,7 +67,7 @@
 			// },
 			{
 				label: 'Services',
-				items: serviceLabels.map(({ id, label }) => ({
+				value: serviceLabels.map(({ id, label }) => ({
 					id,
 					label,
 					color: entities.getColorString('Service')
@@ -86,7 +80,7 @@
 			{
 				label: 'Delete Subnet',
 				icon: Trash2,
-				color: 'btn-icon-danger',
+				class: 'btn-icon-danger',
 				onClick: () => onDelete(subnet)
 			},
 			{
