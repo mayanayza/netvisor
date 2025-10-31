@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::extractor::{AuthenticatedDaemon, AuthenticatedUser},
+    auth::middleware::{AuthenticatedDaemon, AuthenticatedUser},
     config::AppState,
     daemons::types::{
         api::{ApiKeyRequest, DaemonRegistrationRequest, DaemonRegistrationResponse},

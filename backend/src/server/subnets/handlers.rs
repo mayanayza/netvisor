@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::extractor::{AuthenticatedEntity, AuthenticatedUser},
+    auth::middleware::{AuthenticatedEntity, AuthenticatedUser},
     config::AppState,
     shared::types::api::{ApiError, ApiResponse, ApiResult},
     subnets::types::base::Subnet,

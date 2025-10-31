@@ -87,5 +87,3 @@ export async function logout(): Promise<void> {
 		pushError('Logout failed');
 	}
 }
-
-// AHY1gwe2zvx*tfa_ehu
