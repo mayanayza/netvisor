@@ -74,7 +74,10 @@ For larger features or bug fixes:
 
 2. **Install development dependencies**
    ```bash
-   make install-dev
+   make install-dev-mac
+   ```
+   ```bash
+   make install-dev-linux
    ```
    This installs:
    - Rust toolchain with rustfmt and clippy
