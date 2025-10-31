@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import { Search, SlidersHorizontal, X, ChevronDown, ChevronUp } from 'lucide-svelte';
+	import { Search, SlidersHorizontal, X, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-svelte';
 	import type { FieldConfig } from './types';
 	import { onMount, type Snippet } from 'svelte';
 	import Tag from './Tag.svelte';
@@ -14,7 +14,7 @@
         items: T[];
         fields: FieldConfig<T>[];
         storageKey?: string | null;
-        children: Snippet<[T]>;  // Snippet that takes one argument (the item)
+        children: Snippet<[T, 'card' | 'list']>;  // Snippet that takes two arguments (the item and viewMode)
     } = $props();
 
 	// Search state
@@ -47,6 +47,9 @@
 	// Grouping state
 	let selectedGroupField = $state<string | null>(null);
 
+	// View mode state
+	let viewMode = $state<'card' | 'list'>('card');
+
 	// Serializable version of state for localStorage
 	interface SerializableState {
 		searchQuery: string;
@@ -61,6 +64,7 @@
 		sortState: SortState;
 		selectedGroupField: string | null;
 		showFilters: boolean;
+		viewMode: 'card' | 'list';
 	}
 
 	// Load state from localStorage
@@ -103,6 +107,11 @@
 			if (state.showFilters !== undefined) {
 				showFilters = state.showFilters;
 			}
+
+			// Restore view mode
+			if (state.viewMode) {
+				viewMode = state.viewMode;
+			}
 		} catch (e) {
 			console.warn('Failed to load DataControls state from localStorage:', e);
 		}
@@ -127,7 +136,8 @@
 				filterState: serializableFilterState,
 				sortState,
 				selectedGroupField,
-				showFilters
+				showFilters,
+				viewMode
 			};
 
 			localStorage.setItem(storageKey, JSON.stringify(state));
@@ -173,6 +183,7 @@
 					sortState;
 					selectedGroupField;
 					showFilters;
+					viewMode;
 					
 					// Debounce saves
 					clearTimeout(saveTimeout);
@@ -454,6 +465,19 @@
 			</button>
 		{/if}
 
+		<!-- View Mode Toggle -->
+		<button
+			onclick={() => (viewMode = viewMode === 'card' ? 'list' : 'card')}
+			class="btn-secondary flex items-center gap-2"
+			title={viewMode === 'card' ? 'Switch to list view' : 'Switch to card view'}
+		>
+			{#if viewMode === 'card'}
+				<List class="h- w-" />
+			{:else}
+				<LayoutGrid class="h- w-" />
+			{/if}
+		</button>
+
 		<!-- Group By Dropdown -->
 		{#if groupableFields.length > 0}
 			<div class="relative">
@@ -601,9 +625,9 @@
 					</div>
 
 					<!-- Group Items -->
-					<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+					<div class="{viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}">
 						{#each groupItems as item (item)}
-							{@render children(item)}
+							{@render children(item, viewMode)}
 						{/each}
 					</div>
 				</div>
@@ -611,9 +635,9 @@
 		</div>
 	{:else}
 		<!-- Ungrouped view -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+		<div class="{viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}">
 			{#each processedItems as item (item)}
-				{@render children(item)}
+				{@render children(item, viewMode)}
 			{/each}
 		</div>
 	{/if}

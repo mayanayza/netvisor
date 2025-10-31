@@ -52,14 +52,6 @@
 			sortable: false
 		},
 		{
-			key: 'virtualization',
-			label: 'Is Virtualized',
-			type: 'boolean',
-			searchable: false,
-			filterable: true,
-			sortable: true,
-		},
-		{
 			key: 'virtualized_by',
 			label: 'Virtualized By',
 			type: 'string',
@@ -202,10 +194,11 @@
 		/>
 	{:else}
 		<DataControls items={$hosts} fields={hostFields} storageKey="netvisor-hosts-table-state">
-			{#snippet children(item: Host)}
+			{#snippet children(item: Host, viewMode: 'card' | 'list')}
 				<HostCard 
 					host={item} 
 					hostGroups={hostGroups.get(item.id)}
+					{viewMode}
 					onEdit={handleEditHost}
 					onDelete={handleDeleteHost}
 					onConsolidate={handleStartConsolidate}

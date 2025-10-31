@@ -15,6 +15,7 @@
 	export let onDiscovery: (daemon: Daemon) => void = () => {};
 	export let onGenerateApi: (daemon: Daemon) => void = () => {};
 	export let discoveryIsRunning: boolean;
+	export let viewMode: 'card' | 'list';
 
 	$: hostStore = getHostFromId(daemon.host_id);
 	$: host = $hostStore;
@@ -95,4 +96,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode}/>

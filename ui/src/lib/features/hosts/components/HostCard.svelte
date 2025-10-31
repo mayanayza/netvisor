@@ -14,6 +14,7 @@
 	export let onDelete: (host: Host) => void = () => {};
 	export let onHide: (host: Host) => void = () => {};
 	export let onConsolidate: (host: Host) => void = () => {};
+	export let viewMode: 'card' | 'list';
 
 	$: hostServicesStore = getServicesForHost(host.id);
 	$: hostServices = $hostServicesStore;
@@ -75,21 +76,17 @@
 				})),
 				emptyText: 'No groups assigned'
 			},
-			...(vms.length > 0
-				? [
-						{
-							label: 'VMs',
-							items: vms.map((h) => {
-								return {
-									id: h.id,
-									label: h.name,
-									color: entities.getColorHelper('Virtualization').string
-								};
-							}),
-							emptyText: 'No VMs assigned'
-						}
-					]
-				: []),
+			{
+				label: 'VMs',
+				items: vms.map((h) => {
+					return {
+						id: h.id,
+						label: h.name,
+						color: entities.getColorHelper('Virtualization').string
+					};
+				}),
+				emptyText: 'No VMs assigned'
+			},
 			{
 				label: 'Services',
 				items: hostServices
@@ -104,23 +101,19 @@
 					.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
 				emptyText: 'No services assigned'
 			},
-			...(containers.length > 0
-				? [
-						{
-							label: 'Containers',
-							items: containers
-								.map((c) => {
-									return {
-										id: c.id,
-										label: c.name,
-										color: entities.getColorHelper('Virtualization').string
-									};
-								})
-								.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
-							emptyText: 'No services assigned'
-						}
-					]
-				: []),
+			{
+				label: 'Containers',
+				items: containers
+					.map((c) => {
+						return {
+							id: c.id,
+							label: c.name,
+							color: entities.getColorHelper('Virtualization').string
+						};
+					})
+					.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
+				emptyText: 'No containers'
+			},
 			{
 				label: 'Interfaces',
 				items: host.interfaces.map((i) => {
@@ -161,4 +154,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode}/>

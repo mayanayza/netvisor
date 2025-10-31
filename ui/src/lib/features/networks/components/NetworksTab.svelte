@@ -105,9 +105,10 @@
 		/>
 	{:else}
 		<DataControls items={$networks} fields={networkFields} storageKey="netvisor-networks-table-state">
-			{#snippet children(item: Network)}
+			{#snippet children(item: Network, viewMode: 'card' | 'list')}
 				<NetworkCard 
 					network={item} 
+					{viewMode}
 					onDelete={handleDeleteNetwork} 
 					onEdit={handleEditNetwork} />
 			{/snippet}

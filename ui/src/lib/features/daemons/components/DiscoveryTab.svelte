@@ -95,9 +95,10 @@
 		/>
 	{:else}
 		<DataControls items={$daemons} fields={daemonFields} storageKey="netvisor-daemons-table-state">
-			{#snippet children(item: Daemon)}
+			{#snippet children(item: Daemon, viewMode: 'card' | 'list')}
 				<DaemonCard
 					daemon={item}
+					{viewMode}
 					{discoveryIsRunning}
 					onDiscovery={handleRunDiscovery}
 					onDelete={handleDeleteDaemon}

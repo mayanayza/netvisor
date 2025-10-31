@@ -133,9 +133,10 @@
 		/>
 	{:else}
 		<DataControls items={$subnets} fields={subnetFields} storageKey="netvisor-subnets-table-state">
-			{#snippet children(item: Subnet)}
+			{#snippet children(item: Subnet, viewMode: 'card' | 'list')}
 				<SubnetCard 
 					subnet={item} 
+					{viewMode}
 					onEdit={handleEditSubnet} 
 					onDelete={handleDeleteSubnet}
 					/>

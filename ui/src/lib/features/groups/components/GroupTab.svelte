@@ -126,9 +126,10 @@
 		/>
 	{:else}
 		<DataControls items={$groups} fields={groupFields} storageKey="netvisor-groups-table-state">
-			{#snippet children(item: Group)}
+			{#snippet children(item: Group, viewMode: 'card' | 'list')}
 				<GroupCard 
 					group={item}
+					{viewMode}
 					onEdit={() => handleEditGroup(item)}
 					onDelete={() => handleDeleteGroup(item)}
 					/>

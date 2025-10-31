@@ -39,7 +39,6 @@ export interface CardList {
 	label?: string;
 	items: CardListItem[];
 	emptyText?: string;
-	itemActions?: (item: CardListItem) => CardAction[];
 }
 
 // Field configuration for data controls
