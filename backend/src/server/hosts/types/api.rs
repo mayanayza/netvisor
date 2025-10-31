@@ -7,5 +7,6 @@ use crate::server::{hosts::types::base::Host, services::types::base::Service};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostWithServicesRequest {
     pub host: Host,
+    #[serde(default)]
     pub services: Option<Vec<Service>>,
 }

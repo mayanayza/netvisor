@@ -150,7 +150,7 @@
 
 	async function handleHostHide(host: Host) {
 		host.hidden = !host.hidden;
-		await updateHost({host, services:[]})
+		await updateHost({host, services:null})
 	}
 
 	function handleCloseHostEditor() {
