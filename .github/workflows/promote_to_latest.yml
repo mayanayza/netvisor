@@ -26,6 +26,9 @@ jobs:
           
           echo "Release found: ${{ inputs.release_tag }}"
       
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -39,26 +42,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Pull and retag Server image (Docker Hub)
+      - name: Create multi-arch manifest for Server (Docker Hub)
         run: |
-          docker pull mayanayza/netvisor-server:${{ inputs.release_tag }}
-          docker tag mayanayza/netvisor-server:${{ inputs.release_tag }} mayanayza/netvisor-server:latest
-          docker push mayanayza/netvisor-server:latest
+          docker buildx imagetools create -t mayanayza/netvisor-server:latest \
+            mayanayza/netvisor-server:${{ inputs.release_tag }}
       
-      - name: Pull and retag Server image (GHCR)
+      - name: Create multi-arch manifest for Server (GHCR)
         run: |
-          docker pull ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
-          docker tag ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }} ghcr.io/${{ github.repository }}/server:latest
-          docker push ghcr.io/${{ github.repository }}/server:latest
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
+            ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
       
-      - name: Pull and retag Daemon image (Docker Hub)
+      - name: Create multi-arch manifest for Daemon (Docker Hub)
         run: |
-          docker pull mayanayza/netvisor-daemon:${{ inputs.release_tag }}
-          docker tag mayanayza/netvisor-daemon:${{ inputs.release_tag }} mayanayza/netvisor-daemon:latest
-          docker push mayanayza/netvisor-daemon:latest
+          docker buildx imagetools create -t mayanayza/netvisor-daemon:latest \
+            mayanayza/netvisor-daemon:${{ inputs.release_tag }}
       
-      - name: Pull and retag Daemon image (GHCR)
+      - name: Create multi-arch manifest for Daemon (GHCR)
         run: |
-          docker pull ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
-          docker tag ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }} ghcr.io/${{ github.repository }}/daemon:latest
-          docker push ghcr.io/${{ github.repository }}/daemon:latest
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/daemon:latest \
+            ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
