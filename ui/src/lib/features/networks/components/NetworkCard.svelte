@@ -23,12 +23,10 @@
 		title: network.name,
 		iconColor: entities.getColorHelper('Network').icon,
 		icon: entities.getIconComponent('Network'),
-
-		sections: [],
-		lists: [
+		fields: [
 			{
 				label: 'Daemons',
-				items: networkDaemons.map((d) => {
+				value: networkDaemons.map((d) => {
 					return {
 						id: d.id,
 						label: d.ip,
@@ -38,7 +36,7 @@
 			},
 			{
 				label: 'Hosts',
-				items: networkHosts.map((h) => {
+				value: networkHosts.map((h) => {
 					return {
 						id: h.id,
 						label: h.name,
@@ -48,7 +46,7 @@
 			},
 			{
 				label: 'Subnets',
-				items: networkSubnets.map((s) => {
+				value: networkSubnets.map((s) => {
 					return {
 						id: s.id,
 						label: s.name,
@@ -58,7 +56,7 @@
 			},
 			{
 				label: 'Groups',
-				items: networkGroups.map((g) => {
+				value: networkGroups.map((g) => {
 					return {
 						id: g.id,
 						label: g.name,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CardAction, CardSection, CardList, TagProps } from './types';
+	import type { CardAction, CardField, TagProps } from './types';
 	import Tag from './Tag.svelte';
 	import type { Component } from 'svelte';
 	import { type IconComponent } from '$lib/shared/utils/types';
@@ -11,8 +11,7 @@
 	export let icon: IconComponent | null = null; // Expects Svelte component, not string
 	export let iconColor: string = 'text-blue-400';
 	export let actions: CardAction[] = [];
-	export let sections: CardSection[] = [];
-	export let lists: CardList[] = [];
+	export let fields: CardField[] = [];
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	export let footerComponent: Component<any> | null = null; // Optional footer component
 	export let footerProps: Record<string, unknown> = {}; // Props to pass to footer component
@@ -20,6 +19,12 @@
 
 	// Configuration for list view
 	const MAX_ITEMS_IN_LIST_VIEW = 3;
+
+	// Helper to check if value is an array
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	function isArrayValue(value: string | any[]): value is any[] {
+		return Array.isArray(value);
+	}
 </script>
 
 <div
@@ -28,34 +33,26 @@
 	<!-- Header - Fixed width in list view -->
 	<div
 		class={viewMode === 'list'
-			? 'w-54 flex flex-shrink-0 items-center space-x-3'
+			? 'flex w-64 flex-shrink-0 items-center space-x-3'
 			: 'mb-4 flex items-start justify-between'}
 	>
 		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
 			{#if icon}
-				<svelte:component
-					this={icon}
-					size={viewMode === 'list' ? 20 : 28}
-					class="{iconColor} flex-shrink-0"
-				/>
+				<svelte:component this={icon} size={viewMode === 'list' ? 20 : 28} class={iconColor} />
 			{/if}
-			<div class={viewMode === 'list' ? 'min-w-0 flex-1' : ''}>
+			<div>
 				{#if link}
 					<a
 						href={link}
 						class="text-primary hover:text-info {viewMode === 'list'
 							? 'text-base'
-							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block truncate' : ''}"
+							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block' : ''}"
 						target="_blank"
 					>
 						{title}
 					</a>
 				{:else}
-					<h3
-						class="text-primary {viewMode === 'list'
-							? 'truncate text-base'
-							: 'text-lg'} font-semibold"
-					>
+					<h3 class="text-primary {viewMode === 'list' ? 'text-base' : 'text-lg'} font-semibold">
 						{title}
 					</h3>
 				{/if}
@@ -80,98 +77,75 @@
 	<div class={viewMode === 'list' ? 'flex min-w-0 flex-1 items-center' : 'flex-grow space-y-3'}>
 		{#if viewMode === 'list'}
 			<!-- List view: horizontal layout with consistent spacing -->
-			<div class="flex min-w-0 flex-1 items-center">
-				<!-- Sections -->
-				<div class="w-15 mr-4 flex-1">
-					<div class="items-left flex gap-3">
-						{#each sections as section, i ((section.value, i))}
-							<div class="flex flex-shrink flex-col">
-								<span class="text-secondary text-xs">{section.label}:</span>
-								<div class="text-tertiary ml-1 text-xs">{section.value}</div>
-							</div>
-						{/each}
-					</div>
-				</div>
-
-				<!-- Lists - Takes remaining space with consistent layout -->
-				{#if lists.length > 0}
-					<div class="mr-4 flex-grow">
-						<div class="flex w-full justify-evenly">
-							{#each lists as list (list.label)}
-								{#if list.label || list.items}
-									<div class="items-left flex w-32 flex-col gap-2">
-										{#if list.label}
-											<span class="text-secondary flex-shrink-0 whitespace-nowrap text-xs"
-												>{list.label}:</span
-											>
-										{/if}
-										{#if list.items.length > 0}
-											<div class="items-left flex min-w-0 flex-col flex-wrap gap-1">
-												{#each list.items.slice(0, MAX_ITEMS_IN_LIST_VIEW) as item, i ((item.id, i))}
-													<Tag
-														icon={item.icon}
-														disabled={item.disabled}
-														color={item.color}
-														badge={item.badge}
-														label={item.label}
-													/>
-												{/each}
-												{#if list.items.length > MAX_ITEMS_IN_LIST_VIEW}
-													<span class="text-tertiary flex-shrink-0 text-xs"
-														>+{list.items.length - MAX_ITEMS_IN_LIST_VIEW}</span
-													>
-												{/if}
-											</div>
-										{:else if list.label}
-											<span class="text-muted text-xs"
-												>{list.emptyText || `No ${list.label.toLowerCase()}`}</span
-											>
-										{/if}
-									</div>
-								{/if}
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</div>
-		{:else}
-			<!-- Card view: vertical layout -->
-			<!-- Basic info sections -->
-			{#each sections as section, i ((section.value, i))}
-				<div class="text-sm">
-					<span class="text-secondary">{section.label}:</span>
-					<span class="text-tertiary ml-2">{section.value}</span>
-				</div>
-			{/each}
-
-			<!-- List sections -->
-			{#each lists as list (list.label)}
-				{#if list.label || list.items}
-					<div class="text-sm">
-						<div class="flex flex-wrap items-center gap-2">
-							{#if list.label}
-								<span class="text-secondary">{list.label}:</span>
-							{/if}
-							{#if list.items.length > 0}
-								{#each list.items as item, i ((item.id, i))}
-									<div class="flex items-center justify-between">
-										<div class="flex items-center space-x-2">
+			<div
+				class="grid flex-1 items-center gap-3"
+				style="grid-template-columns: repeat({fields.length}, 1fr);"
+			>
+				{#each fields as field, i (field.label + i)}
+					<div class="flex min-w-0 flex-col">
+						<span class="text-secondary text-xs">{field.label}:</span>
+						<div class="text-tertiary break-all text-xs">
+							{#if field.value === null || field.value === undefined || field.value === ''}
+								<span class="text-muted text-xs">—</span>
+							{:else if isArrayValue(field.value)}
+								{#if field.value.length > 0}
+									<div class="flex flex-wrap gap-1">
+										{#each field.value.slice(0, MAX_ITEMS_IN_LIST_VIEW) as item (item.id)}
 											<Tag
 												icon={item.icon}
 												disabled={item.disabled}
-												color={item.color}
+												color={field.color || item.color}
 												badge={item.badge}
 												label={item.label}
 											/>
-										</div>
+										{/each}
+										{#if field.value.length > MAX_ITEMS_IN_LIST_VIEW}
+											<span class="text-tertiary flex-shrink-0 text-xs"
+												>+{field.value.length - MAX_ITEMS_IN_LIST_VIEW}</span
+											>
+										{/if}
 									</div>
-								{/each}
-							{:else if list.label}
-								<span class="text-muted">{list.emptyText || `No ${list.label.toLowerCase()}`}</span>
+								{:else}
+									<span class="text-muted text-xs"
+										>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
+									>
+								{/if}
+							{:else}
+								{field.value}
 							{/if}
 						</div>
 					</div>
-				{/if}
+				{/each}
+			</div>
+		{:else}
+			<!-- Card view: vertical layout -->
+			{#each fields as field, i (field.label + i)}
+				<div class="text-sm">
+					<span class="text-secondary">{field.label}:</span>
+					{#if field.value}
+						{#if isArrayValue(field.value)}
+							{#if field.value.length > 0}
+								<div class="ml-2 inline-flex flex-wrap items-center gap-2">
+									{#each field.value as item (item.id)}
+										<Tag
+											icon={item.icon}
+											disabled={item.disabled}
+											color={field.color || item.color}
+											badge={item.badge}
+											label={item.label}
+										/>
+									{/each}
+								</div>
+							{:else}
+								<span class="text-muted ml-2"
+									>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
+								>
+							{/if}
+						{:else}
+							<span class="text-tertiary ml-2 break-all">{field.value}</span>
+						{/if}
+					{/if}
+				</div>
 			{/each}
 		{/if}
 	</div>

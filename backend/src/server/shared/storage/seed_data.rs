@@ -123,7 +123,7 @@ pub fn create_internet_connectivity_host(
     let base = HostBase {
         name: "Google.com".to_string(),
         network_id,
-        hostname: Some("google.com".to_string()),
+        hostname: None,
         description: Some("Google.com".to_string()),
         interfaces: vec![interface],
         ports: vec![https_port],
@@ -164,7 +164,7 @@ pub fn create_public_dns_host(internet_subnet: &Subnet, network_id: Uuid) -> (Ho
         name: "Cloudflare DNS".to_string(),
         hostname: None,
         network_id,
-        description: Some("Cloudflare DNS".to_string()),
+        description: None,
         target: HostTarget::None,
         interfaces: vec![interface],
         ports: vec![dns_udp_port],

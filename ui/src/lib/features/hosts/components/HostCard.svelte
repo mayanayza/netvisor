@@ -49,27 +49,26 @@
 	// Build card data
 	$: cardData = {
 		title: host.name,
+		...(host.virtualization !== null
+			? {
+					subtitle:
+						'VM Managed By ' + get(getServiceById(host.virtualization.details.service_id))?.name ||
+						'Unknown Service'
+				}
+			: {}),
 		link: host.target.type != 'None' ? `http://${get(getHostTargetString(host))}` : undefined,
 		iconColor: entities.getColorHelper('Host').icon,
 		icon:
 			serviceDefinitions.getIconComponent(hostServices[0]?.service_definition) ||
 			entities.getIconComponent('Host'),
-		sections: [
-			...(host.virtualization !== null
-				? [
-						{
-							label: 'VM Managed By',
-							value:
-								get(getServiceById(host.virtualization.details.service_id))?.name ||
-								'Unknown Service'
-						}
-					]
-				: [])
-		],
-		lists: [
+		fields: [
+			{
+				label: 'Description',
+				value: host.description
+			},
 			{
 				label: 'Groups',
-				items: hostGroups.map((group: Group) => ({
+				value: hostGroups.map((group: Group) => ({
 					id: group.id,
 					label: group.name,
 					color: entities.getColorHelper('Group').string
@@ -78,7 +77,7 @@
 			},
 			{
 				label: 'VMs',
-				items: vms.map((h) => {
+				value: vms.map((h) => {
 					return {
 						id: h.id,
 						label: h.name,
@@ -89,7 +88,7 @@
 			},
 			{
 				label: 'Services',
-				items: hostServices
+				value: hostServices
 					.filter((sv) => !containerIds.includes(sv.id))
 					.map((sv) => {
 						return {
@@ -103,7 +102,7 @@
 			},
 			{
 				label: 'Containers',
-				items: containers
+				value: containers
 					.map((c) => {
 						return {
 							id: c.id,
@@ -116,7 +115,7 @@
 			},
 			{
 				label: 'Interfaces',
-				items: host.interfaces.map((i) => {
+				value: host.interfaces.map((i) => {
 					return {
 						id: i.id,
 						label: formatInterface(i),
@@ -126,7 +125,6 @@
 				emptyText: 'No interfaces'
 			}
 		],
-
 		actions: [
 			{
 				label: 'Delete Host',
