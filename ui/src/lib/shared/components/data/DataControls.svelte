@@ -185,6 +185,14 @@
 		const unsubscribe = $effect.root(() => {
 			$effect(() => {
 				if (storageKey) {
+					// Track all state that should trigger saves - void() prevents lint errors
+					void searchQuery;
+					void filterState;
+					void sortState;
+					void selectedGroupField;
+					void showFilters;
+					void viewMode;
+
 					// Debounce saves
 					clearTimeout(saveTimeout);
 					saveTimeout = setTimeout(saveState, 100);
