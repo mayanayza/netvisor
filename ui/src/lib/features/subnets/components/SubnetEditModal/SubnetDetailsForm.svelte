@@ -13,6 +13,7 @@
 
 	export let formApi: FormApi;
 	export let formData: Subnet;
+	export let isEditing: boolean;
 
 	// Create form fields with validation
 	const name = field('name', formData.name, [required(), maxLength(100)]);
@@ -46,7 +47,7 @@
 		label="CIDR"
 		id="name"
 		{formApi}
-		disabled={!!get(isContainerSubnet(formData.id))}
+		disabled={!!get(isContainerSubnet(formData.id)) || isEditing}
 		placeholder="192.168.1.0/24"
 		helpText="Network address and prefix length (e.g., 192.168.1.0/24)"
 		required={true}

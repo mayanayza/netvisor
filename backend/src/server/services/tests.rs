@@ -140,6 +140,7 @@ async fn test_service_deletion_cleans_up_relationships() {
         .unwrap();
 
     match group_after.base.group_type {
-        GroupType::RequestPath { service_bindings } => assert!(service_bindings.is_empty()),
+        GroupType::RequestPath { service_bindings }
+        | GroupType::HubAndSpoke { service_bindings } => assert!(service_bindings.is_empty()),
     }
 }

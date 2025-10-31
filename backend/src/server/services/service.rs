@@ -294,7 +294,8 @@ impl ServiceService {
             groups
                 .into_iter()
                 .filter_map(|mut group| match &mut group.base.group_type {
-                    GroupType::RequestPath { service_bindings } => {
+                    GroupType::RequestPath { service_bindings }
+                    | GroupType::HubAndSpoke { service_bindings } => {
                         let initial_bindings_length = service_bindings.len();
 
                         service_bindings.retain(|sb| {
