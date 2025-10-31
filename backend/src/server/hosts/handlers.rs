@@ -102,14 +102,14 @@ async fn update_host(
     // If services is None, don't update services
     if let Some(services) = request.services {
         let (create_futures, update_futures): (Vec<_>, Vec<_>) =
-        services.into_iter().partition_map(|s| {
-            if s.id == Uuid::nil() {
-                let service = Service::new(s.base);
-                Either::Left(service_service.create_service(service))
-            } else {
-                Either::Right(service_service.update_service(s))
-            }
-        });
+            services.into_iter().partition_map(|s| {
+                if s.id == Uuid::nil() {
+                    let service = Service::new(s.base);
+                    Either::Left(service_service.create_service(service))
+                } else {
+                    Either::Right(service_service.update_service(s))
+                }
+            });
 
         let created_services = try_join_all(create_futures).await?;
         let updated_services = try_join_all(update_futures).await?;

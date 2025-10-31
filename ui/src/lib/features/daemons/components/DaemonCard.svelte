@@ -96,4 +96,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode}/>
+<GenericCard {...cardData} {viewMode} />

@@ -1,21 +1,29 @@
 <script lang="ts" generics="T">
-	import { Search, SlidersHorizontal, X, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-svelte';
+	import {
+		Search,
+		SlidersHorizontal,
+		X,
+		ChevronDown,
+		ChevronUp,
+		LayoutGrid,
+		List
+	} from 'lucide-svelte';
 	import type { FieldConfig } from './types';
 	import { onMount, type Snippet } from 'svelte';
 	import Tag from './Tag.svelte';
-	import { pushError } from '$lib/shared/stores/feedback';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
-    let {
-        items = $bindable([]),
-        fields = $bindable([]),
-        storageKey = null,
-        children  // Add this - it's the snippet
-    }: {
-        items: T[];
-        fields: FieldConfig<T>[];
-        storageKey?: string | null;
-        children: Snippet<[T, 'card' | 'list']>;  // Snippet that takes two arguments (the item and viewMode)
-    } = $props();
+	let {
+		items = $bindable([]),
+		fields = $bindable([]),
+		storageKey = null,
+		children
+	}: {
+		items: T[];
+		fields: FieldConfig<T>[];
+		storageKey?: string | null;
+		children: Snippet<[T, 'card' | 'list']>; // Snippet that takes two arguments (the item and viewMode)
+	} = $props();
 
 	// Search state
 	let searchQuery = $state('');
@@ -24,7 +32,7 @@
 	interface FilterState {
 		[key: string]: {
 			type: 'string' | 'boolean';
-			values: Set<string>;
+			values: SvelteSet<string>;
 			showTrue?: boolean;
 			showFalse?: boolean;
 		};
@@ -87,7 +95,7 @@
 					const saved = state.filterState[key];
 					restoredFilterState[key] = {
 						...saved,
-						values: new Set(saved.values) // Convert Array back to Set
+						values: new SvelteSet(saved.values) // Convert Array back to Set
 					};
 				});
 				filterState = restoredFilterState;
@@ -146,52 +154,44 @@
 		}
 	}
 
-    // Initialize filter state from fields
-    $effect(() => {
-    fields.forEach((field) => {
-        if (field.filterable && !filterState[field.key]) {
-        if (field.type === 'boolean') {
-            filterState[field.key] = {
-            type: 'boolean',
-            values: new Set(),
-            showTrue: true,
-            showFalse: true
-            };
-        } else {
-            filterState[field.key] = {
-            type: 'string',
-            values: new Set()
-            };
-        }
-        }
-    });
-    });
+	// Initialize filter state from fields
+	$effect(() => {
+		fields.forEach((field) => {
+			if (field.filterable && !filterState[field.key]) {
+				if (field.type === 'boolean') {
+					filterState[field.key] = {
+						type: 'boolean',
+						values: new SvelteSet(),
+						showTrue: true,
+						showFalse: true
+					};
+				} else {
+					filterState[field.key] = {
+						type: 'string',
+						values: new SvelteSet()
+					};
+				}
+			}
+		});
+	});
 
 	// Load state on mount and set up auto-save
 	onMount(() => {
 		loadState();
-		
+
 		// Set up reactive save (debounced)
 		let saveTimeout: ReturnType<typeof setTimeout>;
-		
+
 		const unsubscribe = $effect.root(() => {
 			$effect(() => {
 				if (storageKey) {
-					// Track all state that should be persisted
-					searchQuery;
-					filterState;
-					sortState;
-					selectedGroupField;
-					showFilters;
-					viewMode;
-					
 					// Debounce saves
 					clearTimeout(saveTimeout);
 					saveTimeout = setTimeout(saveState, 100);
 				}
 			});
 		});
-		
+
 		return () => {
 			clearTimeout(saveTimeout);
 			unsubscribe();
@@ -204,12 +204,13 @@
 			return field.getValue(item);
 		}
 		// Default: try to access the key directly
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		return (item as any)[field.key] ?? null;
 	}
 
 	// Get unique string values for a field
 	function getUniqueValues(field: FieldConfig<T>): string[] {
-		const values = new Set<string>();
+		const values = new SvelteSet<string>();
 		items.forEach((item) => {
 			const value = getFieldValue(item, field);
 			if (value !== null && value !== undefined && value !== '') {
@@ -220,7 +221,9 @@
 	}
 
 	// Get groupable fields (only string type fields)
-	let groupableFields = $derived(fields.filter((f) => f.type === 'string' && f.filterable !== false));
+	let groupableFields = $derived(
+		fields.filter((f) => f.type === 'string' && f.filterable !== false)
+	);
 
 	// Apply all filters, sorting, and grouping
 	let processedItems = $derived.by(() => {
@@ -303,15 +306,15 @@
 	// Group items by selected field
 	let groupedItems = $derived.by(() => {
 		if (!selectedGroupField) {
-			return new Map([['All', processedItems]]);
+			return new SvelteMap([['All', processedItems]]);
 		}
 
 		const field = fields.find((f) => f.key === selectedGroupField);
 		if (!field) {
-			return new Map([['All', processedItems]]);
+			return new SvelteMap([['All', processedItems]]);
 		}
 
-		const groups = new Map<string, T[]>();
+		const groups = new SvelteMap<string, T[]>();
 
 		processedItems.forEach((item) => {
 			const value = getFieldValue(item, field);
@@ -324,7 +327,7 @@
 		});
 
 		// Sort groups by key
-		return new Map([...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])));
+		return new SvelteMap([...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])));
 	});
 
 	// Toggle sort
@@ -347,7 +350,7 @@
 		const filter = filterState[fieldKey];
 		if (!filter || filter.type !== 'string') return;
 
-		const newValues = new Set(filter.values);
+		const newValues = new SvelteSet(filter.values);
 		if (newValues.has(value)) {
 			newValues.delete(value);
 		} else {
@@ -386,14 +389,14 @@
 				if (field.type === 'boolean') {
 					newFilterState[field.key] = {
 						type: 'boolean',
-						values: new Set(),
+						values: new SvelteSet(),
 						showTrue: true,
 						showFalse: true
 					};
 				} else {
 					newFilterState[field.key] = {
 						type: 'string',
-						values: new Set()
+						values: new SvelteSet()
 					};
 				}
 			}
@@ -413,17 +416,19 @@
 	}
 
 	// Check if any filters are active
-	let hasActiveFilters = $derived(fields.some((field) => {
-		if (!field.filterable) return false;
-		const filter = filterState[field.key];
-		if (!filter) return false;
+	let hasActiveFilters = $derived(
+		fields.some((field) => {
+			if (!field.filterable) return false;
+			const filter = filterState[field.key];
+			if (!filter) return false;
 
-		if (field.type === 'boolean') {
-			return !filter.showTrue || !filter.showFalse;
-		} else {
-			return filter.values.size > 0;
-		}
-	}));
+			if (field.type === 'boolean') {
+				return !filter.showTrue || !filter.showFalse;
+			} else {
+				return filter.values.size > 0;
+			}
+		})
+	);
 
 	let hasActiveSearch = $derived(searchQuery.trim().length > 0);
 	let hasActiveGrouping = $derived(selectedGroupField !== null);
@@ -483,7 +488,7 @@
 			<div class="relative">
 				<select bind:value={selectedGroupField} class="input-field appearance-none pr-8">
 					<option value={null}>No grouping</option>
-					{#each groupableFields as field}
+					{#each groupableFields as field (field.key)}
 						<option value={field.key}>Group by {field.label}</option>
 					{/each}
 				</select>
@@ -509,7 +514,7 @@
 					class="input-field appearance-none pr-8"
 				>
 					<option value={null}>Sort by...</option>
-					{#each fields.filter((f) => f.sortable !== false) as field}
+					{#each fields.filter((f) => f.sortable !== false) as field (field.key)}
 						<option value={field.key}>{field.label}</option>
 					{/each}
 				</select>
@@ -544,7 +549,7 @@
 			</div>
 
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each fields.filter((f) => f.filterable) as field}
+				{#each fields.filter((f) => f.filterable) as field (field.key)}
 					<div class="space-y-2">
 						<div class="text-secondary text-sm font-medium">{field.label}</div>
 
@@ -579,7 +584,7 @@
 								{#if uniqueValues.length === 0}
 									<p class="text-tertiary text-xs">No values available</p>
 								{:else}
-									{#each uniqueValues as value}
+									{#each uniqueValues as value (value)}
 										<label class="flex items-center gap-2">
 											<input
 												type="checkbox"
@@ -607,7 +612,8 @@
 		</span>
 		{#if hasActiveGrouping}
 			<span>
-				{groupedItems.size} {groupedItems.size === 1 ? 'group' : 'groups'}
+				{groupedItems.size}
+				{groupedItems.size === 1 ? 'group' : 'groups'}
 			</span>
 		{/if}
 	</div>
@@ -616,7 +622,7 @@
 	{#if hasActiveGrouping}
 		<!-- Grouped view -->
 		<div class="space-y-6">
-			{#each [...groupedItems.entries()] as [groupName, groupItems]}
+			{#each [...groupedItems.entries()] as [groupName, groupItems] (groupName)}
 				<div class="space-y-3">
 					<!-- Group Header -->
 					<div class="flex items-center gap-3">
@@ -625,7 +631,11 @@
 					</div>
 
 					<!-- Group Items -->
-					<div class="{viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}">
+					<div
+						class={viewMode === 'list'
+							? 'space-y-2'
+							: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
+					>
 						{#each groupItems as item (item)}
 							{@render children(item, viewMode)}
 						{/each}
@@ -635,7 +645,11 @@
 		</div>
 	{:else}
 		<!-- Ungrouped view -->
-		<div class="{viewMode === 'list' ? 'space-y-2' : 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}">
+		<div
+			class={viewMode === 'list'
+				? 'space-y-2'
+				: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
+		>
 			{#each processedItems as item (item)}
 				{@render children(item, viewMode)}
 			{/each}

@@ -49,5 +49,5 @@ export interface FieldConfig<T> {
 	filterable?: boolean; // Whether to show filter controls for this field
 	sortable?: boolean; // Whether this field can be sorted
 	getValue?: (item: T) => string | boolean | Date | null; // Custom getter function
-	label: string
+	label: string;
 }

@@ -18,10 +18,6 @@
 
 	const loading = loadData([getSubnets, getHosts, getServices]);
 
-	$: sortedSubnets = [...$subnets].sort((a, b) =>
-		a.created_at.localeCompare(b.created_at, undefined, { sensitivity: 'base' })
-	);
-
 	function handleCreateSubnet() {
 		editingSubnet = null;
 		showSubnetEditor = true;
@@ -63,7 +59,7 @@
 	const subnetFields: FieldConfig<Subnet>[] = [
 		{
 			key: 'name',
-			label:'Name',
+			label: 'Name',
 			type: 'string',
 			searchable: true,
 			filterable: false,
@@ -96,13 +92,13 @@
 		{
 			key: 'network_id',
 			type: 'string',
-			label: "Network",
+			label: 'Network',
 			searchable: false,
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
-			},
+				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+			}
 		}
 	];
 </script>
@@ -134,12 +130,12 @@
 	{:else}
 		<DataControls items={$subnets} fields={subnetFields} storageKey="netvisor-subnets-table-state">
 			{#snippet children(item: Subnet, viewMode: 'card' | 'list')}
-				<SubnetCard 
-					subnet={item} 
+				<SubnetCard
+					subnet={item}
 					{viewMode}
-					onEdit={handleEditSubnet} 
+					onEdit={handleEditSubnet}
 					onDelete={handleDeleteSubnet}
-					/>
+				/>
 			{/snippet}
 		</DataControls>
 	{/if}

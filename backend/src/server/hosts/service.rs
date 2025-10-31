@@ -87,7 +87,6 @@ impl HostService {
 
     /// Create a new host
     pub async fn create_host(&self, host: Host) -> Result<Host> {
-
         // Manually created and needs actual UUID
         let host = if host.id == Uuid::nil() {
             Host::new(host.base.clone())

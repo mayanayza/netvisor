@@ -89,7 +89,7 @@ pub fn create_remote_host(remote_subnet: &Subnet, network_id: Uuid) -> (Host, Se
         target: HostTarget::None,
         source: EntitySource::System,
         virtualization: None,
-        hidden: false
+        hidden: false,
     };
 
     let mut host = Host::new(base);
@@ -131,7 +131,7 @@ pub fn create_internet_connectivity_host(
         target: HostTarget::Hostname,
         source: EntitySource::System,
         virtualization: None,
-        hidden: false
+        hidden: false,
     };
 
     let mut host = Host::new(base);
@@ -171,7 +171,7 @@ pub fn create_public_dns_host(internet_subnet: &Subnet, network_id: Uuid) -> (Ho
         services: Vec::new(),
         source: EntitySource::System,
         virtualization: None,
-        hidden: false
+        hidden: false,
     };
 
     let mut host = Host::new(base);

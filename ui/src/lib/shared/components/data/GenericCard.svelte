@@ -17,34 +17,50 @@
 	export let footerComponent: Component<any> | null = null; // Optional footer component
 	export let footerProps: Record<string, unknown> = {}; // Props to pass to footer component
 	export let viewMode: 'card' | 'list' = 'card'; // View mode toggle
-	
+
 	// Configuration for list view
 	const MAX_ITEMS_IN_LIST_VIEW = 3;
 </script>
 
-<div class="card flex {viewMode === 'list' ? 'flex-row items-center gap-4 p-4' : 'h-full flex-col'}">
+<div
+	class="card flex {viewMode === 'list' ? 'flex-row items-center gap-4 p-4' : 'h-full flex-col'}"
+>
 	<!-- Header - Fixed width in list view -->
-	<div class="{viewMode === 'list' ? 'flex items-center space-x-3 w-48 flex-shrink-0' : 'mb-4 flex items-start justify-between'}">
+	<div
+		class={viewMode === 'list'
+			? 'flex w-48 flex-shrink-0 items-center space-x-3'
+			: 'mb-4 flex items-start justify-between'}
+	>
 		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
 			{#if icon}
-				<svelte:component this={icon} size={viewMode === 'list' ? 20 : 28} class="{iconColor} flex-shrink-0" />
+				<svelte:component
+					this={icon}
+					size={viewMode === 'list' ? 20 : 28}
+					class="{iconColor} flex-shrink-0"
+				/>
 			{/if}
-			<div class="{viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
+			<div class={viewMode === 'list' ? 'min-w-0 flex-1' : ''}>
 				{#if link}
 					<a
 						href={link}
-						class="text-primary hover:text-info {viewMode === 'list' ? 'text-base' : 'text-lg'} font-semibold {viewMode === 'list' ? 'truncate block' : ''}"
+						class="text-primary hover:text-info {viewMode === 'list'
+							? 'text-base'
+							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block truncate' : ''}"
 						target="_blank"
 					>
 						{title}
 					</a>
 				{:else}
-					<h3 class="text-primary {viewMode === 'list' ? 'text-base truncate' : 'text-lg'} font-semibold">
+					<h3
+						class="text-primary {viewMode === 'list'
+							? 'truncate text-base'
+							: 'text-lg'} font-semibold"
+					>
 						{title}
 					</h3>
 				{/if}
 				{#if subtitle}
-					<p class="text-secondary {viewMode === 'list' ? 'text-xs truncate' : 'text-sm'}">
+					<p class="text-secondary {viewMode === 'list' ? 'truncate text-xs' : 'text-sm'}">
 						{subtitle}
 					</p>
 				{/if}
@@ -56,24 +72,24 @@
 	</div>
 
 	<!-- Content - grows to fill available space -->
-	<div class="{viewMode === 'list' ? 'flex flex-1 items-center min-w-0' : 'flex-grow space-y-3'}">
+	<div class={viewMode === 'list' ? 'flex min-w-0 flex-1 items-center' : 'flex-grow space-y-3'}>
 		{#if viewMode === 'list'}
 			<!-- List view: horizontal layout with consistent spacing -->
-			<div class="flex flex-1 items-center min-w-0">
+			<div class="flex min-w-0 flex-1 items-center">
 				<!-- Status tag in list view - Fixed width -->
 				{#if status}
-					<div class="w-12 flex-shrink-0 mr-4">
+					<div class="mr-4 w-12 flex-shrink-0">
 						<Tag {...status} />
 					</div>
 				{:else}
-					<div class="w-12 flex-shrink-0 mr-4"></div>
+					<div class="mr-4 w-12 flex-shrink-0"></div>
 				{/if}
 
 				<!-- Sections -->
-				<div class="flex-1 mr-4 w-15">
-					<div class="flex items-left gap-3">
+				<div class="w-15 mr-4 flex-1">
+					<div class="items-left flex gap-3">
 						{#each sections as section, i ((section.value, i))}
-							<div class="flex flex-col flex-shrink">
+							<div class="flex flex-shrink flex-col">
 								<span class="text-secondary text-xs">{section.label}:</span>
 								<div class="text-tertiary ml-1 text-xs">{section.value}</div>
 							</div>
@@ -82,38 +98,44 @@
 				</div>
 
 				<!-- Lists - Takes remaining space with consistent layout -->
-				 {#if lists.length > 0}
-				<div class="flex-grow mr-4">
-					<div class="flex justify-evenly w-full">
-						{#each lists as list (list.label)}
-							{#if list.label || list.items}
-								<div class="flex flex-col items-left gap-2 w-32">
-									{#if list.label}
-										<span class="text-secondary text-xs flex-shrink-0 whitespace-nowrap">{list.label}:</span>
-									{/if}
-									{#if list.items.length > 0}
-										<div class="flex flex-col items-left gap-1 flex-wrap min-w-0">
-											{#each list.items.slice(0, MAX_ITEMS_IN_LIST_VIEW) as item, i ((item.id, i))}
-												<Tag
-													icon={item.icon}
-													disabled={item.disabled}
-													color={item.color}
-													badge={item.badge}
-													label={item.label}
-												/>
-											{/each}
-											{#if list.items.length > MAX_ITEMS_IN_LIST_VIEW}
-												<span class="text-tertiary text-xs flex-shrink-0">+{list.items.length - MAX_ITEMS_IN_LIST_VIEW}</span>
-											{/if}
-										</div>
-									{:else if list.label}
-										<span class="text-muted text-xs">{list.emptyText || `No ${list.label.toLowerCase()}`}</span>
-									{/if}
-								</div>
-							{/if}
-						{/each}
+				{#if lists.length > 0}
+					<div class="mr-4 flex-grow">
+						<div class="flex w-full justify-evenly">
+							{#each lists as list (list.label)}
+								{#if list.label || list.items}
+									<div class="items-left flex w-32 flex-col gap-2">
+										{#if list.label}
+											<span class="text-secondary flex-shrink-0 whitespace-nowrap text-xs"
+												>{list.label}:</span
+											>
+										{/if}
+										{#if list.items.length > 0}
+											<div class="items-left flex min-w-0 flex-col flex-wrap gap-1">
+												{#each list.items.slice(0, MAX_ITEMS_IN_LIST_VIEW) as item, i ((item.id, i))}
+													<Tag
+														icon={item.icon}
+														disabled={item.disabled}
+														color={item.color}
+														badge={item.badge}
+														label={item.label}
+													/>
+												{/each}
+												{#if list.items.length > MAX_ITEMS_IN_LIST_VIEW}
+													<span class="text-tertiary flex-shrink-0 text-xs"
+														>+{list.items.length - MAX_ITEMS_IN_LIST_VIEW}</span
+													>
+												{/if}
+											</div>
+										{:else if list.label}
+											<span class="text-muted text-xs"
+												>{list.emptyText || `No ${list.label.toLowerCase()}`}</span
+											>
+										{/if}
+									</div>
+								{/if}
+							{/each}
+						</div>
 					</div>
-				</div>
 				{/if}
 			</div>
 		{:else}
@@ -167,7 +189,11 @@
 
 	<!-- Action Buttons - Fixed width in list view -->
 	{#if actions.length > 0}
-		<div class="{viewMode === 'list' ? 'flex items-center gap-1 flex-shrink-0 w-32 justify-end' : 'card-divider-h mt-4 flex items-center justify-between pt-4'}">
+		<div
+			class={viewMode === 'list'
+				? 'flex w-32 flex-shrink-0 items-center justify-end gap-1'
+				: 'card-divider-h mt-4 flex items-center justify-between pt-4'}
+		>
 			{#each actions as action (action.label)}
 				<button
 					on:click={action.onClick}

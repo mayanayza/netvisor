@@ -70,12 +70,12 @@
 	const networkFields: FieldConfig<Network>[] = [
 		{
 			key: 'name',
-			label:'Name',
+			label: 'Name',
 			type: 'string',
 			searchable: true,
 			filterable: false,
 			sortable: true
-		},
+		}
 	];
 </script>
 
@@ -104,13 +104,18 @@
 			cta="Create your first network"
 		/>
 	{:else}
-		<DataControls items={$networks} fields={networkFields} storageKey="netvisor-networks-table-state">
+		<DataControls
+			items={$networks}
+			fields={networkFields}
+			storageKey="netvisor-networks-table-state"
+		>
 			{#snippet children(item: Network, viewMode: 'card' | 'list')}
-				<NetworkCard 
-					network={item} 
+				<NetworkCard
+					network={item}
 					{viewMode}
-					onDelete={handleDeleteNetwork} 
-					onEdit={handleEditNetwork} />
+					onDelete={handleDeleteNetwork}
+					onEdit={handleEditNetwork}
+				/>
 			{/snippet}
 		</DataControls>
 	{/if}

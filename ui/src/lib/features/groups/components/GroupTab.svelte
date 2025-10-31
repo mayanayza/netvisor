@@ -58,7 +58,7 @@
 	const groupFields: FieldConfig<Group>[] = [
 		{
 			key: 'name',
-			label:'Name',
+			label: 'Name',
 			type: 'string',
 			searchable: true,
 			filterable: false,
@@ -91,13 +91,13 @@
 		{
 			key: 'network_id',
 			type: 'string',
-			label: "Network",
+			label: 'Network',
 			searchable: false,
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
-			},
+				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+			}
 		}
 	];
 </script>
@@ -127,12 +127,12 @@
 	{:else}
 		<DataControls items={$groups} fields={groupFields} storageKey="netvisor-groups-table-state">
 			{#snippet children(item: Group, viewMode: 'card' | 'list')}
-				<GroupCard 
+				<GroupCard
 					group={item}
 					{viewMode}
 					onEdit={() => handleEditGroup(item)}
 					onDelete={() => handleDeleteGroup(item)}
-					/>
+				/>
 			{/snippet}
 		</DataControls>
 	{/if}

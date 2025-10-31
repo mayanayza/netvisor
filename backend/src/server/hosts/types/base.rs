@@ -50,7 +50,7 @@ impl Default for HostBase {
             ports: Vec::new(),
             source: EntitySource::Unknown,
             virtualization: None,
-            hidden: false
+            hidden: false,
         }
     }
 }

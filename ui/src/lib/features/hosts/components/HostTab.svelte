@@ -29,7 +29,7 @@
 	const hostFields: FieldConfig<Host>[] = [
 		{
 			key: 'name',
-			label:'Name',
+			label: 'Name',
 			type: 'string',
 			searchable: true,
 			filterable: false,
@@ -60,12 +60,12 @@
 			sortable: true,
 			getValue: (host) => {
 				if (host.virtualization !== null) {
-					const virtualizationService = get(getServiceById(host.virtualization.details.service_id))
+					const virtualizationService = get(getServiceById(host.virtualization.details.service_id));
 					if (virtualizationService) {
-						return virtualizationService?.name || "Unknown Service"
+						return virtualizationService?.name || 'Unknown Service';
 					}
 				}
-				return "Not Virtualized"
+				return 'Not Virtualized';
 			}
 		},
 		{
@@ -87,13 +87,13 @@
 		{
 			key: 'network_id',
 			type: 'string',
-			label: "Network",
+			label: 'Network',
 			searchable: false,
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
-			},
+				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+			}
 		}
 	];
 
@@ -159,7 +159,7 @@
 
 	async function handleHostHide(host: Host) {
 		host.hidden = !host.hidden;
-		await updateHost({host, services:null})
+		await updateHost({ host, services: null });
 	}
 
 	function handleCloseHostEditor() {
@@ -195,15 +195,15 @@
 	{:else}
 		<DataControls items={$hosts} fields={hostFields} storageKey="netvisor-hosts-table-state">
 			{#snippet children(item: Host, viewMode: 'card' | 'list')}
-				<HostCard 
-					host={item} 
+				<HostCard
+					host={item}
 					hostGroups={hostGroups.get(item.id)}
 					{viewMode}
 					onEdit={handleEditHost}
 					onDelete={handleDeleteHost}
 					onConsolidate={handleStartConsolidate}
-					onHide={handleHostHide} 
-					/>
+					onHide={handleHostHide}
+				/>
 			{/snippet}
 		</DataControls>
 	{/if}

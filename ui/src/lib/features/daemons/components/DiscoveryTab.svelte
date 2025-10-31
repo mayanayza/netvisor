@@ -49,7 +49,7 @@
 	const daemonFields: FieldConfig<Daemon>[] = [
 		{
 			key: 'name',
-			label:'Name',
+			label: 'Name',
 			type: 'string',
 			searchable: true,
 			filterable: false,
@@ -58,13 +58,13 @@
 		{
 			key: 'network_id',
 			type: 'string',
-			label: "Network",
+			label: 'Network',
 			searchable: false,
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find(n => n.id == item.network_id)?.name || "Unknown Network"
-			},
+				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+			}
 		}
 	];
 </script>
