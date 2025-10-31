@@ -137,6 +137,7 @@
 								placeholder="Select a binding to add..."
 								emptyMessage="No bindings in this group yet."
 								allowReorder={true}
+								{formApi}
 								showSearch={true}
 								options={availableServiceBindings}
 								items={selectedServiceBindings}

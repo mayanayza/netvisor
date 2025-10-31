@@ -1,6 +1,7 @@
 import type { Component } from 'svelte';
 import type { TagProps } from '../../data/types';
 import type { IconComponent } from '$lib/shared/utils/types';
+import type { FormApi } from '../types';
 
 export interface EntityDisplayComponent<T> {
 	// Required methods
@@ -27,6 +28,7 @@ export interface EntityDisplayComponent<T> {
 	renderInlineEdit?(
 		item: T,
 		onUpdate: (updates: Partial<T>) => void,
+		formApi: FormApi,
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		context?: Record<string, any>
 	): {

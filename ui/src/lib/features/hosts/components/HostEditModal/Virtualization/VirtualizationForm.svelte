@@ -10,10 +10,12 @@
 	import type { Host } from '$lib/features/hosts/types/base';
 	import { uuidv4Sentinel } from '$lib/shared/utils/formatting';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
+	import type { FormApi } from '$lib/shared/components/forms/types';
 
 	export let virtualizationManagerServices: Service[];
 	export let onServiceChange: (service: Service) => void;
 	export let onVirtualizedHostChange: (host: Host) => void;
+	export let formApi: FormApi;
 </script>
 
 <div class="space-y-6">
@@ -24,6 +26,7 @@
 				helpText="Services that manage virtual machines or containers on this host"
 				emptyMessage="No virtualization services on this host."
 				{items}
+				{formApi}
 				allowItemRemove={() => false}
 				allowReorder={false}
 				allowAddFromOptions={false}
@@ -49,11 +52,13 @@
 					{#if virtualizationType === 'vms'}
 						<VmManagerConfigPanel
 							service={selectedItem}
+							{formApi}
 							onChange={(updatedHost) => onVirtualizedHostChange(updatedHost)}
 						/>
 					{:else if virtualizationType === 'containers'}
 						<ContainerManagerConfigPanel
 							service={selectedItem}
+							{formApi}
 							onChange={(updatedService) => onServiceChange(updatedService)}
 						/>
 					{:else}

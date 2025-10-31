@@ -29,12 +29,14 @@
 		renderInlineEdit: (
 			binding: PortBinding,
 			onUpdate: (updates: Partial<PortBinding>) => void,
+			formApi: FormApi,
 			context: { service?: Service; host?: Host }
 		) => {
 			return {
 				component: Layer4BindingInlineEditor,
 				props: {
 					binding,
+					formApi,
 					onUpdate,
 					service: context?.service,
 					host: context?.host
@@ -54,6 +56,7 @@
 	import { ALL_INTERFACES, type Host } from '$lib/features/hosts/types/base';
 	import Layer4BindingInlineEditor from './PortBindingInlineEditor.svelte';
 	import { get } from 'svelte/store';
+	import type { FormApi } from '../../types';
 
 	export let item: PortBinding;
 </script>

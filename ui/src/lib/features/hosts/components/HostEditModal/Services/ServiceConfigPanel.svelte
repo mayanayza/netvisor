@@ -306,7 +306,7 @@
 		</div>
 		<!-- Port Bindings -->
 		<div class="space-y-4">
-			{#key service.id}
+			{#key `${service.id}`}
 				<ListManager
 					label="Port Bindings"
 					helpText="Configure which ports this service listens on for a given interface"
@@ -316,6 +316,7 @@
 					allowItemEdit={() => true}
 					allowItemRemove={() => true}
 					allowReorder={false}
+					{formApi}
 					allowCreateNew={true}
 					allowAddFromOptions={false}
 					disableCreateNewButton={!canCreatePortBinding}
@@ -342,6 +343,7 @@
 					allowDuplicates={false}
 					allowItemEdit={() => true}
 					allowItemRemove={() => true}
+					{formApi}
 					allowReorder={false}
 					allowCreateNew={true}
 					allowAddFromOptions={false}

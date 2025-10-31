@@ -2,9 +2,13 @@
 	import { formatInterface, getInterfaceFromId } from '$lib/features/hosts/store';
 	import type { Host } from '$lib/features/hosts/types/base';
 	import type { InterfaceBinding, Service } from '$lib/features/services/types/base';
+	import type { FormApi } from '$lib/shared/components/forms/types';
+	import { field } from 'svelte-forms';
+	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 
 	export let binding: InterfaceBinding;
 	export let onUpdate: (updates: Partial<InterfaceBinding>) => void = () => {};
+	export let formApi: FormApi;
 	export let service: Service | undefined = undefined;
 	export let host: Host | undefined = undefined;
 
@@ -33,11 +37,39 @@
 			};
 		}) || [];
 
-	function handleInterfaceChange(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		const interfaceId = target.value;
-		onUpdate({ interface_id: interfaceId });
+	// Create svelte-forms field
+	const getInterfaceField = () => {
+		return field(`interface_binding_${binding.id}`, binding.interface_id, [], {
+			checkOnInit: false
+		});
+	};
+
+	let currentBindingId: string = binding.id;
+	let interfaceField = getInterfaceField();
+
+	// Reinitialize field when binding changes
+	$: if (binding.id !== currentBindingId) {
+		currentBindingId = binding.id;
+		interfaceField = getInterfaceField();
 	}
+
+	// Update binding when field value changes
+	$: if ($interfaceField) {
+		const interfaceId: string = $interfaceField.value;
+
+		// Only trigger onUpdate if value actually changed
+		if (interfaceId !== binding.interface_id) {
+			onUpdate({ interface_id: interfaceId });
+		}
+	}
+
+	// Build select options for interfaces
+	$: interfaceSelectOptions = interfaceOptions.map(({ iface, disabled, reason }) => ({
+		value: iface.id,
+		label: formatInterface(iface) + (disabled && reason ? ` - ${reason}` : ''),
+		id: iface.id,
+		disabled
+	}));
 </script>
 
 <div class="flex-1">
@@ -65,20 +97,15 @@
 					<div class="text-secondary rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm">
 						{iface ? formatInterface(iface) : 'Unknown Interface'}
 					</div>
-				{:else if host.interfaces.length > 0}
-					<!-- Multiple interfaces - show as dropdown -->
-					<select
-						value={binding.interface_id}
-						on:change={handleInterfaceChange}
-						class="input-field"
-					>
-						<option class="select-option" value="" disabled>Select interface...</option>
-						{#each interfaceOptions as { iface, disabled, reason } (iface.id)}
-							<option value={iface.id} {disabled}>
-								{formatInterface(iface)}{disabled && reason ? ` - ${reason}` : ''}
-							</option>
-						{/each}
-					</select>
+				{:else if host.interfaces.length > 0 && $interfaceField}
+					<!-- Multiple interfaces - show as dropdown with SelectInput -->
+					<SelectInput
+						label=""
+						id="interface_binding_{binding.id}"
+						{formApi}
+						field={interfaceField}
+						options={interfaceSelectOptions}
+					/>
 				{/if}
 			</div>
 		</div>

@@ -47,6 +47,7 @@
 		if (selectedIndex >= 0 && selectedIndex < items.length) {
 			items[selectedIndex] = updatedItem;
 			items = items; // Trigger reactivity
+
 			onChange(updatedItem, selectedIndex);
 		}
 	}

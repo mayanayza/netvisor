@@ -1,11 +1,10 @@
 <script lang="ts">
-	import type { FieldType, FormApi } from '../types';
+	import type { TextFieldType, FormApi } from '../types';
 	import FormField from './FormField.svelte';
-	import { getInputClasses } from './FormField.svelte';
 
 	export let label: string;
 	export let formApi: FormApi;
-	export let field: FieldType;
+	export let field: TextFieldType;
 	export let placeholder: string = '';
 	export let required: boolean = false;
 	export let helpText: string = '';
@@ -40,7 +39,7 @@
 		{placeholder}
 		{rows}
 		{disabled}
-		class="{getInputClasses(showValidation && $field.errors.length > 0)} resize-vertical"
+		class={`input-field ${showValidation && $field.errors.length > 0 ? 'input-field-error' : ''}`}
 		on:blur={enableValidation}
 		on:input={() => {
 			if (showValidation) field.validate();

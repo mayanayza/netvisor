@@ -1,15 +1,15 @@
 <script lang="ts">
-	import FormField, { getInputClasses } from './FormField.svelte';
-	import type { FieldType, FormApi } from '../types';
+	import FormField from './FormField.svelte';
+	import type { TextFieldType, FormApi, NumberFieldType } from '../types';
 
 	export let label: string;
 	export let formApi: FormApi;
-	export let field: FieldType;
+	export let field: TextFieldType | NumberFieldType;
 	export let id: string;
 	export let placeholder: string = '';
 	export let required: boolean = false;
 	export let helpText: string = '';
-	export let type: 'text' | 'email' | 'password' = 'text';
+	export let type: 'text' | 'email' | 'password' | 'number' = 'text';
 	export let disabled: boolean = false;
 	export let showValidation: boolean = true;
 
@@ -39,7 +39,7 @@
 		bind:value={$field.value}
 		{placeholder}
 		{disabled}
-		class={getInputClasses(showValidation && $field.errors.length > 0)}
+		class={`input-field ${showValidation && $field.errors.length > 0 ? 'input-field-error' : ''}`}
 		on:blur={enableValidation}
 		on:input={() => {
 			if (showValidation) field.validate();

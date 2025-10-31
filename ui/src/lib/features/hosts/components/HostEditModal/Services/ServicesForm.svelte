@@ -86,6 +86,7 @@
 				allowReorder={true}
 				options={availableServiceTypes}
 				showSearch={true}
+				{formApi}
 				{items}
 				allowItemRemove={() => true}
 				optionDisplayComponent={ServiceTypeDisplay}

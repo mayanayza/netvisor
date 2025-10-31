@@ -7,29 +7,14 @@
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { PortDisplay } from '$lib/shared/components/forms/selection/display/PortDisplay.svelte';
 	import type { Service } from '$lib/features/services/types/base';
+	import type { FormApi } from '$lib/shared/components/forms/types';
+	import ListConfigEditor from '$lib/shared/components/forms/selection/ListConfigEditor.svelte';
+	import PortConfigPanel from './PortConfigPanel.svelte';
+	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
 
 	export let formData: Host;
+	export let formApi: FormApi;
 	export let currentServices: Service[];
-
-	let allPorts: Port[] = [];
-	let previousPortsLength = 0;
-
-	// Only sort when ports are added or removed, not during editing
-	$: {
-		const currentPorts = formData.ports || [];
-
-		if (currentPorts.length !== previousPortsLength) {
-			allPorts = [...currentPorts].sort((a, b) => {
-				if (a.number !== b.number) {
-					return a.number - b.number;
-				}
-				return a.protocol.localeCompare(b.protocol);
-			});
-			previousPortsLength = currentPorts.length;
-		} else {
-			allPorts = [...currentPorts];
-		}
-	}
 
 	$: selectablePorts = ports
 		.getItems()
@@ -53,19 +38,10 @@
 			type: 'Custom'
 		} as Port;
 
-		let formPorts = formData.ports;
-		formPorts.push(newPort);
-		formData.ports = [...formPorts];
-	}
-
-	function handleEditPort(port: Port, index: number) {
-		const formPorts = formData.ports;
-		formPorts[index] = port;
-		formData.ports = [...formPorts];
+		formData.ports = [...formData.ports, newPort];
 	}
 
 	function handleAddPort(portId: string) {
-		const formPorts = formData.ports;
 		const portType = ports.getItem(portId);
 
 		if (portType) {
@@ -75,10 +51,8 @@
 				type: portType.id,
 				id: uuidv4()
 			};
-			formPorts.push(newPort);
+			formData.ports = [...formData.ports, newPort];
 		}
-
-		formData.ports = [...formPorts];
 	}
 
 	function handleRemovePort(index: number) {
@@ -86,26 +60,45 @@
 	}
 </script>
 
-<div class="space-y-6 p-6">
-	<ListManager
-		label="Ports"
-		helpText="Manage ports for this host"
-		placeholder="Add standard port..."
-		emptyMessage="No ports on this host. Add one to get started."
-		allowReorder={false}
-		allowCreateNew={true}
-		createNewLabel="Custom Port"
-		allowDuplicates={false}
-		allowItemEdit={(port) => port.type == 'Custom'}
-		allowItemRemove={(port: Port) => !isPortUsed(port)}
-		options={selectablePorts}
-		items={allPorts}
-		optionDisplayComponent={PortTypeDisplay}
-		itemDisplayComponent={PortDisplay}
-		getItemContext={() => ({ currentServices })}
-		onCreateNew={handleCreateNewPort}
-		onAdd={handleAddPort}
-		onRemove={handleRemovePort}
-		onEdit={handleEditPort}
-	/>
-</div>
+<ListConfigEditor bind:items={formData.ports}>
+	<svelte:fragment slot="list" let:items let:onEdit let:highlightedIndex>
+		<ListManager
+			label="Ports"
+			helpText="Manage ports for this host"
+			placeholder="Add standard port..."
+			emptyMessage="No ports on this host. Add one to get started."
+			allowReorder={false}
+			allowCreateNew={true}
+			createNewLabel="Custom Port"
+			allowDuplicates={false}
+			allowItemEdit={(port) => port.type == 'Custom'}
+			allowItemRemove={(port: Port) => !isPortUsed(port)}
+			{formApi}
+			options={selectablePorts}
+			{items}
+			optionDisplayComponent={PortTypeDisplay}
+			itemDisplayComponent={PortDisplay}
+			getItemContext={() => ({ currentServices })}
+			onCreateNew={handleCreateNewPort}
+			onAdd={handleAddPort}
+			onRemove={handleRemovePort}
+			{onEdit}
+			{highlightedIndex}
+		/>
+	</svelte:fragment>
+
+	<svelte:fragment slot="config" let:selectedItem let:onChange>
+		{#if selectedItem}
+			<PortConfigPanel
+				{formApi}
+				port={selectedItem}
+				onChange={(updatedPort) => onChange(updatedPort)}
+			/>
+		{:else}
+			<EntityConfigEmpty
+				title="No port selected"
+				subtitle="Select a port from the list to configure it"
+			/>
+		{/if}
+	</svelte:fragment>
+</ListConfigEditor>
