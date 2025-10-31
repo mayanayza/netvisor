@@ -127,11 +127,5 @@ install-dev-linux:
 	cd ui && npm install
 	@echo "Installing cargo-watch for hot reload..."
 	cargo install cargo-watch
-	@echo "Installing postgresql..."
-	sudo apt-get update
-	sudo apt-get install -y postgresql-17 postgresql-contrib-17
-	sudo systemctl enable postgresql
-	sudo systemctl start postgresql
 	@echo ""
 	@echo "Development dependencies installed!"
-	@echo "Note: PostgreSQL 17 is now running as a system service"
