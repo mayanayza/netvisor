@@ -6,10 +6,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 
 ![License](https://img.shields.io/github/license/mayanayza/netvisor)![GitHub release](https://img.shields.io/github/v/release/mayanayza/netvisor)
 ![Daemon](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/daemon-ci.yml?label=daemon-ci)![Server](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/server-ci.yml?label=server-ci)![UI](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/ui-ci.yml?label=ui-ci)
-
-
-
-
+[![Discord](https://img.shields.io/discord/1432872786828726392?logo=discord&label=discord&labelColor=white&color=7289da)](https://discord.gg/b7ffQr8AcZ)
 
 <p align="center">
   <img src="./media/example_visualization.jpeg" width="1200" alt="Example Visualization">
