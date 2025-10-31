@@ -173,7 +173,7 @@ export function createIconComponent(iconName: string | null): IconComponent {
 // Icon helper that turns a string into an SVG
 export function createLogoIconComponent(
 	iconName: string | null,
-	iconSource: 'vector_zone_icons' | 'simple_icons' | 'dashboard_icons',
+	iconSource: 'vector_zone_icons' | 'simple_icons' | 'dashboard_icons' | 'static_file_icon',
 	use_white_background: boolean = false
 ): IconComponent {
 	if (!iconName || iconName == null) return LucideIcons.HelpCircle;

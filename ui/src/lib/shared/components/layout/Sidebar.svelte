@@ -73,7 +73,10 @@
 			>
 				<Menu class="h-5 w-5 flex-shrink-0" />
 				{#if !collapsed}
-					<h1 class="text-primary ml-3 truncate whitespace-nowrap text-xl font-bold">NetVisor</h1>
+					<div class="absolute left-1/2 flex -translate-x-1/2 transform items-center">
+						<img src="/logos/netvisor-logo.png" alt="Logo" class="h-8 w-auto" />
+						<h1 class="text-primary ml-3 truncate whitespace-nowrap text-xl font-bold">NetVisor</h1>
+					</div>
 				{/if}
 			</button>
 		</div>
