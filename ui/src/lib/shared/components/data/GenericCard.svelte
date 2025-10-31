@@ -28,7 +28,7 @@
 	<!-- Header - Fixed width in list view -->
 	<div
 		class={viewMode === 'list'
-			? 'flex w-48 flex-shrink-0 items-center space-x-3'
+			? 'w-54 flex flex-shrink-0 items-center space-x-3'
 			: 'mb-4 flex items-start justify-between'}
 	>
 		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
@@ -64,6 +64,11 @@
 						{subtitle}
 					</p>
 				{/if}
+				{#if status}
+					<div class="mr-4 flex-shrink-0">
+						<Tag {...status} />
+					</div>
+				{/if}
 			</div>
 		</div>
 		{#if status && viewMode === 'card'}
@@ -76,15 +81,6 @@
 		{#if viewMode === 'list'}
 			<!-- List view: horizontal layout with consistent spacing -->
 			<div class="flex min-w-0 flex-1 items-center">
-				<!-- Status tag in list view - Fixed width -->
-				{#if status}
-					<div class="mr-4 w-12 flex-shrink-0">
-						<Tag {...status} />
-					</div>
-				{:else}
-					<div class="mr-4 w-12 flex-shrink-0"></div>
-				{/if}
-
 				<!-- Sections -->
 				<div class="w-15 mr-4 flex-1">
 					<div class="items-left flex gap-3">
