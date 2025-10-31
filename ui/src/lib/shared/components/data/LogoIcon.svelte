@@ -1,5 +1,5 @@
 <script lang="ts">
-	type IconSource = 'vector_zone_icons' | 'simple_icons' | 'dashboard_icons';
+	type IconSource = 'vector_zone_icons' | 'simple_icons' | 'dashboard_icons' | 'static_file_icon';
 
 	let {
 		size = 24,
@@ -22,7 +22,8 @@
 		vector_zone_icons: (name) => `https://www.vectorlogo.zone/logos/${name}.svg`,
 		simple_icons: (name) => `https://cdn.simpleicons.org/${name}`,
 		dashboard_icons: (name) =>
-			`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`
+			`https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${name}.svg`,
+		static_file_icon: (name) => `/logos/${name}`
 	};
 
 	let iconUrl = $derived(sourceUrls[iconSource](iconName));

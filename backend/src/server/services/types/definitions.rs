@@ -45,6 +45,11 @@ pub trait ServiceDefinition: HasId + DynClone + DynHash + DynEq + Send + Sync {
         ""
     }
 
+    /// Path of logo stored in ui/static/logos directory
+    fn static_file_path(&self) -> &'static str {
+        ""
+    }
+
     /// Use this if available logo only has dark variant / if generally it would be more legible with a white background
     fn logo_needs_white_background(&self) -> bool {
         false
@@ -79,6 +84,10 @@ impl ServiceDefinition for Box<dyn ServiceDefinition> {
 
     fn vector_logo_zone_icons_path(&self) -> &'static str {
         ServiceDefinition::vector_logo_zone_icons_path(&**self)
+    }
+
+    fn static_file_path(&self) -> &'static str {
+        ServiceDefinition::static_file_path(&**self)
     }
 
     fn logo_needs_white_background(&self) -> bool {
@@ -125,6 +134,7 @@ impl ServiceDefinitionExt for Box<dyn ServiceDefinition> {
         !self.vector_logo_zone_icons_path().is_empty()
             || !self.dashboard_icons_path().is_empty()
             || !self.simple_icons_path().is_empty()
+            || !self.static_file_path().is_empty()
     }
 
     fn manages_virtualization(&self) -> Option<&'static str> {
@@ -145,12 +155,15 @@ impl EntityMetadataProvider for Box<dyn ServiceDefinition> {
         let dashboard_icon = ServiceDefinition::dashboard_icons_path(self);
         let simple_icon = ServiceDefinition::simple_icons_path(self);
         let vector_zone_icon = ServiceDefinition::vector_logo_zone_icons_path(self);
+        let static_file_icon = ServiceDefinition::static_file_path(self);
         if !dashboard_icon.is_empty() {
             return dashboard_icon;
         } else if !simple_icon.is_empty() {
             return simple_icon;
         } else if !vector_zone_icon.is_empty() {
             return vector_zone_icon;
+        } else if !static_file_icon.is_empty() {
+            return static_file_icon;
         }
         ServiceDefinition::category(self).icon()
     }
@@ -177,6 +190,9 @@ impl TypeMetadataProvider for Box<dyn ServiceDefinition> {
             _ if self.icon() == ServiceDefinition::simple_icons_path(self) => Some("simple_icons"),
             _ if self.icon() == ServiceDefinition::vector_logo_zone_icons_path(self) => {
                 Some("vector_zone_icons")
+            }
+            _ if self.icon() == ServiceDefinition::static_file_path(self) => {
+                Some("static_file_icon")
             }
             _ => None,
         };

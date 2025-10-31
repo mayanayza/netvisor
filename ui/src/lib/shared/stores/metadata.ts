@@ -36,13 +36,18 @@ export interface MetadataRegistry {
 export interface ServicedDefinitionMetadata {
 	can_be_added: boolean;
 	manages_virtualization: 'vms' | 'containers';
-	logo_source: 'dashboard_icons' | 'simple_icons' | 'vector_zone_icons' | null;
+	logo_source: 'dashboard_icons' | 'simple_icons' | 'vector_zone_icons' | 'static_file_icon' | null;
 }
 
 function isValidLogoSource(
 	value: unknown
 ): value is 'dashboard_icons' | 'simple_icons' | 'vector_zone_icons' {
-	return value === 'dashboard_icons' || value === 'simple_icons' || value === 'vector_zone_icons';
+	return (
+		value === 'dashboard_icons' ||
+		value === 'simple_icons' ||
+		value === 'vector_zone_icons' ||
+		value === 'static_file_icon'
+	);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

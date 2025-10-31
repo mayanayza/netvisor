@@ -21,6 +21,10 @@ impl ServiceDefinition for NetvisorDaemon {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::new_tcp(60073), "/api/health", "netvisor")
     }
+
+    fn static_file_path(&self) -> &'static str {
+        "netvisor-logo.png"
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(
