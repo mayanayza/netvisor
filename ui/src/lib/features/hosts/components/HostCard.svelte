@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Edit, Replace, Trash2 } from 'lucide-svelte';
+	import { Edit, Eye, Replace, Trash2 } from 'lucide-svelte';
 	import { formatInterface, getHostTargetString, hosts } from '../store';
 	import type { Host } from '../types/base';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
@@ -12,7 +12,9 @@
 	export let hostGroups: Group[] = [];
 	export let onEdit: (host: Host) => void = () => {};
 	export let onDelete: (host: Host) => void = () => {};
+	export let onHide: (host: Host) => void = () => {};
 	export let onConsolidate: (host: Host) => void = () => {};
+	export let viewMode: 'card' | 'list';
 
 	$: hostServicesStore = getServicesForHost(host.id);
 	$: hostServices = $hostServicesStore;
@@ -74,21 +76,17 @@
 				})),
 				emptyText: 'No groups assigned'
 			},
-			...(vms.length > 0
-				? [
-						{
-							label: 'VMs',
-							items: vms.map((h) => {
-								return {
-									id: h.id,
-									label: h.name,
-									color: entities.getColorHelper('Virtualization').string
-								};
-							}),
-							emptyText: 'No VMs assigned'
-						}
-					]
-				: []),
+			{
+				label: 'VMs',
+				items: vms.map((h) => {
+					return {
+						id: h.id,
+						label: h.name,
+						color: entities.getColorHelper('Virtualization').string
+					};
+				}),
+				emptyText: 'No VMs assigned'
+			},
 			{
 				label: 'Services',
 				items: hostServices
@@ -103,23 +101,19 @@
 					.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
 				emptyText: 'No services assigned'
 			},
-			...(containers.length > 0
-				? [
-						{
-							label: 'Containers',
-							items: containers
-								.map((c) => {
-									return {
-										id: c.id,
-										label: c.name,
-										color: entities.getColorHelper('Virtualization').string
-									};
-								})
-								.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
-							emptyText: 'No services assigned'
-						}
-					]
-				: []),
+			{
+				label: 'Containers',
+				items: containers
+					.map((c) => {
+						return {
+							id: c.id,
+							label: c.name,
+							color: entities.getColorHelper('Virtualization').string
+						};
+					})
+					.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
+				emptyText: 'No containers'
+			},
 			{
 				label: 'Interfaces',
 				items: host.interfaces.map((i) => {
@@ -146,6 +140,12 @@
 				onClick: () => onConsolidate(host)
 			},
 			{
+				label: 'Hide Host',
+				icon: Eye,
+				class: host.hidden ? 'text-blue-400' : '',
+				onClick: () => onHide(host)
+			},
+			{
 				label: 'Edit Host',
 				icon: Edit,
 				onClick: () => onEdit(host)
@@ -154,4 +154,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode} />

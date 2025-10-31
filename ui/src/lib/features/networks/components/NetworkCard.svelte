@@ -11,6 +11,7 @@
 	export let network: Network;
 	export let onDelete: (network: Network) => void = () => {};
 	export let onEdit: (network: Network) => void = () => {};
+	export let viewMode: 'card' | 'list';
 
 	$: networkHosts = $hosts.filter((h) => h.network_id == network.id);
 	$: networkDaemons = $daemons.filter((d) => d.network_id == network.id);
@@ -83,4 +84,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode} />

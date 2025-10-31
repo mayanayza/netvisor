@@ -10,6 +10,7 @@
 	export let subnet: Subnet;
 	export let onEdit: (subnet: Subnet) => void = () => {};
 	export let onDelete: (subnet: Subnet) => void = () => {};
+	export let viewMode: 'card' | 'list';
 
 	$: allServices = getServicesForSubnet(subnet);
 	$: serviceLabelsStore = formatServiceLabels($allServices.map((s) => s.id));
@@ -97,4 +98,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode} />

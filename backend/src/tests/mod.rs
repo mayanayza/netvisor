@@ -83,6 +83,7 @@ pub fn host(network_id: &Uuid) -> Host {
         ports: vec![Port::new(PortBase::new_tcp(22))],
         source: EntitySource::System,
         virtualization: None,
+        hidden: false,
     })
 }
 

@@ -10,10 +10,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Daemon registration request from daemon to server
+/// Generate key for a daemon on network_id
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenerateKeyRequest {
-    pub daemon_id: Uuid,
+pub struct ApiKeyRequest {
     pub network_id: Uuid,
 }
 
@@ -24,13 +23,13 @@ pub struct DaemonRegistrationRequest {
     pub network_id: Uuid,
     pub daemon_ip: IpAddr,
     pub daemon_port: u16,
+    pub api_key: String,
 }
 
 /// Daemon registration response from server to daemon
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonRegistrationResponse {
     pub daemon: Daemon,
-    pub api_key: String,
     pub host_id: Uuid,
 }
 

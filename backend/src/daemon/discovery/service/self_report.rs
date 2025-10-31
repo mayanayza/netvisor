@@ -158,6 +158,7 @@ impl Discovery<SelfReportDiscovery> {
             source: EntitySource::Discovery {
                 metadata: vec![DiscoveryMetadata::new(DiscoveryType::SelfReport, daemon_id)],
             },
+            hidden: false,
             virtualization: None,
         };
 

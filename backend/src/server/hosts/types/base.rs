@@ -34,6 +34,7 @@ pub struct HostBase {
     pub ports: Vec<Port>,
     pub source: EntitySource,
     pub virtualization: Option<HostVirtualization>,
+    pub hidden: bool,
 }
 
 impl Default for HostBase {
@@ -49,6 +50,7 @@ impl Default for HostBase {
             ports: Vec::new(),
             source: EntitySource::Unknown,
             virtualization: None,
+            hidden: false,
         }
     }
 }

@@ -11,6 +11,7 @@ use crate::daemon::{
 #[derive(Serialize, Deserialize)]
 pub struct InitializeDaemonRequest {
     pub network_id: Uuid,
+    pub api_key: String,
 }
 
 pub struct DaemonAppState {

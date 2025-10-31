@@ -15,6 +15,7 @@
 	export let onDiscovery: (daemon: Daemon) => void = () => {};
 	export let onGenerateApi: (daemon: Daemon) => void = () => {};
 	export let discoveryIsRunning: boolean;
+	export let viewMode: 'card' | 'list';
 
 	$: hostStore = getHostFromId(daemon.host_id);
 	$: host = $hostStore;
@@ -63,7 +64,6 @@
 							icon: entities.getIconComponent('Discovery'),
 							class: daemonIsRunningDiscovery ? 'btn-icon-success' : 'btn-icon',
 							onClick: !daemonIsRunningDiscovery ? () => onDiscovery(daemon) : () => {},
-							animation: daemonIsRunningDiscovery ? 'animate-spin' : '',
 							disabled: daemonIsRunningDiscovery
 						}
 					]
@@ -72,13 +72,15 @@
 				label: 'Update API Key',
 				icon: RotateCcwKey,
 				class: `btn-icon ${!daemon.api_key ? 'text-yellow-500' : ''}`,
-				onClick: () => onGenerateApi(daemon)
+				onClick: () => onGenerateApi(daemon),
+				disabled: daemonIsRunningDiscovery
 			},
 			{
 				label: 'Delete Daemon',
 				icon: Trash2,
 				class: 'btn-icon-danger',
-				onClick: () => onDelete(daemon)
+				onClick: () => onDelete(daemon),
+				disabled: daemonIsRunningDiscovery
 			}
 		],
 
@@ -94,4 +96,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode} />

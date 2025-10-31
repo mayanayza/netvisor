@@ -55,15 +55,7 @@ impl HostService {
         services: Vec<Service>,
     ) -> Result<(Host, Vec<Service>)> {
         // Create host first (handles duplicates via upsert_host)
-
-        // Manually created and needs actual UUID
-        let mut created_host = if host.id == Uuid::nil() {
-            self.create_host(Host::new(host.base.clone()), &[host.base.network_id])
-                .await?
-        } else {
-            self.create_host(host.clone(), &[host.base.network_id])
-                .await?
-        };
+        let mut created_host = self.create_host(host.clone()).await?;
 
         // Create services, handling case where created_host was upserted instead of created anew (ie during discovery), which means that host ID + interfaces/port IDs
         // are different from what's mapped to the service and they need to be updated
@@ -94,13 +86,20 @@ impl HostService {
     }
 
     /// Create a new host
-    async fn create_host(&self, host: Host, network_ids: &[Uuid]) -> Result<Host> {
+    pub async fn create_host(&self, host: Host) -> Result<Host> {
+        // Manually created and needs actual UUID
+        let host = if host.id == Uuid::nil() {
+            Host::new(host.base.clone())
+        } else {
+            host
+        };
+
         let lock = self.get_host_lock(&host.id).await;
         let _guard = lock.lock().await;
 
         tracing::debug!("Creating host {:?}", host);
 
-        let all_hosts = self.storage.get_all(network_ids).await?;
+        let all_hosts = self.storage.get_all(&[host.base.network_id]).await?;
 
         let host_from_storage = match all_hosts.into_iter().find(|h| host.eq(h)) {
             // If both are from discovery, or if they have the same ID, upsert data

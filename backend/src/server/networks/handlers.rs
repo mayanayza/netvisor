@@ -27,7 +27,7 @@ async fn create_network(
     _user: AuthenticatedUser,
     Json(request): Json<Network>,
 ) -> ApiResult<Json<ApiResponse<Network>>> {
-    tracing::info!("Received network creation request: {:?}", request);
+    tracing::info!("Received network creation request: {:?}", request.base.name);
 
     if let Err(validation_errors) = request.base.validate() {
         tracing::error!("Network validation failed: {:?}", validation_errors);

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict in3yZs1LRRUzoDCtu64WfeQQqDV3bvrxxaCSuWPPm2iUI1huLWxHALL1XCBYzLy
+\restrict hYYQiX8qX4HPILHratXKxhEijfsECSKnV1NIBT8Pi8ODwmWMyILhqXdVh3yiTpZ
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -137,7 +137,8 @@ CREATE TABLE public.hosts (
     source jsonb NOT NULL,
     virtualization jsonb,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    hidden boolean DEFAULT false
 );
 
 
@@ -232,15 +233,16 @@ ALTER TABLE tower_sessions.session OWNER TO postgres;
 --
 
 COPY public._sqlx_migrations (version, description, installed_on, success, checksum, execution_time) FROM stdin;
-20251006215000	users	2025-10-30 15:38:02.031206+00	t	\\x4f13ce14ff67ef0b7145987c7b22b588745bf9fbb7b673450c26a0f2f9a36ef8ca980e456c8d77cfb1b2d7a4577a64d7	3600458
-20251006215100	networks	2025-10-30 15:38:02.035676+00	t	\\xeaa5a07a262709f64f0c59f31e25519580c79e2d1a523ce72736848946a34b17dd9adc7498eaf90551af6b7ec6d4e0e3	3165333
-20251006215151	create hosts	2025-10-30 15:38:02.039111+00	t	\\x6ec7487074c0724932d21df4cf1ed66645313cf62c159a7179e39cbc261bcb81a24f7933a0e3cf58504f2a90fc5c1962	1714083
-20251006215155	create subnets	2025-10-30 15:38:02.041155+00	t	\\xefb5b25742bd5f4489b67351d9f2494a95f307428c911fd8c5f475bfb03926347bdc269bbd048d2ddb06336945b27926	2280833
-20251006215201	create groups	2025-10-30 15:38:02.043645+00	t	\\x0a7032bf4d33a0baf020e905da865cde240e2a09dda2f62aa535b2c5d4b26b20be30a3286f1b5192bd94cd4a5dbb5bcd	1615709
-20251006215204	create daemons	2025-10-30 15:38:02.045474+00	t	\\xcfea93403b1f9cf9aac374711d4ac72d8a223e3c38a1d2a06d9edb5f94e8a557debac3668271f8176368eadc5105349f	1846875
-20251006215212	create services	2025-10-30 15:38:02.047525+00	t	\\xd5b07f82fc7c9da2782a364d46078d7d16b5c08df70cfbf02edcfe9b1b24ab6024ad159292aeea455f15cfd1f4740c1d	1782625
-20251029193448	user-auth	2025-10-30 15:38:02.049506+00	t	\\xfde8161a8db89d51eeade7517d90a41d560f19645620f2298f78f116219a09728b18e91251ae31e46a47f6942d5a9032	8610667
-20251030044828	daemon api	2025-10-30 15:38:02.058405+00	t	\\x181eb3541f51ef5b038b2064660370775d1b364547a214a20dde9c9d4bb95a1c273cd4525ef29e61fa65a3eb4fee0400	730791
+20251006215000	users	2025-10-31 15:07:46.798361+00	t	\\x4f13ce14ff67ef0b7145987c7b22b588745bf9fbb7b673450c26a0f2f9a36ef8ca980e456c8d77cfb1b2d7a4577a64d7	4676625
+20251006215100	networks	2025-10-31 15:07:46.806149+00	t	\\xeaa5a07a262709f64f0c59f31e25519580c79e2d1a523ce72736848946a34b17dd9adc7498eaf90551af6b7ec6d4e0e3	4354000
+20251006215151	create hosts	2025-10-31 15:07:46.810946+00	t	\\x6ec7487074c0724932d21df4cf1ed66645313cf62c159a7179e39cbc261bcb81a24f7933a0e3cf58504f2a90fc5c1962	3052042
+20251006215155	create subnets	2025-10-31 15:07:46.814353+00	t	\\xefb5b25742bd5f4489b67351d9f2494a95f307428c911fd8c5f475bfb03926347bdc269bbd048d2ddb06336945b27926	8346125
+20251006215201	create groups	2025-10-31 15:07:46.822906+00	t	\\x0a7032bf4d33a0baf020e905da865cde240e2a09dda2f62aa535b2c5d4b26b20be30a3286f1b5192bd94cd4a5dbb5bcd	1752042
+20251006215204	create daemons	2025-10-31 15:07:46.824861+00	t	\\xcfea93403b1f9cf9aac374711d4ac72d8a223e3c38a1d2a06d9edb5f94e8a557debac3668271f8176368eadc5105349f	7789292
+20251006215212	create services	2025-10-31 15:07:46.833066+00	t	\\xd5b07f82fc7c9da2782a364d46078d7d16b5c08df70cfbf02edcfe9b1b24ab6024ad159292aeea455f15cfd1f4740c1d	2453708
+20251029193448	user-auth	2025-10-31 15:07:46.835775+00	t	\\xfde8161a8db89d51eeade7517d90a41d560f19645620f2298f78f116219a09728b18e91251ae31e46a47f6942d5a9032	33631125
+20251030044828	daemon api	2025-10-31 15:07:46.869635+00	t	\\x181eb3541f51ef5b038b2064660370775d1b364547a214a20dde9c9d4bb95a1c273cd4525ef29e61fa65a3eb4fee0400	736875
+20251030170438	host-hide	2025-10-31 15:07:46.870594+00	t	\\x87c6fda7f8456bf610a78e8e98803158caa0e12857c5bab466a5bb0004d41b449004a68e728ca13f17e051f662a15454	600667
 \.
 
 
@@ -249,7 +251,7 @@ COPY public._sqlx_migrations (version, description, installed_on, success, check
 --
 
 COPY public.daemons (id, network_id, host_id, ip, port, registered_at, last_seen, api_key) FROM stdin;
-3f9573cb-160c-456a-b79b-7a20b1e8a627	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	0c019c10-5130-4005-a1fb-810fcfa8e93e	"172.25.0.4"	60073	2025-10-30 15:38:02.158297+00	2025-10-30 15:38:02.158296+00	faacb396244c498096e748709bc50424
+eb4370b2-58c6-4e25-90d9-36ec4c9411f8	bb566863-0043-45c1-90ac-e66840531b12	76481c16-2b20-4b11-b83a-06725be2459f	"172.25.0.4"	60073	2025-10-31 15:07:46.984776+00	2025-10-31 15:07:46.984775+00	062d7977d962429998672ca773c11167
 \.
 
 
@@ -265,15 +267,15 @@ COPY public.groups (id, network_id, name, description, group_type, created_at, u
 -- Data for Name: hosts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.hosts (id, network_id, name, hostname, description, target, interfaces, services, ports, source, virtualization, created_at, updated_at) FROM stdin;
-d2bfda09-4366-4383-bdcb-4ea0c61a39eb	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	Cloudflare DNS	\N	Cloudflare DNS	{"type": "ServiceBinding", "config": "5a57c09f-8484-461f-9a17-6e16996191c5"}	[{"id": "8def9192-d1f2-4ae8-85e8-bd434608771e", "name": "Internet", "subnet_id": "5271b1ef-4424-45d1-a11f-288a4c7c0ccc", "ip_address": "1.1.1.1", "mac_address": null}]	["40466dd1-6c8d-4813-870d-4f48a9962875"]	[{"id": "c5d57b73-0cda-430d-a817-5fbac8aa10b6", "type": "DnsUdp", "number": 53, "protocol": "Udp"}]	{"type": "System"}	null	2025-10-30 15:38:02.108993+00	2025-10-30 15:38:02.120585+00
-519f6256-b95d-46e9-819e-3f1ac5d8facd	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	Google.com	google.com	Google.com	{"type": "ServiceBinding", "config": "60be6dc9-c439-41b3-aa60-f1556368fd94"}	[{"id": "1269fd5a-a88a-4d29-ac82-dc50b6e45456", "name": "Internet", "subnet_id": "5271b1ef-4424-45d1-a11f-288a4c7c0ccc", "ip_address": "203.0.113.234", "mac_address": null}]	["0c35eec1-889d-410f-8198-cd4c767ff03b"]	[{"id": "7b35a8e5-2947-4cb9-bb76-8615474b1b2c", "type": "Https", "number": 443, "protocol": "Tcp"}]	{"type": "System"}	null	2025-10-30 15:38:02.108998+00	2025-10-30 15:38:02.128074+00
-3b9d915f-f4ba-4801-9302-7772e49924f1	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	Mobile Device	\N	A mobile device connecting from a remote network	{"type": "ServiceBinding", "config": "7c646858-9e6d-4cfb-bb51-461e99afe5ad"}	[{"id": "e4e220d6-fa72-4f43-9adf-9f3b47e5c819", "name": "Remote Network", "subnet_id": "03fd25fe-1ba0-405f-b915-0afac2f2d528", "ip_address": "203.0.113.90", "mac_address": null}]	["de9d33e6-7ce6-425c-a0e7-d2ecff82e0ce"]	[{"id": "70c47ecf-3a96-42ee-9eba-d7171611c9ec", "type": "Custom", "number": 0, "protocol": "Tcp"}]	{"type": "System"}	null	2025-10-30 15:38:02.109002+00	2025-10-30 15:38:02.133661+00
-0c019c10-5130-4005-a1fb-810fcfa8e93e	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	172.25.0.4	\N	\N	{"type": "None"}	[]	[]	[]	{"type": "Unknown"}	null	2025-10-30 15:38:02.153264+00	2025-10-30 15:38:02.157557+00
-b248e52c-ec17-47ec-99c7-ab25a98fd3a1	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	NetVisor Daemon API	6b9202cb2426	\N	{"type": "Hostname"}	[{"id": "f39828ba-2a76-4a94-bbb6-3f7c4bab5ea6", "name": null, "subnet_id": "76766e55-ac07-4b35-a77f-c2cc084723fe", "ip_address": "172.25.0.4", "mac_address": null}]	["07b0011e-b808-4d9a-ae00-d821fcf8e630"]	[{"id": "abe28c41-1dd7-4d53-8166-aaa7524f4494", "type": "Custom", "number": 60073, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-30T15:38:09.906023043Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}	null	2025-10-30 15:38:09.906058+00	2025-10-30 15:38:21.3426+00
-02617a61-3a32-47b7-961e-9d602a98c86a	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	Home Assistant	\N	\N	{"type": "None"}	[{"id": "b2a8c8b6-b58a-43a8-977f-abe44705656f", "name": null, "subnet_id": "76766e55-ac07-4b35-a77f-c2cc084723fe", "ip_address": "172.25.0.1", "mac_address": "BE:FF:51:3F:11:10"}]	["f0a7ec49-7d38-45a9-80cf-4f9df45e0ccd", "277806ed-0fbd-48e4-9868-e48bceaed730"]	[{"id": "7706e2e7-a9ec-4e70-b5c5-9fd0f115f80c", "type": "Custom", "number": 60072, "protocol": "Tcp"}, {"id": "069190fc-31fb-4c42-9eb1-0dfe07ce0122", "type": "Custom", "number": 8123, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-30T15:38:30.846385887Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}	null	2025-10-30 15:38:30.846386+00	2025-10-30 15:38:40.524994+00
-8c3615ac-1502-423c-a76f-14da824d7ce3	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	Home Assistant	homeassistant-discovery.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "e04a170e-75fc-41a2-a5f0-49dc1f416da1", "name": null, "subnet_id": "76766e55-ac07-4b35-a77f-c2cc084723fe", "ip_address": "172.25.0.5", "mac_address": "4E:20:99:2E:E3:B2"}]	["9f392f02-08af-4dc2-9b89-c9fb549c1a42"]	[{"id": "21d8a87f-d44b-4eac-8a19-2c5f30a758ab", "type": "Custom", "number": 8123, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-30T15:38:21.331806924Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}	null	2025-10-30 15:38:21.331809+00	2025-10-30 15:38:40.525275+00
-407ce7ce-ae5c-443d-a2a4-beebfbfd7c61	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	NetVisor Server API	netvisor-server-1.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "dab156f8-1d20-4d51-94e9-6ca62f418982", "name": null, "subnet_id": "76766e55-ac07-4b35-a77f-c2cc084723fe", "ip_address": "172.25.0.3", "mac_address": "86:0B:55:DC:6B:61"}]	["abab7c05-5955-470f-a57d-665a9ed62fe8"]	[{"id": "a11953c5-853b-4dff-8c18-ac6fe842a28a", "type": "Custom", "number": 60072, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-30T15:38:09.907871168Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}	null	2025-10-30 15:38:09.907871+00	2025-10-30 15:38:40.534196+00
+COPY public.hosts (id, network_id, name, hostname, description, target, interfaces, services, ports, source, virtualization, created_at, updated_at, hidden) FROM stdin;
+4fc52405-215c-423f-80ef-484fff2c691d	bb566863-0043-45c1-90ac-e66840531b12	Cloudflare DNS	\N	Cloudflare DNS	{"type": "ServiceBinding", "config": "04d54c0e-7c1a-4df6-afcc-7bcdda6eddb4"}	[{"id": "11b5a77b-60fb-4d48-bedf-3dc356daa740", "name": "Internet", "subnet_id": "c2d74814-aed2-44f1-a622-b0beda26925a", "ip_address": "1.1.1.1", "mac_address": null}]	["8d23aa53-3c63-4ed1-b5c7-3cf264a5898f"]	[{"id": "f201702a-9429-401c-a311-642826b4e968", "type": "DnsUdp", "number": 53, "protocol": "Udp"}]	{"type": "System"}	null	2025-10-31 15:07:46.925496+00	2025-10-31 15:07:46.935719+00	f
+c2e9b63a-30ce-48e0-a22d-695b3fa9955d	bb566863-0043-45c1-90ac-e66840531b12	Google.com	google.com	Google.com	{"type": "ServiceBinding", "config": "7b62b2d8-2a33-4fc2-b185-be9da899cb7e"}	[{"id": "bb207873-57c3-4869-8099-b58b6cf32001", "name": "Internet", "subnet_id": "c2d74814-aed2-44f1-a622-b0beda26925a", "ip_address": "203.0.113.39", "mac_address": null}]	["ed3d993b-8068-4d14-907f-30fab9b0fb14"]	[{"id": "f748af71-b5ea-4cac-b219-d9eb2503caa7", "type": "Https", "number": 443, "protocol": "Tcp"}]	{"type": "System"}	null	2025-10-31 15:07:46.925501+00	2025-10-31 15:07:46.942294+00	f
+2d775da7-61d1-427b-85a2-4757f8b36b1e	bb566863-0043-45c1-90ac-e66840531b12	Mobile Device	\N	A mobile device connecting from a remote network	{"type": "ServiceBinding", "config": "7ae8ad87-e734-4974-8e9c-854062f5958b"}	[{"id": "d00cc55b-6375-4f61-8e78-db03d6cbc0ef", "name": "Remote Network", "subnet_id": "a7f5ad6a-9ff6-4e1c-bb19-5e8014f619fb", "ip_address": "203.0.113.97", "mac_address": null}]	["f614de7b-d37d-468a-aff8-a65fc42c5d15"]	[{"id": "3b704a95-5087-4889-bf6d-95b9c2e7ea02", "type": "Custom", "number": 0, "protocol": "Tcp"}]	{"type": "System"}	null	2025-10-31 15:07:46.925503+00	2025-10-31 15:07:46.944758+00	f
+76481c16-2b20-4b11-b83a-06725be2459f	bb566863-0043-45c1-90ac-e66840531b12	172.25.0.4	\N	\N	{"type": "None"}	[]	[]	[]	{"type": "Unknown"}	null	2025-10-31 15:07:46.982396+00	2025-10-31 15:07:46.984251+00	f
+97eb8c70-d647-4edf-8107-5ab8966b876f	bb566863-0043-45c1-90ac-e66840531b12	NetVisor Daemon API	62f263c51cc8	\N	{"type": "Hostname"}	[{"id": "d63b5a1f-8ace-4aba-85cb-debf6192cd95", "name": null, "subnet_id": "7933abaa-6463-4e61-bdcf-8563b579669a", "ip_address": "172.25.0.4", "mac_address": null}]	["ead9bf18-fa06-419f-9133-7c4ed448417b"]	[{"id": "9d093c47-b579-44b5-9efe-2732d453a65c", "type": "Custom", "number": 60073, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-31T15:07:54.427721969Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}	null	2025-10-31 15:07:54.427729+00	2025-10-31 15:07:54.444012+00	f
+8f3aca81-7d80-41ce-8919-fd72ceefed42	bb566863-0043-45c1-90ac-e66840531b12	NetVisor Server API	netvisor-server-1.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "fe1cc8dc-bf58-49bc-b9e1-5be151f47de2", "name": null, "subnet_id": "7933abaa-6463-4e61-bdcf-8563b579669a", "ip_address": "172.25.0.3", "mac_address": "9A:0F:7F:A5:51:EA"}]	["5951b548-db2c-4749-ae38-2542965ac104"]	[{"id": "63aa80c5-4d2d-45d6-9fc5-8ae74257413c", "type": "Custom", "number": 60072, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-31T15:07:54.430898427Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}	null	2025-10-31 15:07:54.430901+00	2025-10-31 15:08:03.899228+00	f
+673556a5-4610-44e2-ba56-140e7baf7b93	bb566863-0043-45c1-90ac-e66840531b12	Home Assistant	homeassistant-discovery.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "ce9e3fa4-52a0-4902-8d36-c6d30262ff1b", "name": null, "subnet_id": "7933abaa-6463-4e61-bdcf-8563b579669a", "ip_address": "172.25.0.5", "mac_address": "96:A1:7E:1B:B7:75"}]	["34e8b19b-9558-4c76-853f-fa6f38f62632"]	[{"id": "e3121d57-6e0f-4355-9cb5-a2f2c1efa9cc", "type": "Custom", "number": 8123, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-31T15:08:03.834541084Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}	null	2025-10-31 15:08:03.834546+00	2025-10-31 15:08:21.99888+00	f
+7f6a36f3-4f71-49de-9c34-e38167676354	bb566863-0043-45c1-90ac-e66840531b12	Home Assistant	\N	\N	{"type": "None"}	[{"id": "51bfa9aa-949b-4e39-87c7-dc501eeaf69a", "name": null, "subnet_id": "7933abaa-6463-4e61-bdcf-8563b579669a", "ip_address": "172.25.0.1", "mac_address": "16:0B:E0:06:9E:DE"}]	["3a88eef9-f5b7-4900-bc9a-3e0e88aa9235", "4518b44a-d12c-4880-a324-d345513d9efa"]	[{"id": "b7e2d7a7-0744-4754-b758-75e2cc2eaf43", "type": "Custom", "number": 8123, "protocol": "Tcp"}, {"id": "c8dc9dbe-e6d4-41b1-aee1-0f54b9eca6fe", "type": "Custom", "number": 60072, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-10-31T15:08:13.023940838Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}	null	2025-10-31 15:08:13.023946+00	2025-10-31 15:08:22.027172+00	f
 \.
 
 
@@ -282,7 +284,7 @@ b248e52c-ec17-47ec-99c7-ab25a98fd3a1	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	NetVis
 --
 
 COPY public.networks (id, name, created_at, updated_at, is_default, user_id) FROM stdin;
-7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	My Network	2025-10-30 15:38:02.107487+00	2025-10-30 15:38:02.10749+00	t	b60e7679-ee19-40e8-a05d-f8cb63922c66
+bb566863-0043-45c1-90ac-e66840531b12	My Network	2025-10-31 15:07:46.922474+00	2025-10-31 15:07:46.922476+00	t	9619ecfb-b3ce-46cb-9c40-c789b2bcb692
 \.
 
 
@@ -291,14 +293,14 @@ COPY public.networks (id, name, created_at, updated_at, is_default, user_id) FRO
 --
 
 COPY public.services (id, network_id, created_at, updated_at, name, host_id, bindings, service_definition, virtualization, source) FROM stdin;
-40466dd1-6c8d-4813-870d-4f48a9962875	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:02.108995+00	2025-10-30 15:38:02.119532+00	Cloudflare DNS	d2bfda09-4366-4383-bdcb-4ea0c61a39eb	[{"id": "5a57c09f-8484-461f-9a17-6e16996191c5", "type": "Port", "port_id": "c5d57b73-0cda-430d-a817-5fbac8aa10b6", "interface_id": "8def9192-d1f2-4ae8-85e8-bd434608771e"}]	"Dns Server"	null	{"type": "System"}
-0c35eec1-889d-410f-8198-cd4c767ff03b	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:02.109+00	2025-10-30 15:38:02.127291+00	Google.com	519f6256-b95d-46e9-819e-3f1ac5d8facd	[{"id": "60be6dc9-c439-41b3-aa60-f1556368fd94", "type": "Port", "port_id": "7b35a8e5-2947-4cb9-bb76-8615474b1b2c", "interface_id": "1269fd5a-a88a-4d29-ac82-dc50b6e45456"}]	"Web Service"	null	{"type": "System"}
-de9d33e6-7ce6-425c-a0e7-d2ecff82e0ce	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:02.109003+00	2025-10-30 15:38:02.133123+00	Mobile Device	3b9d915f-f4ba-4801-9302-7772e49924f1	[{"id": "7c646858-9e6d-4cfb-bb51-461e99afe5ad", "type": "Port", "port_id": "70c47ecf-3a96-42ee-9eba-d7171611c9ec", "interface_id": "e4e220d6-fa72-4f43-9adf-9f3b47e5c819"}]	"Client"	null	{"type": "System"}
-07b0011e-b808-4d9a-ae00-d821fcf8e630	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:09.906959+00	2025-10-30 15:38:21.341876+00	NetVisor Daemon API	b248e52c-ec17-47ec-99c7-ab25a98fd3a1	[{"id": "854a9068-7fbb-4454-9860-8dcee90dfde6", "type": "Port", "port_id": "abe28c41-1dd7-4d53-8166-aaa7524f4494", "interface_id": "f39828ba-2a76-4a94-bbb6-3f7c4bab5ea6"}]	"NetVisor Daemon API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.4:60073/api/health contained \\"netvisor\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-30T15:38:09.906909002Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}
-f0a7ec49-7d38-45a9-80cf-4f9df45e0ccd	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:40.435187+00	2025-10-30 15:38:40.523656+00	Home Assistant	02617a61-3a32-47b7-961e-9d602a98c86a	[{"id": "b838ba1d-d780-4cd4-8e09-29d709969276", "type": "Port", "port_id": "069190fc-31fb-4c42-9eb1-0dfe07ce0122", "interface_id": "b2a8c8b6-b58a-43a8-977f-abe44705656f"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.1:8123/auth/authorize contained \\"home assistant\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-30T15:38:40.435163127Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}
-277806ed-0fbd-48e4-9868-e48bceaed730	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:34.551197+00	2025-10-30 15:38:40.52379+00	NetVisor Server API	02617a61-3a32-47b7-961e-9d602a98c86a	[{"id": "12695e14-bc9c-48c2-9095-f44d865ad953", "type": "Port", "port_id": "7706e2e7-a9ec-4e70-b5c5-9fd0f115f80c", "interface_id": "b2a8c8b6-b58a-43a8-977f-abe44705656f"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.1:60072/api/health contained \\"netvisor\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-30T15:38:34.551183180Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}
-abab7c05-5955-470f-a57d-665a9ed62fe8	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:15.636642+00	2025-10-30 15:38:40.53372+00	NetVisor Server API	407ce7ce-ae5c-443d-a2a4-beebfbfd7c61	[{"id": "6bad5fe7-57d5-4b4a-850f-910f1dfaba65", "type": "Port", "port_id": "a11953c5-853b-4dff-8c18-ac6fe842a28a", "interface_id": "dab156f8-1d20-4d51-94e9-6ca62f418982"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.3:60072/api/health contained \\"netvisor\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-30T15:38:15.636619546Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}
-9f392f02-08af-4dc2-9b89-c9fb549c1a42	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:30.842674+00	2025-10-30 15:38:40.523845+00	Home Assistant	8c3615ac-1502-423c-a76f-14da824d7ce3	[{"id": "2f25087f-5818-4634-a420-614ce5c89fd6", "type": "Port", "port_id": "21d8a87f-d44b-4eac-8a19-2c5f30a758ab", "interface_id": "e04a170e-75fc-41a2-a5f0-49dc1f416da1"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.5:8123/auth/authorize contained \\"home assistant\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-30T15:38:30.842648803Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "Network"}]}
+8d23aa53-3c63-4ed1-b5c7-3cf264a5898f	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:46.925497+00	2025-10-31 15:07:46.935209+00	Cloudflare DNS	4fc52405-215c-423f-80ef-484fff2c691d	[{"id": "04d54c0e-7c1a-4df6-afcc-7bcdda6eddb4", "type": "Port", "port_id": "f201702a-9429-401c-a311-642826b4e968", "interface_id": "11b5a77b-60fb-4d48-bedf-3dc356daa740"}]	"Dns Server"	null	{"type": "System"}
+ed3d993b-8068-4d14-907f-30fab9b0fb14	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:46.925501+00	2025-10-31 15:07:46.941999+00	Google.com	c2e9b63a-30ce-48e0-a22d-695b3fa9955d	[{"id": "7b62b2d8-2a33-4fc2-b185-be9da899cb7e", "type": "Port", "port_id": "f748af71-b5ea-4cac-b219-d9eb2503caa7", "interface_id": "bb207873-57c3-4869-8099-b58b6cf32001"}]	"Web Service"	null	{"type": "System"}
+f614de7b-d37d-468a-aff8-a65fc42c5d15	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:46.925504+00	2025-10-31 15:07:46.944427+00	Mobile Device	2d775da7-61d1-427b-85a2-4757f8b36b1e	[{"id": "7ae8ad87-e734-4974-8e9c-854062f5958b", "type": "Port", "port_id": "3b704a95-5087-4889-bf6d-95b9c2e7ea02", "interface_id": "d00cc55b-6375-4f61-8e78-db03d6cbc0ef"}]	"Client"	null	{"type": "System"}
+ead9bf18-fa06-419f-9133-7c4ed448417b	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:54.428374+00	2025-10-31 15:07:54.442759+00	NetVisor Daemon API	97eb8c70-d647-4edf-8107-5ab8966b876f	[{"id": "8017c992-5f12-4a9e-ab64-1751eded56ae", "type": "Port", "port_id": "9d093c47-b579-44b5-9efe-2732d453a65c", "interface_id": "d63b5a1f-8ace-4aba-85cb-debf6192cd95"}]	"NetVisor Daemon API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.4:60073/api/health contained \\"netvisor\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-31T15:07:54.428359552Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}
+5951b548-db2c-4749-ae38-2542965ac104	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:55.483525+00	2025-10-31 15:08:03.898843+00	NetVisor Server API	8f3aca81-7d80-41ce-8919-fd72ceefed42	[{"id": "290a803b-2e7d-49d9-b410-00cacfcbda03", "type": "Port", "port_id": "63aa80c5-4d2d-45d6-9fc5-8ae74257413c", "interface_id": "fe1cc8dc-bf58-49bc-b9e1-5be151f47de2"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.3:60072/api/health contained \\"netvisor\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-31T15:07:55.483517761Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}
+34e8b19b-9558-4c76-853f-fa6f38f62632	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:08:04.844128+00	2025-10-31 15:08:21.99834+00	Home Assistant	673556a5-4610-44e2-ba56-140e7baf7b93	[{"id": "441403a3-8069-4512-9990-f8684f3ac66b", "type": "Port", "port_id": "e3121d57-6e0f-4355-9cb5-a2f2c1efa9cc", "interface_id": "ce9e3fa4-52a0-4902-8d36-c6d30262ff1b"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.5:8123/auth/authorize contained \\"home assistant\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-31T15:08:04.844120543Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}
+4518b44a-d12c-4880-a324-d345513d9efa	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:08:13.930718+00	2025-10-31 15:08:21.998511+00	NetVisor Server API	7f6a36f3-4f71-49de-9c34-e38167676354	[{"id": "307f7ffe-ba0d-4fd9-91ef-34c4030376c2", "type": "Port", "port_id": "c8dc9dbe-e6d4-41b1-aee1-0f54b9eca6fe", "interface_id": "51bfa9aa-949b-4e39-87c7-dc501eeaf69a"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.1:60072/api/health contained \\"netvisor\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-31T15:08:13.930717047Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}
+3a88eef9-f5b7-4900-bc9a-3e0e88aa9235	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:08:13.930676+00	2025-10-31 15:08:22.026612+00	Home Assistant	7f6a36f3-4f71-49de-9c34-e38167676354	[{"id": "62dc3e66-e291-4c63-afbf-247efe97ec6e", "type": "Port", "port_id": "b7e2d7a7-0744-4754-b758-75e2cc2eaf43", "interface_id": "51bfa9aa-949b-4e39-87c7-dc501eeaf69a"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response from http://172.25.0.1:8123/auth/authorize contained \\"home assistant\\"", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-10-31T15:08:13.930660131Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "Network"}]}
 \.
 
 
@@ -307,9 +309,9 @@ abab7c05-5955-470f-a57d-665a9ed62fe8	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-1
 --
 
 COPY public.subnets (id, network_id, created_at, updated_at, cidr, name, description, subnet_type, source) FROM stdin;
-5271b1ef-4424-45d1-a11f-288a4c7c0ccc	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:02.108934+00	2025-10-30 15:38:02.108934+00	"0.0.0.0/0"	Internet	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for services running on the internet (e.g., public DNS servers, cloud services, etc.).	"Internet"	{"type": "System"}
-03fd25fe-1ba0-405f-b915-0afac2f2d528	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:02.108939+00	2025-10-30 15:38:02.108939+00	"0.0.0.0/0"	Remote Network	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for hosts on remote networks (e.g., mobile connections, friend's networks, public WiFi, etc.).	"Remote"	{"type": "System"}
-76766e55-ac07-4b35-a77f-c2cc084723fe	7e6121a3-b870-4dfa-af64-3d2eb1c17ff8	2025-10-30 15:38:02.170702+00	2025-10-30 15:38:02.170702+00	"172.25.0.0/28"	172.25.0.0/28	\N	"Lan"	{"type": "Discovery", "metadata": [{"date": "2025-10-30T15:38:02.170692304Z", "daemon_id": "3f9573cb-160c-456a-b79b-7a20b1e8a627", "discovery_type": "SelfReport"}]}
+c2d74814-aed2-44f1-a622-b0beda26925a	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:46.925448+00	2025-10-31 15:07:46.925448+00	"0.0.0.0/0"	Internet	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for services running on the internet (e.g., public DNS servers, cloud services, etc.).	"Internet"	{"type": "System"}
+a7f5ad6a-9ff6-4e1c-bb19-5e8014f619fb	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:46.925449+00	2025-10-31 15:07:46.925449+00	"0.0.0.0/0"	Remote Network	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for hosts on remote networks (e.g., mobile connections, friend's networks, public WiFi, etc.).	"Remote"	{"type": "System"}
+7933abaa-6463-4e61-bdcf-8563b579669a	bb566863-0043-45c1-90ac-e66840531b12	2025-10-31 15:07:46.998904+00	2025-10-31 15:07:46.998904+00	"172.25.0.0/28"	172.25.0.0/28	\N	"Lan"	{"type": "Discovery", "metadata": [{"date": "2025-10-31T15:07:46.998895757Z", "daemon_id": "eb4370b2-58c6-4e25-90d9-36ec4c9411f8", "discovery_type": "SelfReport"}]}
 \.
 
 
@@ -318,7 +320,7 @@ COPY public.subnets (id, network_id, created_at, updated_at, cidr, name, descrip
 --
 
 COPY public.users (id, name, created_at, updated_at, password_hash, username) FROM stdin;
-b60e7679-ee19-40e8-a05d-f8cb63922c66	testuser	2025-10-30 15:38:02.106216+00	2025-10-30 15:38:05.797149+00	$argon2id$v=19$m=19456,t=2,p=1$oGnxwFo2a0Jn4EHyNE0IUA$C3tOdhqCZrJnWX/nzwfFG7SfgcvGfSm0ZEkEsqBa+Gk	testuser
+9619ecfb-b3ce-46cb-9c40-c789b2bcb692	testuser	2025-10-31 15:07:46.921033+00	2025-10-31 15:07:50.371803+00	$argon2id$v=19$m=19456,t=2,p=1$eoyOH7MfdyKHl9x5hTY1Vw$b6/QwW4kFP2OyhWebFp1ph2ywAHApx9jKvgSzwJ3Hvk	testuser
 \.
 
 
@@ -327,7 +329,7 @@ b60e7679-ee19-40e8-a05d-f8cb63922c66	testuser	2025-10-30 15:38:02.106216+00	2025
 --
 
 COPY tower_sessions.session (id, data, expiry_date) FROM stdin;
-OPYplfh2f-hWPnlKf-o3aA	\\x93c4106837ea7f4a793e56e87f76f89529f63881a7757365725f6964d92462363065373637392d656531392d343065382d613035642d66386362363339323263363699cd07e9cd014d0f2605ce2fe320ea000000	2025-11-29 15:38:05.803414+00
+r8mQ213bAZv8X8LXNycdFQ	\\x93c410151d2737d7c25ffc9b01db5ddb90c9af81a7757365725f6964d92439363139656366622d623363652d343663622d396334302d63373839623262636236393299cd07e9cd014e0f0732ce16424d7f000000	2025-11-30 15:07:50.373443+00
 \.
 
 
@@ -526,5 +528,5 @@ ALTER TABLE ONLY public.subnets
 -- PostgreSQL database dump complete
 --
 
-\unrestrict in3yZs1LRRUzoDCtu64WfeQQqDV3bvrxxaCSuWPPm2iUI1huLWxHALL1XCBYzLy
+\unrestrict hYYQiX8qX4HPILHratXKxhEijfsECSKnV1NIBT8Pi8ODwmWMyILhqXdVh3yiTpZ
 

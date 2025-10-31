@@ -6,10 +6,12 @@
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { initiateDiscovery, sessions } from '$lib/features/discovery/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getNetworks } from '$lib/features/networks/store';
+	import { getNetworks, networks } from '$lib/features/networks/store';
 	import DaemonCard from './DaemonCard.svelte';
 	import CreateDaemonModal from './CreateDaemonModal.svelte';
 	import { getHosts } from '$lib/features/hosts/store';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 
 	const loading = loadData([getNetworks, getDaemons, getHosts]);
 
@@ -42,6 +44,29 @@
 		showCreateDaemonModal = true;
 		daemon = generateApiDaemon;
 	}
+
+	// Define field configuration for the DataTableControls
+	const daemonFields: FieldConfig<Daemon>[] = [
+		{
+			key: 'name',
+			label: 'Name',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true
+		},
+		{
+			key: 'network_id',
+			type: 'string',
+			label: 'Network',
+			searchable: false,
+			filterable: true,
+			sortable: false,
+			getValue(item) {
+				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+			}
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -69,18 +94,18 @@
 			cta="Create your first daemon"
 		/>
 	{:else}
-		<!-- Daemons grid -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each $daemons as daemon (daemon.id)}
+		<DataControls items={$daemons} fields={daemonFields} storageKey="netvisor-daemons-table-state">
+			{#snippet children(item: Daemon, viewMode: 'card' | 'list')}
 				<DaemonCard
-					{daemon}
+					daemon={item}
+					{viewMode}
 					{discoveryIsRunning}
 					onDiscovery={handleRunDiscovery}
 					onDelete={handleDeleteDaemon}
 					onGenerateApi={handleGenerateApiKey}
 				/>
-			{/each}
-		</div>
+			{/snippet}
+		</DataControls>
 	{/if}
 </div>
 

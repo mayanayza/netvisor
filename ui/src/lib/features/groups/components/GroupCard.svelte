@@ -8,6 +8,7 @@
 	export let group: Group;
 	export let onEdit: (group: Group) => void = () => {};
 	export let onDelete: (group: Group) => void = () => {};
+	export let viewMode: 'card' | 'list';
 
 	$: groupServicesStore = getServicesForGroup(group.id);
 	$: groupServices = $groupServicesStore;
@@ -70,4 +71,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} />
+<GenericCard {...cardData} {viewMode} />

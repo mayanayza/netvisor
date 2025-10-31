@@ -83,11 +83,13 @@ impl DaemonRuntimeService {
     pub async fn initialize_services(
         &self,
         network_id: Uuid,
+        api_key: String,
         discovery_service: Arc<DaemonDiscoveryService>,
         discovery_manager: Arc<DaemonDiscoverySessionManager>,
     ) -> Result<()> {
         // Ensure network_id is stored
         self.config_store.set_network_id(network_id).await?;
+        self.config_store.set_api_key(api_key).await?;
 
         let daemon_id = self.config_store.get_id().await?;
         let has_docker_client = self.utils.get_own_docker_socket().await?;
@@ -124,52 +126,56 @@ impl DaemonRuntimeService {
     pub async fn register_with_server(&self, daemon_id: Uuid, network_id: Uuid) -> Result<()> {
         let daemon_ip = self.utils.get_own_ip_address()?;
         let daemon_port = self.config_store.get_port().await?;
-        tracing::info!("Registering daemon with ID: {}", daemon_id,);
-        let registration_request = DaemonRegistrationRequest {
-            daemon_id,
-            network_id,
-            daemon_ip,
-            daemon_port,
-        };
+        if let Some(api_key) = self.config_store.get_api_key().await? {
+            tracing::info!("Registering daemon with ID: {}", daemon_id,);
+            let registration_request = DaemonRegistrationRequest {
+                daemon_id,
+                network_id,
+                daemon_ip,
+                daemon_port,
+                api_key,
+            };
 
-        let server_target = self.config_store.get_server_endpoint().await?;
+            let server_target = self.config_store.get_server_endpoint().await?;
 
-        let response = self
-            .client
-            .post(format!("{}/api/daemons/register", server_target))
-            .json(&registration_request)
-            .send()
-            .await?;
+            let response = self
+                .client
+                .post(format!("{}/api/daemons/register", server_target))
+                .json(&registration_request)
+                .send()
+                .await?;
 
-        let status = response.status();
-        let api_response: ApiResponse<DaemonRegistrationResponse> = response.json().await?;
+            let status = response.status();
+            let api_response: ApiResponse<DaemonRegistrationResponse> = response.json().await?;
 
-        if !status.is_success() {
-            anyhow::bail!(
-                "Registration failed: {}",
-                api_response.error.unwrap_or("Unknown Error".to_string())
+            if !status.is_success() {
+                anyhow::bail!(
+                    "Registration failed: {}",
+                    api_response.error.unwrap_or("Unknown Error".to_string())
+                );
+            }
+
+            if !api_response.success {
+                let error_msg = api_response
+                    .error
+                    .unwrap_or_else(|| "Unknown registration error".to_string());
+                anyhow::bail!("Registration failed: {}", error_msg);
+            }
+
+            let response = api_response
+                .data
+                .ok_or_else(|| anyhow::anyhow!("No daemon data in successful response"))?;
+
+            self.config_store.set_host_id(response.host_id).await?;
+
+            tracing::info!(
+                "Successfully registered with server, assigned ID: {}",
+                response.daemon.id
             );
+
+            Ok(())
+        } else {
+            anyhow::bail!("API key not set for daemon. Registration failed.")
         }
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown registration error".to_string());
-            anyhow::bail!("Registration failed: {}", error_msg);
-        }
-
-        let response = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No daemon data in successful response"))?;
-
-        self.config_store.set_api_key(response.api_key).await?;
-        self.config_store.set_host_id(response.host_id).await?;
-
-        tracing::info!(
-            "Successfully registered with server, assigned ID: {}",
-            response.daemon.id
-        );
-
-        Ok(())
     }
 }

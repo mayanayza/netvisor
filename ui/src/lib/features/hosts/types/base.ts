@@ -3,7 +3,7 @@ import type { EntitySource } from '$lib/shared/types';
 
 export interface HostWithServicesRequest {
 	host: Host;
-	services: Service[];
+	services: Service[] | null;
 }
 
 export type HostVirtualization = { type: 'Proxmox'; details: ProxmoxVirtualization };
@@ -22,6 +22,7 @@ export interface Host {
 	virtualization: HostVirtualization | null;
 	source: EntitySource;
 	network_id: string;
+	hidden: boolean;
 }
 
 export interface ProxmoxVirtualization {

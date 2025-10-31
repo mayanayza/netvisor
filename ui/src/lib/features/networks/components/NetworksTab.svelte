@@ -17,6 +17,8 @@
 	import { getSubnets } from '$lib/features/subnets/store';
 	import { getGroups } from '$lib/features/groups/store';
 	import NetworkEditModal from './NetworkEditModal.svelte';
+	import DataControls from '$lib/shared/components/data/DataControls.svelte';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
 
 	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
@@ -63,6 +65,18 @@
 		showCreateNetworkModal = false;
 		editingNetwork = null;
 	}
+
+	// Define field configuration for the DataTableControls
+	const networkFields: FieldConfig<Network>[] = [
+		{
+			key: 'name',
+			label: 'Name',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -90,12 +104,20 @@
 			cta="Create your first network"
 		/>
 	{:else}
-		<!-- Daemons grid -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each $networks as network (network.id)}
-				<NetworkCard {network} onDelete={handleDeleteNetwork} onEdit={handleEditNetwork} />
-			{/each}
-		</div>
+		<DataControls
+			items={$networks}
+			fields={networkFields}
+			storageKey="netvisor-networks-table-state"
+		>
+			{#snippet children(item: Network, viewMode: 'card' | 'list')}
+				<NetworkCard
+					network={item}
+					{viewMode}
+					onDelete={handleDeleteNetwork}
+					onEdit={handleEditNetwork}
+				/>
+			{/snippet}
+		</DataControls>
 	{/if}
 </div>
 

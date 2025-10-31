@@ -9,7 +9,7 @@
 	import { entities } from '$lib/shared/stores/metadata';
 	import dockerTemplate from '$lib/templates/docker-compose.daemon.yml?raw';
 	import { writable, type Writable } from 'svelte/store';
-	import { generateApiKey } from '../store';
+	import { createNewApiKey, updateApiKey } from '../store';
 	import type { Daemon } from '../types/base';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import { RotateCcwKey } from 'lucide-svelte';
@@ -27,12 +27,20 @@
 		onClose();
 	}
 
-	async function handleGenerateApiKey() {
+	async function handleCreateNewApiKey() {
+		const generatedKey = await createNewApiKey({
+			network_id: selectedNetworkId
+		});
+		if (generatedKey) {
+			apiKeyStore.set(generatedKey);
+		} else {
+			pushError('Failed to generate API key');
+		}
+	}
+
+	async function handleUpdateApiKey() {
 		if (daemon) {
-			const generatedKey = await generateApiKey({
-				daemon_id: daemon.id,
-				network_id: daemon.network_id
-			});
+			const generatedKey = await updateApiKey(daemon.id);
 			if (generatedKey) {
 				apiKeyStore.set(generatedKey);
 			} else {
@@ -56,15 +64,31 @@
 	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} \\ \n--network-id ${selectedNetworkId} ${apiKey ? `--daemon-api-key ${apiKey}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} \\ \n${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${apiKey ? `--daemon-api-key ${apiKey}` : ''}`;
+
+	let dockerCompose = '';
+	$: if (apiKey) {
+		dockerCompose = populateDockerCompose(
+			dockerTemplate,
+			serverTarget,
+			serverPort,
+			selectedNetworkId,
+			apiKey
+		);
+	}
 
 	function populateDockerCompose(
 		template: string,
 		serverTarget: string,
 		serverPort: string,
-		networkId: string
+		networkId: string,
+		apiKey: string
 	): string {
 		// Replace lines that contain env vars
+		let splitString = '# Daemon configuration';
+		let [beforeKey, afterKey] = template.split(splitString);
+		template =
+			beforeKey + splitString + '\n' + `      - NETVISOR_DAEMON_API_KEY=${apiKey}` + afterKey;
 
 		return template
 			.split('\n')
@@ -100,11 +124,42 @@
 	</svelte:fragment>
 
 	<div class="space-y-4">
+		<h3 class="text-primary text-lg font-medium">
+			{daemon ? 'Create New API Key' : 'Update API Key'}
+		</h3>
+
+		{#if daemon && !daemon.api_key}
+			<InlineWarning
+				title="Daemon missing API key"
+				body="This daemon does not have an API key set in its config file. Please press the button below to generate one, then use the daemon start command or relaunch the docker compose."
+			/>
+		{/if}
+
 		{#if !daemon}
-			<h3 class="text-primary text-lg font-medium">Daemon Installation</h3>
-
 			<SelectNetwork bind:selectedNetworkId></SelectNetwork>
+		{/if}
 
+		<div class="pb-2">
+			<div class="flex items-start gap-2">
+				<button
+					class="btn-primary m-1 flex-shrink-0 self-stretch"
+					on:click={daemon ? handleUpdateApiKey : handleCreateNewApiKey}
+				>
+					<RotateCcwKey />
+					<span>Generate Key</span>
+				</button>
+
+				<div class="flex-1">
+					<CodeContainer
+						language="bash"
+						expandable={false}
+						code={apiKey ? apiKey : 'Press Generate Key...'}
+					/>
+				</div>
+			</div>
+		</div>
+
+		{#if !daemon && apiKey}
 			<div class="text-secondary mt-3">
 				<b>Option 1.</b> Run the install script, then start the daemon
 			</div>
@@ -115,43 +170,11 @@
 
 			<div class="text-secondary mt-3"><b>Option 2.</b> Run this docker-compose</div>
 
-			<CodeContainer
-				language="yaml"
-				expandable={false}
-				code={populateDockerCompose(dockerTemplate, serverTarget, serverPort, selectedNetworkId)}
-			/>
+			<CodeContainer language="yaml" expandable={false} code={dockerCompose} />
 		{:else if daemon}
-			<h3 class="text-primary text-lg font-medium">Update API Key</h3>
-
-			{#if !daemon.api_key}
-				<InlineWarning
-					title="Daemon missing API key"
-					body="This daemon does not have an API key set in its config file. Please press the button below to generate one, then use the daemon start command or relaunch the docker compose."
-				/>
-			{/if}
-
-			<div class="pb-2">
-				<div class="flex items-start gap-2">
-					<button
-						class="btn-primary m-1 flex-shrink-0 self-stretch"
-						on:click={handleGenerateApiKey}
-					>
-						<RotateCcwKey />
-						<span>Generate Key</span>
-					</button>
-
-					<div class="flex-1">
-						<CodeContainer
-							language="bash"
-							expandable={false}
-							code={apiKey ? apiKey : 'Press Generate Key...'}
-						/>
-					</div>
-				</div>
-			</div>
 			{#if daemon.api_key && !apiKey}
 				<InlineWarning
-					title="Any existing API key will be invalidated when you generate a new key."
+					title="The existing API key will be invalidated when you generate a new key."
 				/>
 			{:else if apiKey}
 				<InlineWarning

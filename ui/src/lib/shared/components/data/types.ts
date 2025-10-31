@@ -39,5 +39,15 @@ export interface CardList {
 	label?: string;
 	items: CardListItem[];
 	emptyText?: string;
-	itemActions?: (item: CardListItem) => CardAction[];
+}
+
+// Field configuration for data controls
+export interface FieldConfig<T> {
+	key: string;
+	type: 'string' | 'boolean' | 'date';
+	searchable?: boolean; // Whether this field should be included in text search
+	filterable?: boolean; // Whether to show filter controls for this field
+	sortable?: boolean; // Whether this field can be sorted
+	getValue?: (item: T) => string | boolean | Date | null; // Custom getter function
+	label: string;
 }

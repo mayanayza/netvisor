@@ -44,19 +44,26 @@ async fn create_host(
         )));
     }
 
-    for service in &request.services {
-        if let Err(e) = service.base.validate() {
-            tracing::error!("Service validation failed: {:?}", e);
-            return Err(ApiError::bad_request(&format!(
-                "Service validation failed: {}",
-                e
-            )));
+    // If services is None, there are no services to create
+    let (host, services) = if let Some(services) = request.services {
+        for service in &services {
+            if let Err(e) = service.base.validate() {
+                tracing::error!("Service validation failed: {:?}", e);
+                return Err(ApiError::bad_request(&format!(
+                    "Service validation failed: {}",
+                    e
+                )));
+            }
         }
-    }
 
-    let (host, services) = host_service
-        .create_host_with_services(request.host, request.services)
-        .await?;
+        let (host, services) = host_service
+            .create_host_with_services(request.host, services)
+            .await?;
+
+        (host, Some(services))
+    } else {
+        (host_service.create_host(request.host).await?, None)
+    };
 
     Ok(Json(ApiResponse::success(HostWithServicesRequest {
         host,
@@ -92,24 +99,27 @@ async fn update_host(
     let host_service = &state.services.host_service;
     let service_service = &state.services.service_service;
 
-    let (create_futures, update_futures): (Vec<_>, Vec<_>) =
-        request.services.into_iter().partition_map(|s| {
-            if s.id == Uuid::nil() {
-                let service = Service::new(s.base);
-                Either::Left(service_service.create_service(service))
-            } else {
-                Either::Right(service_service.update_service(s))
-            }
-        });
+    // If services is None, don't update services
+    if let Some(services) = request.services {
+        let (create_futures, update_futures): (Vec<_>, Vec<_>) =
+            services.into_iter().partition_map(|s| {
+                if s.id == Uuid::nil() {
+                    let service = Service::new(s.base);
+                    Either::Left(service_service.create_service(service))
+                } else {
+                    Either::Right(service_service.update_service(s))
+                }
+            });
 
-    let created_services = try_join_all(create_futures).await?;
-    let updated_services = try_join_all(update_futures).await?;
+        let created_services = try_join_all(create_futures).await?;
+        let updated_services = try_join_all(update_futures).await?;
 
-    request.host.base.services = created_services
-        .iter()
-        .chain(updated_services.iter())
-        .map(|s| s.id)
-        .collect();
+        request.host.base.services = created_services
+            .iter()
+            .chain(updated_services.iter())
+            .map(|s| s.id)
+            .collect();
+    }
 
     let updated_host = host_service.update_host(request.host).await?;
 

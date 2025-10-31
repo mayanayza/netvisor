@@ -47,8 +47,8 @@ impl HostStorage for PostgresHostStorage {
             INSERT INTO hosts (
                 id, name, hostname, target, description,
                 services, interfaces, ports, source, virtualization,
-                created_at, updated_at, network_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                created_at, updated_at, network_id, hidden
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             "#,
         )
         .bind(host.id)
@@ -64,6 +64,7 @@ impl HostStorage for PostgresHostStorage {
         .bind(host.created_at)
         .bind(host.updated_at)
         .bind(host.base.network_id)
+        .bind(host.base.hidden)
         .execute(&self.pool)
         .await?;
 
@@ -110,7 +111,7 @@ impl HostStorage for PostgresHostStorage {
             UPDATE hosts SET 
                 name = $2, hostname = $3, description = $4,
                 target = $5, interfaces = $6, ports = $7, source = $8, services = $9, virtualization = $10,
-                updated_at = $11, network_id = $12
+                updated_at = $11, network_id = $12, hidden = $13
             WHERE id = $1
             "#,
         )
@@ -126,6 +127,7 @@ impl HostStorage for PostgresHostStorage {
         .bind(virtualization_str)
         .bind(host.updated_at)
         .bind(host.base.network_id)
+        .bind(host.base.hidden)
         .execute(&self.pool)
         .await?;
 
@@ -169,6 +171,7 @@ fn row_to_host(row: sqlx::postgres::PgRow) -> Result<Host, Error> {
             target,
             hostname: row.get("hostname"),
             description: row.get("description"),
+            hidden: row.get("hidden"),
             services,
             ports,
             virtualization,
