@@ -12,13 +12,19 @@ use crate::server::{
     services::types::endpoints::{ApplicationProtocol, Endpoint},
     shared::types::api::ApiResponse,
 };
-use anyhow::{Error, Result};
-use std::sync::Arc;
+use anyhow::{Error, Result, anyhow};
+use itertools::Itertools;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 use uuid::Uuid;
 
 pub struct DaemonService {
     daemon_storage: Arc<dyn DaemonStorage>,
     client: reqwest::Client,
+    // network_id to API key
+    pending_api_keys: Arc<Mutex<HashMap<Uuid, Vec<String>>>>,
 }
 
 impl DaemonService {
@@ -26,6 +32,56 @@ impl DaemonService {
         Self {
             daemon_storage,
             client: reqwest::Client::new(),
+            pending_api_keys: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    pub fn generate_api_key(&self) -> String {
+        Uuid::new_v4().simple().to_string()
+    }
+
+    /// Create a new pending API key for a daemon to claim when it registers
+    pub async fn create_pending_api_key(&self, network_id: Uuid, api_key: String) -> Result<()> {
+        let mut pending_api_keys = self
+            .pending_api_keys
+            .lock()
+            .map_err(|_| anyhow!("Failed to acquire write access to pending API keys"))?;
+
+        pending_api_keys
+            .entry(network_id)
+            .or_insert_with(Vec::new)
+            .push(api_key);
+
+        Ok(())
+    }
+
+    /// Create a new pending API key for a daemon to claim when it registers
+    pub async fn claim_pending_api_key(
+        &self,
+        network_id: Uuid,
+        api_key: &String,
+    ) -> Result<(), Error> {
+        let mut pending_api_keys = self
+            .pending_api_keys
+            .lock()
+            .map_err(|_| anyhow!("Failed to acquire write access to pending API keys"))?;
+
+        if let Some(pending_keys) = pending_api_keys.get_mut(&network_id) {
+            if let Some((position, _)) = pending_keys.iter().find_position(|v| *v == api_key) {
+                pending_keys.remove(position);
+                Ok(())
+            } else {
+                Err(anyhow!(
+                    "API key {} is not pending for network id {}",
+                    api_key,
+                    network_id
+                ))
+            }
+        } else {
+            Err(anyhow!(
+                "No pending API keys available for network {}",
+                network_id
+            ))
         }
     }
 

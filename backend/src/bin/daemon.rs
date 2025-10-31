@@ -146,10 +146,16 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("🔗 Server at {}", server_addr);
 
     if let Some(network_id) = network_id {
-        if api_key.is_some() {
-            tracing::info!("Network ID available: {}", network_id);
+        tracing::info!("Network ID available: {}", network_id);
+        if let Some(api_key) = api_key {
+            tracing::info!("API key available: [redacted]");
             runtime_service
-                .initialize_services(*network_id, discovery_service, discovery_manager)
+                .initialize_services(
+                    *network_id,
+                    api_key.clone(),
+                    discovery_service,
+                    discovery_manager,
+                )
                 .await?;
         } else {
             tracing::warn!(

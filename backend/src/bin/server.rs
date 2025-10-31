@@ -86,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
     // Create app state
     let state = AppState::new(config, DiscoverySessionManager::new()).await?;
     let user_service = state.services.user_service.clone();
+    let daemon_service = state.services.daemon_service.clone();
 
     // Create discovery cleanup task
     let discovery_cleanup_state = state.clone();
@@ -168,7 +169,12 @@ async fn main() -> anyhow::Result<()> {
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
-        initialize_local_daemon(integrated_daemon_url, network.id).await?;
+        let api_key = daemon_service.generate_api_key();
+        daemon_service
+            .create_pending_api_key(network.id, api_key.clone())
+            .await?;
+
+        initialize_local_daemon(integrated_daemon_url, network.id, api_key).await?;
     } else {
         tracing::debug!("Server already has data, skipping seed data");
     }
@@ -178,12 +184,19 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn initialize_local_daemon(daemon_url: String, network_id: Uuid) -> Result<(), Error> {
+pub async fn initialize_local_daemon(
+    daemon_url: String,
+    network_id: Uuid,
+    api_key: String,
+) -> Result<(), Error> {
     let client = reqwest::Client::new();
 
     match client
         .post(format!("{}/api/initialize", daemon_url))
-        .json(&InitializeDaemonRequest { network_id })
+        .json(&InitializeDaemonRequest {
+            network_id,
+            api_key,
+        })
         .send()
         .await
     {

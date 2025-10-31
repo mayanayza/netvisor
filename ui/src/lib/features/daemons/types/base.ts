@@ -12,7 +12,6 @@ export interface Daemon extends DaemonBase {
 	last_seen: string;
 }
 
-export interface GenerateApiRequest {
-	daemon_id: string;
+export interface ApiKeyRequest {
 	network_id: string;
 }

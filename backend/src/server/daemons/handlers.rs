@@ -2,7 +2,7 @@ use crate::server::{
     auth::extractor::{AuthenticatedDaemon, AuthenticatedUser},
     config::AppState,
     daemons::types::{
-        api::{DaemonRegistrationRequest, DaemonRegistrationResponse, GenerateKeyRequest},
+        api::{ApiKeyRequest, DaemonRegistrationRequest, DaemonRegistrationResponse},
         base::{Daemon, DaemonBase},
     },
     hosts::types::base::{Host, HostBase},
@@ -20,23 +20,40 @@ use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/register", post(register_daemon))
-        .route("/generate_api_key", post(generate_api_key))
-        .route("/{id}/heartbeat", put(receive_heartbeat))
         .route("/", get(get_all_daemons))
+        .route("/register", post(register_daemon))
+        .route("/create_new_api_key", post(create_new_api_key))
+        .route("/{id}/update_api_key", post(update_api_key))
+        .route("/{id}/heartbeat", put(receive_heartbeat))
         .route("/{id}", get(get_daemon))
         .route("/{id}", delete(delete_daemon))
 }
 
-async fn generate_api_key(
+async fn create_new_api_key(
     State(state): State<Arc<AppState>>,
     _user: AuthenticatedUser,
-    Json(request): Json<GenerateKeyRequest>,
+    Json(request): Json<ApiKeyRequest>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
     let service = &state.services.daemon_service;
 
-    if let Some(mut daemon) = service.get_daemon(&request.daemon_id).await? {
-        let api_key = Uuid::new_v4().simple().to_string();
+    let api_key = service.generate_api_key();
+
+    service
+        .create_pending_api_key(request.network_id, api_key.clone())
+        .await?;
+
+    Ok(Json(ApiResponse::success(api_key)))
+}
+
+async fn update_api_key(
+    State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
+    Path(daemon_id): Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<String>>> {
+    let service = &state.services.daemon_service;
+
+    if let Some(mut daemon) = service.get_daemon(&daemon_id).await? {
+        let api_key = service.generate_api_key();
         daemon.base.api_key = Some(api_key.clone());
         service.update_daemon(daemon.clone()).await?;
 
@@ -44,7 +61,7 @@ async fn generate_api_key(
     } else {
         Err(ApiError::not_found(format!(
             "Could not find daemon {}. Unable to generate API key.",
-            request.daemon_id
+            daemon_id
         )))
     }
 }
@@ -56,7 +73,9 @@ async fn register_daemon(
 ) -> ApiResult<Json<ApiResponse<DaemonRegistrationResponse>>> {
     let service = &state.services.daemon_service;
 
-    let api_key = Uuid::new_v4().simple().to_string();
+    service
+        .claim_pending_api_key(request.network_id, &request.api_key)
+        .await?;
 
     // Create a dummy host to return a host_id to the daemon
     let mut dummy_host = Host::new(HostBase::default());
@@ -76,7 +95,7 @@ async fn register_daemon(
             network_id: request.network_id,
             ip: request.daemon_ip,
             port: request.daemon_port,
-            api_key: Some(api_key.clone()),
+            api_key: Some(request.api_key),
         },
     );
 
@@ -87,7 +106,6 @@ async fn register_daemon(
 
     Ok(Json(ApiResponse::success(DaemonRegistrationResponse {
         daemon: registered_daemon,
-        api_key,
         host_id: host.id,
     })))
 }
