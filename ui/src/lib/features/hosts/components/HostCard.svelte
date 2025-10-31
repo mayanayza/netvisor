@@ -49,23 +49,26 @@
 	// Build card data
 	$: cardData = {
 		title: host.name,
+		...(host.virtualization !== null
+			? {
+					subtitle:
+						'VM Managed By ' + get(getServiceById(host.virtualization.details.service_id))?.name ||
+						'Unknown Service'
+				}
+			: {}),
 		link: host.target.type != 'None' ? `http://${get(getHostTargetString(host))}` : undefined,
 		iconColor: entities.getColorHelper('Host').icon,
 		icon:
 			serviceDefinitions.getIconComponent(hostServices[0]?.service_definition) ||
 			entities.getIconComponent('Host'),
-		sections: [
-			...(host.virtualization !== null
-				? [
-						{
-							label: 'VM Managed By',
-							value:
-								get(getServiceById(host.virtualization.details.service_id))?.name ||
-								'Unknown Service'
-						}
-					]
-				: [])
-		],
+		sections: host.description
+			? [
+					{
+						label: 'Description',
+						value: host.description
+					}
+				]
+			: [],
 		lists: [
 			{
 				label: 'Groups',

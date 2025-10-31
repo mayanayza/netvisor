@@ -31,31 +31,23 @@
 			? 'w-54 flex flex-shrink-0 items-center space-x-3'
 			: 'mb-4 flex items-start justify-between'}
 	>
-		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
+		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'w-40 flex-1' : ''}">
 			{#if icon}
-				<svelte:component
-					this={icon}
-					size={viewMode === 'list' ? 20 : 28}
-					class="{iconColor} flex-shrink-0"
-				/>
+				<svelte:component this={icon} size={viewMode === 'list' ? 20 : 28} class={iconColor} />
 			{/if}
-			<div class={viewMode === 'list' ? 'min-w-0 flex-1' : ''}>
+			<div>
 				{#if link}
 					<a
 						href={link}
 						class="text-primary hover:text-info {viewMode === 'list'
 							? 'text-base'
-							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block truncate' : ''}"
+							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block' : ''}"
 						target="_blank"
 					>
 						{title}
 					</a>
 				{:else}
-					<h3
-						class="text-primary {viewMode === 'list'
-							? 'truncate text-base'
-							: 'text-lg'} font-semibold"
-					>
+					<h3 class="text-primary {viewMode === 'list' ? 'text-base' : 'text-lg'} font-semibold">
 						{title}
 					</h3>
 				{/if}
@@ -82,12 +74,14 @@
 			<!-- List view: horizontal layout with consistent spacing -->
 			<div class="flex min-w-0 flex-1 items-center">
 				<!-- Sections -->
-				<div class="w-15 mr-4 flex-1">
-					<div class="items-left flex gap-3">
+				<div class="mr-4 min-w-0 flex-1">
+					<div class="flex flex-wrap gap-3">
 						{#each sections as section, i ((section.value, i))}
-							<div class="flex flex-shrink flex-col">
+							<div class="flex w-full min-w-0 flex-col">
 								<span class="text-secondary text-xs">{section.label}:</span>
-								<div class="text-tertiary ml-1 text-xs">{section.value}</div>
+								<div class="text-tertiary break-all text-xs">
+									{section.value}
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -140,7 +134,7 @@
 			{#each sections as section, i ((section.value, i))}
 				<div class="text-sm">
 					<span class="text-secondary">{section.label}:</span>
-					<span class="text-tertiary ml-2">{section.value}</span>
+					<span class="text-tertiary ml-2 break-all">{section.value}</span>
 				</div>
 			{/each}
 
