@@ -19,7 +19,8 @@ help:
 	@echo "  make lint           - Run all linters"
 	@echo "  make format         - Format all code"
 	@echo "  make clean          - Clean build artifacts and containers"
-	@echo "  make install-dev    - Install local development dependencies"
+	@echo "  make install-dev-mac    - Install development dependencies on macOS"
+	@echo "  make install-dev-linux  - Install development dependencies on Linux"
 
 setup-db:
 	@echo "Setting up PostgreSQL..."
@@ -102,7 +103,7 @@ clean:
 	cd backend && cargo clean
 	cd ui && rm -rf node_modules dist build .svelte-kit
 
-install-dev:
+install-dev-mac:
 	@echo "Installing Rust toolchain..."
 	rustup install stable
 	rustup component add rustfmt clippy
@@ -112,7 +113,25 @@ install-dev:
 	cargo install cargo-watch
 	@echo "Installing postgresql..."
 	brew install postgresql@17
-	echo 'export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"' >> ~/.zshrc
+	echo 'export PATH="/opt/homebrew/opt/postgresql@17/bin:$$PATH"' >> ~/.zshrc
 	brew services start postgresql@17
-	source ~/.zshrc
+	@echo ""
 	@echo "Development dependencies installed!"
+	@echo "Note: Run 'source ~/.zshrc' to update your PATH, or restart your terminal"
+
+install-dev-linux:
+	@echo "Installing Rust toolchain..."
+	rustup install stable
+	rustup component add rustfmt clippy
+	@echo "Installing Node.js dependencies..."
+	cd ui && npm install
+	@echo "Installing cargo-watch for hot reload..."
+	cargo install cargo-watch
+	@echo "Installing postgresql..."
+	sudo apt-get update
+	sudo apt-get install -y postgresql-17 postgresql-contrib-17
+	sudo systemctl enable postgresql
+	sudo systemctl start postgresql
+	@echo ""
+	@echo "Development dependencies installed!"
+	@echo "Note: PostgreSQL 17 is now running as a system service"
