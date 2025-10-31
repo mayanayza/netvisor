@@ -10,11 +10,12 @@
 	import { consolidateHosts, createHost, deleteHost, getHosts, hosts, updateHost } from '../store';
 	import { getGroups, groups } from '$lib/features/groups/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getServices, services } from '$lib/features/services/store';
+	import { getServiceById, getServices, services } from '$lib/features/services/store';
 	import { getSubnets } from '$lib/features/subnets/store';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
+	import { get } from 'svelte/store';
 
 	const loading = loadData([getHosts, getGroups, getServices, getSubnets, getDaemons]);
 
@@ -57,7 +58,23 @@
 			searchable: false,
 			filterable: true,
 			sortable: true,
-			getValue: (host) => host.virtualization !== null
+		},
+		{
+			key: 'virtualized_by',
+			label: 'Virtualized By',
+			type: 'string',
+			searchable: false,
+			filterable: true,
+			sortable: true,
+			getValue: (host) => {
+				if (host.virtualization !== null) {
+					const virtualizationService = get(getServiceById(host.virtualization.details.service_id))
+					if (virtualizationService) {
+						return virtualizationService?.name || "Unknown Service"
+					}
+				}
+				return "Not Virtualized"
+			}
 		},
 		{
 			key: 'created_at',

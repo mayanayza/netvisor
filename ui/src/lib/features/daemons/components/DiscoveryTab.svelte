@@ -94,19 +94,6 @@
 			cta="Create your first daemon"
 		/>
 	{:else}
-		<!-- Daemons grid -->
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each $daemons as daemon (daemon.id)}
-				<DaemonCard
-					{daemon}
-					{discoveryIsRunning}
-					onDiscovery={handleRunDiscovery}
-					onDelete={handleDeleteDaemon}
-					onGenerateApi={handleGenerateApiKey}
-				/>
-			{/each}
-		</div>
-
 		<DataControls items={$daemons} fields={daemonFields} storageKey="netvisor-daemons-table-state">
 			{#snippet children(item: Daemon)}
 				<DaemonCard
