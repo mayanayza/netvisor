@@ -2,7 +2,7 @@
 	import { getSubnetFromId, isContainerSubnet } from '$lib/features/subnets/store';
 	import { get } from 'svelte/store';
 
-	export const InterfaceDisplay: EntityDisplayComponent<Interface> = {
+	export const InterfaceDisplay: EntityDisplayComponent<Interface, object> = {
 		getId: (iface: Interface) => iface.id,
 		getLabel: (iface: Interface) => (iface.name ? iface.name : 'Unnamed Interface'),
 		getDescription: (iface: Interface) => {
@@ -39,6 +39,7 @@
 	import { entities } from '$lib/shared/stores/metadata';
 
 	export let item: Interface;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={InterfaceDisplay} />
+<ListSelectItem {item} {context} displayComponent={InterfaceDisplay} />

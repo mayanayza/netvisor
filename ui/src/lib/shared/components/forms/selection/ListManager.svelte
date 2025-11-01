@@ -1,4 +1,6 @@
-<script lang="ts" generics="T, V">
+<!-- T: Item type, V: Dropdown option type, C: type of context passed to item -->
+<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+<script lang="ts" generics="T, V, C">
 	import { ArrowUp, ArrowDown, Trash2, Plus, Edit } from 'lucide-svelte';
 	import RichSelect from './RichSelect.svelte';
 	import ListSelectItem from './ListSelectItem.svelte';
@@ -21,13 +23,13 @@
 
 	// Options (dropdown)
 	export let options: V[] = [];
-	export let optionDisplayComponent: EntityDisplayComponent<V>;
+	export let optionDisplayComponent: EntityDisplayComponent<V, C>;
 	export let showSearch: boolean = false;
 
 	// Items
 	export let items: T[] = [];
-	export let itemDisplayComponent: EntityDisplayComponent<T>;
-	export let getItemContext: ((item: T, index: number) => Record<string, unknown>) | null = null;
+	export let itemDisplayComponent: EntityDisplayComponent<T, C>;
+	export let getItemContext: (item: T, index: number) => C = () => new Object() as C;
 	export let formApi: FormApi;
 
 	// Item interaction
@@ -166,7 +168,7 @@
 					<!-- Use slot if provided, otherwise check for inline editing -->
 					<slot name="item" {item} {index}>
 						{#if editingIndex === index && itemDisplayComponent.supportsInlineEdit && itemDisplayComponent.renderInlineEdit}
-							{@const context = getItemContext ? getItemContext(item, index) : undefined}
+							{@const context = getItemContext(item, index)}
 							{@const inlineEditConfig = itemDisplayComponent.renderInlineEdit(
 								item,
 								(updates) => {
@@ -178,7 +180,7 @@
 							)}
 							<svelte:component this={inlineEditConfig.component} {...inlineEditConfig.props} />
 						{:else}
-							{@const context = getItemContext ? getItemContext(item, index) : undefined}
+							{@const context = getItemContext(item, index)}
 							<ListSelectItem {item} {context} displayComponent={itemDisplayComponent} />
 						{/if}
 					</slot>

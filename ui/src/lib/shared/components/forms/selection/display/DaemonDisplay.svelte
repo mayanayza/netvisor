@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
 	import { entities } from '$lib/shared/stores/metadata';
 
-	export const DaemonDisplay: EntityDisplayComponent<Daemon> = {
+	export const DaemonDisplay: EntityDisplayComponent<Daemon, object> = {
 		getId: (daemon: Daemon) => daemon.id,
 		getLabel: (daemon: Daemon) => get(getHostFromId(daemon.host_id))?.name || 'Unknown Daemon',
 		getDescription: (daemon: Daemon) => get(getHostFromId(daemon.host_id))?.description || '',
@@ -21,6 +21,7 @@
 	import { get } from 'svelte/store';
 
 	export let item: Daemon;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={DaemonDisplay} />
+<ListSelectItem {item} {context} displayComponent={DaemonDisplay} />

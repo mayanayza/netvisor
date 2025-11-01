@@ -1,6 +1,7 @@
 <script lang="ts" context="module">
 	export const ServiceTypeDisplay: EntityDisplayComponent<
-		TypeMetadata<ServicedDefinitionMetadata>
+		TypeMetadata<ServicedDefinitionMetadata>,
+		object
 	> = {
 		getId: (serviceType: TypeMetadata<ServicedDefinitionMetadata>) => serviceType.id,
 		getLabel: (serviceType: TypeMetadata<ServicedDefinitionMetadata>) => serviceType.name,
@@ -31,6 +32,7 @@
 	import type { EntityDisplayComponent } from '../types';
 
 	export let item: TypeMetadata<ServicedDefinitionMetadata>;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={ServiceTypeDisplay} />
+<ListSelectItem {item} {context} displayComponent={ServiceTypeDisplay} />

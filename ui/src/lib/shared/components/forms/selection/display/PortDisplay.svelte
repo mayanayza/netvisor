@@ -4,7 +4,7 @@
 	import { entities, ports } from '$lib/shared/stores/metadata';
 	import type { Service } from '$lib/features/services/types/base';
 
-	export const PortDisplay: EntityDisplayComponent<Port> = {
+	export const PortDisplay: EntityDisplayComponent<Port, object> = {
 		getId: (port: Port) => `${port.id}`,
 		getLabel: (port: Port) => {
 			let metadata = ports.getMetadata(port.type);
@@ -59,6 +59,7 @@
 	import { get } from 'svelte/store';
 
 	export let item: Port;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={PortDisplay} />
+<ListSelectItem {item} {context} displayComponent={PortDisplay} />

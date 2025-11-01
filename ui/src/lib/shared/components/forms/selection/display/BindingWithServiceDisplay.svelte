@@ -2,7 +2,7 @@
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { getServiceForBinding, getServiceHost } from '$lib/features/services/store';
 
-	export const BindingWithServiceDisplay: EntityDisplayComponent<Binding> = {
+	export const BindingWithServiceDisplay: EntityDisplayComponent<Binding, object> = {
 		getId: (binding: Binding) => binding.id,
 		getLabel: (binding: Binding) => {
 			const service = get(getServiceForBinding(binding.id));
@@ -82,6 +82,7 @@
 	import { get } from 'svelte/store';
 
 	export let item: Binding;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={BindingWithServiceDisplay} />
+<ListSelectItem {context} {item} displayComponent={BindingWithServiceDisplay} />

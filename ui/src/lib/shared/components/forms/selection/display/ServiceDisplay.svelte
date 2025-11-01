@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	export const ServiceDisplay: EntityDisplayComponent<Service> = {
+	export const ServiceDisplay: EntityDisplayComponent<Service, object> = {
 		getId: (service: Service) => service.id,
 		getLabel: (service: Service) => service.name,
 		getDescription: (service: Service) => {
@@ -51,6 +51,7 @@
 	import { matchConfidenceLabel } from '$lib/shared/types';
 
 	export let item: Service;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={ServiceDisplay} />
+<ListSelectItem {item} {context} displayComponent={ServiceDisplay} />

@@ -2,6 +2,7 @@
 	import { form as createForm } from 'svelte-forms';
 	import GenericModal from '../layout/GenericModal.svelte';
 	import type { TextFieldType, FormApi, NumberFieldType } from './types';
+	import { pushWarning } from '$lib/shared/stores/feedback';
 
 	export let title: string = 'Edit';
 	export let isOpen: boolean = false;
@@ -48,6 +49,7 @@
 
 		// Check if current fields are valid
 		if (!$form.valid) {
+			pushWarning('Form invalid: ' + $form.errors);
 			return; // Don't proceed if validation fails
 		} else {
 			onSave?.();
