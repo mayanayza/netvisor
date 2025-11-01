@@ -22,6 +22,27 @@ export async function getServices() {
 	);
 }
 
+// Delete a service
+export async function deleteService(id: string) {
+	return await api.request<void, Service[]>(
+		`/services/${id}`,
+		services,
+		(_, current) => current.filter((g) => g.id !== id),
+		{ method: 'DELETE' }
+	);
+}
+
+// Update a service
+export async function updateService(data: Service) {
+	console.log(1);
+	return await api.request<Service, Service[]>(
+		`/services/${data.id}`,
+		services,
+		(updatedService, current) => current.map((s) => (s.id === data.id ? updatedService : s)),
+		{ method: 'PUT', body: JSON.stringify(data) }
+	);
+}
+
 // Helper functions for working with services and the MetadataRegistry
 export function createDefaultService(
 	serviceType: string,

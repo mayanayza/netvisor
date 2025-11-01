@@ -64,7 +64,7 @@ export interface HostnameTargetConfig {
 
 export interface Port {
 	number: number;
-	protocol: string;
+	protocol: 'Tcp' | 'Udp';
 	id: string;
 	type: string;
 }
