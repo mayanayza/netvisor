@@ -154,7 +154,7 @@ export function getServicesForGroup(group_id: string): Readable<Service[]> {
 		const group = $groups.find((g) => g.id == group_id);
 
 		if (group) {
-			if (group.group_type === 'RequestPath') {
+			if (group.group_type === 'RequestPath' || group.group_type === 'HubAndSpoke') {
 				const serviceMap = new Map($services.flatMap((s) => s.bindings.map((b) => [b.id, s])));
 				return group.service_bindings
 					.map((sb) => serviceMap.get(sb))

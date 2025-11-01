@@ -2,7 +2,7 @@ import type { EntitySource } from '$lib/shared/types';
 
 export type GroupType = 'RequestPath';
 
-export type Group = RequestPathGroup;
+export type Group = RequestPathGroup | HubAndSpokeGroup;
 
 interface BaseGroup {
 	id: string;
@@ -17,5 +17,10 @@ interface BaseGroup {
 
 export interface RequestPathGroup extends BaseGroup {
 	group_type: 'RequestPath';
+	service_bindings: string[]; // Binding IDs
+}
+
+export interface HubAndSpokeGroup extends BaseGroup {
+	group_type: 'HubAndSpoke';
 	service_bindings: string[]; // Binding IDs
 }

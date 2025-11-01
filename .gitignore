@@ -13,6 +13,7 @@ Thumbs.db
 
 # Logs
 *.log
+/target
 
 # Environment
 .env
