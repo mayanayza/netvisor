@@ -2,7 +2,7 @@
 	import type { Host } from '$lib/features/hosts/types/base';
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	export const HostDisplay: EntityDisplayComponent<Host> = {
+	export const HostDisplay: EntityDisplayComponent<Host, object> = {
 		getId: (host: Host) => host.id,
 		getLabel: (host: Host) => host.name,
 		getDescription: (host: Host) => get(getHostTargetString(host)) || 'Unknown Host',
@@ -35,6 +35,7 @@
 	import { get } from 'svelte/store';
 
 	export let item: Host;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={HostDisplay} />
+<ListSelectItem {item} {context} displayComponent={HostDisplay} />

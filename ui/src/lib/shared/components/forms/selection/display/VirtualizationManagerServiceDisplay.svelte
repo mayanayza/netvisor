@@ -1,7 +1,7 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	export const VirtualizationManagerServiceDisplay: EntityDisplayComponent<Service> = {
+	export const VirtualizationManagerServiceDisplay: EntityDisplayComponent<Service, object> = {
 		getId: (service: Service) => service.id,
 		getLabel: (service: Service) => service.name,
 		getDescription: (service: Service) => {
@@ -47,6 +47,7 @@
 	import { hosts } from '$lib/features/hosts/store';
 
 	export let item: Service;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={VirtualizationManagerServiceDisplay} />
+<ListSelectItem {item} {context} displayComponent={VirtualizationManagerServiceDisplay} />

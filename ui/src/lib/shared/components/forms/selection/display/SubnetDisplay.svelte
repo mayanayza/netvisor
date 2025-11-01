@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-	export const SubnetDisplay: EntityDisplayComponent<Subnet> = {
+	export const SubnetDisplay: EntityDisplayComponent<Subnet, object> = {
 		getId: (subnet: Subnet) => subnet.id,
 		getLabel: (subnet: Subnet) => subnet.name,
 		getDescription: (subnet: Subnet) => (subnet.name == subnet.cidr ? '' : subnet.cidr),
@@ -18,6 +18,7 @@
 	import type { Subnet } from '$lib/features/subnets/types/base';
 
 	export let item: Subnet;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={SubnetDisplay} />
+<ListSelectItem {item} {context} displayComponent={SubnetDisplay} />

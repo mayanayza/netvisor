@@ -1,11 +1,12 @@
-<script lang="ts" generics="T">
+<!-- T: Item type, C: type of context passed to item -->
+<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+<script lang="ts" generics="T, C">
 	import Tag from '../../data/Tag.svelte';
 	import type { EntityDisplayComponent } from './types';
 
 	export let item: T;
-	export let displayComponent: EntityDisplayComponent<T>;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	export let context: Record<string, any> | undefined = undefined;
+	export let displayComponent: EntityDisplayComponent<T, C>;
+	export let context: C;
 
 	$: icon = displayComponent.getIcon?.(item, context);
 	$: tags = displayComponent.getTags?.(item, context) || [];

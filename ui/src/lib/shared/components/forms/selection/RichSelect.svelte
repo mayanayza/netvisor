@@ -1,4 +1,4 @@
-<script lang="ts" generics="T">
+<script lang="ts" generics="V, C">
 	import { ChevronDown } from 'lucide-svelte';
 	import ListSelectItem from './ListSelectItem.svelte';
 	import type { EntityDisplayComponent } from './types';
@@ -7,14 +7,15 @@
 
 	export let label: string = '';
 	export let selectedValue: string | null = '';
-	export let options: T[] = [];
+	export let options: V[] = [];
 	export let placeholder: string = 'Select an option...';
 	export let required: boolean = false;
 	export let disabled: boolean = false;
 	export let error: string | null = null;
 	export let onSelect: (value: string) => void;
 	export let showSearch: boolean = false;
-	export let displayComponent: EntityDisplayComponent<T>;
+	export let displayComponent: EntityDisplayComponent<V, C>;
+	export let getOptionContext: (option: V, index: number) => C = () => new Object() as C;
 
 	let isOpen = false;
 	let dropdownElement: HTMLDivElement;
@@ -27,12 +28,14 @@
 	$: selectedItem = options.find((i) => displayComponent.getId(i) === selectedValue);
 
 	// Filter options based on search text
-	$: filteredOptions = options.filter((option) => {
+	$: filteredOptions = options.filter((option, index) => {
 		if (!filterText.trim()) return true;
+
+		const context = getOptionContext(option, index);
 
 		const searchTerm = filterText.toLowerCase();
 		const label = displayComponent.getLabel(option).toLowerCase();
-		const description = displayComponent.getDescription?.(option)?.toLowerCase() || '';
+		const description = displayComponent.getDescription?.(option, context)?.toLowerCase() || '';
 
 		return label.includes(searchTerm) || description.includes(searchTerm);
 	});
@@ -45,10 +48,11 @@
 			return [{ category: null, options: optionsToGroup }];
 		}
 
-		const groups = new SvelteMap<string | null, T[]>();
+		const groups = new SvelteMap<string | null, V[]>();
 
-		optionsToGroup.forEach((option) => {
-			const category = displayComponent.getCategory!(option);
+		optionsToGroup.forEach((option, index) => {
+			const context = getOptionContext(option, index);
+			const category = displayComponent.getCategory!(option, context);
 			if (!groups.has(category)) {
 				groups.set(category, []);
 			}
@@ -105,11 +109,21 @@
 
 	function handleSelect(value: string) {
 		try {
-			const item = options.find((i) => displayComponent.getId(i) === value);
-			if (item && !displayComponent.getIsDisabled?.(item)) {
-				isOpen = false;
-				filterText = '';
-				onSelect(value);
+			let index;
+			const item = options.find((o, i) => {
+				if (displayComponent.getId(o) === value) {
+					index = i;
+					return true;
+				}
+				return false;
+			});
+			if (item && index) {
+				const context = getOptionContext(item, index);
+				if (!displayComponent.getIsDisabled?.(item, context)) {
+					isOpen = false;
+					filterText = '';
+					onSelect(value);
+				}
 			}
 		} catch (e) {
 			console.warn('Error in handleSelect:', e);
@@ -168,7 +182,8 @@
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-3">
 			{#if selectedItem}
-				<ListSelectItem item={selectedItem} {displayComponent} />
+				{@const context = getOptionContext(selectedItem, 0)}
+				<ListSelectItem {context} item={selectedItem} {displayComponent} />
 			{:else}
 				<span class="text-secondary"
 					>{options.length == 0 ? 'No options available' : placeholder}</span
@@ -232,6 +247,7 @@
 
 						<!-- Options in this category -->
 						{#each group.options as option, optionIndex (displayComponent.getId(option))}
+							{@const context = getOptionContext(option, optionIndex)}
 							{@const isLastInGroup = optionIndex === group.options.length - 1}
 							{@const isLastGroup = groupIndex === groupedOptions.length - 1}
 							<button
@@ -239,18 +255,18 @@
 								on:click={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
-									if (!displayComponent.getIsDisabled?.(option)) {
+									if (!displayComponent.getIsDisabled?.(option, context)) {
 										handleSelect(displayComponent.getId(option));
 									}
 								}}
 								class="w-full px-3 py-3 text-left transition-colors
                        {!isLastInGroup || !isLastGroup ? 'border-b border-gray-600' : ''}
-                       {displayComponent.getIsDisabled?.(option)
+                       {displayComponent.getIsDisabled?.(option, context)
 									? 'cursor-not-allowed opacity-50'
 									: 'hover:bg-gray-600'}"
-								disabled={displayComponent.getIsDisabled?.(option)}
+								disabled={displayComponent.getIsDisabled?.(option, context)}
 							>
-								<ListSelectItem item={option} {displayComponent} />
+								<ListSelectItem {context} item={option} {displayComponent} />
 							</button>
 						{/each}
 					{/if}

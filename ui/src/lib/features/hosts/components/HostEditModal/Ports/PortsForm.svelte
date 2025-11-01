@@ -88,11 +88,16 @@
 	</svelte:fragment>
 
 	<svelte:fragment slot="config" let:selectedItem let:onChange>
-		{#if selectedItem}
+		{#if selectedItem && selectedItem.type == 'Custom'}
 			<PortConfigPanel
 				{formApi}
 				port={selectedItem}
 				onChange={(updatedPort) => onChange(updatedPort)}
+			/>
+		{:else if selectedItem && selectedItem.type != 'Custom'}
+			<EntityConfigEmpty
+				title="Standard Port"
+				subtitle="This is a standard port, and can't be edited"
 			/>
 		{:else}
 			<EntityConfigEmpty

@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-	export const PortTypeDisplay: EntityDisplayComponent<TypeMetadata<PortTypeMetadata>> = {
+	export const PortTypeDisplay: EntityDisplayComponent<TypeMetadata<PortTypeMetadata>, object> = {
 		getId: (portType: TypeMetadata<PortTypeMetadata>) => portType.id,
 		getLabel: (portType: TypeMetadata<PortTypeMetadata>) =>
 			`${portType.metadata.number}/${portType.metadata.protocol.toLowerCase()} - ${portType.name}`,
@@ -19,6 +19,7 @@
 	import type { EntityDisplayComponent } from '../types';
 
 	export let item: TypeMetadata<PortTypeMetadata>;
+	export let context = {};
 </script>
 
-<ListSelectItem {item} displayComponent={PortTypeDisplay} />
+<ListSelectItem {item} {context} displayComponent={PortTypeDisplay} />
