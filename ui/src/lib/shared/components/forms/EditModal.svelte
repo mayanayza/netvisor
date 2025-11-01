@@ -45,8 +45,6 @@
 		// Force validation on all fields
 		await Promise.all(Object.values(formFields).map((field) => field.validate()));
 
-		console.log($form);
-
 		// Check if current fields are valid
 		if (!$form.valid) {
 			pushWarning('Form invalid: ' + $form.errors);

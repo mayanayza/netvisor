@@ -56,7 +56,7 @@
 			{/if}
 			<h3 class="text-sm font-semibold">Match Details</h3>
 		</div>
-		<Tag label={matchConfidenceLabel(details.confidence)} color={confidenceColor} />
+		<Tag label={matchConfidenceLabel(details)} color={confidenceColor} />
 	</button>
 
 	{#if isExpanded}

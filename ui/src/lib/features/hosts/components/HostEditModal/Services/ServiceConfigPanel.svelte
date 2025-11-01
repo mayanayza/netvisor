@@ -18,7 +18,7 @@
 	import { get, readable, type Readable } from 'svelte/store';
 
 	export let formApi: FormApi;
-	export let formData: Host;
+	export let host: Host;
 	export let service: Service;
 	export let onChange: (updatedService: Service) => void = () => {};
 
@@ -58,7 +58,7 @@
 	// Available port+interface combinations for new Port bindings
 
 	// First, get all services for all ports reactively
-	$: allPortServicesStores = formData.ports.map((port) => ({
+	$: allPortServicesStores = host.ports.map((port) => ({
 		portId: port.id,
 		store: getServicesForPort(port.id)
 	}));
@@ -70,13 +70,13 @@
 	}));
 
 	// Available port+interface combinations for new Port bindings
-	$: availablePortCombinations = formData.interfaces.flatMap((iface) => {
+	$: availablePortCombinations = host.interfaces.flatMap((iface) => {
 		// Can't add Port binding if THIS service has an Interface binding on this interface
 		if (interfacesWithInterfaceBindingsThisService.has(iface.id)) {
 			return [];
 		}
 
-		return formData.ports
+		return host.ports
 			.filter((port) => {
 				// Check if this specific port+interface combo is already bound by this service
 				const alreadyBoundByThisService = portBindings.some(
@@ -114,7 +114,7 @@
 	$: canCreatePortBinding = availablePortCombinations.length > 0;
 
 	// Available interfaces for new Interface bindings
-	$: availableInterfacesForInterfaceBinding = formData.interfaces.filter((iface) => {
+	$: availableInterfacesForInterfaceBinding = host.interfaces.filter((iface) => {
 		// Can't add Interface binding if this service already has one on this interface
 		if (interfaceBindings.some((b) => b.interface_id === iface.id)) {
 			return false;
@@ -149,12 +149,12 @@
 			return;
 		}
 
-		if (formData.interfaces.length === 0) {
+		if (host.interfaces.length === 0) {
 			pushWarning("Host does not have any interfaces, can't create binding");
 			return;
 		}
 
-		if (formData.ports.length === 0) {
+		if (host.ports.length === 0) {
 			pushWarning("Host does not have any ports, can't create binding");
 			return;
 		}
@@ -219,7 +219,7 @@
 			return;
 		}
 
-		if (formData.interfaces.length === 0) {
+		if (host.interfaces.length === 0) {
 			pushWarning("Host does not have any interfaces, can't create binding");
 			return;
 		}
@@ -324,7 +324,7 @@
 					optionDisplayComponent={PortBindingDisplay}
 					itemDisplayComponent={PortBindingDisplay}
 					items={portBindings}
-					getItemContext={() => ({ service, host: formData })}
+					getItemContext={() => ({ service, host: host })}
 					onCreateNew={handleCreatePortBinding}
 					onRemove={handleRemovePortBinding}
 					onEdit={handleUpdatePortBinding}
@@ -352,7 +352,7 @@
 					optionDisplayComponent={InterfaceBindingDisplay}
 					itemDisplayComponent={InterfaceBindingDisplay}
 					items={interfaceBindings}
-					getItemContext={() => ({ service, host: formData })}
+					getItemContext={() => ({ service, host: host })}
 					onCreateNew={handleCreateInterfaceBinding}
 					onRemove={handleRemoveInterfaceBinding}
 					onEdit={handleUpdateInterfaceBinding}

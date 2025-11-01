@@ -8,6 +8,6 @@
 	let colorHelper = createColorHelper(color);
 </script>
 
-<div class="p-2 {colorHelper.bg} rounded-lg">
+<div class="rounded-lg p-2">
 	<Icon size={24} class={colorHelper.icon} />
 </div>

@@ -42,15 +42,18 @@ export function matchConfidenceColor(confidence: MatchDetails['confidence']): st
 	return confidenceColor[confidence];
 }
 
-export function matchConfidenceLabel(confidence: MatchDetails['confidence']): string {
+export function matchConfidenceLabel(details: MatchDetails): string {
+	const notApplicableReason =
+		details.reason.type == 'container' ? details.reason.data[0] : 'Unknown Reason';
+
 	const confidenceLabel: Record<MatchDetails['confidence'], string> = {
-		NotApplicable: 'Not Applicable',
+		NotApplicable: `N/A (${notApplicableReason})`,
 		Low: 'Low Confidence',
 		Medium: 'Medium Confidence',
 		High: 'High Confidence',
 		Certain: 'Certain'
 	};
-	return confidenceLabel[confidence];
+	return confidenceLabel[details.confidence];
 }
 
 export type DiscoveryType =

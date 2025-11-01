@@ -223,7 +223,7 @@ impl Service {
                 // Confidence not applicable for generic services
                 result.details.confidence = MatchConfidence::NotApplicable;
                 result.details.reason = MatchReason::Container(
-                    "Match confidence for generic services is N/A".to_string(),
+                    "Generic service".to_string(),
                     vec![result.details.reason],
                 )
             };

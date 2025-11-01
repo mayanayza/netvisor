@@ -18,6 +18,7 @@
 	import DiscoveryTab from '$lib/features/daemons/components/DiscoveryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
+	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
 
 	let activeTab = 'hosts';
 	let appInitialized = false;
@@ -25,15 +26,15 @@
 	let dataLoadingStarted = false;
 
 	// Valid tab names for validation
-	const validTabs = ['discovery', 'networks', 'hosts', 'subnets', 'groups', 'topology'];
+	const validTabs = ['discovery', 'networks', 'hosts', 'services', 'subnets', 'groups', 'topology'];
 
 	// Function to get initial tab from URL hash
 	function getInitialTab(): string {
 		if (typeof window !== 'undefined') {
 			const hash = window.location.hash.substring(1); // Remove the #
-			return validTabs.includes(hash) ? hash : 'hosts';
+			return validTabs.includes(hash) ? hash : 'discovery';
 		}
-		return 'hosts';
+		return 'discovery';
 	}
 
 	function handleTabChange(tab: string) {
@@ -131,6 +132,8 @@
 					<NetworksTab />
 				{:else if activeTab === 'hosts'}
 					<HostTab />
+				{:else if activeTab === 'services'}
+					<ServiceTab />
 				{:else if activeTab === 'subnets'}
 					<SubnetTab />
 				{:else if activeTab === 'groups'}

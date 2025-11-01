@@ -124,7 +124,7 @@ pub fn create_internet_connectivity_host(
         name: "Google.com".to_string(),
         network_id,
         hostname: None,
-        description: Some("Google.com".to_string()),
+        description: None,
         interfaces: vec![interface],
         ports: vec![https_port],
         services: Vec::new(),

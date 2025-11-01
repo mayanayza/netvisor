@@ -13,7 +13,7 @@
 				let confidence = service.source.details.confidence;
 
 				if (confidence != 'Certain' && confidence != 'NotApplicable') {
-					descriptionItems.push(matchConfidenceLabel(confidence));
+					descriptionItems.push(matchConfidenceLabel(service.source.details));
 				}
 			}
 

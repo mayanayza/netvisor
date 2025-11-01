@@ -104,7 +104,7 @@
 			{#if selectedItem}
 				<ServiceConfigPanel
 					{formApi}
-					bind:formData
+					bind:host={formData}
 					service={selectedItem}
 					onChange={(updatedService) => onChange(updatedService)}
 				/>

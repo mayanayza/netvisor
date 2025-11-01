@@ -47,7 +47,7 @@
 		if (portType) {
 			const newPort: Port = {
 				number: portType.metadata.number as number,
-				protocol: portType.metadata.protocol as string,
+				protocol: portType.metadata.protocol,
 				type: portType.id,
 				id: uuidv4()
 			};

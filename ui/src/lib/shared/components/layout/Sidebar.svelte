@@ -13,11 +13,12 @@
 	const SIDEBAR_STORAGE_KEY = 'netvisor-sidebar-collapsed';
 
 	const navItems = [
-		{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
 		{ id: 'discovery', label: 'Discovery', icon: entities.getIconComponent('Discovery') },
-		{ id: 'hosts', label: 'Hosts', icon: entities.getIconComponent('Host') },
+		{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
 		{ id: 'subnets', label: 'Subnets', icon: entities.getIconComponent('Subnet') },
 		{ id: 'groups', label: 'Groups', icon: entities.getIconComponent('Group') },
+		{ id: 'hosts', label: 'Hosts', icon: entities.getIconComponent('Host') },
+		{ id: 'services', label: 'Services', icon: entities.getIconComponent('Service') },
 		{ id: 'topology', label: 'Topology', icon: entities.getIconComponent('Topology') }
 	];
 
