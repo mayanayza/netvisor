@@ -2,6 +2,7 @@ use netvisor::server::auth::types::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::types::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::types::base::Daemon;
 use netvisor::server::discovery::types::api::InitiateDiscoveryRequest;
+use netvisor::server::discovery::types::base::DiscoveryType;
 use netvisor::server::networks::types::Network;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::types::base::Service;
@@ -287,7 +288,10 @@ async fn run_discovery(client: &TestClient, daemon_id: Uuid) -> Result<(), Strin
     let initial_update: DiscoveryUpdatePayload = client
         .post(
             "/api/discovery/initiate",
-            &InitiateDiscoveryRequest { daemon_id },
+            &InitiateDiscoveryRequest {
+                daemon_id,
+                discovery_type: DiscoveryType::Network { subnet_ids: None },
+            },
         )
         .await?;
 

@@ -4,24 +4,19 @@ use std::{
     time::Duration,
 };
 
-use crate::server::hosts::types::ports::TransportProtocol;
-use crate::server::services::types::endpoints::Endpoint;
 use crate::{
     daemon::discovery::{
         manager::DaemonDiscoverySessionManager, types::base::DiscoveryCriticalError,
     },
     server::{
-        discovery::types::{
-            api::InitiateDiscoveryRequest,
-            base::{DiscoveryMetadata, DiscoveryType},
-        },
+        discovery::types::base::{DiscoveryMetadata, DiscoveryType},
         groups::types::Group,
         services::types::{
             base::{
                 DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
                 ServiceMatchServiceParams,
             },
-            endpoints::EndpointResponse,
+            endpoints::{Endpoint, EndpointResponse},
             patterns::MatchConfidence,
         },
     },
@@ -29,18 +24,9 @@ use crate::{
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
-use dhcproto::v4::{self, Decodable, Encodable, Encoder, Message, MessageType};
-use rand::{Rng, SeedableRng};
-use rsntp::AsyncSntpClient;
-use snmp2::{AsyncSession, Oid};
-use std::net::SocketAddr;
-use tokio::{net::TcpStream, sync::RwLock, time::timeout};
+use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 
-use tokio::net::UdpSocket;
-
-use trust_dns_resolver::TokioAsyncResolver;
-use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use uuid::Uuid;
 
 use crate::{
@@ -73,435 +59,6 @@ use crate::{
 
 pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
 
-pub trait HasDiscoveryType {
-    fn discovery_type(&self) -> DiscoveryType;
-}
-
-pub struct Discovery<T> {
-    pub service: Arc<DaemonDiscoveryService>,
-    pub manager: Arc<DaemonDiscoverySessionManager>,
-    pub domain: T,
-}
-
-impl<T> Discovery<T> {
-    pub fn new(
-        service: Arc<DaemonDiscoveryService>,
-        manager: Arc<DaemonDiscoverySessionManager>,
-        domain: T,
-    ) -> Self {
-        Self {
-            service,
-            domain,
-            manager,
-        }
-    }
-}
-
-impl<T> Discovery<T>
-where
-    T: 'static,
-    Self: DiscoversNetworkedEntities,
-{
-    pub async fn discover_on_network(
-        self: Arc<Self>,
-        request: DaemonDiscoveryRequest,
-    ) -> Result<(), Error> {
-        if self.manager.is_discovery_running().await {
-            Err(anyhow!("Discovery session already running"))
-        } else {
-            let cancel_token = self.manager.start_new_session().await;
-
-            let handler = self.clone();
-            let request_clone = request.clone();
-
-            let inner_manager = self.manager.clone();
-            let handle = tokio::spawn(async move {
-                match handler
-                    .start_discovery_session(request_clone, cancel_token)
-                    .await
-                {
-                    Ok(()) => {
-                        tracing::info!("Discovery completed successfully");
-                    }
-                    Err(e) => {
-                        tracing::error!("Discovery failed: {}", e);
-                    }
-                }
-                inner_manager.clear_completed_task().await;
-            });
-            self.manager.set_current_task(handle).await;
-
-            // Return immediate acknowledgment
-            Ok(())
-        }
-    }
-
-    pub async fn scan_ports_and_endpoints(
-        ip: IpAddr,
-        cancel: CancellationToken,
-        filter_endpoint_ports: Option<Vec<PortBase>>,
-    ) -> Result<(Vec<PortBase>, Vec<EndpointResponse>), Error> {
-        if cancel.is_cancelled() {
-            return Err(anyhow!("Operation cancelled"));
-        }
-
-        let mut open_ports = Vec::new();
-        let mut endpoint_responses = Vec::new();
-
-        // Scan TCP ports sequentially (not concurrently)
-        let tcp_ports = Self::scan_tcp_ports(ip, cancel.clone()).await?;
-        open_ports.extend(tcp_ports);
-
-        if cancel.is_cancelled() {
-            return Err(anyhow!("Operation cancelled"));
-        }
-
-        // Scan UDP ports sequentially
-        let udp_ports = Self::scan_udp_ports(ip, cancel.clone()).await?;
-        open_ports.extend(udp_ports);
-
-        if cancel.is_cancelled() {
-            return Err(anyhow!("Operation cancelled"));
-        }
-
-        // Scan endpoints sequentially
-        let endpoints = Self::scan_endpoints(ip, cancel.clone(), filter_endpoint_ports).await?;
-        endpoint_responses.extend(endpoints);
-
-        tracing::debug!(
-            "Scan results for {}: found {} open ports, {} endpoint responses",
-            ip,
-            open_ports.len(),
-            endpoint_responses.len()
-        );
-
-        Ok((open_ports, endpoint_responses))
-    }
-
-    pub async fn scan_tcp_ports(
-        ip: IpAddr,
-        cancel: CancellationToken,
-    ) -> Result<Vec<PortBase>, Error> {
-        let discovery_ports = Service::all_discovery_ports();
-        let ports: Vec<u16> = discovery_ports
-            .iter()
-            .filter(|p| p.protocol() == TransportProtocol::Tcp)
-            .map(|p| p.number())
-            .collect();
-        let mut open_ports = Vec::new();
-
-        for port in ports {
-            if cancel.is_cancelled() {
-                break;
-            }
-
-            match timeout(SCAN_TIMEOUT, TcpStream::connect((ip, port))).await {
-                Ok(Ok(_)) => {
-                    open_ports.push(PortBase::new_tcp(port));
-                    tracing::debug!("Found open TCP port {}:{}", ip, port);
-                }
-                Ok(Err(e)) => {
-                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        return Err(e.into());
-                    }
-                }
-                Err(_) => {
-                    // Timeout - normal for closed/filtered ports
-                }
-            }
-        }
-
-        Ok(open_ports)
-    }
-
-    pub async fn scan_udp_ports(
-        ip: IpAddr,
-        cancel: CancellationToken,
-    ) -> Result<Vec<PortBase>, anyhow::Error> {
-        let discovery_ports = Service::all_discovery_ports();
-        let ports: Vec<u16> = discovery_ports
-            .iter()
-            .filter(|p| p.protocol() == TransportProtocol::Udp)
-            .map(|p| p.number())
-            .collect();
-
-        let mut open_ports = Vec::new();
-
-        for port in ports {
-            if cancel.is_cancelled() {
-                break;
-            }
-
-            let result = match port {
-                53 => Self::test_dns_service(ip).await,
-                123 => Self::test_ntp_service(ip).await,
-                161 => Self::test_snmp_service(ip).await,
-                67 => Self::test_dhcp_service(ip).await,
-                _ => Ok(None),
-            };
-
-            match result {
-                Ok(Some(detected_port)) => {
-                    open_ports.push(PortBase::new_udp(detected_port));
-                    tracing::debug!("Found open UDP port {}:{}", ip, detected_port);
-                }
-                Ok(None) => {
-                    // Port closed or no response
-                }
-                Err(e) => {
-                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        return Err(e);
-                    }
-                }
-            }
-        }
-
-        Ok(open_ports)
-    }
-
-    pub async fn scan_endpoints(
-        ip: IpAddr,
-        cancel: CancellationToken,
-        filter_ports: Option<Vec<PortBase>>,
-    ) -> Result<Vec<EndpointResponse>, Error> {
-        use std::collections::HashMap;
-
-        let client = reqwest::Client::builder()
-            .timeout(SCAN_TIMEOUT)
-            .build()
-            .map_err(|e| anyhow!("Could not build client {}", e))?;
-
-        let all_endpoints: Vec<Endpoint> = Service::all_discovery_endpoints()
-            .into_iter()
-            .filter_map(|e| {
-                if let Some(filter_ports) = &filter_ports {
-                    if filter_ports.contains(&e.port_base) {
-                        return Some(e);
-                    }
-                    None
-                } else {
-                    Some(e)
-                }
-            })
-            .collect();
-
-        // Group endpoints by (port, path) to avoid duplicate requests
-        let mut unique_endpoints: HashMap<(u16, String), Endpoint> = HashMap::new();
-        for endpoint in all_endpoints {
-            let key = (endpoint.port_base.number(), endpoint.path.clone());
-            unique_endpoints.entry(key).or_insert(endpoint);
-        }
-
-        let mut responses = Vec::new();
-
-        // Only make one request per unique (port, path) combination
-        for ((_, _), endpoint) in unique_endpoints {
-            if cancel.is_cancelled() {
-                break;
-            }
-
-            let endpoint_with_ip = endpoint.use_ip(ip);
-            let url = endpoint_with_ip.to_string();
-
-            match client.get(&url).send().await {
-                Ok(response) if response.status().is_success() => {
-                    if let Ok(text) = response.text().await {
-                        // Return single response that can be checked by all patterns
-                        responses.push(EndpointResponse {
-                            endpoint: endpoint_with_ip,
-                            response: text,
-                        });
-                    }
-                }
-                Ok(_) => (),
-                Err(e) => {
-                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        return Err(e.into());
-                    }
-                }
-            }
-        }
-
-        Ok(responses)
-    }
-
-    // Use simpler DNS resolver that doesn't have API issues
-    pub async fn test_dns_service(ip: IpAddr) -> Result<Option<u16>, Error> {
-        // Use the simpler approach - create resolver with custom config directly
-        let mut config = ResolverConfig::new();
-        let name_server = NameServerConfig::new(SocketAddr::new(ip, 53), Protocol::Udp);
-        config.add_name_server(name_server);
-
-        let test_resolver = TokioAsyncResolver::tokio(config, ResolverOpts::default());
-
-        match timeout(
-            Duration::from_millis(2000),
-            test_resolver.lookup_ip("google.com"),
-        )
-        .await
-        {
-            Ok(Ok(_)) => {
-                tracing::debug!("DNS server responding at {}:53", ip);
-                Ok(Some(53))
-            }
-            _ => {
-                tracing::debug!("DNS server not responding at {}:53", ip);
-                Ok(None)
-            }
-        }
-    }
-
-    pub async fn test_ntp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
-        let client = AsyncSntpClient::new();
-        let server_addr = format!("{}:123", ip);
-
-        match timeout(
-            Duration::from_millis(2000),
-            client.synchronize(&server_addr),
-        )
-        .await
-        {
-            Ok(Ok(result)) => {
-                // Validate that we got a meaningful time response
-                if let Ok(datetime) = result.datetime().unix_timestamp() {
-                    if datetime > Duration::from_secs(0) {
-                        // Sanity check for valid timestamp
-                        tracing::debug!(
-                            "NTP server responding at {}:123 with time {}",
-                            ip,
-                            datetime.as_millis()
-                        );
-                        Ok(Some(123))
-                    } else {
-                        tracing::debug!("Invalid NTP response from {}:123", ip);
-                        Ok(None)
-                    }
-                } else {
-                    tracing::debug!("Invalid NTP response from {}:123", ip);
-                    Ok(None)
-                }
-            }
-            Ok(Err(e)) => {
-                tracing::debug!("NTP error from {}:123 - {}", ip, e);
-                Ok(None)
-            }
-            Err(_) => {
-                tracing::debug!("NTP timeout from {}:123", ip);
-                Ok(None)
-            }
-        }
-    }
-
-    pub async fn test_snmp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
-        let target = format!("{}:161", ip);
-        let community = b"public";
-
-        match AsyncSession::new_v2c(&target, community, 0).await {
-            Ok(mut session) => {
-                let sys_descr_oid = Oid::from(&[1, 3, 6, 1, 2, 1, 1, 1, 0])
-                    .map_err(|e| anyhow!("Invalid Oid: {:?}", e))?;
-
-                match timeout(Duration::from_millis(2000), session.get(&sys_descr_oid)).await {
-                    Ok(Ok(mut response)) => {
-                        if let Some(_varbind) = response.varbinds.next() {
-                            tracing::debug!("SNMP server responding at {}:161", ip);
-                            Ok(Some(161))
-                        } else {
-                            tracing::debug!("Empty SNMP response from {}:161", ip);
-                            Ok(None)
-                        }
-                    }
-                    Ok(Err(e)) => {
-                        tracing::debug!("SNMP error from {}:161 - {}", ip, e);
-                        Ok(None)
-                    }
-                    Err(_) => {
-                        tracing::debug!("SNMP timeout from {}:161", ip);
-                        Ok(None)
-                    }
-                }
-            }
-            Err(e) => {
-                tracing::debug!("SNMP session creation failed for {}:161 - {}", ip, e);
-                Ok(None)
-            }
-        }
-    }
-
-    /// Test if a host is running a DHCP server on port 67
-    pub async fn test_dhcp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
-        let socket = UdpSocket::bind("0.0.0.0:0").await?;
-        let target = SocketAddr::new(ip, 67);
-
-        // Create a minimal DHCP DISCOVER message
-        let mut rng = rand::rngs::StdRng::from_os_rng();
-        let mac_addr: [u8; 6] = rng.random();
-        let transaction_id = rng.random::<u32>();
-
-        let mut msg = Message::default();
-        msg.set_opcode(v4::Opcode::BootRequest)
-            .set_htype(v4::HType::Eth)
-            .set_xid(transaction_id)
-            .set_flags(v4::Flags::default().set_broadcast())
-            .set_chaddr(&mac_addr);
-
-        msg.opts_mut()
-            .insert(v4::DhcpOption::MessageType(MessageType::Discover));
-
-        // Encode and send DHCP DISCOVER packet
-        let mut buf = Vec::new();
-        let mut encoder = Encoder::new(&mut buf);
-        msg.encode(&mut encoder)?;
-        socket.send_to(&buf, target).await?;
-
-        // Wait for DHCP OFFER response
-        let mut response_buf = [0u8; 1500];
-        match timeout(
-            Duration::from_millis(2000),
-            socket.recv_from(&mut response_buf),
-        )
-        .await
-        {
-            Ok(Ok((len, _))) if len > 0 => {
-                // Try to parse as DHCP message and validate response type
-                match Message::decode(&mut dhcproto::Decoder::new(&response_buf[..len])) {
-                    Ok(response_msg) => {
-                        let is_valid_response = response_msg.opts().iter().any(|(_, opt)| {
-                            matches!(
-                                opt,
-                                v4::DhcpOption::MessageType(MessageType::Offer)
-                                    | v4::DhcpOption::MessageType(MessageType::Ack)
-                            )
-                        });
-
-                        if is_valid_response {
-                            tracing::debug!("DHCP server responding at {}:67", ip);
-                            Ok(Some(67))
-                        } else {
-                            tracing::debug!("Invalid DHCP response from {}:67", ip);
-                            Ok(None)
-                        }
-                    }
-                    Err(_) => {
-                        tracing::debug!("Failed to parse DHCP response from {}:67", ip);
-                        Ok(None)
-                    }
-                }
-            }
-            _ => {
-                tracing::debug!("DHCP timeout from {}:67", ip);
-                Ok(None)
-            }
-        }
-    }
-}
-
-impl<T> AsRef<DaemonDiscoveryService> for Discovery<T> {
-    fn as_ref(&self) -> &DaemonDiscoveryService {
-        &self.service
-    }
-}
-
 #[derive(Clone)]
 pub struct DiscoverySession {
     pub info: DiscoverySessionInfo,
@@ -518,6 +75,32 @@ impl DiscoverySession {
             scanned_count: Arc::new(AtomicUsize::new(0)),
             discovered_count: Arc::new(AtomicUsize::new(0)),
         }
+    }
+}
+
+pub struct Discovery<T> {
+    pub service: Arc<DaemonDiscoveryService>,
+    pub manager: Arc<DaemonDiscoverySessionManager>,
+    pub domain: T,
+}
+
+impl<T> Discovery<T> {
+    pub fn new(
+        service: Arc<DaemonDiscoveryService>,
+        manager: Arc<DaemonDiscoverySessionManager>,
+        domain: T,
+    ) -> Self {
+        Self {
+            service,
+            manager,
+            domain,
+        }
+    }
+}
+
+impl<T> AsRef<DaemonDiscoveryService> for Discovery<T> {
+    fn as_ref(&self) -> &DaemonDiscoveryService {
+        &self.service
     }
 }
 
@@ -548,17 +131,66 @@ impl DaemonDiscoveryService {
     }
 }
 
-impl AsRef<DaemonDiscoveryService> for DaemonDiscoveryService {
-    fn as_ref(&self) -> &DaemonDiscoveryService {
-        self
+#[async_trait]
+pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
+    fn discovery_type(&self) -> DiscoveryType;
+
+    async fn discover(
+        &self,
+        request: DaemonDiscoveryRequest,
+        cancel: CancellationToken,
+    ) -> Result<(), Error>;
+
+    /// Report discovery progress to server
+    async fn report_discovery_update(&self, update: DiscoverySessionUpdate) -> Result<(), Error> {
+        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let session = self.as_ref().get_session().await?;
+        let discovery_type = self.discovery_type();
+
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
+        let payload = DiscoveryUpdatePayload::from_state_and_update(
+            discovery_type,
+            session.info.clone(),
+            update,
+        );
+
+        let response = self
+            .as_ref()
+            .client
+            .post(format!("{}/api/discovery/update", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&payload)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Failed to report discovery update: HTTP {}",
+                response.status()
+            );
+        }
+
+        tracing::debug!(
+            "Discovery update reported for session {}",
+            session.info.session_id
+        );
+        Ok(())
     }
 }
 
 #[async_trait]
 pub trait DiscoversNetworkedEntities:
-    AsRef<DaemonDiscoveryService> + Send + Sync + HasDiscoveryType
+    AsRef<DaemonDiscoveryService> + Send + Sync + RunsDiscovery
 {
     async fn get_gateway_ips(&self) -> Result<Vec<IpAddr>, Error>;
+
+    async fn discover_create_subnets(&self) -> Result<Vec<Subnet>, Error>;
 
     async fn initialize_discovery_session(
         &self,
@@ -587,14 +219,6 @@ pub trait DiscoversNetworkedEntities:
 
         Ok(())
     }
-
-    async fn discover_create_subnets(&self) -> Result<Vec<Subnet>, Error>;
-
-    async fn start_discovery_session(
-        &self,
-        request: DaemonDiscoveryRequest,
-        cancel: CancellationToken,
-    ) -> Result<(), Error>;
 
     async fn start_discovery(
         &self,
@@ -865,6 +489,72 @@ pub trait DiscoversNetworkedEntities:
         Ok(services)
     }
 
+    async fn scan_endpoints(
+        ip: IpAddr,
+        cancel: CancellationToken,
+        filter_ports: Option<Vec<PortBase>>,
+    ) -> Result<Vec<EndpointResponse>, Error> {
+        use std::collections::HashMap;
+
+        let client = reqwest::Client::builder()
+            .timeout(SCAN_TIMEOUT)
+            .build()
+            .map_err(|e| anyhow!("Could not build client {}", e))?;
+
+        let all_endpoints: Vec<Endpoint> = Service::all_discovery_endpoints()
+            .into_iter()
+            .filter_map(|e| {
+                if let Some(filter_ports) = &filter_ports {
+                    if filter_ports.contains(&e.port_base) {
+                        return Some(e);
+                    }
+                    None
+                } else {
+                    Some(e)
+                }
+            })
+            .collect();
+
+        // Group endpoints by (port, path) to avoid duplicate requests
+        let mut unique_endpoints: HashMap<(u16, String), Endpoint> = HashMap::new();
+        for endpoint in all_endpoints {
+            let key = (endpoint.port_base.number(), endpoint.path.clone());
+            unique_endpoints.entry(key).or_insert(endpoint);
+        }
+
+        let mut responses = Vec::new();
+
+        // Only make one request per unique (port, path) combination
+        for ((_, _), endpoint) in unique_endpoints {
+            if cancel.is_cancelled() {
+                break;
+            }
+
+            let endpoint_with_ip = endpoint.use_ip(ip);
+            let url = endpoint_with_ip.to_string();
+
+            match client.get(&url).send().await {
+                Ok(response) if response.status().is_success() => {
+                    if let Ok(text) = response.text().await {
+                        // Return single response that can be checked by all patterns
+                        responses.push(EndpointResponse {
+                            endpoint: endpoint_with_ip,
+                            response: text,
+                        });
+                    }
+                }
+                Ok(_) => (),
+                Err(e) => {
+                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                        return Err(e.into());
+                    }
+                }
+            }
+        }
+
+        Ok(responses)
+    }
+
     async fn periodic_scan_update(
         &self,
         frequency: usize,
@@ -894,103 +584,11 @@ pub trait DiscoversNetworkedEntities:
 
         Ok((last_reported_scanned, last_reported_discovered))
     }
-
-    /// Report discovery progress to server
-    async fn report_discovery_update(&self, update: DiscoverySessionUpdate) -> Result<(), Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
-        let session = self.as_ref().get_session().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        let payload = DiscoveryUpdatePayload::from_state_and_update(session.info.clone(), update);
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!("{}/api/discovery/update", server_target))
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&payload)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovery update: HTTP {}",
-                response.status()
-            );
-        }
-
-        tracing::debug!(
-            "Discovery update reported for session {}",
-            session.info.session_id
-        );
-        Ok(())
-    }
-}
-
-#[async_trait]
-pub trait InitiatesOwnDiscovery:
-    AsRef<DaemonDiscoveryService> + Send + Sync + HasDiscoveryType
-{
-    async fn initiate_own_discovery(&self) -> Result<Uuid, Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        tracing::info!("Initiating discovery");
-
-        let url = format!("{}/api/discovery/daemon-initiate", server_target);
-        tracing::info!("Initiating discovery at URL: {}", url); // Add this line
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!("{}/api/discovery/daemon-initiate", server_target))
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&InitiateDiscoveryRequest { daemon_id })
-            .send()
-            .await?;
-
-        tracing::info!("Response status: {}", response.status());
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to initiate own discovery: HTTP {}",
-                response.status()
-            );
-        }
-
-        let api_response: ApiResponse<Uuid> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to initiate discovery: {}", error_msg);
-        }
-
-        let session_id = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No session id in successful response"))?;
-
-        Ok(session_id)
-    }
 }
 
 #[async_trait]
 pub trait CreatesDiscoveredEntities:
-    AsRef<DaemonDiscoveryService> + Send + Sync + HasDiscoveryType
+    AsRef<DaemonDiscoveryService> + Send + Sync + RunsDiscovery
 {
     async fn create_host(
         &self,

@@ -6,7 +6,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub enum DiscoveryPhase {
-    Initiated, // Initial state, set by server; all subsequent states until Finished are set by Daemon
+    Pending, // Initial state, set by server; all subsequent states until Finished are set by Daemon
+    Starting,
     Started,
     Scanning,
     Complete,
@@ -46,7 +47,10 @@ impl DiscoverySessionUpdate {
 impl std::fmt::Display for DiscoveryPhase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DiscoveryPhase::Initiated => write!(f, "Session created in server"),
+            DiscoveryPhase::Pending => {
+                write!(f, "Session created, waiting for daemon availability")
+            }
+            DiscoveryPhase::Starting => write!(f, "Sending session to daemon"),
             DiscoveryPhase::Started => write!(f, "Session started in daemon"),
             DiscoveryPhase::Scanning => write!(f, "Scanning for active hosts"),
             DiscoveryPhase::Complete => write!(f, "Discovery complete"),

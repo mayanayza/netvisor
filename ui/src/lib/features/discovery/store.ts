@@ -9,7 +9,7 @@ import { SSEClient, type SSEClient as SSEClientType } from '$lib/shared/utils/ss
 import { getDaemons } from '../daemons/store';
 
 // session_id to latest update
-export const sessions = writable<Map<string, DiscoveryUpdatePayload>>(new Map());
+export const sessions = writable<DiscoveryUpdatePayload[]>([]);
 export const cancelling = writable<Map<string, boolean>>(new Map());
 
 // Track last known discovered_count per session to detect changes
@@ -26,9 +26,7 @@ export function startDiscoverySSE() {
 		url: '/api/discovery/stream',
 		onMessage: (update) => {
 			sessions.update((current) => {
-				const newMap = new Map(current);
-				newMap.set(update.session_id, update);
-
+				console.log(current);
 				// Check if discovered_count increased
 				const lastCount = lastDiscoveredCount.get(update.session_id) || 0;
 				const currentCount = update.discovered_count || 0;
@@ -50,32 +48,13 @@ export function startDiscoverySSE() {
 					getServices();
 					getSubnets();
 					getDaemons();
-
-					// Cleanup
-					setTimeout(() => {
-						sessions.update((s) => {
-							const m = new Map(s);
-							m.delete(update.session_id);
-							lastDiscoveredCount.delete(update.session_id);
-							return m;
-						});
-					}, 5000);
 				} else if (update.phase === 'Cancelled') {
 					pushWarning(`Discovery cancelled`);
-					lastDiscoveredCount.delete(update.session_id);
-					setTimeout(() => {
-						sessions.update((s) => {
-							const m = new Map(s);
-							m.delete(update.session_id);
-							return m;
-						});
-					}, 3000);
 				} else if (update.phase === 'Failed' && update.error) {
 					pushError(`Discovery error: ${update.error}`, -1);
-					lastDiscoveredCount.delete(update.session_id);
 				}
 
-				// Clear cancelling state for terminal phases
+				// Cleanup for terminal phases
 				if (
 					update.phase === 'Complete' ||
 					update.phase === 'Cancelled' ||
@@ -86,9 +65,25 @@ export function startDiscoverySSE() {
 						m.delete(update.session_id);
 						return m;
 					});
+
+					lastDiscoveredCount.delete(update.session_id);
+
+					// Remove completed/cancelled/failed sessions and return
+					return current.filter((session) => session.session_id !== update.session_id);
 				}
 
-				return newMap;
+				// For non-terminal phases, update or add the session
+				const existingIndex = current.findIndex((s) => s.session_id === update.session_id);
+
+				if (existingIndex >= 0) {
+					// Update existing session
+					const updated = [...current];
+					updated[existingIndex] = update;
+					return updated;
+				} else {
+					// Add new session
+					return [...current, update];
+				}
 			});
 		},
 		onError: (error) => {
@@ -111,14 +106,10 @@ export function stopDiscoverySSE() {
 }
 
 export async function initiateDiscovery(data: InitiateDiscoveryRequest) {
-	const result = await api.request<DiscoveryUpdatePayload, Map<string, DiscoveryUpdatePayload>>(
+	const result = await api.request<DiscoveryUpdatePayload, DiscoveryUpdatePayload[]>(
 		'/discovery/initiate',
 		sessions,
-		(update, currentSessions) => {
-			const map = new Map(currentSessions);
-			map.set(update.session_id, update);
-			return map;
-		},
+		(update, currentSessions) => [...currentSessions, update],
 		{ method: 'POST', body: JSON.stringify(data) }
 	);
 

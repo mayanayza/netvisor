@@ -45,7 +45,7 @@ impl DiscoveryMetadata {
 impl Default for DiscoveryMetadata {
     fn default() -> Self {
         Self {
-            discovery_type: DiscoveryType::Network,
+            discovery_type: DiscoveryType::Network { subnet_ids: None },
             daemon_id: Uuid::new_v4(),
             date: Utc::now(),
         }
@@ -53,10 +53,10 @@ impl Default for DiscoveryMetadata {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Display, Copy)]
-#[serde(tag = "discovery_type")]
+#[serde(tag = "type")]
 pub enum DiscoveryType {
-    SelfReport,
-    Network,
+    SelfReport { host_id: Uuid },
+    Network { subnet_ids: Option<u16> },
     Docker { host_id: Uuid },
-    Proxmox { host_id: Uuid },
+    // Proxmox { host_id: Uuid },
 }

@@ -14,6 +14,7 @@
 
 	const navItems = [
 		{ id: 'discovery', label: 'Discovery', icon: entities.getIconComponent('Discovery') },
+		{ id: 'daemons', label: 'Daemons', icon: entities.getIconComponent('Daemon') },
 		{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
 		{ id: 'subnets', label: 'Subnets', icon: entities.getIconComponent('Subnet') },
 		{ id: 'groups', label: 'Groups', icon: entities.getIconComponent('Group') },

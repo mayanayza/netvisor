@@ -64,4 +64,12 @@
 		border: 2px solid #6b7280 !important;
 		/* uses text-muted as color */
 	}
+
+	/* Enable text wrapping in code blocks */
+	:global(.prism--code-container pre),
+	:global(.prism--code-container code) {
+		white-space: pre-wrap !important;
+		word-wrap: break-word !important;
+		overflow-wrap: break-word !important;
+	}
 </style>

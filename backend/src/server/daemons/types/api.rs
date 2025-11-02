@@ -24,6 +24,7 @@ pub struct DaemonRegistrationRequest {
     pub daemon_ip: IpAddr,
     pub daemon_port: u16,
     pub api_key: String,
+    pub has_docker_client: bool,
 }
 
 /// Daemon registration response from server to daemon
@@ -64,6 +65,7 @@ pub struct DiscoveryUpdatePayload {
     pub session_id: Uuid,
     pub daemon_id: Uuid,
     pub phase: DiscoveryPhase,
+    pub discovery_type: DiscoveryType,
     pub completed: usize,
     pub total: usize,
     pub discovered_count: usize,
@@ -73,12 +75,13 @@ pub struct DiscoveryUpdatePayload {
 }
 
 impl DiscoveryUpdatePayload {
-    pub fn new(session_id: Uuid, daemon_id: Uuid) -> Self {
+    pub fn new(session_id: Uuid, daemon_id: Uuid, discovery_type: DiscoveryType) -> Self {
         Self {
             session_id,
             daemon_id,
-            phase: DiscoveryPhase::Initiated,
+            phase: DiscoveryPhase::Pending,
             completed: 0,
+            discovery_type,
             total: 0,
             discovered_count: 0,
             error: None,
@@ -88,11 +91,13 @@ impl DiscoveryUpdatePayload {
     }
 
     pub fn from_state_and_update(
+        discovery_type: DiscoveryType,
         info: DiscoverySessionInfo,
         update: DiscoverySessionUpdate,
     ) -> Self {
         Self {
             session_id: info.session_id,
+            discovery_type,
             daemon_id: info.daemon_id,
             phase: update.phase,
             completed: update.completed,

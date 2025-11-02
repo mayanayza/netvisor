@@ -132,9 +132,14 @@ impl DaemonService {
     /// Send discovery request to daemon
     pub async fn send_discovery_request(
         &self,
-        daemon: &Daemon,
+        daemon_id: &Uuid,
         request: DaemonDiscoveryRequest,
     ) -> Result<(), Error> {
+        let daemon = self
+            .get_daemon(daemon_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Could not find daemon {}", daemon_id))?;
+
         let endpoint = Endpoint {
             ip: Some(daemon.base.ip),
             port_base: PortBase::new_tcp(daemon.base.port),

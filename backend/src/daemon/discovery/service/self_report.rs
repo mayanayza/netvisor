@@ -1,7 +1,7 @@
 use crate::{
-    daemon::discovery::service::{
-        base::{CreatesDiscoveredEntities, Discovery, HasDiscoveryType, InitiatesOwnDiscovery},
-        docker::DockerScanDiscovery,
+    daemon::discovery::{
+        service::base::{CreatesDiscoveredEntities, Discovery, DiscoverySession, RunsDiscovery},
+        types::base::{DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate},
     },
     server::{
         daemons::types::api::DaemonDiscoveryRequest,
@@ -31,63 +31,58 @@ use crate::{
     },
 };
 use anyhow::{Error, Result};
+use async_trait::async_trait;
+use chrono::Utc;
 use futures::future::try_join_all;
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    result::Result::Ok,
-    sync::Arc,
-};
+use std::net::{IpAddr, Ipv4Addr};
 use strum::IntoDiscriminant;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 #[derive(Default)]
-pub struct SelfReportDiscovery {}
+pub struct SelfReportDiscovery {
+    host_id: Uuid,
+}
 
-impl HasDiscoveryType for Discovery<SelfReportDiscovery> {
-    fn discovery_type(&self) -> DiscoveryType {
-        DiscoveryType::SelfReport
+impl SelfReportDiscovery {
+    pub fn new(host_id: Uuid) -> Self {
+        Self { host_id }
     }
 }
 
 impl CreatesDiscoveredEntities for Discovery<SelfReportDiscovery> {}
 
-impl Discovery<SelfReportDiscovery> {
-    pub async fn run_self_report_docker_discovery(&self) -> Result<(), Error> {
-        let config_store = &self.as_ref().config_store;
-        let utils = &self.as_ref().utils;
-
-        let host_id = config_store.get_host_id().await?;
-        let docker_ok = utils.get_own_docker_socket().await?;
-
-        if let (Some(host_id), true) = (host_id, docker_ok) {
-            let docker_discovery = Arc::new(Discovery::new(
-                self.service.clone(),
-                self.manager.clone(),
-                DockerScanDiscovery::new(host_id),
-            ));
-
-            let session_id = docker_discovery.initiate_own_discovery().await?;
-
-            let request = DaemonDiscoveryRequest {
-                session_id,
-                discovery_type: DiscoveryType::Docker { host_id },
-            };
-
-            docker_discovery.discover_on_network(request).await?;
+#[async_trait]
+impl RunsDiscovery for Discovery<SelfReportDiscovery> {
+    fn discovery_type(&self) -> DiscoveryType {
+        DiscoveryType::SelfReport {
+            host_id: self.domain.host_id,
         }
-
-        Ok(())
     }
 
-    pub async fn run_self_report_discovery(&self) -> Result<(Host, Vec<Service>), Error> {
-        let config_store = &self.as_ref().config_store;
+    async fn discover(
+        &self,
+        request: DaemonDiscoveryRequest,
+        _cancel: CancellationToken,
+    ) -> Result<(), Error> {
+        let daemon_id = self.as_ref().config_store.get_id().await?;
+
+        let session_info = DiscoverySessionInfo {
+            total_to_scan: 1,
+            session_id: request.session_id,
+            daemon_id,
+            started_at: Some(Utc::now()),
+        };
+
+        let session = DiscoverySession::new(session_info, Vec::new());
+        let mut current_session = self.as_ref().current_session.write().await;
+        *current_session = Some(session);
+        drop(current_session);
+
         let utils = &self.as_ref().utils;
 
-        let host_id = config_store
-            .get_host_id()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Host ID not set"))?;
-        let daemon_id = config_store.get_id().await?;
+        let host_id = self.domain.host_id;
+
         let network_id = self
             .as_ref()
             .config_store
@@ -95,7 +90,7 @@ impl Discovery<SelfReportDiscovery> {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Network ID not set"))?;
 
-        let binding_address = config_store.get_bind_address().await?;
+        let binding_address = self.as_ref().config_store.get_bind_address().await?;
         let binding_ip = IpAddr::V4(binding_address.parse::<Ipv4Addr>()?);
 
         let (interfaces, subnets) = utils
@@ -138,7 +133,9 @@ impl Discovery<SelfReportDiscovery> {
                 .collect()
         };
 
-        let own_port = Port::new(PortBase::new_tcp(config_store.get_port().await?));
+        let own_port = Port::new(PortBase::new_tcp(
+            self.as_ref().config_store.get_port().await?,
+        ));
         let own_port_id = own_port.id;
         let local_ip = utils.get_own_ip_address()?;
         let hostname = utils.get_own_hostname();
@@ -156,7 +153,7 @@ impl Discovery<SelfReportDiscovery> {
             interfaces: interfaces.clone(),
             ports: vec![own_port],
             source: EntitySource::Discovery {
-                metadata: vec![DiscoveryMetadata::new(DiscoveryType::SelfReport, daemon_id)],
+                metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
             },
             hidden: false,
             virtualization: None,
@@ -185,7 +182,7 @@ impl Discovery<SelfReportDiscovery> {
             host_id: host.id,
             virtualization: None,
             source: EntitySource::DiscoveryWithMatch {
-                metadata: vec![DiscoveryMetadata::new(DiscoveryType::SelfReport, daemon_id)],
+                metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
                 details: MatchDetails::new_certain("NetVisor Daemon self-report"),
             },
         });
@@ -198,6 +195,17 @@ impl Discovery<SelfReportDiscovery> {
             host.base.hostname
         );
 
-        Ok((host, services))
+        self.create_host(host, services).await?;
+
+        self.report_discovery_update(DiscoverySessionUpdate {
+            phase: DiscoveryPhase::Complete,
+            completed: 1,
+            error: None,
+            discovered_count: 1,
+            finished_at: Some(Utc::now()),
+        })
+        .await?;
+
+        Ok(())
     }
 }

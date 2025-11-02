@@ -15,7 +15,7 @@ use std::{collections::HashMap, net::IpAddr, sync::OnceLock};
 use strum::IntoDiscriminant;
 use tokio_util::sync::CancellationToken;
 
-use crate::daemon::discovery::service::base::{HasDiscoveryType, InitiatesOwnDiscovery};
+use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::server::discovery::types::base::{DiscoveryMetadata, DiscoveryType};
@@ -56,39 +56,25 @@ pub struct DockerScanDiscovery {
     host_id: Uuid,
 }
 
-impl HasDiscoveryType for Discovery<DockerScanDiscovery> {
+pub struct ProcessContainerParams<'a> {
+    pub containers_interfaces_and_subnets: &'a HashMap<String, Vec<(Interface, Subnet)>>,
+    pub container: &'a ContainerInspectResponse,
+    pub container_summary: &'a ContainerSummary,
+    pub docker_service_id: &'a Uuid,
+    pub scanned_count: Arc<AtomicUsize>,
+    pub discovered_count: Arc<AtomicUsize>,
+    pub cancel: CancellationToken,
+}
+
+#[async_trait]
+impl RunsDiscovery for Discovery<DockerScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::Docker {
             host_id: self.domain.host_id,
         }
     }
-}
 
-impl Default for DockerScanDiscovery {
-    fn default() -> Self {
-        Self {
-            docker_client: OnceLock::new(),
-            host_id: Uuid::nil(),
-        }
-    }
-}
-
-impl DockerScanDiscovery {
-    pub fn new(host_id: Uuid) -> Self {
-        Self {
-            docker_client: OnceLock::new(),
-            host_id,
-        }
-    }
-}
-
-impl InitiatesOwnDiscovery for Discovery<DockerScanDiscovery> {}
-
-impl CreatesDiscoveredEntities for Discovery<DockerScanDiscovery> {}
-
-#[async_trait]
-impl DiscoversNetworkedEntities for Discovery<DockerScanDiscovery> {
-    async fn start_discovery_session(
+    async fn discover(
         &self,
         request: DaemonDiscoveryRequest,
         cancel: CancellationToken,
@@ -155,7 +141,21 @@ impl DiscoversNetworkedEntities for Discovery<DockerScanDiscovery> {
 
         Ok(())
     }
+}
 
+impl DockerScanDiscovery {
+    pub fn new(host_id: Uuid) -> Self {
+        Self {
+            docker_client: OnceLock::new(),
+            host_id,
+        }
+    }
+}
+
+impl CreatesDiscoveredEntities for Discovery<DockerScanDiscovery> {}
+
+#[async_trait]
+impl DiscoversNetworkedEntities for Discovery<DockerScanDiscovery> {
     async fn get_gateway_ips(&self) -> Result<Vec<IpAddr>, Error> {
         let docker = self
             .domain
@@ -216,16 +216,6 @@ impl DiscoversNetworkedEntities for Discovery<DockerScanDiscovery> {
     }
 }
 
-pub struct ProcessContainerParams<'a> {
-    pub containers_interfaces_and_subnets: &'a HashMap<String, Vec<(Interface, Subnet)>>,
-    pub container: &'a ContainerInspectResponse,
-    pub container_summary: &'a ContainerSummary,
-    pub docker_service_id: &'a Uuid,
-    pub scanned_count: Arc<AtomicUsize>,
-    pub discovered_count: Arc<AtomicUsize>,
-    pub cancel: CancellationToken,
-}
-
 impl Discovery<DockerScanDiscovery> {
     /// Create a new Docker discovery instance connecting to a remote Docker daemon
     pub async fn new_local_docker_client(&self) -> Result<Docker, Error> {
@@ -262,7 +252,10 @@ impl Discovery<DockerScanDiscovery> {
             network_id,
             virtualization: None,
             source: EntitySource::DiscoveryWithMatch {
-                metadata: vec![DiscoveryMetadata::new(DiscoveryType::SelfReport, daemon_id)],
+                metadata: vec![DiscoveryMetadata::new(
+                    DiscoveryType::SelfReport { host_id },
+                    daemon_id,
+                )],
                 details: MatchDetails::new_certain("Docker daemon self-report"),
             },
         });

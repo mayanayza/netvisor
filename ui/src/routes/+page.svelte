@@ -15,10 +15,11 @@
 	import { watchStores } from '$lib/shared/utils/storeWatcher';
 	import { getNetworks } from '$lib/features/networks/store';
 	import { startDiscoverySSE } from '$lib/features/discovery/store';
-	import DiscoveryTab from '$lib/features/daemons/components/DiscoveryTab.svelte';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
 	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
+	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
+	import DiscoveryTab from '$lib/features/discovery/components/DiscoveryTab.svelte';
 
 	let activeTab = 'hosts';
 	let appInitialized = false;
@@ -26,7 +27,16 @@
 	let dataLoadingStarted = false;
 
 	// Valid tab names for validation
-	const validTabs = ['discovery', 'networks', 'hosts', 'services', 'subnets', 'groups', 'topology'];
+	const validTabs = [
+		'discovery',
+		'daemons',
+		'networks',
+		'hosts',
+		'services',
+		'subnets',
+		'groups',
+		'topology'
+	];
 
 	// Function to get initial tab from URL hash
 	function getInitialTab(): string {
@@ -128,6 +138,8 @@
 			<div class="p-8">
 				{#if activeTab === 'discovery'}
 					<DiscoveryTab />
+				{:else if activeTab === 'daemons'}
+					<DaemonTab />
 				{:else if activeTab === 'networks'}
 					<NetworksTab />
 				{:else if activeTab === 'hosts'}

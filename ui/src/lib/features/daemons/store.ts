@@ -46,15 +46,18 @@ export async function deleteDaemon(id: string) {
 
 export function getDaemonIsRunningDiscovery(
 	daemon_id: string | null,
-	sessionsMap: Map<string, DiscoveryUpdatePayload>
+	sessions: DiscoveryUpdatePayload[]
 ): boolean {
 	if (!daemon_id) return false;
 
 	// Find any active session for this daemon
-	for (const session of sessionsMap.values()) {
+	for (const session of sessions) {
 		if (
 			session.daemon_id === daemon_id &&
-			(session.phase === 'Initiated' || session.phase === 'Started' || session.phase === 'Scanning')
+			(session.phase === 'Pending' ||
+				session.phase === 'Starting' ||
+				session.phase === 'Started' ||
+				session.phase === 'Scanning')
 		) {
 			return true;
 		}
@@ -70,7 +73,10 @@ export function getDaemonDiscoveryData(
 	for (const session of sessions.values()) {
 		if (
 			session.daemon_id === daemonId &&
-			(session.phase === 'Initiated' || session.phase === 'Started' || session.phase === 'Scanning')
+			(session.phase === 'Pending' ||
+				session.phase === 'Starting' ||
+				session.phase === 'Started' ||
+				session.phase === 'Scanning')
 		) {
 			return session;
 		}

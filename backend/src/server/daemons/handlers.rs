@@ -5,6 +5,7 @@ use crate::server::{
         api::{ApiKeyRequest, DaemonRegistrationRequest, DaemonRegistrationResponse},
         base::{Daemon, DaemonBase},
     },
+    discovery::types::base::DiscoveryType,
     hosts::types::base::{Host, HostBase},
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
@@ -103,6 +104,55 @@ async fn register_daemon(
         .register_daemon(daemon)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to register daemon: {}", e)))?;
+
+    let discovery_service = state.services.discovery_service.clone();
+
+    discovery_service
+        .create_session(
+            request.daemon_id,
+            DiscoveryType::SelfReport { host_id: host.id },
+        )
+        .await?;
+
+    if request.has_docker_client {
+        discovery_service
+            .create_session(
+                request.daemon_id,
+                DiscoveryType::Docker { host_id: host.id },
+            )
+            .await?;
+    }
+
+    discovery_service
+        .create_session(
+            request.daemon_id,
+            DiscoveryType::Network { subnet_ids: None },
+        )
+        .await?;
+    discovery_service
+        .create_session(
+            request.daemon_id,
+            DiscoveryType::Network { subnet_ids: None },
+        )
+        .await?;
+    discovery_service
+        .create_session(
+            request.daemon_id,
+            DiscoveryType::Network { subnet_ids: None },
+        )
+        .await?;
+    discovery_service
+        .create_session(
+            request.daemon_id,
+            DiscoveryType::Network { subnet_ids: None },
+        )
+        .await?;
+    discovery_service
+        .create_session(
+            request.daemon_id,
+            DiscoveryType::Network { subnet_ids: None },
+        )
+        .await?;
 
     Ok(Json(ApiResponse::success(DaemonRegistrationResponse {
         daemon: registered_daemon,

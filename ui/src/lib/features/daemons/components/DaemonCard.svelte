@@ -1,8 +1,7 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { Daemon } from '$lib/features/daemons/types/base';
-	import { getDaemonIsRunningDiscovery, getDaemonDiscoveryData } from '$lib/features/daemons/store';
-	import DaemonDiscoveryStatus from '$lib/features/daemons/components/DaemonDiscoveryStatus.svelte';
+	import { getDaemonIsRunningDiscovery } from '$lib/features/daemons/store';
 	import { sessions } from '$lib/features/discovery/store';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { networks } from '$lib/features/networks/store';
@@ -12,17 +11,13 @@
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
-	export let onDiscovery: (daemon: Daemon) => void = () => {};
 	export let onGenerateApi: (daemon: Daemon) => void = () => {};
-	export let discoveryIsRunning: boolean;
 	export let viewMode: 'card' | 'list';
 
 	$: hostStore = getHostFromId(daemon.host_id);
 	$: host = $hostStore;
 
-	$: daemonIsRunningDiscovery =
-		discoveryIsRunning && getDaemonIsRunningDiscovery(daemon.id, $sessions);
-	$: discoveryData = daemonIsRunningDiscovery ? getDaemonDiscoveryData(daemon.id, $sessions) : null;
+	$: daemonIsRunningDiscovery = getDaemonIsRunningDiscovery(daemon.id, $sessions);
 
 	// Build card data
 	$: cardData = {
@@ -36,7 +31,7 @@
 				}
 			: {}),
 		iconColor: entities.getColorHelper('Daemon').icon,
-		icon: entities.getIconComponent('Daemon'),
+		Icon: entities.getIconComponent('Daemon'),
 		fields: [
 			{
 				label: 'Network',
@@ -56,17 +51,6 @@
 			}
 		],
 		actions: [
-			...(daemon.api_key
-				? [
-						{
-							label: 'Run Discovery',
-							icon: entities.getIconComponent('Discovery'),
-							class: daemonIsRunningDiscovery ? 'btn-icon-success' : 'btn-icon',
-							onClick: !daemonIsRunningDiscovery ? () => onDiscovery(daemon) : () => {},
-							disabled: daemonIsRunningDiscovery
-						}
-					]
-				: []),
 			{
 				label: 'Update API Key',
 				icon: RotateCcwKey,
@@ -81,17 +65,7 @@
 				onClick: () => onDelete(daemon),
 				disabled: daemonIsRunningDiscovery
 			}
-		],
-
-		// Add footer when discovery is running
-		footerComponent: daemonIsRunningDiscovery && daemon ? DaemonDiscoveryStatus : null,
-		footerProps:
-			daemonIsRunningDiscovery && daemon
-				? {
-						daemon,
-						discoveryData
-					}
-				: {}
+		]
 	};
 </script>
 

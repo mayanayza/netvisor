@@ -22,7 +22,7 @@
 	$: cardData = {
 		title: network.name,
 		iconColor: entities.getColorHelper('Network').icon,
-		icon: entities.getIconComponent('Network'),
+		Icon: entities.getIconComponent('Network'),
 		fields: [
 			{
 				label: 'Daemons',

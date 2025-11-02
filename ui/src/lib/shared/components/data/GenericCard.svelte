@@ -1,21 +1,34 @@
 <script lang="ts">
 	import type { CardAction, CardField, TagProps } from './types';
 	import Tag from './Tag.svelte';
-	import type { Component } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import { type IconComponent } from '$lib/shared/utils/types';
 
-	export let title: string;
-	export let link: string = '';
-	export let subtitle: string = '';
-	export let status: TagProps | null = null;
-	export let icon: IconComponent | null = null; // Expects Svelte component, not string
-	export let iconColor: string = 'text-blue-400';
-	export let actions: CardAction[] = [];
-	export let fields: CardField[] = [];
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	export let footerComponent: Component<any> | null = null; // Optional footer component
-	export let footerProps: Record<string, unknown> = {}; // Props to pass to footer component
-	export let viewMode: 'card' | 'list' = 'card'; // View mode toggle
+	interface Props {
+		title: string;
+		link?: string;
+		subtitle?: string;
+		status?: TagProps | null;
+		Icon?: IconComponent | null;
+		iconColor?: string;
+		actions?: CardAction[];
+		fields?: CardField[];
+		footer?: Snippet; // Snippet for footer
+		viewMode?: 'card' | 'list';
+	}
+
+	let {
+		title,
+		link = '',
+		subtitle = '',
+		status = null,
+		Icon = null,
+		iconColor = 'text-blue-400',
+		actions = [],
+		fields = [],
+		footer,
+		viewMode = 'card'
+	}: Props = $props();
 
 	// Configuration for list view
 	const MAX_ITEMS_IN_LIST_VIEW = 3;
@@ -37,8 +50,8 @@
 			: 'mb-4 flex items-start justify-between'}
 	>
 		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
-			{#if icon}
-				<svelte:component this={icon} size={viewMode === 'list' ? 20 : 28} class={iconColor} />
+			{#if Icon}
+				<Icon size={viewMode === 'list' ? 20 : 28} class={iconColor} />
 			{/if}
 			<div>
 				{#if link}
@@ -151,10 +164,8 @@
 	</div>
 
 	<!-- Footer Component (only in card view) -->
-	{#if footerComponent && viewMode === 'card'}
-		<div class="card-divider-h mt-4 pt-4">
-			<svelte:component this={footerComponent} {...footerProps} />
-		</div>
+	{#if footer && viewMode === 'card'}
+		{@render footer()}
 	{/if}
 
 	<!-- Action Buttons - Fixed width in list view -->
@@ -166,12 +177,12 @@
 		>
 			{#each actions as action (action.label)}
 				<button
-					on:click={action.onClick}
+					onclick={action.onClick}
 					disabled={action.disabled}
 					class={(action.class ? action.class : 'btn-icon') + ' ' + action.animation || ''}
 					title={action.label}
 				>
-					<svelte:component this={action.icon} size={16} />
+					<action.icon size={16} />
 				</button>
 			{/each}
 		</div>

@@ -7,7 +7,6 @@ use netvisor::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
         config::{AppState, CliArgs, ServerConfig},
-        discovery::manager::DiscoverySessionManager,
         shared::handlers::create_router,
         users::types::base::{User, UserBase},
     },
@@ -89,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     // Create app state
-    let state = AppState::new(config, DiscoverySessionManager::new()).await?;
+    let state = AppState::new(config).await?;
     let user_service = state.services.user_service.clone();
     let daemon_service = state.services.daemon_service.clone();
 
@@ -105,7 +104,8 @@ async fn main() -> anyhow::Result<()> {
 
             // Clean up old sessions (remove completed sessions > 24 hours old)
             discovery_cleanup_state
-                .discovery_manager
+                .services
+                .discovery_service
                 .cleanup_old_sessions(24)
                 .await;
         }

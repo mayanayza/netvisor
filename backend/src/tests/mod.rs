@@ -1,7 +1,7 @@
 use crate::server::{
     config::{AppState, ServerConfig},
     daemons::types::base::{Daemon, DaemonBase},
-    discovery::{manager::DiscoverySessionManager, types::base::EntitySource},
+    discovery::types::base::EntitySource,
     groups::types::{Group, GroupBase, GroupType},
     hosts::types::{
         base::{Host, HostBase},
@@ -155,9 +155,8 @@ pub async fn test_services() -> (StorageFactory, ServiceFactory, ContainerAsync<
 }
 pub async fn setup_test_app() -> Router<Arc<AppState>> {
     let config = ServerConfig::default();
-    let discovery_manager = DiscoverySessionManager::new();
 
-    let state = AppState::new(config, discovery_manager).await.unwrap();
+    let state = AppState::new(config).await.unwrap();
 
     crate::server::shared::handlers::create_router().with_state(state)
 }
