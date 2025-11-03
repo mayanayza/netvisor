@@ -183,8 +183,8 @@ export async function initiateDiscovery(discovery_id: string) {
 	// Just make the request, don't update the store here
 	const result = await api.request<DiscoveryUpdatePayload, DiscoveryUpdatePayload[]>(
 		'/discovery/start-session',
-		null,  // Don't pass the store
-		null,  // Don't pass a mutator
+		null, // Don't pass the store
+		null, // Don't pass a mutator
 		{ method: 'POST', body: JSON.stringify(discovery_id) }
 	);
 

@@ -26,10 +26,10 @@ use dhcproto::v4::{self, Decodable, Encoder, Message, MessageType};
 use rand::{Rng, SeedableRng};
 use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
-use uuid::Uuid;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::{net::TcpStream, time::timeout};
+use uuid::Uuid;
 
 use tokio::net::UdpSocket;
 
@@ -50,14 +50,12 @@ use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, Res
 
 #[derive(Default)]
 pub struct NetworkScanDiscovery {
-    subnet_ids: Option<Vec<Uuid>>
+    subnet_ids: Option<Vec<Uuid>>,
 }
 
 impl NetworkScanDiscovery {
     pub fn new(subnet_ids: Option<Vec<Uuid>>) -> Self {
-        Self {
-            subnet_ids
-        }
+        Self { subnet_ids }
     }
 }
 
@@ -118,9 +116,11 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
 
         // Target specific subnets if provided in discovery type
         let subnets = if let Some(subnet_ids) = &self.domain.subnet_ids {
-
             let all_subnets = self.get_subnets().await?;
-            all_subnets.into_iter().filter(|s| subnet_ids.contains(&s.id)).collect()
+            all_subnets
+                .into_iter()
+                .filter(|s| subnet_ids.contains(&s.id))
+                .collect()
 
         // Target all interfaced subnets if not
         } else {
@@ -133,7 +133,9 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
             // Filter out docker bridge subnets, those are handled in docker discovery
             let subnets: Vec<Subnet> = subnets
                 .into_iter()
-                .filter(|s| s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge)
+                .filter(|s| {
+                    s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge
+                })
                 .collect();
 
             let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
@@ -706,5 +708,4 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
 
         Ok(subnets)
     }
-
 }

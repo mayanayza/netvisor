@@ -38,23 +38,20 @@ async fn get_all_subnets(
     State(state): State<Arc<AppState>>,
     entity: AuthenticatedEntity,
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
-
     let service = &state.services.subnet_service;
 
     let network_ids = match entity {
         AuthenticatedEntity::Daemon(network_id) => {
-            vec!(network_id)
-        },
-        AuthenticatedEntity::User(user_id) => {
-            state
-                .services
-                .network_service
-                .get_all_networks(&user_id)
-                .await?
-                .iter()
-                .map(|n| n.id)
-                .collect()
+            vec![network_id]
         }
+        AuthenticatedEntity::User(user_id) => state
+            .services
+            .network_service
+            .get_all_networks(&user_id)
+            .await?
+            .iter()
+            .map(|n| n.id)
+            .collect(),
     };
 
     let subnets = service.get_all_subnets(&network_ids).await?;
