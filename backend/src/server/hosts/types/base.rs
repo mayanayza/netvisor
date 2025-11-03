@@ -1,6 +1,6 @@
-use crate::server::discovery::types::base::EntitySource;
 use crate::server::hosts::types::virtualization::HostVirtualization;
 use crate::server::shared::types::api::deserialize_empty_string_as_none;
+use crate::server::shared::types::entities::EntitySource;
 use crate::server::subnets::types::base::Subnet;
 use crate::server::{
     hosts::types::ports::Port,

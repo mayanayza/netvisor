@@ -1,5 +1,4 @@
 use crate::server::{
-    discovery::types::base::EntitySource,
     hosts::types::{
         base::{Host, HostBase},
         interfaces::Interface,
@@ -7,6 +6,7 @@ use crate::server::{
         targets::HostTarget,
         virtualization::HostVirtualization,
     },
+    shared::types::entities::EntitySource,
 };
 use anyhow::{Error, Result};
 use async_trait::async_trait;

@@ -18,7 +18,7 @@ use tokio_util::sync::CancellationToken;
 use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
-use crate::server::discovery::types::base::{DiscoveryMetadata, DiscoveryType};
+use crate::server::discovery::types::base::DiscoveryType;
 use crate::server::hosts::types::base::HostBase;
 use crate::server::hosts::types::interfaces::ALL_INTERFACES_IP;
 use crate::server::hosts::types::ports::Port;
@@ -28,16 +28,16 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::endpoints::{Endpoint, EndpointResponse};
 use crate::server::services::types::patterns::MatchDetails;
 use crate::server::services::types::virtualization::{DockerVirtualization, ServiceVirtualization};
+use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
 use crate::server::subnets::types::base::{
     Subnet, SubnetBase, SubnetType, SubnetTypeDiscriminants,
 };
 use crate::{
     daemon::discovery::service::base::{
-        CreatesDiscoveredEntities, DiscoversNetworkedEntities, Discovery,
+        CreatesDiscoveredEntities, DiscoversNetworkedEntities, DiscoveryRunner,
     },
     server::{
         daemons::types::api::DaemonDiscoveryRequest,
-        discovery::types::base::EntitySource,
         hosts::types::{
             base::Host,
             interfaces::{Interface, InterfaceBase},
@@ -67,7 +67,7 @@ pub struct ProcessContainerParams<'a> {
 }
 
 #[async_trait]
-impl RunsDiscovery for Discovery<DockerScanDiscovery> {
+impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::Docker {
             host_id: self.domain.host_id,
@@ -152,10 +152,10 @@ impl DockerScanDiscovery {
     }
 }
 
-impl CreatesDiscoveredEntities for Discovery<DockerScanDiscovery> {}
+impl CreatesDiscoveredEntities for DiscoveryRunner<DockerScanDiscovery> {}
 
 #[async_trait]
-impl DiscoversNetworkedEntities for Discovery<DockerScanDiscovery> {
+impl DiscoversNetworkedEntities for DiscoveryRunner<DockerScanDiscovery> {
     async fn get_gateway_ips(&self) -> Result<Vec<IpAddr>, Error> {
         let docker = self
             .domain
@@ -216,7 +216,7 @@ impl DiscoversNetworkedEntities for Discovery<DockerScanDiscovery> {
     }
 }
 
-impl Discovery<DockerScanDiscovery> {
+impl DiscoveryRunner<DockerScanDiscovery> {
     /// Create a new Docker discovery instance connecting to a remote Docker daemon
     pub async fn new_local_docker_client(&self) -> Result<Docker, Error> {
         tracing::debug!("Connecting to Docker daemon");

@@ -1,11 +1,13 @@
 use crate::{
     daemon::discovery::{
-        service::base::{CreatesDiscoveredEntities, Discovery, DiscoverySession, RunsDiscovery},
+        service::base::{
+            CreatesDiscoveredEntities, DiscoveryRunner, DiscoverySession, RunsDiscovery,
+        },
         types::base::{DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate},
     },
     server::{
-        daemons::types::api::DaemonDiscoveryRequest,
-        discovery::types::base::{DiscoveryMetadata, DiscoveryType, EntitySource},
+        daemons::types::api::{DaemonCapabilities, DaemonDiscoveryRequest},
+        discovery::types::base::DiscoveryType,
         hosts::types::{
             interfaces::{ALL_INTERFACES_IP, Interface},
             ports::{Port, PortBase},
@@ -16,6 +18,10 @@ use crate::{
                 base::ServiceBase, bindings::Binding, definitions::ServiceDefinition,
                 patterns::MatchDetails,
             },
+        },
+        shared::types::{
+            api::ApiResponse,
+            entities::{DiscoveryMetadata, EntitySource},
         },
         subnets::types::base::{Subnet, SubnetTypeDiscriminants},
     },
@@ -50,10 +56,10 @@ impl SelfReportDiscovery {
     }
 }
 
-impl CreatesDiscoveredEntities for Discovery<SelfReportDiscovery> {}
+impl CreatesDiscoveredEntities for DiscoveryRunner<SelfReportDiscovery> {}
 
 #[async_trait]
-impl RunsDiscovery for Discovery<SelfReportDiscovery> {
+impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::SelfReport {
             host_id: self.domain.host_id,
@@ -66,10 +72,17 @@ impl RunsDiscovery for Discovery<SelfReportDiscovery> {
         _cancel: CancellationToken,
     ) -> Result<(), Error> {
         let daemon_id = self.as_ref().config_store.get_id().await?;
+        let network_id = self
+            .as_ref()
+            .config_store
+            .get_network_id()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Network ID not set, aborting discovery session"))?;
 
         let session_info = DiscoverySessionInfo {
             total_to_scan: 1,
             session_id: request.session_id,
+            network_id,
             daemon_id,
             started_at: Some(Utc::now()),
         };
@@ -105,6 +118,14 @@ impl RunsDiscovery for Discovery<SelfReportDiscovery> {
 
         let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
         let created_subnets = try_join_all(subnet_futures).await?;
+
+        // Get docker socket
+        let has_docker_socket = self.as_ref().utils.get_own_docker_socket().await?;
+
+        // Update capabilities
+        let interfaced_subnet_ids = created_subnets.iter().map(|s| s.id).collect();
+        self.update_capabilities(has_docker_socket, interfaced_subnet_ids)
+            .await?;
 
         // Created subnets may differ from discovered if there are existing subnets with the same CIDR, so we need to update interface subnet_id references
         // Also filter out interfaces where subnet creation didn't happen for any reason
@@ -205,6 +226,57 @@ impl RunsDiscovery for Discovery<SelfReportDiscovery> {
             finished_at: Some(Utc::now()),
         })
         .await?;
+
+        Ok(())
+    }
+}
+
+impl DiscoveryRunner<SelfReportDiscovery> {
+    async fn update_capabilities(
+        &self,
+        has_docker_socket: bool,
+        interfaced_subnet_ids: Vec<Uuid>,
+    ) -> Result<(), Error> {
+        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+
+        let capabilities = DaemonCapabilities {
+            has_docker_socket,
+            interfaced_subnet_ids,
+        };
+
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
+        let daemon_id = self.as_ref().config_store.get_id().await?;
+
+        let response = self
+            .as_ref()
+            .client
+            .post(format!(
+                "{}/api/daemons/{}/update-capabilities",
+                server_target, daemon_id
+            ))
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&capabilities)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Failed to update capabilities: HTTP {}", response.status());
+        }
+
+        let api_response: ApiResponse<()> = response.json().await?;
+
+        if !api_response.success {
+            let error_msg = api_response
+                .error
+                .unwrap_or_else(|| "Unknown error".to_string());
+            anyhow::bail!("Failed to update capabilities: {}", error_msg);
+        }
 
         Ok(())
     }

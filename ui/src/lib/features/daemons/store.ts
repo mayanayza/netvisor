@@ -1,6 +1,6 @@
 import { derived, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
-import type { ApiKeyRequest, Daemon } from './types/base';
+import type { Daemon } from './types/base';
 import type { DiscoveryUpdatePayload } from '../discovery/types/api';
 
 export const daemons = writable<Daemon[]>([]);
@@ -22,12 +22,12 @@ export async function updateApiKey(daemon_id: string) {
 	}
 }
 
-export async function createNewApiKey(data: ApiKeyRequest) {
+export async function createNewApiKey(network_id: string) {
 	const response = await api.request<string, void>(
 		`/daemons/create_new_api_key`,
 		null,
 		(daemons) => daemons,
-		{ method: 'POST', body: JSON.stringify(data) }
+		{ method: 'POST', body: JSON.stringify(network_id) }
 	);
 
 	if (response && response?.success && response.data) {

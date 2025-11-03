@@ -1,127 +1,117 @@
-import { get, writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
-import type { DiscoveryUpdatePayload, InitiateDiscoveryRequest } from './types/api';
-import { pushError, pushSuccess, pushWarning } from '$lib/shared/stores/feedback';
-import { getHosts } from '../hosts/store';
-import { getSubnets } from '../subnets/store';
-import { getServices } from '../services/store';
-import { SSEClient, type SSEClient as SSEClientType } from '$lib/shared/utils/sse';
-import { getDaemons } from '../daemons/store';
+import { api } from '$lib/shared/utils/api';
+import { writable } from 'svelte/store';
+import type { Discovery } from './types/base';
+import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 
-// session_id to latest update
-export const sessions = writable<DiscoveryUpdatePayload[]>([]);
-export const cancelling = writable<Map<string, boolean>>(new Map());
+export const discoveries = writable<Discovery[]>([]);
 
-// Track last known discovered_count per session to detect changes
-const lastDiscoveredCount = new Map<string, number>();
-
-let sseClient: SSEClientType<DiscoveryUpdatePayload> | null = null;
-
-export function startDiscoverySSE() {
-	if (sseClient?.isConnected()) {
-		return;
-	}
-
-	sseClient = new SSEClient<DiscoveryUpdatePayload>({
-		url: '/api/discovery/stream',
-		onMessage: (update) => {
-			sessions.update((current) => {
-				console.log(current);
-				// Check if discovered_count increased
-				const lastCount = lastDiscoveredCount.get(update.session_id) || 0;
-				const currentCount = update.discovered_count || 0;
-
-				if (currentCount > lastCount) {
-					// New hosts discovered - refresh data
-					getHosts();
-					getServices();
-					getSubnets();
-					getDaemons();
-					lastDiscoveredCount.set(update.session_id, currentCount);
-				}
-
-				// Handle terminal phases
-				if (update.phase === 'Complete') {
-					pushSuccess(`Discovery completed with ${update.discovered_count} hosts found`);
-					// Final refresh on completion
-					getHosts();
-					getServices();
-					getSubnets();
-					getDaemons();
-				} else if (update.phase === 'Cancelled') {
-					pushWarning(`Discovery cancelled`);
-				} else if (update.phase === 'Failed' && update.error) {
-					pushError(`Discovery error: ${update.error}`, -1);
-				}
-
-				// Cleanup for terminal phases
-				if (
-					update.phase === 'Complete' ||
-					update.phase === 'Cancelled' ||
-					update.phase === 'Failed'
-				) {
-					cancelling.update((c) => {
-						const m = new Map(c);
-						m.delete(update.session_id);
-						return m;
-					});
-
-					lastDiscoveredCount.delete(update.session_id);
-
-					// Remove completed/cancelled/failed sessions and return
-					return current.filter((session) => session.session_id !== update.session_id);
-				}
-
-				// For non-terminal phases, update or add the session
-				const existingIndex = current.findIndex((s) => s.session_id === update.session_id);
-
-				if (existingIndex >= 0) {
-					// Update existing session
-					const updated = [...current];
-					updated[existingIndex] = update;
-					return updated;
-				} else {
-					// Add new session
-					return [...current, update];
-				}
-			});
-		},
-		onError: (error) => {
-			console.error('Discovery SSE error:', error);
-			pushError('Lost connection to discovery updates');
-		},
-		onOpen: () => {
-			console.log('Connected to discovery updates');
-		}
+export async function getDiscoveries() {
+	return await api.request<Discovery[]>(`/discovery`, discoveries, (discoveries) => discoveries, {
+		method: 'GET'
 	});
-
-	sseClient.connect();
 }
 
-export function stopDiscoverySSE() {
-	if (sseClient) {
-		sseClient.disconnect();
-		sseClient = null;
-	}
-}
-
-export async function initiateDiscovery(data: InitiateDiscoveryRequest) {
-	const result = await api.request<DiscoveryUpdatePayload, DiscoveryUpdatePayload[]>(
-		'/discovery/initiate',
-		sessions,
-		(update, currentSessions) => [...currentSessions, update],
+export async function createDiscovery(data: Discovery) {
+	return api.request<Discovery, Discovery[]>(
+		'/discovery',
+		discoveries,
+		(group, current) => [...current, group],
 		{ method: 'POST', body: JSON.stringify(data) }
 	);
-
-	if (result?.success) {
-		startDiscoverySSE(); // Start SSE on first discovery
-	}
 }
 
-export async function cancelDiscovery(id: string) {
-	const map = new Map(get(cancelling));
-	map.set(id, true);
-	cancelling.set(map);
+export async function updateDiscovery(data: Discovery) {
+	return api.request<Discovery, Discovery[]>(
+		`/discovery/${data.id}`,
+		discoveries,
+		(updatedDiscovery, current) => current.map((g) => (g.id === data.id ? updatedDiscovery : g)),
+		{ method: 'PUT', body: JSON.stringify(data) }
+	);
+}
 
-	await api.request<void, void>(`/discovery/${id}/cancel`, null, null, { method: 'POST' });
+export async function deleteDiscovery(id: string) {
+	await api.request<void, Discovery[]>(
+		`/discovery/${id}`,
+		discoveries,
+		(_, current) => current.filter((g) => g.id !== id),
+		{ method: 'DELETE' }
+	);
+}
+
+export function createEmptyDiscoveryFormData(): Discovery {
+	return {
+		id: uuidv4Sentinel,
+		created_at: utcTimeZoneSentinel,
+		updated_at: utcTimeZoneSentinel,
+		discovery_type: {
+			type: 'Network',
+			subnet_ids: []
+		},
+		run_type: {
+			type: 'Scheduled',
+			last_run: null,
+			cron_schedule: '0 0 * * * *',
+			enabled: true
+		},
+		name: 'My Scheduled Discovery',
+		daemon_id: uuidv4Sentinel,
+		network_id: uuidv4Sentinel
+	};
+}
+
+/**
+ * Parse a simple cron expression back to hours
+ * Only handles the patterns we generate
+ */
+export function parseCronToHours(cron: string): number | null {
+	const parts = cron.split(' ');
+	if (parts.length !== 6) return null;
+
+	const [, , hour, day, ,] = parts;
+
+	// Daily pattern: "0 0 0 * * *"
+	if (hour === '0' && day === '*') {
+		return 24;
+	}
+
+	// Every N days: "0 0 0 */N * *"
+	if (hour === '0' && day.startsWith('*/')) {
+		const days = parseInt(day.slice(2));
+		return days * 24;
+	}
+
+	// Every N hours: "0 0 */N * * *"
+	if (hour.startsWith('*/')) {
+		return parseInt(hour.slice(2));
+	}
+
+	// Every hour: "0 0 * * * *"
+	if (hour === '*') {
+		return 1;
+	}
+
+	return null;
+}
+
+/**
+ * Generate a cron expression for "every N hours"
+ * Format: "0 0 *\/N * * *" (second minute hour day month weekday)
+ */
+export function generateCronSchedule(hours: number): string {
+	if (hours === 0) {
+		return '0 0 * * * *'; // Every hour as fallback
+	}
+	if (hours === 1) {
+		return '0 0 * * * *'; // Every hour
+	}
+	if (hours === 24) {
+		return '0 0 0 * * *'; // Daily at midnight
+	}
+	if (hours % 24 === 0) {
+		// Every N days at midnight
+		const days = hours / 24;
+		return `0 0 0 */${days} * *`;
+	}
+	// Every N hours
+	return `0 0 */${hours} * * *`;
 }

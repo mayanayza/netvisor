@@ -109,7 +109,7 @@
 
 	function handleSelect(value: string) {
 		try {
-			let index;
+			let index: number | undefined;
 			const item = options.find((o, i) => {
 				if (displayComponent.getId(o) === value) {
 					index = i;
@@ -117,7 +117,7 @@
 				}
 				return false;
 			});
-			if (item && index) {
+			if (item && index !== undefined) {
 				const context = getOptionContext(item, index);
 				if (!displayComponent.getIsDisabled?.(item, context)) {
 					isOpen = false;

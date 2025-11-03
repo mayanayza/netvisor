@@ -9,12 +9,7 @@ import { entities } from '$lib/shared/stores/metadata';
 export const groups = writable<Group[]>([]);
 
 export async function getGroups() {
-	return await api.request<Group[]>(
-		`/groups?network_id=${get(currentNetwork).id}`,
-		groups,
-		(groups) => groups,
-		{ method: 'GET' }
-	);
+	return await api.request<Group[]>(`/groups`, groups, (groups) => groups, { method: 'GET' });
 }
 
 export async function createGroup(data: Group) {

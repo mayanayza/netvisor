@@ -137,6 +137,7 @@ tower-sessions-sqlx-store = { version = "0.15", features = ["postgres"] }
 secrecy = "0.10.3"
 sha2 = "0.10.9"
 hex = "0.4.3"
+tokio-cron-scheduler = "0.15.1"
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]

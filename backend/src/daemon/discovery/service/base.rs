@@ -9,7 +9,7 @@ use crate::{
         manager::DaemonDiscoverySessionManager, types::base::DiscoveryCriticalError,
     },
     server::{
-        discovery::types::base::{DiscoveryMetadata, DiscoveryType},
+        discovery::types::base::DiscoveryType,
         groups::types::Group,
         services::types::{
             base::{
@@ -19,6 +19,7 @@ use crate::{
             endpoints::{Endpoint, EndpointResponse},
             patterns::MatchConfidence,
         },
+        shared::types::entities::{DiscoveryMetadata, EntitySource},
     },
 };
 use anyhow::{Error, anyhow};
@@ -37,7 +38,6 @@ use crate::{
     },
     server::{
         daemons::types::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
-        discovery::types::base::EntitySource,
         hosts::types::{
             api::HostWithServicesRequest,
             base::{Host, HostBase},
@@ -78,13 +78,13 @@ impl DiscoverySession {
     }
 }
 
-pub struct Discovery<T> {
+pub struct DiscoveryRunner<T> {
     pub service: Arc<DaemonDiscoveryService>,
     pub manager: Arc<DaemonDiscoverySessionManager>,
     pub domain: T,
 }
 
-impl<T> Discovery<T> {
+impl<T> DiscoveryRunner<T> {
     pub fn new(
         service: Arc<DaemonDiscoveryService>,
         manager: Arc<DaemonDiscoverySessionManager>,
@@ -98,7 +98,7 @@ impl<T> Discovery<T> {
     }
 }
 
-impl<T> AsRef<DaemonDiscoveryService> for Discovery<T> {
+impl<T> AsRef<DaemonDiscoveryService> for DiscoveryRunner<T> {
     fn as_ref(&self) -> &DaemonDiscoveryService {
         &self.service
     }
@@ -163,7 +163,10 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
         let response = self
             .as_ref()
             .client
-            .post(format!("{}/api/discovery/update", server_target))
+            .post(format!(
+                "{}/api/discovery/{}/update",
+                server_target, session.info.session_id
+            ))
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&payload)
             .send()
@@ -204,10 +207,17 @@ pub trait DiscoversNetworkedEntities:
             request.session_id
         );
         let gateway_ips = self.get_gateway_ips().await?;
+        let network_id = self
+            .as_ref()
+            .config_store
+            .get_network_id()
+            .await?
+            .ok_or_else(|| anyhow!("Network ID not set, aborting discovery session"))?;
 
         let session_info = DiscoverySessionInfo {
             total_to_scan,
             session_id: request.session_id,
+            network_id,
             daemon_id,
             started_at: Some(Utc::now()),
         };
@@ -356,7 +366,7 @@ pub trait DiscoversNetworkedEntities:
             services: Vec::new(),
             ports: Vec::new(),
             source: EntitySource::Discovery {
-                metadata: vec![DiscoveryMetadata::new(discovery_type, daemon_id)],
+                metadata: vec![DiscoveryMetadata::new(discovery_type.clone(), daemon_id)],
             },
             virtualization: None,
             hidden: false,

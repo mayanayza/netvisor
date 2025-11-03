@@ -2,8 +2,8 @@ use serial_test::serial;
 
 use crate::{
     server::{
-        discovery::types::base::{DiscoveryMetadata, EntitySource},
         services::types::bindings::Binding,
+        shared::types::entities::{DiscoveryMetadata, EntitySource},
     },
     tests::*,
 };

@@ -2,9 +2,7 @@ use crate::server::{
     daemons::{
         storage::DaemonStorage,
         types::{
-            api::{
-                DaemonDiscoveryCancellationRequest, DaemonDiscoveryRequest, DaemonDiscoveryResponse,
-            },
+            api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
             base::Daemon,
         },
     },
@@ -194,7 +192,7 @@ impl DaemonService {
         let response = self
             .client
             .post(format!("{}", endpoint))
-            .json(&DaemonDiscoveryCancellationRequest { session_id })
+            .json(&session_id)
             .send()
             .await?;
 

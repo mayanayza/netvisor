@@ -31,6 +31,7 @@ export interface MetadataRegistry {
 	group_types: TypeMetadata<GroupTypeMetadata>[];
 	entities: EntityMetadata[];
 	ports: TypeMetadata<PortTypeMetadata>[];
+	discovery_types: TypeMetadata<DiscoveryTypeMetadata>[];
 }
 
 export interface ServicedDefinitionMetadata {
@@ -71,6 +72,9 @@ export interface PortTypeMetadata {
 	number: number;
 	protocol: 'Tcp' | 'Udp';
 }
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface DiscoveryTypeMetadata {}
 
 export const metadata = writable<MetadataRegistry>();
 
@@ -241,6 +245,7 @@ export const edgeTypes = createTypeMetadataHelpers('edge_types');
 export const groupTypes = createTypeMetadataHelpers('group_types');
 export const entities = createEntityMetadataHelpers('entities');
 export const ports = createTypeMetadataHelpers('ports');
+export const discoveryTypes = createTypeMetadataHelpers('discovery_types');
 
 export async function getMetadata() {
 	await api.request<MetadataRegistry>('/metadata', metadata, (metadata) => metadata, {

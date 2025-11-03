@@ -14,21 +14,24 @@
 	import { getServices, services } from '$lib/features/services/store';
 	import { watchStores } from '$lib/shared/utils/storeWatcher';
 	import { getNetworks } from '$lib/features/networks/store';
-	import { startDiscoverySSE } from '$lib/features/discovery/store';
+	import { startDiscoverySSE } from '$lib/features/discovery/SSEStore';
 	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
 	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
 	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
-	import DiscoveryTab from '$lib/features/discovery/components/DiscoveryTab.svelte';
+	import DiscoverySessionTab from '$lib/features/discovery/components/tabs/DiscoverySessionTab.svelte';
+	import DiscoveryRunsTab from '$lib/features/discovery/components/tabs/DiscoveryRunsTab.svelte';
 
-	let activeTab = 'hosts';
+	let activeTab = 'topology';
 	let appInitialized = false;
 	let sidebarCollapsed = false;
 	let dataLoadingStarted = false;
 
 	// Valid tab names for validation
 	const validTabs = [
-		'discovery',
+		'discovery-sessions',
+		'discovery-scheduled',
+		'discovery-history',
 		'daemons',
 		'networks',
 		'hosts',
@@ -42,9 +45,9 @@
 	function getInitialTab(): string {
 		if (typeof window !== 'undefined') {
 			const hash = window.location.hash.substring(1); // Remove the #
-			return validTabs.includes(hash) ? hash : 'discovery';
+			return validTabs.includes(hash) ? hash : 'topology';
 		}
-		return 'discovery';
+		return 'topology';
 	}
 
 	function handleTabChange(tab: string) {
@@ -136,8 +139,12 @@
 			class:ml-64={!sidebarCollapsed}
 		>
 			<div class="p-8">
-				{#if activeTab === 'discovery'}
-					<DiscoveryTab />
+				{#if activeTab === 'discovery-sessions'}
+					<DiscoverySessionTab />
+				{:else if activeTab === 'discovery-scheduled'}
+					<DiscoveryRunsTab runType="Scheduled" />
+				{:else if activeTab === 'discovery-history'}
+					<DiscoveryRunsTab runType="Historical" />
 				{:else if activeTab === 'daemons'}
 					<DaemonTab />
 				{:else if activeTab === 'networks'}

@@ -1,11 +1,12 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
-	import { cancelDiscovery, cancelling } from '$lib/features/discovery/store';
+	import { cancelDiscovery, cancelling } from '$lib/features/discovery/SSEStore';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { Loader2, X } from 'lucide-svelte';
-	import type { DiscoveryUpdatePayload } from '../types/api';
-	import { daemons } from '../../daemons/store';
-	import { hosts } from '../../hosts/store';
+	import type { DiscoveryUpdatePayload } from '../../types/api';
+	import { daemons } from '../../../daemons/store';
+	import { hosts } from '../../../hosts/store';
+	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
 	export let viewMode: 'card' | 'list';
 	export let session: DiscoveryUpdatePayload;
@@ -50,7 +51,7 @@
 		fields: [
 			{
 				label: 'Started',
-				value: session.started_at
+				value: session.started_at ? formatTimestamp(session.started_at) : 'Not Yet'
 			},
 			{
 				label: 'Session ID',

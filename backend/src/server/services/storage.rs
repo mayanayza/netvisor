@@ -4,13 +4,13 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::server::{
-    discovery::types::base::EntitySource,
     services::types::{
         base::{Service, ServiceBase},
         bindings::Binding,
         definitions::ServiceDefinition,
         virtualization::ServiceVirtualization,
     },
+    shared::types::entities::EntitySource,
 };
 
 #[async_trait]

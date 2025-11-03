@@ -8,6 +8,7 @@ pub struct MetadataRegistry {
     pub group_types: Vec<TypeMetadata>,
     pub entities: Vec<EntityMetadata>,
     pub ports: Vec<TypeMetadata>,
+    pub discovery_types: Vec<TypeMetadata>,
 }
 
 #[derive(Serialize, Debug, Clone)]

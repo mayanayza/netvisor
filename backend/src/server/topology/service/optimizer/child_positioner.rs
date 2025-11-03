@@ -519,15 +519,11 @@ impl<'a> ChildPositioner<'a> {
                 let prev_idx = indices[i - 1];
                 let curr_idx = indices[i];
 
-                let old_y = nodes[curr_idx].position.y;
-
                 let above_bottom_padded = nodes[prev_idx].position.y
                     + nodes[prev_idx].size.y as isize
                     + NODE_PADDING.y as isize;
 
                 nodes[curr_idx].position.y = above_bottom_padded;
-
-                tracing::debug!("Node {}: y {} -> {}", curr_idx, old_y, above_bottom_padded);
             }
         }
     }

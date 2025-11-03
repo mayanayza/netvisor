@@ -28,9 +28,7 @@
 	}
 
 	async function handleCreateNewApiKey() {
-		const generatedKey = await createNewApiKey({
-			network_id: selectedNetworkId
-		});
+		const generatedKey = await createNewApiKey(selectedNetworkId);
 		if (generatedKey) {
 			apiKeyStore.set(generatedKey);
 		} else {

@@ -1,5 +1,6 @@
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
+use crate::server::daemons::types::api::DaemonCapabilities;
 use crate::{
     daemon::shared::storage::ConfigStore,
     server::{
@@ -46,7 +47,7 @@ impl DaemonRuntimeService {
             if self.config_store.get_network_id().await?.is_some() {
                 let response = self
                     .client
-                    .put(format!(
+                    .post(format!(
                         "{}/api/daemons/{}/heartbeat",
                         server_target, daemon_id
                     ))
@@ -96,19 +97,6 @@ impl DaemonRuntimeService {
         self.register_with_server(daemon_id, network_id, has_docker_client)
             .await?;
 
-        // Run self-discovery
-        // let discovery = Discovery::new(
-        //     discovery_service.clone(),
-        //     discovery_manager.clone(),
-        //     SelfReportDiscovery::default(),
-        // );
-        // discovery.run_self_report_discovery().await?;
-
-        // // If has Docker, discover Docker services
-        // if has_docker_client {
-        //     discovery.run_self_report_docker_discovery().await?;
-        // }
-
         tracing::info!("Daemon fully initialized!");
 
         Ok(())
@@ -119,7 +107,7 @@ impl DaemonRuntimeService {
         &self,
         daemon_id: Uuid,
         network_id: Uuid,
-        has_docker_client: bool,
+        has_docker_socket: bool,
     ) -> Result<()> {
         let daemon_ip = self.utils.get_own_ip_address()?;
         let daemon_port = self.config_store.get_port().await?;
@@ -131,7 +119,10 @@ impl DaemonRuntimeService {
                 daemon_ip,
                 daemon_port,
                 api_key,
-                has_docker_client,
+                capabilities: DaemonCapabilities {
+                    has_docker_socket,
+                    interfaced_subnet_ids: Vec::new(),
+                },
             };
 
             let server_target = self.config_store.get_server_endpoint().await?;

@@ -1,4 +1,4 @@
-use crate::server::discovery::types::base::{DiscoveryMetadata, DiscoveryType, EntitySource};
+use crate::server::discovery::types::base::DiscoveryType;
 use crate::server::hosts::types::interfaces::Interface;
 use crate::server::hosts::types::ports::PortBase;
 use crate::server::services::definitions::ServiceDefinitionRegistry;
@@ -8,6 +8,7 @@ use crate::server::services::types::definitions::{DefaultServiceDefinition, Serv
 use crate::server::services::types::endpoints::{Endpoint, EndpointResponse};
 use crate::server::services::types::patterns::{MatchConfidence, MatchReason, MatchResult};
 use crate::server::services::types::virtualization::{DockerVirtualization, ServiceVirtualization};
+use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
 use crate::server::subnets::types::base::Subnet;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -228,7 +229,7 @@ impl Service {
                 )
             };
 
-            let discovery_metadata = DiscoveryMetadata::new(*discovery_type, *daemon_id);
+            let discovery_metadata = DiscoveryMetadata::new(discovery_type.clone(), *daemon_id);
 
             let bindings: Vec<Binding> = if !result.ports.is_empty() {
                 result

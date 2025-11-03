@@ -1,5 +1,6 @@
 export interface InitiateDiscoveryRequest {
 	daemon_id: string;
+	discovery_type: DiscoveryType;
 }
 
 export interface DiscoverySessionRequest {
@@ -19,15 +20,15 @@ export interface DiscoveryUpdatePayload {
 	finished_at?: string;
 }
 
-export type DiscoveryType = NetworkScan | DockerScan | SelfReport;
+export type DiscoveryType = Network | Docker | SelfReport;
 
-export interface NetworkScan {
-	type: 'NetworkScan';
-	subnet_ids: null;
+export interface Network {
+	type: 'Network';
+	subnet_ids: string[];
 }
 
-export interface DockerScan {
-	type: 'DockerScan';
+export interface Docker {
+	type: 'Docker';
 	host_id: string;
 }
 

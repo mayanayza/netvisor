@@ -1,5 +1,6 @@
 use crate::daemon::discovery::service::base::{
-    CreatesDiscoveredEntities, DiscoversNetworkedEntities, Discovery, RunsDiscovery, SCAN_TIMEOUT,
+    CreatesDiscoveredEntities, DiscoversNetworkedEntities, DiscoveryRunner, RunsDiscovery,
+    SCAN_TIMEOUT,
 };
 use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySessionUpdate};
 use crate::server::discovery::types::base::DiscoveryType;
@@ -9,6 +10,7 @@ use crate::server::hosts::types::{
     ports::PortBase,
 };
 use crate::server::services::types::base::{Service, ServiceMatchBaselineParams};
+use crate::server::shared::types::api::ApiResponse;
 use crate::server::subnets::types::base::SubnetTypeDiscriminants;
 use crate::{
     daemon::utils::base::DaemonUtils,
@@ -24,6 +26,7 @@ use dhcproto::v4::{self, Decodable, Encoder, Message, MessageType};
 use rand::{Rng, SeedableRng};
 use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
+use uuid::Uuid;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::{net::TcpStream, time::timeout};
@@ -46,18 +49,22 @@ use trust_dns_resolver::TokioAsyncResolver;
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 
 #[derive(Default)]
-pub struct NetworkScanDiscovery {}
+pub struct NetworkScanDiscovery {
+    subnet_ids: Option<Vec<Uuid>>
+}
 
 impl NetworkScanDiscovery {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(subnet_ids: Option<Vec<Uuid>>) -> Self {
+        Self {
+            subnet_ids
+        }
     }
 }
 
-impl CreatesDiscoveredEntities for Discovery<NetworkScanDiscovery> {}
+impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
 
 #[async_trait]
-impl RunsDiscovery for Discovery<NetworkScanDiscovery> {
+impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::Network { subnet_ids: None }
     }
@@ -92,7 +99,7 @@ impl RunsDiscovery for Discovery<NetworkScanDiscovery> {
 }
 
 #[async_trait]
-impl DiscoversNetworkedEntities for Discovery<NetworkScanDiscovery> {
+impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
     async fn get_gateway_ips(&self) -> Result<Vec<IpAddr>, Error> {
         self.as_ref()
             .utils
@@ -109,26 +116,35 @@ impl DiscoversNetworkedEntities for Discovery<NetworkScanDiscovery> {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Network ID not set"))?;
 
-        let (_, subnets) = self
-            .as_ref()
-            .utils
-            .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
-            .await?;
+        // Target specific subnets if provided in discovery type
+        let subnets = if let Some(subnet_ids) = &self.domain.subnet_ids {
 
-        // Filter out docker bridge subnets, those are handled in docker discovery
-        let subnets: Vec<Subnet> = subnets
-            .into_iter()
-            .filter(|s| s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge)
-            .collect();
+            let all_subnets = self.get_subnets().await?;
+            all_subnets.into_iter().filter(|s| subnet_ids.contains(&s.id)).collect()
 
-        let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
-        let subnets = try_join_all(subnet_futures).await?;
+        // Target all interfaced subnets if not
+        } else {
+            let (_, subnets) = self
+                .as_ref()
+                .utils
+                .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
+                .await?;
+
+            // Filter out docker bridge subnets, those are handled in docker discovery
+            let subnets: Vec<Subnet> = subnets
+                .into_iter()
+                .filter(|s| s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge)
+                .collect();
+
+            let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
+            try_join_all(subnet_futures).await?
+        };
 
         Ok(subnets)
     }
 }
 
-impl Discovery<NetworkScanDiscovery> {
+impl DiscoveryRunner<NetworkScanDiscovery> {
     /// Scan subnet concurrently and process hosts immediately as they're discovered
     async fn scan_and_process_hosts(
         &self,
@@ -649,4 +665,46 @@ impl Discovery<NetworkScanDiscovery> {
 
         ips.into_iter()
     }
+
+    async fn get_subnets(&self) -> Result<Vec<Subnet>, Error> {
+        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+
+        let api_key = self
+            .as_ref()
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+
+        let response = self
+            .as_ref()
+            .client
+            .get(format!("{}/api/subnets", server_target))
+            .header("Authorization", format!("Bearer {}", api_key))
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            anyhow::bail!(
+                "Failed to report discovered subnet: HTTP {}",
+                response.status(),
+            );
+        }
+
+        let api_response: ApiResponse<Vec<Subnet>> = response.json().await?;
+
+        if !api_response.success {
+            let error_msg = api_response
+                .error
+                .unwrap_or_else(|| "Unknown error".to_string());
+            anyhow::bail!("Failed to create subnet: {}", error_msg);
+        }
+
+        let subnets = api_response
+            .data
+            .ok_or_else(|| anyhow::anyhow!("No subnet data in successful response"))?;
+
+        Ok(subnets)
+    }
+
 }

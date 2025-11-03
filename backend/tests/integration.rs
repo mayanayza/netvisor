@@ -1,8 +1,6 @@
 use netvisor::server::auth::types::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::types::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::types::base::Daemon;
-use netvisor::server::discovery::types::api::InitiateDiscoveryRequest;
-use netvisor::server::discovery::types::base::DiscoveryType;
 use netvisor::server::networks::types::Network;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::types::base::Service;
@@ -143,24 +141,6 @@ impl TestClient {
             .await
     }
 
-    /// Generic POST request
-    async fn post<T: serde::de::DeserializeOwned, B: serde::Serialize>(
-        &self,
-        path: &str,
-        body: &B,
-    ) -> Result<T, String> {
-        let response = self
-            .client
-            .post(format!("{}{}", BASE_URL, path))
-            .json(body)
-            .send()
-            .await
-            .map_err(|e| format!("POST {} failed: {}", path, e))?;
-
-        self.parse_response(response, &format!("POST {}", path))
-            .await
-    }
-
     /// Parse API response
     async fn parse_response<T: serde::de::DeserializeOwned>(
         &self,
@@ -282,22 +262,7 @@ async fn wait_for_daemon(client: &TestClient, network_id: Uuid) -> Result<Daemon
     .await
 }
 
-async fn run_discovery(client: &TestClient, daemon_id: Uuid) -> Result<(), String> {
-    println!("\n=== Starting Discovery ===");
-
-    let initial_update: DiscoveryUpdatePayload = client
-        .post(
-            "/api/discovery/initiate",
-            &InitiateDiscoveryRequest {
-                daemon_id,
-                discovery_type: DiscoveryType::Network { subnet_ids: None },
-            },
-        )
-        .await?;
-
-    let session_id = initial_update.session_id;
-    println!("✅ Discovery session started: {}", session_id);
-
+async fn run_discovery(client: &TestClient) -> Result<(), String> {
     // Connect to SSE stream
     println!("🔌 Connecting to SSE stream...");
 
@@ -324,9 +289,6 @@ async fn run_discovery(client: &TestClient, daemon_id: Uuid) -> Result<(), Strin
                         for line in text.lines() {
                             if let Some(data) = line.strip_prefix("data: ") {
                                 if let Ok(update) = serde_json::from_str::<DiscoveryUpdatePayload>(data) {
-                                    if update.session_id != session_id {
-                                        continue;
-                                    }
 
                                     println!(
                                         "📊 Discovery: {} - {}/{} scanned, {} discovered",
@@ -444,9 +406,7 @@ async fn test_full_integration() {
     println!("✅ Daemon registered: {}", daemon.id);
 
     // Run discovery
-    run_discovery(&client, daemon.id)
-        .await
-        .expect("Discovery failed");
+    run_discovery(&client).await.expect("Discovery failed");
 
     // Verify service discovered
     let _service = verify_home_assistant_discovered(&client, network.id)

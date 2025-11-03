@@ -91,6 +91,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::new(config).await?;
     let user_service = state.services.user_service.clone();
     let daemon_service = state.services.daemon_service.clone();
+    let discovery_service = state.services.discovery_service.clone();
 
     // Create discovery cleanup task
     let discovery_cleanup_state = state.clone();
@@ -170,6 +171,9 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         axum::serve(listener, app).await.unwrap();
     });
+
+    // Start cron for discovery scheduler
+    discovery_service.start_scheduler().await?;
 
     let all_users = user_service.get_all_users().await?;
 

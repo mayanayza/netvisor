@@ -1,5 +1,5 @@
 use crate::server::{
-    discovery::types::base::EntitySource,
+    shared::types::entities::EntitySource,
     subnets::types::base::{Subnet, SubnetBase, SubnetType},
 };
 use anyhow::{Error, Result};

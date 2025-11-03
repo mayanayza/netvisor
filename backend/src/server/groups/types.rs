@@ -1,6 +1,6 @@
-use crate::server::discovery::types::base::EntitySource;
 use crate::server::shared::constants::Entity;
 use crate::server::shared::types::api::deserialize_empty_string_as_none;
+use crate::server::shared::types::entities::EntitySource;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

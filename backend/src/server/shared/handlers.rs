@@ -1,3 +1,4 @@
+use crate::server::discovery::types::base::DiscoveryType;
 use crate::server::groups::types::GroupType;
 use crate::server::hosts::types::ports::PortBase;
 use crate::server::services::definitions::ServiceDefinitionRegistry;
@@ -54,6 +55,7 @@ async fn get_metadata_registry() -> Json<ApiResponse<MetadataRegistry>> {
             .collect(),
         entities: Entity::iter().map(|e| e.to_metadata()).collect(),
         ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
+        discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
     };
 
     Json(ApiResponse::success(registry))

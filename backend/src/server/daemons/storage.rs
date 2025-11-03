@@ -1,5 +1,6 @@
 use std::net::IpAddr;
 
+use crate::server::daemons::types::api::DaemonCapabilities;
 use crate::server::daemons::types::base::{Daemon, DaemonBase};
 use anyhow::Error;
 use anyhow::Result;
@@ -32,13 +33,14 @@ impl PostgresDaemonStorage {
 impl DaemonStorage for PostgresDaemonStorage {
     async fn create(&self, daemon: &Daemon) -> Result<()> {
         let ip_str = serde_json::to_string(&daemon.base.ip)?;
+        let capabilities_json = serde_json::to_value(&daemon.base.capabilities)?;
 
         sqlx::query(
             r#"
             INSERT INTO daemons (
                 id, host_id, ip, port,
-                last_seen, registered_at, network_id, api_key
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                last_seen, registered_at, network_id, api_key, capabilities
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             "#,
         )
         .bind(daemon.id)
@@ -49,6 +51,7 @@ impl DaemonStorage for PostgresDaemonStorage {
         .bind(chrono::Utc::now())
         .bind(daemon.base.network_id)
         .bind(&daemon.base.api_key)
+        .bind(capabilities_json)
         .execute(&self.pool)
         .await?;
 
@@ -113,11 +116,12 @@ impl DaemonStorage for PostgresDaemonStorage {
 
     async fn update(&self, daemon: &Daemon) -> Result<Daemon> {
         let ip_str = serde_json::to_string(&daemon.base.ip)?;
+        let capabilities_json = serde_json::to_value(&daemon.base.capabilities)?;
 
         sqlx::query(
             r#"
             UPDATE daemons SET 
-                host_id = $2, ip = $3, port = $4, last_seen = $5, api_key = $6
+                host_id = $2, ip = $3, port = $4, last_seen = $5, api_key = $6, capabilities = $7
             WHERE id = $1
             "#,
         )
@@ -127,6 +131,7 @@ impl DaemonStorage for PostgresDaemonStorage {
         .bind(daemon.base.port as i32)
         .bind(daemon.last_seen)
         .bind(&daemon.base.api_key)
+        .bind(capabilities_json)
         .execute(&self.pool)
         .await?;
 
@@ -147,6 +152,10 @@ fn row_to_daemon(row: sqlx::postgres::PgRow) -> Result<Daemon, Error> {
     let ip: IpAddr = serde_json::from_str(&row.get::<String, _>("ip"))
         .or(Err(Error::msg("Failed to deserialize IP")))?;
 
+    let capabilities: DaemonCapabilities =
+        serde_json::from_value(row.get::<serde_json::Value, _>("capabilities"))
+            .or(Err(Error::msg("Failed to deserialize capabilities")))?;
+
     Ok(Daemon {
         id: row.get("id"),
         last_seen: row.get("last_seen"),
@@ -157,6 +166,7 @@ fn row_to_daemon(row: sqlx::postgres::PgRow) -> Result<Daemon, Error> {
             host_id: row.get("host_id"),
             network_id: row.get("network_id"),
             api_key: row.get("api_key"),
+            capabilities,
         },
     })
 }

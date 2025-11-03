@@ -19,6 +19,7 @@ pub enum DiscoveryPhase {
 pub struct DiscoverySessionInfo {
     pub total_to_scan: usize,
     pub session_id: Uuid,
+    pub network_id: Uuid,
     pub daemon_id: Uuid,
     pub started_at: Option<DateTime<Utc>>,
 }

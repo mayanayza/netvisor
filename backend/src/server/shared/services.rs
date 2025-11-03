@@ -27,7 +27,9 @@ impl ServiceFactory {
         let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
         let group_service = Arc::new(GroupService::new(storage.host_groups.clone()));
 
-        let discovery_service = Arc::new(DiscoveryService::new(daemon_service.clone()));
+        // Already implements Arc internally due to scheduler + sessions
+        let discovery_service =
+            DiscoveryService::new(storage.discovery.clone(), daemon_service.clone()).await?;
 
         let service_service = Arc::new(ServiceService::new(
             storage.services.clone(),

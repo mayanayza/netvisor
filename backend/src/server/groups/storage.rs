@@ -1,6 +1,6 @@
 use crate::server::{
-    discovery::types::base::EntitySource,
     groups::types::{Group, GroupBase, GroupType},
+    shared::types::entities::EntitySource,
 };
 use anyhow::{Error, Result};
 use async_trait::async_trait;

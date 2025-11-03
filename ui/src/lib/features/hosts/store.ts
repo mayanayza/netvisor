@@ -11,12 +11,7 @@ export const hosts = writable<Host[]>([]);
 export const polling = writable(false);
 
 export async function getHosts() {
-	return await api.request<Host[]>(
-		`/hosts?network_id=${get(currentNetwork).id}`,
-		hosts,
-		(hosts) => hosts,
-		{ method: 'GET' }
-	);
+	return await api.request<Host[]>(`/hosts`, hosts, (hosts) => hosts, { method: 'GET' });
 }
 
 export async function createHost(data: HostWithServicesRequest) {

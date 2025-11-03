@@ -1,62 +1,124 @@
-use crate::server::services::types::patterns::MatchDetails;
-use chrono::DateTime;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use strum_macros::Display;
-use strum_macros::EnumDiscriminants;
+use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, EnumDiscriminants)]
-#[strum_discriminants(derive(Hash, Serialize, Deserialize))]
-#[serde(tag = "type")]
-pub enum EntitySource {
-    Manual,
-    System,
-    // Used with hosts and subnets
-    Discovery {
-        metadata: Vec<DiscoveryMetadata>,
+use crate::server::{
+    daemons::types::api::DiscoveryUpdatePayload,
+    shared::{
+        constants::Entity,
+        types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
     },
-    // Only used with services
-    DiscoveryWithMatch {
-        metadata: Vec<DiscoveryMetadata>,
-        details: MatchDetails,
-    },
-    Unknown,
-}
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Copy, Hash)]
-pub struct DiscoveryMetadata {
-    #[serde(flatten)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DiscoveryBase {
     pub discovery_type: DiscoveryType,
+    pub run_type: RunType,
+    pub name: String,
     pub daemon_id: Uuid,
-    pub date: DateTime<Utc>,
+    pub network_id: Uuid,
 }
 
-impl DiscoveryMetadata {
-    pub fn new(discovery_type: DiscoveryType, daemon_id: Uuid) -> Self {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Discovery {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[serde(flatten)]
+    pub base: DiscoveryBase,
+}
+
+impl Discovery {
+    pub fn new(base: DiscoveryBase) -> Self {
+        let now = chrono::Utc::now();
         Self {
-            discovery_type,
-            daemon_id,
-            date: Utc::now(),
+            id: Uuid::new_v4(),
+            created_at: now,
+            updated_at: now,
+            base,
+        }
+    }
+
+    pub fn disable(&mut self) {
+        if let RunType::Scheduled {
+            enabled: mut _enabled,
+            ..
+        } = self.base.run_type
+        {
+            _enabled = false;
         }
     }
 }
 
-impl Default for DiscoveryMetadata {
-    fn default() -> Self {
-        Self {
-            discovery_type: DiscoveryType::Network { subnet_ids: None },
-            daemon_id: Uuid::new_v4(),
-            date: Utc::now(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Display, Copy)]
+#[derive(
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    Eq,
+    PartialEq,
+    Hash,
+    Display,
+    IntoStaticStr,
+    EnumDiscriminants,
+    EnumIter,
+)]
 #[serde(tag = "type")]
 pub enum DiscoveryType {
     SelfReport { host_id: Uuid },
-    Network { subnet_ids: Option<u16> },
+    // None = all interfaced subnets
+    Network { subnet_ids: Option<Vec<Uuid>> },
     Docker { host_id: Uuid },
-    // Proxmox { host_id: Uuid },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum RunType {
+    Scheduled {
+        cron_schedule: String,
+        last_run: Option<DateTime<Utc>>,
+        enabled: bool,
+    },
+    Historical {
+        results: DiscoveryUpdatePayload,
+    },
+    AdHoc {
+        last_run: Option<DateTime<Utc>>,
+    },
+}
+
+impl HasId for DiscoveryType {
+    fn id(&self) -> &'static str {
+        self.into()
+    }
+}
+
+impl EntityMetadataProvider for DiscoveryType {
+    fn color(&self) -> &'static str {
+        Entity::Discovery.color()
+    }
+
+    fn icon(&self) -> &'static str {
+        Entity::Discovery.icon()
+    }
+}
+
+impl TypeMetadataProvider for DiscoveryType {
+    fn name(&self) -> &'static str {
+        self.id()
+    }
+    fn description(&self) -> &'static str {
+        match self {
+            DiscoveryType::Docker { .. } => {
+                "Discover Docker containers and their configurations on the daemon's host"
+            }
+            DiscoveryType::Network { .. } => {
+                "Scan network subnets to discover hosts, open ports, and running services"
+            }
+            DiscoveryType::SelfReport { .. } => {
+                "The daemon reports its own host configuration and network details"
+            }
+        }
+    }
 }

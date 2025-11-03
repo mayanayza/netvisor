@@ -11,10 +11,17 @@ export function formatDuration(startTime: string, endTime?: string) {
 	const end = endTime ? new Date(endTime) : new Date();
 	const durationMs = end.getTime() - start.getTime();
 
-	if (durationMs < 1000) return '<1s';
-	if (durationMs < 60000) return `${Math.round(durationMs / 1000)}s`;
-	if (durationMs < 3600000) return `${Math.round(durationMs / 60000)}m`;
-	return `${Math.round(durationMs / 3600000)}h`;
+	const totalSeconds = Math.floor(durationMs / 1000);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
+
+	// Format with leading zeros
+	const hh = hours.toString().padStart(2, '0');
+	const mm = minutes.toString().padStart(2, '0');
+	const ss = seconds.toString().padStart(2, '0');
+
+	return `${hh}:${mm}:${ss}`;
 }
 
 export function formatTimestamp(timestamp: string): string {

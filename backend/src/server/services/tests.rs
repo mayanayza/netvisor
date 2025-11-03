@@ -2,9 +2,9 @@ use serial_test::serial;
 
 use crate::{
     server::{
-        discovery::types::base::EntitySource,
         groups::types::GroupType,
         services::types::{bindings::Binding, patterns::MatchDetails},
+        shared::types::entities::EntitySource,
     },
     tests::*,
 };
