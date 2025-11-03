@@ -10,7 +10,7 @@ use crate::server::{
         types::{
             base::Service,
             bindings::Binding,
-            patterns::{MatchDetails, MatchReason},
+            patterns::{MatchConfidence, MatchDetails, MatchReason},
         },
     },
 };
@@ -143,17 +143,30 @@ impl ServiceService {
                 ]
                 .concat();
 
+                // Max confidence
                 let confidence = existing_service_details
                     .confidence
                     .max(new_service_details.confidence);
 
-                let reason_str = format!(
-                    "Updated match data on {}",
-                    new_service_metadata
-                        .first()
-                        .map(|m| m.date)
-                        .unwrap_or_default()
-                );
+                // If both matches are N/A, continue to use N/A reason string. If not, use whatever the non-N/A string is.
+                // If somehow confidence changed, use the higher confidence string
+                let reason_str = match (
+                    &existing_service_details.confidence,
+                    &new_service_details.confidence,
+                ) {
+                    (MatchConfidence::NotApplicable, MatchConfidence::NotApplicable) => {
+                        existing_service_details.reason_string()
+                    }
+                    (_, MatchConfidence::NotApplicable) => new_service_details.reason_string(),
+                    (MatchConfidence::NotApplicable, _) => existing_service_details.reason_string(),
+                    (_, _) => {
+                        if existing_service_details.confidence > new_service_details.confidence {
+                            existing_service_details.reason_string()
+                        } else {
+                            new_service_details.reason_string()
+                        }
+                    }
+                };
 
                 let reason = match existing_service_details.reason {
                     // If data has already been upserted, just append to avoid a continuously nested structure

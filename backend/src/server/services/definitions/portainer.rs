@@ -21,11 +21,11 @@ impl ServiceDefinition for Portainer {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
             Pattern::Endpoint(PortBase::new_tcp(9443), "/", "portainer"),
-            Pattern::AllOf(vec!(
+            Pattern::AllOf(vec![
                 Pattern::Port(PortBase::new_tcp(9443)),
                 Pattern::Port(PortBase::new_tcp(9000)),
                 Pattern::Port(PortBase::new_tcp(8000)),
-            ))
+            ]),
         ])
     }
 

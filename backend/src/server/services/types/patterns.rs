@@ -45,6 +45,13 @@ impl MatchDetails {
             confidence: MatchConfidence::Certain,
         }
     }
+
+    pub fn reason_string(&self) -> String {
+        match &self.reason {
+            MatchReason::Container(string, _) => string.clone(),
+            MatchReason::Reason(string) => string.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Display, Serialize, Deserialize)]
