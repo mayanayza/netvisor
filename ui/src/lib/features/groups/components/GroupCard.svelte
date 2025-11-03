@@ -19,7 +19,7 @@
 	$: cardData = {
 		title: group.name,
 		iconColor: groupTypes.getColorHelper(group.group_type).icon,
-		icon: groupTypes.getIconComponent(group.group_type),
+		Icon: groupTypes.getIconComponent(group.group_type),
 		fields: [
 			{
 				label: 'Description',

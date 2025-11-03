@@ -3,8 +3,8 @@
 		getId: (subnet: Subnet) => subnet.id,
 		getLabel: (subnet: Subnet) => subnet.name,
 		getDescription: (subnet: Subnet) => (subnet.name == subnet.cidr ? '' : subnet.cidr),
-		getIcon: () => entities.getIconComponent('Subnet'),
-		getIconColor: () => entities.getColorHelper('Subnet').icon,
+		getIcon: (subnet: Subnet) => subnetTypes.getIconComponent(subnet.subnet_type),
+		getIconColor: (subnet: Subnet) => subnetTypes.getColorHelper(subnet.subnet_type).icon,
 		getTags: () => [],
 		getIsDisabled: () => false,
 		getCategory: () => null
@@ -14,7 +14,7 @@
 <script lang="ts">
 	import ListSelectItem from '$lib/shared/components/forms/selection/ListSelectItem.svelte';
 	import type { EntityDisplayComponent } from '../types';
-	import { entities } from '$lib/shared/stores/metadata';
+	import { subnetTypes } from '$lib/shared/stores/metadata';
 	import type { Subnet } from '$lib/features/subnets/types/base';
 
 	export let item: Subnet;

@@ -1,5 +1,4 @@
 use crate::server::{
-    discovery::types::base::{EntitySource, EntitySourceDiscriminants},
     groups::{service::GroupService, types::GroupType},
     hosts::{
         service::HostService,
@@ -13,6 +12,7 @@ use crate::server::{
             patterns::{MatchConfidence, MatchDetails, MatchReason},
         },
     },
+    shared::types::entities::{EntitySource, EntitySourceDiscriminants},
 };
 use anyhow::anyhow;
 use anyhow::{Error, Result};

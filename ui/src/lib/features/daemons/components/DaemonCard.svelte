@@ -1,28 +1,24 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { Daemon } from '$lib/features/daemons/types/base';
-	import { getDaemonIsRunningDiscovery, getDaemonDiscoveryData } from '$lib/features/daemons/store';
-	import DaemonDiscoveryStatus from '$lib/features/daemons/components/DaemonDiscoveryStatus.svelte';
-	import { sessions } from '$lib/features/discovery/store';
+	import { getDaemonIsRunningDiscovery } from '$lib/features/daemons/store';
+	import { sessions } from '$lib/features/discovery/SSEStore';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
 	import { RotateCcwKey, Trash2 } from 'lucide-svelte';
+	import { subnets } from '$lib/features/subnets/store';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
-	export let onDiscovery: (daemon: Daemon) => void = () => {};
 	export let onGenerateApi: (daemon: Daemon) => void = () => {};
-	export let discoveryIsRunning: boolean;
 	export let viewMode: 'card' | 'list';
 
 	$: hostStore = getHostFromId(daemon.host_id);
 	$: host = $hostStore;
 
-	$: daemonIsRunningDiscovery =
-		discoveryIsRunning && getDaemonIsRunningDiscovery(daemon.id, $sessions);
-	$: discoveryData = daemonIsRunningDiscovery ? getDaemonDiscoveryData(daemon.id, $sessions) : null;
+	$: daemonIsRunningDiscovery = getDaemonIsRunningDiscovery(daemon.id, $sessions);
 
 	// Build card data
 	$: cardData = {
@@ -36,7 +32,7 @@
 				}
 			: {}),
 		iconColor: entities.getColorHelper('Daemon').icon,
-		icon: entities.getIconComponent('Daemon'),
+		Icon: entities.getIconComponent('Daemon'),
 		fields: [
 			{
 				label: 'Network',
@@ -53,20 +49,38 @@
 			{
 				label: 'Last Seen',
 				value: formatTimestamp(daemon.last_seen)
+			},
+			{
+				label: 'Has Docker Socket',
+				value: [
+					daemon.capabilities.has_docker_socket
+						? {
+								id: daemon.id,
+								label: 'True',
+								color: entities.getColorHelper('Virtualization').string
+							}
+						: {
+								id: daemon.id,
+								label: 'False',
+								color: 'gray'
+							}
+				]
+			},
+			{
+				label: 'Interfaces With',
+				value: daemon.capabilities.interfaced_subnet_ids
+					.map((s) => $subnets.find((subnet) => subnet.id == s))
+					.filter((s) => s != undefined)
+					.map((s) => {
+						return {
+							id: s.id,
+							label: s.name,
+							color: entities.getColorHelper('Subnet').string
+						};
+					})
 			}
 		],
 		actions: [
-			...(daemon.api_key
-				? [
-						{
-							label: 'Run Discovery',
-							icon: entities.getIconComponent('Discovery'),
-							class: daemonIsRunningDiscovery ? 'btn-icon-success' : 'btn-icon',
-							onClick: !daemonIsRunningDiscovery ? () => onDiscovery(daemon) : () => {},
-							disabled: daemonIsRunningDiscovery
-						}
-					]
-				: []),
 			{
 				label: 'Update API Key',
 				icon: RotateCcwKey,
@@ -81,17 +95,7 @@
 				onClick: () => onDelete(daemon),
 				disabled: daemonIsRunningDiscovery
 			}
-		],
-
-		// Add footer when discovery is running
-		footerComponent: daemonIsRunningDiscovery && daemon ? DaemonDiscoveryStatus : null,
-		footerProps:
-			daemonIsRunningDiscovery && daemon
-				? {
-						daemon,
-						discoveryData
-					}
-				: {}
+		]
 	};
 </script>
 

@@ -7,12 +7,7 @@ import { currentNetwork } from '../networks/store';
 export const subnets = writable<Subnet[]>([]);
 
 export async function getSubnets() {
-	return await api.request<Subnet[]>(
-		`/subnets?network_id=${get(currentNetwork).id}`,
-		subnets,
-		(subnets) => subnets,
-		{ method: 'GET' }
-	);
+	return await api.request<Subnet[]>(`/subnets`, subnets, (subnets) => subnets, { method: 'GET' });
 }
 
 export async function createSubnet(subnet: Subnet) {

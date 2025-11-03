@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -59,19 +58,9 @@ impl DaemonDiscoverySessionManager {
         // Signal cooperative cancellation
         self.cancellation_token.write().await.cancel();
 
-        // Give it a brief moment for cooperative cancellation
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-
-        // If still running, abort
-        if self.is_discovery_running().await {
-            tracing::warn!("Discovery not responding to cancellation, aborting task");
-            if let Some(task) = self.current_task.write().await.take() {
-                task.abort();
-            }
-            return false;
-        }
-
-        tracing::info!("Discovery cancelled successfully");
+        // Don't wait - just return success
+        // The spawned task will handle cleanup
+        tracing::info!("Cancellation signal sent");
         true
     }
 

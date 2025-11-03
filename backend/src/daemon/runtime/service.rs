@@ -1,8 +1,6 @@
-use crate::daemon::discovery::manager::DaemonDiscoverySessionManager;
-use crate::daemon::discovery::service::base::{DaemonDiscoveryService, Discovery};
-use crate::daemon::discovery::service::self_report::SelfReportDiscovery;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
+use crate::server::daemons::types::api::DaemonCapabilities;
 use crate::{
     daemon::shared::storage::ConfigStore,
     server::{
@@ -49,7 +47,7 @@ impl DaemonRuntimeService {
             if self.config_store.get_network_id().await?.is_some() {
                 let response = self
                     .client
-                    .put(format!(
+                    .post(format!(
                         "{}/api/daemons/{}/heartbeat",
                         server_target, daemon_id
                     ))
@@ -80,13 +78,7 @@ impl DaemonRuntimeService {
     }
 
     /// Initialize daemon services (called immediately or via /initialize endpoint)
-    pub async fn initialize_services(
-        &self,
-        network_id: Uuid,
-        api_key: String,
-        discovery_service: Arc<DaemonDiscoveryService>,
-        discovery_manager: Arc<DaemonDiscoverySessionManager>,
-    ) -> Result<()> {
+    pub async fn initialize_services(&self, network_id: Uuid, api_key: String) -> Result<()> {
         // Ensure network_id is stored
         self.config_store.set_network_id(network_id).await?;
         self.config_store.set_api_key(api_key).await?;
@@ -102,20 +94,8 @@ impl DaemonRuntimeService {
 
         tracing::info!("Registering with server...");
 
-        self.register_with_server(daemon_id, network_id).await?;
-
-        // Run self-discovery
-        let discovery = Discovery::new(
-            discovery_service.clone(),
-            discovery_manager.clone(),
-            SelfReportDiscovery::default(),
-        );
-        discovery.run_self_report_discovery().await?;
-
-        // If has Docker, discover Docker services
-        if has_docker_client {
-            discovery.run_self_report_docker_discovery().await?;
-        }
+        self.register_with_server(daemon_id, network_id, has_docker_client)
+            .await?;
 
         tracing::info!("Daemon fully initialized!");
 
@@ -123,7 +103,12 @@ impl DaemonRuntimeService {
     }
 
     /// Register daemon with server and return assigned ID
-    pub async fn register_with_server(&self, daemon_id: Uuid, network_id: Uuid) -> Result<()> {
+    pub async fn register_with_server(
+        &self,
+        daemon_id: Uuid,
+        network_id: Uuid,
+        has_docker_socket: bool,
+    ) -> Result<()> {
         let daemon_ip = self.utils.get_own_ip_address()?;
         let daemon_port = self.config_store.get_port().await?;
         if let Some(api_key) = self.config_store.get_api_key().await? {
@@ -134,6 +119,10 @@ impl DaemonRuntimeService {
                 daemon_ip,
                 daemon_port,
                 api_key,
+                capabilities: DaemonCapabilities {
+                    has_docker_socket,
+                    interfaced_subnet_ids: Vec::new(),
+                },
             };
 
             let server_target = self.config_store.get_server_endpoint().await?;

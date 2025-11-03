@@ -28,9 +28,7 @@
 	}
 
 	async function handleCreateNewApiKey() {
-		const generatedKey = await createNewApiKey({
-			network_id: selectedNetworkId
-		});
+		const generatedKey = await createNewApiKey(selectedNetworkId);
 		if (generatedKey) {
 			apiKeyStore.set(generatedKey);
 		} else {
@@ -64,7 +62,7 @@
 	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} \\ \n${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${apiKey ? `--daemon-api-key ${apiKey}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${apiKey ? `--daemon-api-key ${apiKey}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (apiKey) {

@@ -21,7 +21,7 @@
 		title: subnet.name,
 		subtitle: get(isContainerSubnet(subnet.id)) ? '' : subnet.cidr,
 		iconColor: subnetTypes.getColorHelper(subnet.subnet_type).icon,
-		icon: subnetTypes.getIconComponent(subnet.subnet_type),
+		Icon: subnetTypes.getIconComponent(subnet.subnet_type),
 		fields: [
 			{
 				label: 'Description',

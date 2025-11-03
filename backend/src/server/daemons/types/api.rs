@@ -10,10 +10,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Generate key for a daemon on network_id
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiKeyRequest {
-    pub network_id: Uuid,
+/// Daemon registration request from daemon to server
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct DaemonCapabilities {
+    pub has_docker_socket: bool,
+    pub interfaced_subnet_ids: Vec<Uuid>,
 }
 
 /// Daemon registration request from daemon to server
@@ -24,6 +25,7 @@ pub struct DaemonRegistrationRequest {
     pub daemon_ip: IpAddr,
     pub daemon_port: u16,
     pub api_key: String,
+    pub capabilities: DaemonCapabilities,
 }
 
 /// Daemon registration response from server to daemon
@@ -46,24 +48,14 @@ pub struct DaemonDiscoveryResponse {
     pub session_id: Uuid,
 }
 
-/// Cancellation request from server to daemon
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DaemonDiscoveryCancellationRequest {
-    pub session_id: Uuid,
-}
-
-/// Cancellation response
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DaemonDiscoveryCancellationResponse {
-    pub session_id: Uuid,
-}
-
 /// Progress update from daemon to server during discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveryUpdatePayload {
     pub session_id: Uuid,
     pub daemon_id: Uuid,
+    pub network_id: Uuid,
     pub phase: DiscoveryPhase,
+    pub discovery_type: DiscoveryType,
     pub completed: usize,
     pub total: usize,
     pub discovered_count: usize,
@@ -73,12 +65,19 @@ pub struct DiscoveryUpdatePayload {
 }
 
 impl DiscoveryUpdatePayload {
-    pub fn new(session_id: Uuid, daemon_id: Uuid) -> Self {
+    pub fn new(
+        session_id: Uuid,
+        daemon_id: Uuid,
+        network_id: Uuid,
+        discovery_type: DiscoveryType,
+    ) -> Self {
         Self {
             session_id,
             daemon_id,
-            phase: DiscoveryPhase::Initiated,
+            network_id,
+            phase: DiscoveryPhase::Pending,
             completed: 0,
+            discovery_type,
             total: 0,
             discovered_count: 0,
             error: None,
@@ -88,11 +87,14 @@ impl DiscoveryUpdatePayload {
     }
 
     pub fn from_state_and_update(
+        discovery_type: DiscoveryType,
         info: DiscoverySessionInfo,
         update: DiscoverySessionUpdate,
     ) -> Self {
         Self {
             session_id: info.session_id,
+            discovery_type,
+            network_id: info.network_id,
             daemon_id: info.daemon_id,
             phase: update.phase,
             completed: update.completed,

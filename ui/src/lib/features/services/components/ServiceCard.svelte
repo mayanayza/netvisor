@@ -46,7 +46,7 @@
 			? `http://${get(getBindingDisplayName(firstTcpPortBinding))}`
 			: undefined,
 		iconColor: serviceDefinitions.getColorHelper(service.service_definition).icon,
-		icon: serviceDefinitions.getIconComponent(service.service_definition),
+		Icon: serviceDefinitions.getIconComponent(service.service_definition),
 		fields: [
 			{
 				label: 'Port Bindings',

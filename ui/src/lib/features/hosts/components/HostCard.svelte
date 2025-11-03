@@ -58,7 +58,7 @@
 			: {}),
 		link: host.target.type != 'None' ? `http://${get(getHostTargetString(host))}` : undefined,
 		iconColor: entities.getColorHelper('Host').icon,
-		icon:
+		Icon:
 			serviceDefinitions.getIconComponent(hostServices[0]?.service_definition) ||
 			entities.getIconComponent('Host'),
 		fields: [

@@ -39,12 +39,7 @@ async fn initialize(
     state
         .services
         .runtime_service
-        .initialize_services(
-            request.network_id,
-            request.api_key,
-            state.services.discovery_service.clone(),
-            state.services.discovery_manager.clone(),
-        )
+        .initialize_services(request.network_id, request.api_key)
         .await?;
 
     Ok(Json(ApiResponse::success(

@@ -1,7 +1,9 @@
 use crate::server::{
     config::{AppState, ServerConfig},
-    daemons::types::base::{Daemon, DaemonBase},
-    discovery::{manager::DiscoverySessionManager, types::base::EntitySource},
+    daemons::types::{
+        api::DaemonCapabilities,
+        base::{Daemon, DaemonBase},
+    },
     groups::types::{Group, GroupBase, GroupType},
     hosts::types::{
         base::{Host, HostBase},
@@ -14,7 +16,10 @@ use crate::server::{
         definitions::ServiceDefinitionRegistry,
         types::base::{Service, ServiceBase},
     },
-    shared::{services::ServiceFactory, types::storage::StorageFactory},
+    shared::{
+        services::ServiceFactory,
+        types::{entities::EntitySource, storage::StorageFactory},
+    },
     subnets::types::base::{Subnet, SubnetBase, SubnetType},
     users::types::base::{User, UserBase},
 };
@@ -144,6 +149,10 @@ pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)),
             port: 60073,
             api_key: None,
+            capabilities: DaemonCapabilities {
+                has_docker_socket: false,
+                interfaced_subnet_ids: Vec::new(),
+            },
         },
     )
 }
@@ -155,9 +164,8 @@ pub async fn test_services() -> (StorageFactory, ServiceFactory, ContainerAsync<
 }
 pub async fn setup_test_app() -> Router<Arc<AppState>> {
     let config = ServerConfig::default();
-    let discovery_manager = DiscoverySessionManager::new();
 
-    let state = AppState::new(config, discovery_manager).await.unwrap();
+    let state = AppState::new(config).await.unwrap();
 
     crate::server::shared::handlers::create_router().with_state(state)
 }

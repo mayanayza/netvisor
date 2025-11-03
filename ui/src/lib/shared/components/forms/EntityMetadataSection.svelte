@@ -8,8 +8,9 @@
 	import { pushWarning } from '$lib/shared/stores/feedback';
 	import CodeContainer from '../data/CodeContainer.svelte';
 	import type { Network } from '$lib/features/networks/types';
+	import type { Discovery } from '$lib/features/discovery/types/base';
 
-	export let entities: (Group | Host | Subnet | Service | Network | null)[] = [null];
+	export let entities: (Group | Host | Subnet | Service | Network | Discovery | null)[] = [null];
 	export let showSummary: boolean = true;
 
 	let id = entities.length == 1 ? entities[0]?.id : null;

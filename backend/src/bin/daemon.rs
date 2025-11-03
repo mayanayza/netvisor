@@ -116,8 +116,6 @@ async fn main() -> anyhow::Result<()> {
 
     let state = DaemonAppState::new(config_store, utils).await?;
     let runtime_service = state.services.runtime_service.clone();
-    let discovery_service = state.services.discovery_service.clone();
-    let discovery_manager = state.services.discovery_manager.clone();
 
     // Create HTTP server with config values
     let api_router = create_router().with_state(state);
@@ -150,12 +148,7 @@ async fn main() -> anyhow::Result<()> {
         if let Some(api_key) = api_key {
             tracing::info!("API key available: [redacted]");
             runtime_service
-                .initialize_services(
-                    *network_id,
-                    api_key.clone(),
-                    discovery_service,
-                    discovery_manager,
-                )
+                .initialize_services(*network_id, api_key.clone())
                 .await?;
         } else {
             tracing::warn!(

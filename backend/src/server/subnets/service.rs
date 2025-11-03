@@ -1,6 +1,7 @@
 use crate::server::{
-    discovery::types::base::{DiscoveryType, EntitySource},
+    discovery::types::base::DiscoveryType,
     hosts::service::HostService,
+    shared::types::entities::EntitySource,
     subnets::{storage::SubnetStorage, types::base::Subnet},
 };
 use anyhow::Result;
@@ -51,7 +52,7 @@ impl SubnetService {
                             // Only one metadata entry will be present for subnet which is trying to be created bc it is brand new / just discovered
                             if let Some(metadata) = metadata.first() {
                                 existing_metadata.iter().any(|other_m| {
-                                    match (metadata.discovery_type, other_m.discovery_type) {
+                                    match (&metadata.discovery_type, &other_m.discovery_type) {
                                         // Only return existing if they originate from the same host
                                         (
                                             DiscoveryType::Docker { host_id },

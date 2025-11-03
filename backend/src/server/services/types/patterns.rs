@@ -647,7 +647,7 @@ mod tests {
                 host_id: Uuid::new_v4(),
                 network_id: Uuid::new_v4(),
                 daemon_id: Uuid::new_v4(),
-                discovery_type: DiscoveryType::Network,
+                discovery_type: DiscoveryType::Network { subnet_ids: None },
                 gateway_ips: vec![],
                 endpoint_responses,
                 virtualization: None,

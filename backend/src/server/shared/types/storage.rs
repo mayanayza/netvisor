@@ -6,6 +6,7 @@ use tower_sessions_sqlx_store::PostgresStore;
 
 use crate::server::{
     daemons::storage::{DaemonStorage, PostgresDaemonStorage},
+    discovery::storage::{DiscoveryStorage, PostgresDiscoveryStorage},
     groups::storage::{GroupStorage, PostgresGroupStorage},
     hosts::storage::{HostStorage, PostgresHostStorage},
     networks::storage::{NetworkStorage, PostgresNetworkStorage},
@@ -23,6 +24,7 @@ pub struct StorageFactory {
     pub daemons: Arc<dyn DaemonStorage>,
     pub subnets: Arc<dyn SubnetStorage>,
     pub services: Arc<dyn ServiceStorage>,
+    pub discovery: Arc<dyn DiscoveryStorage>,
 }
 
 pub async fn create_session_store(
@@ -51,6 +53,7 @@ impl StorageFactory {
 
         Ok(Self {
             sessions,
+            discovery: Arc::new(PostgresDiscoveryStorage::new(pool.clone())),
             users: Arc::new(PostgresUserStorage::new(pool.clone())),
             networks: Arc::new(PostgresNetworkStorage::new(pool.clone())),
             hosts: Arc::new(PostgresHostStorage::new(pool.clone())),

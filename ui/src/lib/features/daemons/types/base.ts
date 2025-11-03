@@ -4,14 +4,14 @@ export interface DaemonBase {
 	ip: string;
 	port: number;
 	api_key: string | null;
+	capabilities: {
+		has_docker_socket: boolean;
+		interfaced_subnet_ids: string[];
+	};
 }
 
 export interface Daemon extends DaemonBase {
 	id: string;
 	registered_at: string;
 	last_seen: string;
-}
-
-export interface ApiKeyRequest {
-	network_id: string;
 }

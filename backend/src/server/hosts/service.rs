@@ -1,8 +1,8 @@
 use crate::server::{
     daemons::service::DaemonService,
-    discovery::types::base::{EntitySource, EntitySourceDiscriminants},
     hosts::{storage::HostStorage, types::base::Host},
     services::{service::ServiceService, types::base::Service},
+    shared::types::entities::{EntitySource, EntitySourceDiscriminants},
 };
 use anyhow::{Error, Result, anyhow};
 use futures::future::{join_all, try_join_all};

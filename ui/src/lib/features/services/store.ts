@@ -12,14 +12,9 @@ export const services = writable<Service[]>([]);
 
 // Get all services
 export async function getServices() {
-	return await api.request<Service[]>(
-		`/services?network_id=${get(currentNetwork).id}`,
-		services,
-		(services) => services,
-		{
-			method: 'GET'
-		}
-	);
+	return await api.request<Service[]>(`/services`, services, (services) => services, {
+		method: 'GET'
+	});
 }
 
 // Delete a service

@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize, Serializer};
 use uuid::Uuid;
 
+use crate::server::daemons::types::api::DaemonCapabilities;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonBase {
     pub host_id: Uuid,
@@ -12,6 +14,8 @@ pub struct DaemonBase {
     pub port: u16,
     #[serde(serialize_with = "serialize_api_key_status")]
     pub api_key: Option<String>,
+    #[serde(default)]
+    pub capabilities: DaemonCapabilities,
 }
 
 fn serialize_api_key_status<S>(key: &Option<String>, serializer: S) -> Result<S::Ok, S::Error>

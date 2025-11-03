@@ -2,9 +2,7 @@ use crate::server::{
     daemons::{
         storage::DaemonStorage,
         types::{
-            api::{
-                DaemonDiscoveryCancellationRequest, DaemonDiscoveryRequest, DaemonDiscoveryResponse,
-            },
+            api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
             base::Daemon,
         },
     },
@@ -132,9 +130,14 @@ impl DaemonService {
     /// Send discovery request to daemon
     pub async fn send_discovery_request(
         &self,
-        daemon: &Daemon,
+        daemon_id: &Uuid,
         request: DaemonDiscoveryRequest,
     ) -> Result<(), Error> {
+        let daemon = self
+            .get_daemon(daemon_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Could not find daemon {}", daemon_id))?;
+
         let endpoint = Endpoint {
             ip: Some(daemon.base.ip),
             port_base: PortBase::new_tcp(daemon.base.port),
@@ -189,7 +192,7 @@ impl DaemonService {
         let response = self
             .client
             .post(format!("{}", endpoint))
-            .json(&DaemonDiscoveryCancellationRequest { session_id })
+            .json(&session_id)
             .send()
             .await?;
 

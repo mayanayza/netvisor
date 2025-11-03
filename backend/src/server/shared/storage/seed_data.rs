@@ -3,7 +3,6 @@ use std::net::{IpAddr, Ipv4Addr};
 use uuid::Uuid;
 
 use crate::server::{
-    discovery::types::base::EntitySource,
     hosts::types::{
         base::{Host, HostBase},
         interfaces::{Interface, InterfaceBase},
@@ -18,6 +17,7 @@ use crate::server::{
             bindings::Binding,
         },
     },
+    shared::types::entities::EntitySource,
     subnets::types::base::{Subnet, SubnetBase, SubnetType},
     users::types::base::{User, UserBase},
 };

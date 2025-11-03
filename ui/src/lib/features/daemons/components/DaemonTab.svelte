@@ -4,7 +4,6 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import { daemons, deleteDaemon, getDaemons } from '$lib/features/daemons/store';
 	import type { Daemon } from '$lib/features/daemons/types/base';
-	import { initiateDiscovery, sessions } from '$lib/features/discovery/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getNetworks, networks } from '$lib/features/networks/store';
 	import DaemonCard from './DaemonCard.svelte';
@@ -18,16 +17,10 @@
 	let showCreateDaemonModal = false;
 	let daemon: Daemon | null = null;
 
-	$: discoveryIsRunning = $sessions.size > 0;
-
 	function handleDeleteDaemon(daemon: Daemon) {
 		if (confirm(`Are you sure you want to delete daemon @"${daemon.ip}"?`)) {
 			deleteDaemon(daemon.id);
 		}
-	}
-
-	function handleRunDiscovery(daemon: Daemon) {
-		initiateDiscovery({ daemon_id: daemon.id });
 	}
 
 	function handleCreateDaemon() {
@@ -45,7 +38,6 @@
 		daemon = generateApiDaemon;
 	}
 
-	// Define field configuration for the DataTableControls
 	const daemonFields: FieldConfig<Daemon>[] = [
 		{
 			key: 'name',
@@ -72,8 +64,8 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<TabHeader
-		title="Discovery"
-		subtitle="Run discovery and manage daemons"
+		title="Daemons"
+		subtitle="Manage daemons"
 		buttons={[
 			{
 				onClick: handleCreateDaemon,
@@ -99,8 +91,6 @@
 				<DaemonCard
 					daemon={item}
 					{viewMode}
-					{discoveryIsRunning}
-					onDiscovery={handleRunDiscovery}
 					onDelete={handleDeleteDaemon}
 					onGenerateApi={handleGenerateApiKey}
 				/>
