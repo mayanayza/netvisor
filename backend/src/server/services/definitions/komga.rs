@@ -5,26 +5,26 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct Plex;
+pub struct Komga;
 
-impl ServiceDefinition for Plex {
+impl ServiceDefinition for Komga {
     fn name(&self) -> &'static str {
-        "Plex Media Server"
+        "Komga"
     }
     fn description(&self) -> &'static str {
-        "Media server for streaming personal content"
+        "a media server for your comics, mangas, BDs, magazines and eBooks."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
+        Pattern::Endpoint(PortBase::new_tcp(25600), "/", "Komga")
     }
 
     fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+        "Komga"
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<Plex>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Komga>));

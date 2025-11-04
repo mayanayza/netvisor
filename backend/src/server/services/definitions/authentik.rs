@@ -5,26 +5,29 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct Plex;
+pub struct Authentik;
 
-impl ServiceDefinition for Plex {
+impl ServiceDefinition for Authentik {
     fn name(&self) -> &'static str {
-        "Plex Media Server"
+        "Authentik"
     }
     fn description(&self) -> &'static str {
-        "Media server for streaming personal content"
+        "a self-hosted, open source identity provider"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
+        Pattern::AnyOf(vec![
+            Pattern::Endpoint(PortBase::Http, "/", "authentik"),
+            Pattern::Endpoint(PortBase::Https, "/", "authentik"),
+        ])
     }
 
     fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+        "Authentik"
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<Plex>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Authentik>));

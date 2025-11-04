@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@reference "tailwindcss";
+
 @layer base {
 	html {
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

@@ -5,26 +5,28 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct Plex;
+pub struct CoolerControl;
 
-impl ServiceDefinition for Plex {
+impl ServiceDefinition for CoolerControl {
     fn name(&self) -> &'static str {
-        "Plex Media Server"
+        "CoolerControl"
     }
     fn description(&self) -> &'static str {
-        "Media server for streaming personal content"
+        "Monitor temperatures, fan speeds, and power in real time."
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Media
+        ServiceCategory::Monitoring
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
+        Pattern::Endpoint(PortBase::new_tcp(11987), "/", "CoolerControl")
     }
 
     fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+        "Cooler Control"
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<Plex>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<CoolerControl>
+));

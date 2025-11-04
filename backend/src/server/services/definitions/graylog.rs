@@ -5,26 +5,26 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct Plex;
+pub struct Graylog;
 
-impl ServiceDefinition for Plex {
+impl ServiceDefinition for Graylog {
     fn name(&self) -> &'static str {
-        "Plex Media Server"
+        "Graylog"
     }
     fn description(&self) -> &'static str {
-        "Media server for streaming personal content"
+        "Security Information and Event Management (SIEM) solution and log analytics platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Media
+        ServiceCategory::Monitoring
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
+        Pattern::Endpoint(PortBase::new_tcp(9000), "/", "Graylog")
     }
 
     fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+        "Graylog"
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<Plex>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Graylog>));

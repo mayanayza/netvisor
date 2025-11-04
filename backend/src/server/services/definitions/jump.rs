@@ -5,26 +5,22 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct Plex;
+pub struct Jump;
 
-impl ServiceDefinition for Plex {
+impl ServiceDefinition for Jump {
     fn name(&self) -> &'static str {
-        "Plex Media Server"
+        "Jump"
     }
     fn description(&self) -> &'static str {
-        "Media server for streaming personal content"
+        "a self-hosted startpage and real-time status page"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Media
+        ServiceCategory::Dashboard
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
-    }
-
-    fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+        Pattern::Endpoint(PortBase::new_tcp(8123), "/", "Jump")
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<Plex>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Jump>));

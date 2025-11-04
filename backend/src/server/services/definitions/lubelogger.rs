@@ -5,26 +5,26 @@ use crate::server::services::types::definitions::ServiceDefinition;
 use crate::server::services::types::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct Plex;
+pub struct Lubelogger;
 
-impl ServiceDefinition for Plex {
+impl ServiceDefinition for Lubelogger {
     fn name(&self) -> &'static str {
-        "Plex Media Server"
+        "Lubelogger"
     }
     fn description(&self) -> &'static str {
-        "Media server for streaming personal content"
+        "Vehicle Maintenance Records and Fuel Mileage Tracker"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Media
+        ServiceCategory::HomeAutomation
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
+        Pattern::Endpoint(PortBase::HttpAlt, "/", "LubeLogger")
     }
 
     fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+        "Lubelogger"
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<Plex>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Lubelogger>));
