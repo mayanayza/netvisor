@@ -104,7 +104,7 @@ For larger features or bug fixes:
 
         ```bash
         npm i --save-dev prettier-plugin-svelte prettier prettier-plugin-tailwindcss
-        
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
         make install-dev-linux
         ```
 
