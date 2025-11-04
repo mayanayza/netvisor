@@ -8,60 +8,20 @@ import { getServices } from '../services/store';
 import { SSEClient, type SSEClient as SSEClientType } from '$lib/shared/utils/sse';
 import { getDaemons } from '../daemons/store';
 
-const STORAGE_KEY = 'netvisor_discovery_sessions';
-const SESSION_MAX_AGE_MS = 60 * 1000; // 60 seconds
-
-interface PersistedSession extends DiscoveryUpdatePayload {
-	persistedAt: number;
-}
-
-// Helper to save sessions to localStorage
-function persistSessions(sessionList: DiscoveryUpdatePayload[]) {
-	if (typeof window === 'undefined') return;
-
-	try {
-		const persisted: PersistedSession[] = sessionList.map((session) => ({
-			...session,
-			persistedAt: Date.now()
-		}));
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
-	} catch (error) {
-		console.warn('Failed to persist discovery sessions:', error);
-	}
-}
-
-// Helper to load sessions from localStorage
-function loadPersistedSessions(): DiscoveryUpdatePayload[] {
-	if (typeof window === 'undefined') return [];
-
-	try {
-		const stored = localStorage.getItem(STORAGE_KEY);
-		if (!stored) return [];
-
-		const persisted: PersistedSession[] = JSON.parse(stored);
-		const now = Date.now();
-
-		// Filter out stale sessions and terminal states that might have been missed
-		const active = persisted.filter((session) => {
-			const age = now - session.persistedAt;
-			const isStale = age > SESSION_MAX_AGE_MS;
-			const isTerminal = ['Complete', 'Cancelled', 'Failed'].includes(session.phase);
-
-			return !isStale && !isTerminal;
-		});
-
-		// Return just the payload data without persistedAt
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		return active.map(({ persistedAt: _, ...payload }) => payload);
-	} catch (error) {
-		console.warn('Failed to load persisted discovery sessions:', error);
-		return [];
-	}
-}
-
 // session_id to latest update
-export const sessions = writable<DiscoveryUpdatePayload[]>(loadPersistedSessions());
+export const sessions = writable<DiscoveryUpdatePayload[]>([]);
 export const cancelling = writable<Map<string, boolean>>(new Map());
+
+export async function getActiveSessions() {
+	return await api.request<DiscoveryUpdatePayload[]>(
+		`/discovery/active-sessions`,
+		sessions,
+		(sessions) => sessions,
+		{
+			method: 'GET'
+		}
+	);
+}
 
 // Track last known processed per session to detect changes
 const lastProcessedCount = new Map<string, number>();
@@ -120,7 +80,6 @@ export function startDiscoverySSE() {
 
 					// Remove completed/cancelled/failed sessions
 					const updated = current.filter((session) => session.session_id !== update.session_id);
-					persistSessions(updated);
 					return updated;
 				}
 
@@ -137,8 +96,6 @@ export function startDiscoverySSE() {
 					updated = [...current, update];
 				}
 
-				// Persist to localStorage
-				persistSessions(updated);
 				return updated;
 			});
 		},
@@ -158,24 +115,6 @@ export function stopDiscoverySSE() {
 	if (sseClient) {
 		sseClient.disconnect();
 		sseClient = null;
-
-		// Clear persisted sessions when explicitly stopping
-		if (typeof window !== 'undefined') {
-			localStorage.removeItem(STORAGE_KEY);
-		}
-	}
-}
-
-export function cleanupStaleDiscoverySessions() {
-	const current = loadPersistedSessions();
-	if (current.length === 0) {
-		// No active sessions, clear storage
-		if (typeof window !== 'undefined') {
-			localStorage.removeItem(STORAGE_KEY);
-		}
-	} else {
-		// Re-persist cleaned sessions
-		persistSessions(current);
 	}
 }
 
@@ -203,7 +142,6 @@ export async function initiateDiscovery(discovery_id: string) {
 				updated = [...current, result.data!];
 			}
 
-			persistSessions(updated);
 			return updated;
 		});
 

@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedUser,
+    auth::middleware::{AuthenticatedDaemon, AuthenticatedUser},
     config::AppState,
     daemons::types::api::DiscoveryUpdatePayload,
     discovery::types::base::{Discovery, RunType},
@@ -23,6 +23,7 @@ use uuid::Uuid;
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/start-session", post(start_session))
+        .route("/active-sessions", get(get_active_sessions))
         .route("/{session_id}/cancel", post(cancel_discovery))
         .route("/{session_id}/update", post(receive_discovery_update))
         .route("/stream", get(discovery_stream))
@@ -97,6 +98,7 @@ async fn delete_discovery(
 /// Receive discovery progress update from daemon
 async fn receive_discovery_update(
     State(state): State<Arc<AppState>>,
+    _daemon: AuthenticatedDaemon,
     Path(_session_id): Path<Uuid>,
     Json(update): Json<DiscoveryUpdatePayload>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
@@ -112,6 +114,7 @@ async fn receive_discovery_update(
 /// Endpoint to start a discovery session
 async fn start_session(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Json(discovery_id): Json<Uuid>,
 ) -> ApiResult<Json<ApiResponse<DiscoveryUpdatePayload>>> {
     let mut discovery = state
@@ -151,6 +154,7 @@ async fn start_session(
 
 async fn discovery_stream(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let mut rx = state.services.discovery_service.subscribe();
 
@@ -173,9 +177,33 @@ async fn discovery_stream(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
+/// Get the latest payload from active discovery sessions
+async fn get_active_sessions(
+    State(state): State<Arc<AppState>>,
+    user: AuthenticatedUser,
+) -> ApiResult<Json<ApiResponse<Vec<DiscoveryUpdatePayload>>>> {
+    let network_ids: Vec<Uuid> = state
+        .services
+        .network_service
+        .get_all_networks(&user.0)
+        .await?
+        .iter()
+        .map(|n| n.id)
+        .collect();
+
+    let sessions = state
+        .services
+        .discovery_service
+        .get_all_sessions(&network_ids)
+        .await;
+
+    Ok(Json(ApiResponse::success(sessions)))
+}
+
 /// Cancel an active discovery session
 async fn cancel_discovery(
     State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
     Path(session_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     state
