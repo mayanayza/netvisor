@@ -1,3 +1,4 @@
+use crate::server::hosts::types::ports::PortBase;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::types::categories::ServiceCategory;
 use crate::server::services::types::definitions::ServiceDefinition;
@@ -18,7 +19,7 @@ impl ServiceDefinition for WebService {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Port(PortBase::RTSP)
+        Pattern::Port(PortBase::Rtsp)
     }
 
     fn is_generic(&self) -> bool {

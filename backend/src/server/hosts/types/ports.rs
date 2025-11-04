@@ -71,7 +71,6 @@ pub enum PortBase {
     HttpAlt,
     Https,
     HttpsAlt,
-    Rtsp,
     Custom(PortConfig),
 }
 
@@ -274,10 +273,6 @@ impl PortBase {
                 number: 8443,
                 protocol: TransportProtocol::Tcp,
             },
-            PortBase::Rtsp => PortConfig {
-                number: 554,
-                protocol: TransportProtocol::Tcp,
-            },
             PortBase::Custom(config) => *config,
         }
     }
@@ -314,13 +309,12 @@ impl TypeMetadataProvider for PortBase {
             PortBase::Snmp => "SNMP",
             PortBase::Rdp => "RDP",
             PortBase::Ntp => "NTP",
-            PortBase::Rtsp => "Rtsp",
+            PortBase::Rtsp => "RTSP",
             PortBase::Dhcp => "DHCP",
             PortBase::Http => "HTTP",
             PortBase::HttpAlt => "HTTP Alt",
             PortBase::Https => "HTTPS",
             PortBase::HttpsAlt => "HTTPS Alt",
-            PortBase::Rtsp => "RTSP",
             PortBase::Custom(_) => "Custom",
         }
     }
@@ -345,7 +339,6 @@ impl TypeMetadataProvider for PortBase {
             PortBase::HttpAlt => "Alternative HTTP Port",
             PortBase::Https => "Hypertext Transfer Protocol Secure",
             PortBase::HttpsAlt => "Alternative HTTPS Port",
-            PortBase::Rtsp => "Real-Time Streaming Protocol",
             PortBase::Custom(_) => "Custom Port Configuration",
         }
     }
