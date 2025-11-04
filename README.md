@@ -112,7 +112,7 @@ You can deploy additional daemons at any time after setting up your first networ
    - Click **Register** to create your account
 
 <p align="center">
-  <img src="./media/registration.png" width="500" alt="Registration Screen">
+  <img src="./media/registration.png" width="400" alt="Registration Screen">
 </p>
 
 3. **Automatic initialization**: After registration, NetVisor automatically:
@@ -126,7 +126,7 @@ You can deploy additional daemons at any time after setting up your first networ
    - Wait 5-10+ minutes for the scan to complete (depends on your network size)
 
 <p align="center">
-  <img src="./media/first_discovery.png" width="800" alt="First Discovery">
+  <img src="./media/first_discovery.png" width="600" alt="First Discovery">
 </p>
 
 5. **View your topology**:
@@ -135,7 +135,7 @@ You can deploy additional daemons at any time after setting up your first networ
    - Explore your discovered hosts, services, and network structure
 
 <p align="center">
-  <img src="./media/first_topology.png" width="1000" alt="First Topology">
+  <img src="./media/first_topology.png" width="600" alt="First Topology">
 </p>
 
 ---
@@ -157,7 +157,7 @@ NetVisor uses username/password authentication to secure your network data. Fail
 The NetVisor interface is organized with a collapsible sidebar:
 
 <p align="center">
-  <img src="./media/navigation.png" width="1200" alt="Navigation Sidebar">
+  <img src="./media/navigation.png" width="300" alt="Navigation Sidebar">
 </p>
 
 #### 🔍 Discover
@@ -169,7 +169,7 @@ The Discover section contains three subtabs for managing network discovery:
 - Queue of pending discovery jobs
 
 <p align="center">
-  <img src="./media/discovery_sessions.png" width="1000" alt="Discovery Sessions">
+  <img src="./media/discovery_sessions.png" width="800" alt="Discovery Sessions">
 </p>
 
 **Scheduled**: Schedule and manually trigger network discovery
@@ -177,7 +177,7 @@ The Discover section contains three subtabs for managing network discovery:
 - Manually trigger scans
 
 <p align="center">
-  <img src="./media/discovery_scheduled.png" width="1000" alt="Discovery Scheduled">
+  <img src="./media/discovery_scheduled.png" width="800" alt="Discovery Scheduled">
 </p>
 
 **History**: Review past discovery sessions
@@ -185,7 +185,7 @@ The Discover section contains three subtabs for managing network discovery:
 - Detailed session information and results
 
 <p align="center">
-  <img src="./media/discovery_history.png" width="1000" alt="Discovery History">
+  <img src="./media/discovery_history.png" width="800" alt="Discovery History">
 </p>
 
 #### 📊 Manage
@@ -198,7 +198,7 @@ The Manage section groups all network organization and configuration tabs:
 - Managing multi-tenant deployments
 
 <p align="center">
-  <img src="./media/networks_tab.png" width="1000" alt="Networks Tab">
+  <img src="./media/networks_tab.png" width="800" alt="Networks Tab">
 </p>
 
 **🖥️ Hosts**: View and manage all discovered hosts on your network. Features include:
@@ -209,7 +209,7 @@ The Manage section groups all network organization and configuration tabs:
 - Virtualization management (for hosts running Proxmox/Docker)
 
 <p align="center">
-  <img src="./media/hosts_tab.png" width="1000" alt="Hosts Tab">
+  <img src="./media/hosts_tab.png" width="800" alt="Hosts Tab">
 </p>
 
 **🔧 Services**: Browse all discovered services across your network. This tab provides:
@@ -220,7 +220,7 @@ The Manage section groups all network organization and configuration tabs:
 - Service detection confidence scores
 
 <p align="center">
-  <img src="./media/services_tab.png" width="1000" alt="Services Tab">
+  <img src="./media/services_tab.png" width="800" alt="Services Tab">
 </p>
 
 **🌐 Subnets**: Organize and configure network segments. Manage:
@@ -228,7 +228,7 @@ The Manage section groups all network organization and configuration tabs:
 - Organizational subnets for external resources (ie services on the internet / non-local networks)
 
 <p align="center">
-  <img src="./media/subnets_tab.png" width="1000" alt="Subnets Tab">
+  <img src="./media/subnets_tab.png" width="800" alt="Subnets Tab">
 </p>
 
 **🏷️ Groups**: Create logical service groupings and visualize relationships. Groups help you:
@@ -238,7 +238,7 @@ The Manage section groups all network organization and configuration tabs:
 - Organize hosts by function or team
 
 <p align="center">
-  <img src="./media/groups_tab.png" width="1000" alt="Groups Tab">
+  <img src="./media/groups_tab.png" width="800" alt="Groups Tab">
 </p>
 
 #### 🗺️ Topology
@@ -289,16 +289,15 @@ Discovery creates hosts with their interfaces, services, and subnet relationship
 **Scan Duration**: Discovery typically takes 5-10+ minutes depending on:
 - Number of subnets the daemon's host is connected to
 - Network mask size for those subnets (must scan every IP address)
-- Number of concurrent scans configured (default: 15)
+- Number of concurrent host scans configured (default: 15)
 - Network response times
 
 **Real-time Updates**: Switch to the **Discover > Sessions** tab to monitor active scans. The UI receives live updates via Server-Sent Events, showing:
 - Current scan progress (scanned count / discovered count)
-- Newly discovered hosts and services
 - Scan completion status
 
 <p align="center">
-  <img src="./media/discovery_progress.png" width="800" alt="Discovery Progress">
+  <img src="./media/discovery_progress.png" width="500" alt="Discovery Progress">
 </p>
 
 ---
@@ -454,10 +453,6 @@ The topology supports extensive customization through the options panel on the r
 - **Subnet sizing**: Drag subnet boundaries to resize containers
 - **Node positioning**: Drag hosts and subnets to manually organize your topology
 
-<p align="center">
-  <img src="./media/topology_customization.png" width="1000" alt="Topology Customization">
-</p>
-
 ### Export
 
 Export your topology visualization as a PNG image for documentation, presentations, or sharing:
@@ -467,10 +462,6 @@ Export your topology visualization as a PNG image for documentation, presentatio
 3. PNG file downloads automatically with timestamp
 
 The export includes your entire topology with all current customizations applied.
-
-<p align="center">
-  <img src="./media/topology_export.png" width="300" alt="Export Button">
-</p>
 
 ---
 
