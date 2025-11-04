@@ -1,0 +1,27 @@
+use crate::server::hosts::types::ports::PortBase;
+use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
+use crate::server::services::types::categories::ServiceCategory;
+use crate::server::services::types::definitions::ServiceDefinition;
+use crate::server::services::types::patterns::Pattern;
+
+#[derive(Default, Clone, Eq, PartialEq, Hash)]
+pub struct Jump;
+
+impl ServiceDefinition for Jump {
+    fn name(&self) -> &'static str {
+        "Jump"
+    }
+    fn description(&self) -> &'static str {
+        "a self-hosted startpage and real-time status page"
+    }
+    fn category(&self) -> ServiceCategory {
+        ServiceCategory::Dashboard
+    }
+
+    fn discovery_pattern(&self) -> Pattern<'_> {
+        Pattern::Endpoint(PortBase::new_tcp(8123), "/", "Jump")
+    }
+
+}
+
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Jump>));

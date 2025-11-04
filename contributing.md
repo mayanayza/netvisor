@@ -25,6 +25,7 @@ If you're interested in adding a service definition, jump to the [Adding Service
 ### 1. Service Definitions (Recommended for First-Time Contributors)
 
 Service definitions are small, focused additions that help NetVisor discover and identify specific services on your network. Examples include:
+
 - Home automation platforms (Home Assistant, OpenHAB)
 - Media servers (Plex, Jellyfin, Emby)
 - Infrastructure services (Pi-hole, AdGuard, Traefik)
@@ -37,6 +38,7 @@ Found a bug? [Please open an issue!](https://github.com/mayanayza/netvisor/issue
 ### 3. Documentation
 
 Help improve our documentation:
+
 - Fix typos or clarify existing docs
 - Add examples or tutorials for specific setups
 - Improve installation instructions
@@ -45,6 +47,7 @@ Help improve our documentation:
 ### 4. Code Contributions
 
 For larger features or bug fixes:
+
 - Discuss your idea in an issue first
 - Follow the development workflow below
 - Write tests for new functionality
@@ -55,10 +58,12 @@ For larger features or bug fixes:
 ### Prerequisites
 
 **For Daemon Development:**
+
 - Linux: Docker with host networking support, OR binary installation
 - Mac/Windows: Binary installation only (Docker Desktop does not support host networking)
 
 **For Server Development:**
+
 - Rust 1.90 or later
 - Node.js 20 or later
 - PostgreSQL 17
@@ -67,27 +72,71 @@ For larger features or bug fixes:
 ### Initial Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/mayanayza/netvisor.git
    cd netvisor
    ```
 
 2. **Install development dependencies**
-   ```bash
-   make install-dev-mac
-   ```
-   ```bash
-   make install-dev-linux
-   ```
-   This installs:
-   - Rust toolchain with rustfmt and clippy
-   - Node.js dependencies
-   - PostgreSQL 17
+
+    On Ubuntu/Debian:
+   1. Install NVM and Node.js 20
+
+        ```bash
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+        nvm install 20
+        nvm use 20
+        ```
+
+   2. Install postgresql-17
+
+        ```bash
+        sudo apt install curl ca-certificates gnupg2 wget vim -y
+        sudo install -d /usr/share/postgresql-common/pgdg
+        sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        sudo sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+        sudo apt update
+        sudo apt -y install postgresql-17
+        ```
+
+   3. Install project dependencies
+
+        ```bash
+        npm i --save-dev prettier-plugin-svelte prettier prettier-plugin-tailwindcss
+        
+        make install-dev-linux
+        ```
+
+    On MacOS:
+   1. Install Homebrew if not already installed
+
+        ```bash
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        ```
+
+   2. Install Rust, Node.js 20, and PostgreSQL 17
+
+        ```bash
+        brew install rust node@20 postgresql@17
+        ```
+
+   3. Install project dependencies
+
+        ```bash
+        make install-dev-mac
+        ```
+
+        This installs:
+        - Rust toolchain with rustfmt and clippy
+        - Node.js dependencies
 
 3. **Set up the database**
+
    ```bash
    make setup-db
    ```
+
    This starts a PostgreSQL container on port 5432.
 
 ### Development Environments
@@ -110,6 +159,7 @@ make dev-daemon
 ```
 
 **Advantages:**
+
 - Faster iteration with hot reload
 - Easier debugging
 - More control over individual components
@@ -133,6 +183,7 @@ make dev-down
 ```
 
 **Use this when:**
+
 - Testing the full stack together
 - You want a production-like environment
 - You're having dependency issues locally
@@ -140,15 +191,17 @@ make dev-down
 ### Accessing the Application
 
 Once running:
-- **UI**: http://localhost:5173 (with hot reload)
-- **Server API**: http://localhost:60072
-- **Daemon API**: http://localhost:60073
+
+- **UI**: <http://localhost:5173> (with hot reload)
+- **Server API**: <http://localhost:60072>
+- **Daemon API**: <http://localhost:60073>
 
 ## Development Workflow
 
 ### Before You Start
 
 1. Create a new branch for your work:
+
    ```bash
    git checkout -b feature/your-feature-name
    # or
@@ -156,6 +209,7 @@ Once running:
    ```
 
 2. If working on the server/daemon, ensure fresh start:
+
    ```bash
    make clean-daemon  # Clear daemon config
    make clean-db      # Stop and remove database
@@ -170,6 +224,7 @@ Once running:
    - Keep changes focused and atomic
 
 2. **Test your changes**
+
    ```bash
    make test
    ```
@@ -183,11 +238,13 @@ Once running:
    ```
 
 3. **Format your code**
+
    ```bash
    make format
    ```
 
 4. **Lint your code**
+
    ```bash
    make lint
    ```
@@ -211,6 +268,7 @@ Service definitions are the best place to start contributing! They help NetVisor
 ### Project Structure
 
 Service definitions are located in:
+
 ```
 backend/src/server/services/definitions/
 ├── mod.rs                 # Module registry
@@ -285,6 +343,7 @@ This is the preferred match type, as the existence of the name of the service in
 
 **Pattern::Endpoint**
 Check if an endpoint returns expected content:
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::Endpoint(
@@ -301,6 +360,7 @@ This pattern is acceptable if there are no usable endpoints (ie they require aut
 
 **Pattern::Port**
 Match a specific port:
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::Port(PortBase::Http)  // Port 80
@@ -308,6 +368,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 ```
 
 Common PortBase values:
+
 - `PortBase::Http` (80)
 - `PortBase::Https` (443)
 - `PortBase::HttpAlt` (8080)
@@ -321,6 +382,7 @@ Common PortBase values:
 
 **Pattern::AnyOf**
 Match if ANY pattern succeeds:
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::AnyOf(vec![
@@ -332,6 +394,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 
 **Pattern::AllOf**
 Match ONLY if ALL patterns succeed:
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::AllOf(vec![
@@ -343,6 +406,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 
 **Pattern::Not**
 Inverse of a pattern:
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::Not(&Pattern::IsGateway)
@@ -353,6 +417,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 
 **Pattern::IsGateway**
 Matches if the host is in the routing table as a gateway:
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::IsGateway
@@ -361,6 +426,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 
 **Pattern::MacVendor**
 Match based on MAC address vendor:
+
 ```rust
 use crate::server::services::types::patterns::Vendor;
 
@@ -370,6 +436,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 ```
 
 To add new Vendor:: values:
+
 1. Go to `backend/src/server/services/types/patterns.rs` and ctrl+f "pub struct Vendor;"
 2. Use `https://gist.github.com/aallan/b4bb86db86079509e6159810ae9bd3e4` to identify the string used by a vendor for their MAC address patterns.
 3. Add your new Vendor value: 
@@ -393,6 +460,7 @@ For a list of subnet types and information on how they are derived, check out `b
 
 **Pattern::None**
 For services that aren't auto-discovered (manual only):
+
 ```rust
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::None
@@ -404,6 +472,7 @@ fn discovery_pattern(&self) -> Pattern<'_> {
 Choose the most appropriate category. If the service you want to add doesn't fit the category, you can add one at `backend/src/server/services/types/categories.rs`.
 
 #### Infrastructure
+
 - `ServiceCategory::NetworkCore` - Switches, core infrastructure
 - `ServiceCategory::NetworkAccess` - Routers, access points
 - `ServiceCategory::NetworkSecurity` - Firewalls, security appliances
@@ -412,6 +481,7 @@ Choose the most appropriate category. If the service you want to add doesn't fit
 - `ServiceCategory::ReverseProxy` - Nginx, Traefik, HAProxy, etc
 
 #### Server Services
+
 - `ServiceCategory::Storage` - NAS, file servers
 - `ServiceCategory::Media` - Plex, Jellyfin, Emby
 - `ServiceCategory::HomeAutomation` - Home Assistant, OpenHAB
@@ -419,6 +489,7 @@ Choose the most appropriate category. If the service you want to add doesn't fit
 - `ServiceCategory::Backup` - Backup services
 
 #### Applications
+
 - `ServiceCategory::Web` - Web servers and applications
 - `ServiceCategory::Database` - Database servers
 - `ServiceCategory::Development` - Development tools
@@ -426,12 +497,14 @@ Choose the most appropriate category. If the service you want to add doesn't fit
 - `ServiceCategory::Monitoring` - Monitoring and metrics
 
 #### Devices
+
 - `ServiceCategory::Workstation` - Desktop computers
 - `ServiceCategory::Mobile` - Mobile devices
 - `ServiceCategory::IoT` - IoT devices
 - `ServiceCategory::Printer` - Printers
 
 #### Other
+
 - `ServiceCategory::AdBlock` - Pi-hole, AdGuard
 - `ServiceCategory::Custom` - Custom services
 - `ServiceCategory::Unknown` - When unclear
@@ -440,6 +513,7 @@ Choose the most appropriate category. If the service you want to add doesn't fit
 
 #### Generic Services
 Mark services not tied to a specific brand.
+
 ```rust
 fn is_generic(&self) -> bool { 
     true 
@@ -451,6 +525,7 @@ fn is_generic(&self) -> bool {
 NetVisor supports icons from three sources. All icons **must support SVG format**.
 
 **Dashboard Icons** (Recommended - has the most service icons):
+
 ```rust
 fn dashboard_icons_path(&self) -> &'static str { 
     "home-assistant"  // From dashboardicons.com/icons/home-assistant
@@ -458,6 +533,7 @@ fn dashboard_icons_path(&self) -> &'static str {
 ```
 
 **Simple Icons**:
+
 ```rust
 fn simple_icons_path(&self) -> &'static str { 
     "plex"  // From simpleicons.org/icons/plex.svg
@@ -465,6 +541,7 @@ fn simple_icons_path(&self) -> &'static str {
 ```
 
 **Vector Logo Zone**:
+
 ```rust
 fn vector_logo_zone_icons_path(&self) -> &'static str { 
     "akamai/akamai-icon"  // From vectorlogo.zone/logos/akamai/akamai-icon.svg
@@ -472,6 +549,7 @@ fn vector_logo_zone_icons_path(&self) -> &'static str {
 ```
 
 **White Background** (for dark logos):
+
 ```rust
 fn logo_needs_white_background(&self) -> bool {
     true
@@ -479,9 +557,10 @@ fn logo_needs_white_background(&self) -> bool {
 ```
 
 Browse available icons:
-- Dashboard Icons: https://dashboardicons.com/
-- Simple Icons: https://simpleicons.org/
-- Vector Logo Zone: https://www.vectorlogo.zone/
+
+- Dashboard Icons: <https://dashboardicons.com/>
+- Simple Icons: <https://simpleicons.org/>
+- Vector Logo Zone: <https://www.vectorlogo.zone/>
 
 ### Complete Examples
 
@@ -623,6 +702,7 @@ make test
 ```
 
 This will:
+
 - Stop any running dev containers
 - Clean daemon config
 - Run all backend and integration tests
@@ -650,6 +730,7 @@ If you have the actual service running on your network:
 #### 3. Manual Testing
 
 Even if you don't have the service running, you should verify:
+
 - The service compiles without errors
 - The pattern logic makes sense
 - The category is appropriate
