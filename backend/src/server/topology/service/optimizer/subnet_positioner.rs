@@ -25,6 +25,7 @@ const GRID_SIZE: isize = 25;
 /// - Optimizes all subnets simultaneously in each iteration
 /// - Applies non-overlap constraints to prevent subnet collisions
 /// - Iterates until convergence or max iterations reached
+/// - Grid snapping happens AFTER optimization to avoid local minima at grid boundaries
 pub struct SubnetPositioner<'a> {
     max_iterations: usize,
     context: &'a TopologyContext<'a>,
@@ -52,6 +53,7 @@ impl<'a> SubnetPositioner<'a> {
     /// 2. Apply non-overlap constraints to ensure subnets don't collide
     /// 3. Evaluate if total edge length improved
     /// 4. If yes, keep changes and continue; if no, revert and stop
+    /// 5. AFTER optimization complete, snap all positions to grid
     ///
     /// Stops when: no improvement OR max iterations reached
     pub fn optimize_positions(&self, nodes: &mut [Node], edges: &[Edge]) {
@@ -73,15 +75,40 @@ impl<'a> SubnetPositioner<'a> {
             .cloned()
             .collect();
 
+        tracing::debug!(
+            "Starting subnet position optimization with {} subnets, {} inter-subnet edges",
+            subnet_ids.len(),
+            inter_subnet_edges.len()
+        );
+
+        // Log initial subnet positions
+        for subnet_id in &subnet_ids {
+            if let Some(subnet) = nodes.iter().find(|n| n.id == *subnet_id) {
+                tracing::debug!(
+                    "  Initial subnet {} at x={}, width={}",
+                    subnet_id,
+                    subnet.position.x,
+                    subnet.size.x
+                );
+            }
+        }
+
         let mut improved = true;
         let mut iteration = 0;
 
+        // OPTIMIZATION LOOP - positions are NOT grid-snapped during iteration
         while improved && iteration < self.max_iterations {
             iteration += 1;
 
             let initial_length = self
                 .utils
                 .calculate_total_edge_length(nodes, &inter_subnet_edges);
+
+            tracing::debug!(
+                "Iteration {} - Initial edge length: {:.2}",
+                iteration,
+                initial_length
+            );
 
             // Save original positions to revert if worse
             let original_positions: HashMap<Uuid, isize> = nodes
@@ -99,9 +126,23 @@ impl<'a> SubnetPositioner<'a> {
             for &subnet_id in &subnet_ids {
                 let optimal_x = self.calculate_optimal_x(nodes, &inter_subnet_edges, subnet_id);
 
+                tracing::debug!(
+                    "  Subnet {} - calculated optimal_x={} (NO grid snap during optimization)",
+                    subnet_id,
+                    optimal_x
+                );
+
                 // Apply non-overlap constraints
                 let constrained_x =
                     self.apply_non_overlap_constraint(nodes, subnet_id, optimal_x, &new_positions);
+
+                tracing::debug!(
+                    "  Subnet {} - constrained_x={} (optimal={}, diff={})",
+                    subnet_id,
+                    constrained_x,
+                    optimal_x,
+                    constrained_x - optimal_x
+                );
 
                 new_positions.insert(subnet_id, constrained_x);
             }
@@ -109,7 +150,15 @@ impl<'a> SubnetPositioner<'a> {
             // Apply all new positions at once
             for (subnet_id, new_x) in &new_positions {
                 if let Some(subnet) = nodes.iter_mut().find(|n| n.id == *subnet_id) {
+                    let old_x = subnet.position.x;
                     subnet.position.x = *new_x;
+                    tracing::debug!(
+                        "  Subnet {} - moved x: {} -> {} (delta={})",
+                        subnet_id,
+                        old_x,
+                        new_x,
+                        new_x - old_x
+                    );
                 }
             }
 
@@ -117,9 +166,26 @@ impl<'a> SubnetPositioner<'a> {
                 .utils
                 .calculate_total_edge_length(nodes, &inter_subnet_edges);
 
+            let improvement = initial_length - new_length;
+            let improvement_pct = (improvement / initial_length) * 100.0;
+
+            tracing::debug!(
+                "Iteration {} - New edge length: {:.2}, improvement: {:.2} ({:.2}%)",
+                iteration,
+                new_length,
+                improvement,
+                improvement_pct
+            );
+
             if new_length < initial_length {
+                tracing::debug!("Iteration {} - Accepted (improvement)", iteration);
                 improved = true;
             } else {
+                tracing::debug!(
+                    "Iteration {} - Rejected (worse by {:.2}), reverting positions",
+                    iteration,
+                    new_length - initial_length
+                );
                 // Revert - this move made things worse
                 for (subnet_id, original_x) in original_positions {
                     if let Some(subnet) = nodes.iter_mut().find(|n| n.id == subnet_id) {
@@ -128,6 +194,43 @@ impl<'a> SubnetPositioner<'a> {
                 }
                 // Stop if we can't improve
                 break;
+            }
+        }
+
+        tracing::debug!(
+            "Subnet optimization complete after {} iterations",
+            iteration
+        );
+
+        // NOW snap all positions to grid for visual alignment
+        tracing::debug!("Snapping all subnet positions to grid...");
+        for subnet_id in &subnet_ids {
+            if let Some(subnet) = nodes.iter_mut().find(|n| n.id == *subnet_id) {
+                let original_x = subnet.position.x;
+                let snapped_x = Self::snap_to_grid(original_x as f64);
+                subnet.position.x = snapped_x;
+                
+                if original_x != snapped_x {
+                    tracing::debug!(
+                        "  Subnet {} - snapped x: {} -> {} (delta={})",
+                        subnet_id,
+                        original_x,
+                        snapped_x,
+                        snapped_x - original_x
+                    );
+                }
+            }
+        }
+
+        // Log final positions
+        for subnet_id in &subnet_ids {
+            if let Some(subnet) = nodes.iter().find(|n| n.id == *subnet_id) {
+                tracing::debug!(
+                    "  Final subnet {} at x={} (grid-snapped), width={}",
+                    subnet_id,
+                    subnet.position.x,
+                    subnet.size.x
+                );
             }
         }
     }
@@ -143,6 +246,8 @@ impl<'a> SubnetPositioner<'a> {
     ///
     /// By using subnet centers rather than individual node positions,
     /// internal topology changes (like VM host edges) don't affect subnet positioning.
+    ///
+    /// NOTE: Does NOT snap to grid - returns exact optimal position
     fn calculate_optimal_x(&self, nodes: &[Node], edges: &[Edge], subnet_id: Uuid) -> isize {
         let subnet_positions: HashMap<Uuid, Ixy> = nodes
             .iter()
@@ -191,8 +296,21 @@ impl<'a> SubnetPositioner<'a> {
 
         if external_subnet_positions.is_empty() {
             // No external connections, keep current position
-            return subnet_positions.get(&subnet_id).map(|p| p.x).unwrap_or(0);
+            let current_x = subnet_positions.get(&subnet_id).map(|p| p.x).unwrap_or(0);
+            tracing::debug!(
+                "    Subnet {} has no external connections, keeping current x={}",
+                subnet_id,
+                current_x
+            );
+            return current_x;
         }
+
+        tracing::debug!(
+            "    Subnet {} has {} external connection targets at centers: {:?}",
+            subnet_id,
+            external_subnet_positions.len(),
+            external_subnet_positions
+        );
 
         // Calculate median of external subnet centers
         let median_external = self.utils.calculate_median(&mut external_subnet_positions);
@@ -205,9 +323,18 @@ impl<'a> SubnetPositioner<'a> {
             .unwrap_or(0);
 
         // Position subnet so its center aligns with median of external connections
+        // Return EXACT position without grid snapping
         let optimal_x = median_external as isize - (subnet_width / 2);
 
-        Self::snap_to_grid(optimal_x as f64)
+        tracing::debug!(
+            "    Subnet {} - median of external centers: {:.2}, subnet_width: {}, optimal_x (exact): {}",
+            subnet_id,
+            median_external,
+            subnet_width,
+            optimal_x
+        );
+
+        optimal_x
     }
 
     /// Apply constraint to prevent overlapping with other subnets in the same row
@@ -245,6 +372,16 @@ impl<'a> SubnetPositioner<'a> {
             proposed_x
         };
 
+        if bounded_proposed_x != proposed_x {
+            tracing::debug!(
+                "    Subnet {} - bounded movement from {} to {} (max_move={})",
+                subnet_id,
+                proposed_x,
+                bounded_proposed_x,
+                max_move
+            );
+        }
+
         // Check against other subnets in the same row
         for other in nodes.iter() {
             if !matches!(other.node_type, NodeType::SubnetNode { .. })
@@ -270,13 +407,24 @@ impl<'a> SubnetPositioner<'a> {
             if bounded_proposed_x < other_right + padding && proposed_right + padding > other_x {
                 // Determine which side to push to based on current position
                 // This maintains the current spatial relationship
-                if current_x < other_x {
+                let constrained_x = if current_x < other_x {
                     // We're on the left, stay on the left
-                    return (other_x - width - padding).min(bounded_proposed_x);
+                    (other_x - width - padding).min(bounded_proposed_x)
                 } else {
                     // We're on the right, stay on the right
-                    return (other_right + padding).max(bounded_proposed_x);
-                }
+                    (other_right + padding).max(bounded_proposed_x)
+                };
+
+                tracing::debug!(
+                    "    Subnet {} would overlap with subnet {} at x={}, constrained from {} to {}",
+                    subnet_id,
+                    other.id,
+                    other_x,
+                    bounded_proposed_x,
+                    constrained_x
+                );
+
+                return constrained_x;
             }
         }
 
