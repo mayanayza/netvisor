@@ -8,17 +8,21 @@ pub struct WebService;
 
 impl ServiceDefinition for WebService {
     fn name(&self) -> &'static str {
-        "Camera"
+        "RTSP Camera"
     }
     fn description(&self) -> &'static str {
-        "A generic IP Camera"
+        "Camera with RTSP Streaming"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::IoT
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::None
+        Pattern::Port(PortBase::RTSP)
+    }
+
+    fn is_generic(&self) -> bool {
+        true
     }
 }
 

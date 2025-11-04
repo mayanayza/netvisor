@@ -20,6 +20,10 @@ impl ServiceDefinition for WebService {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::None
     }
+
+    fn is_generic(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<WebService>));
