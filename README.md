@@ -9,7 +9,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 [![Discord](https://img.shields.io/discord/1432872786828726392?logo=discord&label=discord&labelColor=white&color=7289da)](https://discord.gg/b7ffQr8AcZ)
 
 <p align="center">
-  <img src="./media/example_visualization.jpeg" width="1200" alt="Example Visualization">
+  <img src="./media/topology_full.png" width="1200" alt="Example Visualization">
 </p>
 
 ## Table of Contents
