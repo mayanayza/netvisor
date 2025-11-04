@@ -108,6 +108,15 @@
 					.filter(Boolean)
 			: [];
 
+	$: nonInterfacedSubnets =
+		formData.discovery_type.type == 'Network' && formData.discovery_type.subnet_ids.length > 0
+			? formData.discovery_type.subnet_ids
+					.filter((s) => !daemon.capabilities.interfaced_subnet_ids.includes(s))
+					.map((s) => $subnets.find((subnet) => subnet.id == s))
+					.filter((s) => s != undefined)
+					.map((s) => s.name + ` (${s.cidr})`)
+			: [];
+
 	function handleAddSubnet(subnetId: string) {
 		if (formData.discovery_type.type === 'Network') {
 			const currentIds = formData.discovery_type.subnet_ids || [];
@@ -223,6 +232,12 @@
 						onRemove={handleRemoveSubnet}
 					/>
 				</div>
+				{#if nonInterfacedSubnets.length > 0}
+					<InlineWarning
+						title="Non-Interfaced Subnet Added"
+						body={`The selected daemon does not have a direct network interface with the following subnets: \n${nonInterfacedSubnets.join('\n')}. \nYou can still include them, but hostnames and MAC addresses will not be available for any discovered hosts.`}
+					/>
+				{/if}
 			{/if}
 		</div>
 	</div>

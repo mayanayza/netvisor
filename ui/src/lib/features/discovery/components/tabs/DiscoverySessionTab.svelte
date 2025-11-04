@@ -3,7 +3,7 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
-	import { sessions } from '../../SSEStore';
+	import { getActiveSessions, sessions } from '../../SSEStore';
 	import DiscoverySessionCard from '../cards/DiscoverySessionCard.svelte';
 	import { type DiscoveryUpdatePayload } from '../../types/api';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
@@ -11,7 +11,7 @@
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 
-	const loading = loadData([getDaemons]);
+	const loading = loadData([getDaemons, getActiveSessions]);
 
 	// Define field configuration for the DataTableControls
 	let discoveryFields: FieldConfig<DiscoveryUpdatePayload>[];

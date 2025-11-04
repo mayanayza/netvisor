@@ -286,6 +286,16 @@ impl DiscoveryService {
         self.sessions.read().await.get(session_id).cloned()
     }
 
+    /// Get session state
+    pub async fn get_all_sessions(&self, network_ids: &[Uuid]) -> Vec<DiscoveryUpdatePayload> {
+        let all_sessions = self.sessions.read().await;
+        all_sessions
+            .values()
+            .filter(|v| network_ids.contains(&v.network_id))
+            .cloned()
+            .collect()
+    }
+
     /// Create a new discovery session
     pub async fn start_session(
         &self,
@@ -350,126 +360,109 @@ impl DiscoveryService {
     }
 
     /// Update progress for a session
-    pub async fn update_session(&self, update: DiscoveryUpdatePayload) -> Result<Uuid, Error> {
+    pub async fn update_session(&self, update: DiscoveryUpdatePayload) -> Result<(), Error> {
         tracing::debug!("Updated session {:?}", update);
 
         let mut sessions = self.sessions.write().await;
 
-        if let Some(session) = sessions.get_mut(&update.session_id) {
-            let daemon_id = session.daemon_id;
-            tracing::debug!(
-                "Updated session {}: {} ({}/{})",
-                update.session_id,
-                update.phase,
-                update.processed,
-                update.total_to_process
-            );
+        let session = sessions
+            .get_mut(&update.session_id)
+            .ok_or_else(|| anyhow::anyhow!("Session not found"))?;
 
-            let _ = self.update_tx.send(update.clone());
+        let daemon_id = session.daemon_id;
+        tracing::debug!(
+            "Updated session {}: {} ({}/{})",
+            update.session_id,
+            update.phase,
+            update.processed,
+            update.total_to_process
+        );
 
-            *session = update;
+        let _ = self.update_tx.send(update.clone());
 
-            if matches!(
-                session.phase,
-                DiscoveryPhase::Cancelled | DiscoveryPhase::Complete | DiscoveryPhase::Failed
-            ) {
-                // Remove from daemon sessions mapping
-                match &session.error {
-                    Some(e) => tracing::error!(
-                        "{} discovery session {} with error {}",
-                        &session.phase,
-                        &session.session_id,
-                        e
-                    ),
-                    None => tracing::info!(
-                        "{} discovery session {}",
-                        &session.phase,
-                        &session.session_id
-                    ),
-                }
+        *session = update.clone();
 
-                session.finished_at = Some(Utc::now());
+        let is_terminal = matches!(
+            session.phase,
+            DiscoveryPhase::Cancelled | DiscoveryPhase::Complete | DiscoveryPhase::Failed
+        );
 
-                // Create historical discovery record
-                let historical_discovery = Discovery {
-                    id: Uuid::new_v4(),
-                    created_at: session.started_at.unwrap_or(Utc::now()),
-                    updated_at: Utc::now(),
-                    base: crate::server::discovery::types::base::DiscoveryBase {
-                        daemon_id: session.daemon_id,
-                        network_id: session.network_id,
-                        name: "Discovery Run".to_string(),
-                        discovery_type: session.discovery_type.clone(),
-                        run_type: RunType::Historical {
-                            results: session.clone(),
-                        },
+        if is_terminal {
+            // Create historical discovery record
+            let historical_discovery = Discovery {
+                id: Uuid::new_v4(),
+                created_at: session.started_at.unwrap_or(Utc::now()),
+                updated_at: Utc::now(),
+                base: crate::server::discovery::types::base::DiscoveryBase {
+                    daemon_id: session.daemon_id,
+                    network_id: session.network_id,
+                    name: "Discovery Run".to_string(),
+                    discovery_type: session.discovery_type.clone(),
+                    run_type: RunType::Historical {
+                        results: session.clone(),
                     },
-                };
+                },
+            };
 
-                // Save to database
-                if let Err(e) = self.discovery_storage.create(&historical_discovery).await {
-                    tracing::error!(
-                        "Failed to create historical discovery record for session {}: {}",
-                        session.session_id,
-                        e
-                    );
-                } else {
-                    tracing::debug!(
-                        "Created historical discovery record {} for session {}",
-                        historical_discovery.id,
-                        session.session_id
-                    );
-                }
-
-                // Get next session info BEFORE trying to send request
-                let next_session = if let Some(daemon_sessions) = self
-                    .daemon_sessions
-                    .write()
-                    .await
-                    .get_mut(&session.daemon_id)
-                {
-                    daemon_sessions.retain(|s| *s != session.session_id);
-
-                    // Get info about next session if it exists
-                    daemon_sessions
-                        .first()
-                        .and_then(|next_session_id| sessions.get_mut(next_session_id))
-                } else {
-                    None
-                };
-
-                let next_session_info = if let Some(next_session) = next_session {
-                    next_session.phase = DiscoveryPhase::Pending;
-                    Some((next_session.discovery_type.clone(), next_session.session_id))
-                } else {
-                    None
-                };
-
-                // Drop the sessions lock before sending the request
-                drop(sessions);
-
-                // If any in queue, initiate next session
-                if let Some((discovery_type, session_id)) = next_session_info {
-                    tracing::debug!("Starting next session");
-
-                    self.daemon_service
-                        .send_discovery_request(
-                            &daemon_id,
-                            DaemonDiscoveryRequest {
-                                discovery_type,
-                                session_id,
-                            },
-                        )
-                        .await?;
-                }
-
-                return Ok(daemon_id);
+            // Save to database
+            if let Err(e) = self.discovery_storage.create(&historical_discovery).await {
+                tracing::error!(
+                    "Failed to create historical discovery record for session {}: {}",
+                    session.session_id,
+                    e
+                );
+            } else {
+                tracing::debug!(
+                    "Created historical discovery record {} for session {}",
+                    historical_discovery.id,
+                    session.session_id
+                );
             }
 
-            Ok(daemon_id)
-        } else {
-            Err(anyhow::anyhow!("Session not found"))
+            // Get next session info BEFORE trying to send request
+            let next_session_info = if let Some(daemon_sessions) = self
+                .daemon_sessions
+                .write()
+                .await
+                .get_mut(&session.daemon_id)
+            {
+                daemon_sessions.retain(|s| *s != session.session_id);
+
+                // Get info about next session if it exists
+                daemon_sessions
+                    .first()
+                    .and_then(|next_session_id| sessions.get_mut(next_session_id))
+                    .map(|next_session| {
+                        next_session.phase = DiscoveryPhase::Pending;
+                        (next_session.discovery_type.clone(), next_session.session_id)
+                    })
+            } else {
+                None
+            };
+
+            // Remove the completed session
+            sessions.remove(&update.session_id);
+
+            // Drop the sessions lock before sending the request
+            drop(sessions);
+
+            // If any in queue, initiate next session
+            if let Some((discovery_type, session_id)) = next_session_info {
+                tracing::debug!("Starting next session");
+
+                self.daemon_service
+                    .send_discovery_request(
+                        &daemon_id,
+                        DaemonDiscoveryRequest {
+                            discovery_type,
+                            session_id,
+                        },
+                    )
+                    .await?;
+            }
         }
+
+        Ok(())
     }
 
     pub async fn cancel_session(&self, session_id: Uuid) -> Result<(), Error> {

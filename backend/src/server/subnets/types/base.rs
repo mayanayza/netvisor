@@ -365,11 +365,7 @@ impl TypeMetadataProvider for SubnetType {
     fn metadata(&self) -> serde_json::Value {
         let network_scan_discovery_eligible = !matches!(
             &self,
-            SubnetType::Remote
-                | SubnetType::Internet
-                | SubnetType::DockerBridge
-                | SubnetType::Unknown
-                | SubnetType::None
+            SubnetType::Remote | SubnetType::Internet | SubnetType::DockerBridge
         );
 
         serde_json::json!({
