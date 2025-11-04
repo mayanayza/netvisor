@@ -2,6 +2,8 @@ import { api } from '$lib/shared/utils/api';
 import { writable } from 'svelte/store';
 import type { Discovery } from './types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
+import type { FieldConfig } from '$lib/shared/components/data/types';
+import type { Daemon } from '../daemons/types/base';
 
 export const discoveries = writable<Discovery[]>([]);
 
@@ -115,3 +117,36 @@ export function generateCronSchedule(hours: number): string {
 	// Every N hours
 	return `0 0 */${hours} * * *`;
 }
+
+// Define field configuration for the DataTableControls
+export const discoveryFields = (daemons: Daemon[]): FieldConfig<Discovery>[] => [
+	{
+		key: 'name',
+		label: 'Name',
+		type: 'string',
+		searchable: true,
+		filterable: false,
+		sortable: true
+	},
+	{
+		key: 'daemon',
+		label: 'Daemon',
+		type: 'string',
+		searchable: true,
+		filterable: true,
+		sortable: true,
+		getValue: (item) => {
+			const daemon = daemons.find((d) => d.id == item.daemon_id);
+			return daemon ? daemon.ip : 'Unknown Daemon';
+		}
+	},
+	{
+		key: 'discovery_type',
+		label: 'Discovery Type',
+		type: 'string',
+		searchable: true,
+		filterable: true,
+		sortable: true,
+		getValue: (item) => item.discovery_type.type
+	}
+];

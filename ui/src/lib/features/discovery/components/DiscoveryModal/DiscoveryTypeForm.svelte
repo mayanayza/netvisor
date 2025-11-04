@@ -9,9 +9,10 @@
 	import type { Docker, Network, SelfReport } from '../../types/api';
 	import type { Discovery } from '../../types/base';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
-	import { discoveryTypes } from '$lib/shared/stores/metadata';
+	import { discoveryTypes, subnetTypes } from '$lib/shared/stores/metadata';
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { generateCronSchedule, parseCronToHours } from '../../store';
+	import { onMount } from 'svelte';
 
 	export let formApi: FormApi;
 	export let formData: Discovery;
@@ -31,6 +32,19 @@
 		},
 		{ value: 'SelfReport', label: 'Self Report', disabled: daemonHostId == null }
 	];
+
+	// Initialize subnet_ids on mount if needed
+	onMount(() => {
+		if (
+			formData.discovery_type.type === 'Network' &&
+			(!formData.discovery_type.subnet_ids || formData.discovery_type.subnet_ids.length === 0)
+		) {
+			formData.discovery_type = {
+				...formData.discovery_type,
+				subnet_ids: daemon.capabilities.interfaced_subnet_ids
+			};
+		}
+	});
 
 	// Run type toggle
 	const runTypeField = field('run_type', formData.run_type.type, [required()]);
@@ -64,7 +78,7 @@
 		if (type === 'Network' && formData.discovery_type.type !== 'Network') {
 			formData.discovery_type = {
 				type: 'Network',
-				subnet_ids: []
+				subnet_ids: daemon.capabilities.interfaced_subnet_ids
 			} as Network;
 		} else if (type === 'Docker' && formData.discovery_type.type !== 'Docker') {
 			formData.discovery_type = {
@@ -84,8 +98,7 @@
 		(s) =>
 			formData.discovery_type.type === 'Network' &&
 			!formData.discovery_type.subnet_ids?.includes(s.id) &&
-			s.source.type != 'System' &&
-			s.subnet_type != 'DockerBridge'
+			subnetTypes.getMetadata(s.subnet_type).network_scan_discovery_eligible
 	);
 
 	$: selectedSubnets =
@@ -93,7 +106,7 @@
 			? formData.discovery_type.subnet_ids
 					.map((id) => $subnets.find((s) => s.id === id))
 					.filter(Boolean)
-			: $subnets.filter((s) => daemon.capabilities.interfaced_subnet_ids.includes(s.id));
+			: [];
 
 	function handleAddSubnet(subnetId: string) {
 		if (formData.discovery_type.type === 'Network') {
@@ -115,8 +128,8 @@
 	}
 
 	// Frequency configuration - convert between hours and cron
-	let selectedDays = 0;
-	let selectedHours = 1;
+	let selectedDays = 1;
+	let selectedHours = 0;
 
 	// Parse existing cron schedule on mount/update
 	$: if (formData.run_type.type === 'Scheduled' && formData.run_type.cron_schedule) {
@@ -195,10 +208,11 @@
 				<div class="rounded-lg bg-gray-800/50 p-4">
 					<ListManager
 						label="Target Subnets"
-						helpText="Select specific subnets to scan, or leave empty to scan all"
+						helpText="Select specific subnets to scan, or leave empty to scan all subnets that the daemon has an interface with. Default selection is subnets that the daemon has an interface with."
 						placeholder="Select a subnet..."
 						emptyMessage="All subnets in network will be scanned"
 						allowReorder={false}
+						allowItemEdit={() => false}
 						{formApi}
 						showSearch={true}
 						options={availableSubnets}
@@ -241,23 +255,6 @@
 						options={hourOptions}
 						disabled={readOnly}
 					/>
-				</div>
-
-				<div class="rounded-lg border border-blue-800 bg-blue-900/20 p-3">
-					<p class="text-sm text-blue-300">
-						Discovery will run every <strong>{selectedDays * 24 + selectedHours}</strong> hours
-						{#if selectedDays > 0 || selectedHours > 0}
-							({#if selectedDays > 0}{selectedDays} day{selectedDays !== 1 ? 's' : ''}{/if}
-							{#if selectedDays > 0 && selectedHours > 0}and
-							{/if}
-							{#if selectedHours > 0}{selectedHours} hour{selectedHours !== 1 ? 's' : ''}{/if})
-						{/if}
-					</p>
-					{#if formData.run_type.cron_schedule}
-						<p class="mt-1 font-mono text-xs text-blue-400">
-							Cron: {formData.run_type.cron_schedule}
-						</p>
-					{/if}
 				</div>
 			</div>
 		</div>

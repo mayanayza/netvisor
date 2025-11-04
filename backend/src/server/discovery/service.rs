@@ -361,8 +361,8 @@ impl DiscoveryService {
                 "Updated session {}: {} ({}/{})",
                 update.session_id,
                 update.phase,
-                update.completed,
-                update.total
+                update.processed,
+                update.total_to_process
             );
 
             let _ = self.update_tx.send(update.clone());
@@ -509,9 +509,8 @@ impl DiscoveryService {
                     network_id,
                     daemon_id,
                     phase: DiscoveryPhase::Cancelled,
-                    completed: 0,
-                    total: session.total,
-                    discovered_count: 0,
+                    processed: 0,
+                    total_to_process: session.total_to_process,
                     error: None,
                     started_at: session.started_at,
                     finished_at: Some(Utc::now()),

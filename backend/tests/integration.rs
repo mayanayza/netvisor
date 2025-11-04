@@ -291,11 +291,10 @@ async fn run_discovery(client: &TestClient) -> Result<(), String> {
                                 if let Ok(update) = serde_json::from_str::<DiscoveryUpdatePayload>(data) {
 
                                     println!(
-                                        "📊 Discovery: {} - {}/{} scanned, {} discovered",
+                                        "📊 Discovery: {} - {}/{} processed",
                                         update.phase,
-                                        update.completed,
-                                        update.total,
-                                        update.discovered_count
+                                        update.processed,
+                                        update.total_to_process,
                                     );
 
                                     if update.finished_at.is_some() {
@@ -303,8 +302,7 @@ async fn run_discovery(client: &TestClient) -> Result<(), String> {
                                             return Err(format!("Discovery failed: {}", error));
                                         }
                                         println!("✅ Discovery completed!");
-                                        println!("   Total scanned: {}", update.completed);
-                                        println!("   Hosts discovered: {}", update.discovered_count);
+                                        println!("   Total processed: {}", update.processed);
                                         return Ok(());
                                     }
                                 }

@@ -51,8 +51,9 @@ function isValidLogoSource(
 	);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SubnetTypeMetadata {}
+export interface SubnetTypeMetadata {
+	network_scan_discovery_eligible: boolean;
+}
 
 export interface EdgeTypeMetadata {
 	is_dashed: boolean;

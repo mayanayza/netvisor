@@ -61,8 +61,7 @@ pub struct ProcessContainerParams<'a> {
     pub container: &'a ContainerInspectResponse,
     pub container_summary: &'a ContainerSummary,
     pub docker_service_id: &'a Uuid,
-    pub scanned_count: Arc<AtomicUsize>,
-    pub discovered_count: Arc<AtomicUsize>,
+    pub processed_count: Arc<AtomicUsize>,
     pub cancel: CancellationToken,
 }
 
@@ -280,19 +279,17 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         docker_service_id: &Uuid,
     ) -> Result<Vec<(Host, Vec<Service>)>> {
         let session = self.as_ref().get_session().await?;
-        let scanned_count = session.scanned_count.clone();
-        let discovered_count = session.discovered_count.clone();
+        let processed_count = session.processed_count.clone();
 
         let concurrent_scans = self.as_ref().config_store.get_concurrent_scans().await?;
 
-        self.report_discovery_update(DiscoverySessionUpdate::scanning(0, 0))
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(0))
             .await?;
 
         // Process containers concurrently using streams
         let results = stream::iter(containers.into_iter())
             .map(|(container, container_summary)| {
-                let scanned_count = scanned_count.clone();
-                let discovered_count = discovered_count.clone();
+                let processed_count = processed_count.clone();
                 let cancel = cancel.clone();
 
                 async move {
@@ -301,8 +298,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         container: &container,
                         container_summary: &container_summary,
                         docker_service_id,
-                        scanned_count,
-                        discovered_count,
+                        processed_count,
                         cancel,
                     })
                     .await
@@ -311,8 +307,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             .buffer_unordered(concurrent_scans);
 
         let mut stream_pin = Box::pin(results);
-        let mut last_reported_scan_count: usize = 0;
-        let mut last_reported_discovery_count: usize = 0;
+        let mut last_reported_processed_count: usize = 0;
         let mut all_container_data = Vec::new();
 
         while let Some(result) = stream_pin.next().await {
@@ -327,8 +322,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 Err(e) => tracing::warn!("Error processing container: {}", e),
             }
 
-            (last_reported_scan_count, last_reported_discovery_count) = self
-                .periodic_scan_update(5, last_reported_scan_count, last_reported_discovery_count)
+            last_reported_processed_count = self
+                .periodic_scan_update(5, last_reported_processed_count)
                 .await?;
         }
 
@@ -342,12 +337,12 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         let ProcessContainerParams {
             container,
             container_summary,
-            scanned_count,
+            processed_count,
             cancel,
             ..
         } = params;
 
-        scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        processed_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         if let Some(container_id) = container.id.clone() {
             if cancel.is_cancelled() {
@@ -390,14 +385,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         let ProcessContainerParams {
             containers_interfaces_and_subnets,
             container,
-            scanned_count,
-            discovered_count,
             cancel,
             docker_service_id,
             ..
         } = params;
-
-        scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         tracing::info!(
             "Processing host mode container {}",
@@ -450,7 +441,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 if let Ok(Some((mut host, services))) = self.process_host(params, None).await {
                     host.id = self.domain.host_id;
 
-                    discovered_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     if let Ok((created_host, created_services)) =
                         self.create_host(host, services).await
                     {
@@ -475,10 +465,9 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             containers_interfaces_and_subnets,
             container,
             container_summary,
-            scanned_count,
-            discovered_count,
             cancel,
             docker_service_id,
+            ..
         } = params;
 
         tracing::info!(
@@ -488,8 +477,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 .as_ref()
                 .unwrap_or(&"Unknown Container Name".to_string())
         );
-
-        scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         let empty_vec_ref = &vec![];
 
@@ -698,7 +685,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     });
                 });
 
-                discovered_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 if let Ok((created_host, created_services)) = self.create_host(host, services).await
                 {
                     return Ok::<Option<(Host, Vec<Service>)>, Error>(Some((

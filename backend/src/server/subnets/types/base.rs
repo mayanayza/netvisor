@@ -361,4 +361,19 @@ impl TypeMetadataProvider for SubnetType {
             SubnetType::None => "No Subnet",
         }
     }
+
+    fn metadata(&self) -> serde_json::Value {
+        let network_scan_discovery_eligible = !matches!(
+            &self,
+            SubnetType::Remote
+                | SubnetType::Internet
+                | SubnetType::DockerBridge
+                | SubnetType::Unknown
+                | SubnetType::None
+        );
+
+        serde_json::json!({
+            "network_scan_discovery_eligible": network_scan_discovery_eligible,
+        })
+    }
 }
