@@ -19,7 +19,10 @@ impl ServiceDefinition for QNAP {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "QNAP")
+        Pattern::AnyOf(vec![
+            Pattern::Endpoint(PortBase::Http, "/", "QNAP"),
+            Pattern::Endpoint(PortBase::HttpAlt, "/", "QNAP"),
+        ])
     }
 
     fn dashboard_icons_path(&self) -> &'static str {
