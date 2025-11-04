@@ -47,14 +47,10 @@
 				label: 'Running On',
 				value: daemon ? `Daemon @ ${daemon.ip}` : 'Unknown Daemon'
 			},
-			...(session.phase == 'Pending'
-				? [
-						{
-							label: 'Phase',
-							value: session.phase
-						}
-					]
-				: [])
+			{
+				label: '', // No label needed for snippet
+				snippet: progressSnippet
+			}
 		],
 		actions: [
 			{
@@ -67,31 +63,29 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode}>
-	{#snippet footer()}
-		{#if session.phase != 'Pending'}
-			<div class="mt-2 flex items-center justify-between gap-3 pt-2">
-				<div class="flex-1 space-y-2">
-					<div class="flex items-center gap-3">
-						<span class="text-secondary text-sm font-medium">Phase: </span>
-						<span class="text-accent text-sm font-medium"
-							>{isCancelling ? 'Cancelling' : session.phase}</span
-						>
-					</div>
-
-					{#if session.total_to_process && session.total_to_process > 0}
-						<div class="flex items-center gap-2">
-							<div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-700">
-								<div
-									class="h-full bg-blue-500 transition-all duration-300 ease-out"
-									style="width: {progressPercent}%"
-								></div>
-							</div>
-							<span class="text-secondary text-xs">{Math.round(progressPercent)}%</span>
-						</div>
-					{/if}
-				</div>
+{#snippet progressSnippet()}
+	<div class="flex items-center justify-between gap-3">
+		<div class="flex-1 space-y-2">
+			<div class="flex items-center gap-3">
+				<span class={`text-secondary ${viewMode == 'list' ? 'text-xs' : 'text-sm'} font-medium`}
+					>Phase:
+				</span>
+				<span class={`text-accent ${viewMode == 'list' ? 'text-xs' : 'text-sm'} font-medium`}
+					>{isCancelling ? 'Cancelling' : session.phase}</span
+				>
 			</div>
-		{/if}
-	{/snippet}
-</GenericCard>
+
+			<div class="flex items-center gap-2">
+				<div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-700">
+					<div
+						class="h-full bg-blue-500 transition-all duration-300 ease-out"
+						style="width: {progressPercent}%"
+					></div>
+				</div>
+				<span class="text-secondary text-xs">{Math.round(progressPercent)}%</span>
+			</div>
+		</div>
+	</div>
+{/snippet}
+
+<GenericCard {...cardData} {viewMode} />

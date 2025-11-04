@@ -244,7 +244,6 @@
 						{formApi}
 						field={daysField}
 						options={dayOptions}
-						disabled={readOnly}
 					/>
 
 					<SelectInput
@@ -253,7 +252,6 @@
 						{formApi}
 						field={hoursField}
 						options={hourOptions}
-						disabled={readOnly}
 					/>
 				</div>
 			</div>

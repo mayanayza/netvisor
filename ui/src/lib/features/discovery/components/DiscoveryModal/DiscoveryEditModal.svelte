@@ -7,15 +7,17 @@
 	import DiscoveryTypeForm from './DiscoveryTypeForm.svelte';
 	import type { Discovery } from '../../types/base';
 	import DiscoveryHistoricalSummary from './DiscoveryHistoricalSummary.svelte';
-	import { daemons } from '$lib/features/daemons/store';
-	import { hosts } from '$lib/features/hosts/store';
 	import { uuidv4Sentinel } from '$lib/shared/utils/formatting';
 	import { createEmptyDiscoveryFormData } from '../../store';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { pushError } from '$lib/shared/stores/feedback';
+	import type { Daemon } from '$lib/features/daemons/types/base';
+	import type { Host } from '$lib/features/hosts/types/base';
 
 	export let discovery: Discovery | null = null;
 	export let isOpen = false;
+	export let daemons: Daemon[] = [];
+	export let hosts: Host[] = [];
 	export let onCreate: (data: Discovery) => Promise<void> | void;
 	export let onUpdate: (id: string, data: Discovery) => Promise<void> | void;
 	export let onClose: () => void;
@@ -35,16 +37,17 @@
 
 	let formData: Discovery = createEmptyDiscoveryFormData();
 
-	$: if (formData.daemon_id == uuidv4Sentinel && $daemons.length > 0) {
-		formData.daemon_id = $daemons[0].id;
-	}
+	$: daemon = daemons.find((d) => d.id === formData.daemon_id) || null;
+	$: daemonHostId = (daemon ? hosts.find((h) => h.id === daemon.host_id)?.id : null) || null;
 
-	$: daemon = $daemons.find((d) => d.id == formData.daemon_id) || null;
-	$: daemonHostId = (daemon ? $hosts.find((h) => h.id === daemon.host_id)?.id : null) || null;
-
-	// Initialize form data when discovery changes or modal opens
+	// Reset form when modal opens
 	$: if (isOpen) {
 		resetForm();
+	}
+
+	// Set default daemon when available
+	$: if (formData.daemon_id === uuidv4Sentinel && daemons.length > 0) {
+		formData.daemon_id = daemons[0].id;
 	}
 
 	function resetForm() {
@@ -52,7 +55,6 @@
 	}
 
 	async function handleSubmit() {
-		// Clean up the data before sending
 		if (daemon) {
 			const discoveryData: Discovery = {
 				...formData,
@@ -86,9 +88,8 @@
 		}
 	}
 
-	// Dynamic labels based on mode
 	$: saveLabel = isEditing ? 'Update Discovery' : 'Create Discovery';
-	$: showSave = !isHistoricalRun; // Don't show save for historical runs
+	$: showSave = !isHistoricalRun;
 
 	let colorHelper = entities.getColorHelper('Discovery');
 </script>
@@ -107,34 +108,21 @@
 	size="xl"
 	let:formApi
 >
-	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
 		<ModalHeaderIcon Icon={entities.getIconComponent('Discovery')} color={colorHelper.string} />
 	</svelte:fragment>
 
-	<!-- Content -->
 	<div class="flex h-full flex-col overflow-hidden">
 		<div class="flex-1 overflow-y-auto">
 			<div class="space-y-8 p-6">
-				<!-- Basic Details Form -->
-				<DiscoveryDetailsForm {formApi} bind:formData readOnly={isHistoricalRun} />
+				<DiscoveryDetailsForm {formApi} {daemons} bind:formData readOnly={isEditing} />
 
 				{#if isHistoricalRun && discovery?.run_type.type === 'Historical'}
-					<!-- Historical Run Summary -->
 					<DiscoveryHistoricalSummary payload={discovery.run_type.results} />
+				{:else if daemon}
+					<DiscoveryTypeForm {formApi} bind:formData readOnly={isEditing} {daemonHostId} {daemon} />
 				{:else}
-					<!-- Discovery Type Configuration -->
-					{#if daemon}
-						<DiscoveryTypeForm
-							{formApi}
-							bind:formData
-							readOnly={isEditing}
-							{daemonHostId}
-							{daemon}
-						/>
-					{:else}
-						<InlineWarning body="No daemon selected; can't set up discovery" />
-					{/if}
+					<InlineWarning body="No daemon selected; can't set up discovery" />
 				{/if}
 
 				{#if isEditing}

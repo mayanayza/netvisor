@@ -17,8 +17,9 @@
 	import { getSubnets } from '$lib/features/subnets/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
-	import { getHosts } from '$lib/features/hosts/store';
+	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import DiscoveryRunCard from '../cards/DiscoveryScheduledCard.svelte';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
 
 	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
 
@@ -66,17 +67,20 @@
 		editingDiscovery = null;
 	}
 
-	const fields = discoveryFields($daemons);
+	let fields: FieldConfig<Discovery>[];
 
-	fields.push({
-		key: 'run_type',
-		label: 'Run Type',
-		type: 'string',
-		searchable: true,
-		filterable: true,
-		sortable: true,
-		getValue: (item) => item.run_type.type
-	});
+	$: fields = [
+		...discoveryFields($daemons),
+		{
+			key: 'run_type',
+			label: 'Run Type',
+			type: 'string',
+			searchable: true,
+			filterable: true,
+			sortable: true,
+			getValue: (item) => item.run_type.type
+		}
+	];
 </script>
 
 <div class="space-y-6">
@@ -125,6 +129,8 @@
 
 <DiscoveryEditModal
 	isOpen={showDiscoveryModal}
+	daemons={$daemons}
+	hosts={$hosts}
 	discovery={editingDiscovery}
 	onCreate={handleDiscoveryCreate}
 	onUpdate={handleDiscoveryUpdate}
