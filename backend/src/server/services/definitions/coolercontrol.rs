@@ -27,4 +27,6 @@ impl ServiceDefinition for CoolerControl {
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<CoolerControl>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<CoolerControl>
+));

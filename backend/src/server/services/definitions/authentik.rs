@@ -21,7 +21,7 @@ impl ServiceDefinition for Authentik {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
             Pattern::Endpoint(PortBase::Http, "/", "authentik"),
-            Pattern::Endpoint(PortBase::Https, "/", "authentik")
+            Pattern::Endpoint(PortBase::Https, "/", "authentik"),
         ])
     }
 

@@ -27,4 +27,6 @@ impl ServiceDefinition for AudioBookShelf {
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<AudioBookShelf>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<AudioBookShelf>
+));
