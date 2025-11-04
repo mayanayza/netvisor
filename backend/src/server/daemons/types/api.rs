@@ -13,7 +13,9 @@ use uuid::Uuid;
 /// Daemon registration request from daemon to server
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DaemonCapabilities {
+    #[serde(default)]
     pub has_docker_socket: bool,
+    #[serde(default)]
     pub interfaced_subnet_ids: Vec<Uuid>,
 }
 

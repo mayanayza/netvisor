@@ -15,9 +15,10 @@
 	import { getSubnets } from '$lib/features/subnets/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
-	import { getHosts } from '$lib/features/hosts/store';
+	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import DiscoveryHistoryCard from '../cards/DiscoveryHistoryCard.svelte';
 	import { formatDuration, formatTimestamp } from '$lib/shared/utils/formatting';
+	import type { FieldConfig } from '$lib/shared/components/data/types';
 
 	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
 
@@ -50,47 +51,50 @@
 		editingDiscovery = null;
 	}
 
-	const fields = discoveryFields($daemons);
+	let fields: FieldConfig<Discovery>[];
 
-	fields.push({
-		key: 'started_at',
-		label: 'Started At',
-		type: 'string',
-		searchable: true,
-		filterable: false,
-		sortable: true,
-		getValue: (item) => {
-			const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
-			return results && results.started_at ? formatTimestamp(results.started_at) : 'Unknown';
-		}
-	});
-	fields.push({
-		key: 'finished_at',
-		label: 'Finished At',
-		type: 'string',
-		searchable: true,
-		filterable: false,
-		sortable: true,
-		getValue: (item) => {
-			const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
-			return results && results.finished_at ? formatTimestamp(results.finished_at) : 'Unknown';
-		}
-	});
-	fields.push({
-		key: 'duration',
-		label: 'Duration',
-		type: 'string',
-		searchable: true,
-		filterable: false,
-		sortable: true,
-		getValue: (item) => {
-			const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
-			if (results && results.finished_at && results.started_at) {
-				return formatDuration(results.started_at, results.finished_at);
+	$: fields = [
+		...discoveryFields($daemons),
+		{
+			key: 'started_at',
+			label: 'Started At',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true,
+			getValue: (item) => {
+				const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
+				return results && results.started_at ? formatTimestamp(results.started_at) : 'Unknown';
 			}
-			return 'Unknown';
+		},
+		{
+			key: 'finished_at',
+			label: 'Finished At',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true,
+			getValue: (item) => {
+				const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
+				return results && results.finished_at ? formatTimestamp(results.finished_at) : 'Unknown';
+			}
+		},
+		{
+			key: 'duration',
+			label: 'Duration',
+			type: 'string',
+			searchable: true,
+			filterable: false,
+			sortable: true,
+			getValue: (item) => {
+				const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
+				if (results && results.finished_at && results.started_at) {
+					return formatDuration(results.started_at, results.finished_at);
+				}
+				return 'Unknown';
+			}
 		}
-	});
+	];
 </script>
 
 <div class="space-y-6">
@@ -117,6 +121,8 @@
 
 <DiscoveryEditModal
 	isOpen={showDiscoveryModal}
+	hosts={$hosts}
+	daemons={$daemons}
 	discovery={editingDiscovery}
 	onCreate={handleDiscoveryCreate}
 	onUpdate={handleDiscoveryUpdate}

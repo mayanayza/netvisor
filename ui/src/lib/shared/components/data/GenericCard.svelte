@@ -13,7 +13,7 @@
 		iconColor?: string;
 		actions?: CardAction[];
 		fields?: CardField[];
-		footer?: Snippet; // Snippet for footer
+		children?: Snippet; // Optional additional content
 		viewMode?: 'card' | 'list';
 	}
 
@@ -26,7 +26,7 @@
 		iconColor = 'text-blue-400',
 		actions = [],
 		fields = [],
-		footer,
+		children,
 		viewMode = 'card'
 	}: Props = $props();
 
@@ -96,14 +96,59 @@
 			>
 				{#each fields as field, i (field.label + i)}
 					<div class="flex min-w-0 flex-col">
-						<span class="text-secondary text-xs">{field.label}:</span>
-						<div class="text-tertiary break-all text-xs">
-							{#if field.value === null || field.value === undefined || field.value === ''}
-								<span class="text-muted text-xs">—</span>
-							{:else if isArrayValue(field.value)}
+						{#if field.snippet}
+							{@render field.snippet()}
+						{:else}
+							<span class="text-secondary text-xs">{field.label}:</span>
+							<div class="text-tertiary break-all text-xs">
+								{#if field.value === null || field.value === undefined || field.value === ''}
+									<span class="text-muted text-xs">—</span>
+								{:else if isArrayValue(field.value)}
+									{#if field.value.length > 0}
+										<div class="flex flex-wrap gap-1">
+											{#each field.value.slice(0, MAX_ITEMS_IN_LIST_VIEW) as item (item.id)}
+												<Tag
+													icon={item.icon}
+													disabled={item.disabled}
+													color={field.color || item.color}
+													badge={item.badge}
+													label={item.label}
+												/>
+											{/each}
+											{#if field.value.length > MAX_ITEMS_IN_LIST_VIEW}
+												<span class="text-tertiary flex-shrink-0 text-xs"
+													>+{field.value.length - MAX_ITEMS_IN_LIST_VIEW}</span
+												>
+											{/if}
+										</div>
+									{:else}
+										<span class="text-muted text-xs"
+											>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
+										>
+									{/if}
+								{:else}
+									{field.value}
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<!-- Card view: vertical layout -->
+			{#each fields as field, i (field.label + i)}
+				{#if field.snippet}
+					<div>
+						{@render field.snippet()}
+					</div>
+				{:else}
+					<div class="text-sm">
+						<span class="text-secondary">{field.label}:</span>
+						{#if field.value}
+							{#if isArrayValue(field.value)}
 								{#if field.value.length > 0}
-									<div class="flex flex-wrap gap-1">
-										{#each field.value.slice(0, MAX_ITEMS_IN_LIST_VIEW) as item (item.id)}
+									<div class="ml-2 inline-flex flex-wrap items-center gap-2">
+										{#each field.value as item (item.id)}
 											<Tag
 												icon={item.icon}
 												disabled={item.disabled}
@@ -112,60 +157,27 @@
 												label={item.label}
 											/>
 										{/each}
-										{#if field.value.length > MAX_ITEMS_IN_LIST_VIEW}
-											<span class="text-tertiary flex-shrink-0 text-xs"
-												>+{field.value.length - MAX_ITEMS_IN_LIST_VIEW}</span
-											>
-										{/if}
 									</div>
 								{:else}
-									<span class="text-muted text-xs"
+									<span class="text-muted ml-2"
 										>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
 									>
 								{/if}
 							{:else}
-								{field.value}
+								<span class="text-tertiary ml-2 break-all">{field.value}</span>
 							{/if}
-						</div>
-					</div>
-				{/each}
-			</div>
-		{:else}
-			<!-- Card view: vertical layout -->
-			{#each fields as field, i (field.label + i)}
-				<div class="text-sm">
-					<span class="text-secondary">{field.label}:</span>
-					{#if field.value}
-						{#if isArrayValue(field.value)}
-							{#if field.value.length > 0}
-								<div class="ml-2 inline-flex flex-wrap items-center gap-2">
-									{#each field.value as item (item.id)}
-										<Tag
-											icon={item.icon}
-											disabled={item.disabled}
-											color={field.color || item.color}
-											badge={item.badge}
-											label={item.label}
-										/>
-									{/each}
-								</div>
-							{:else}
-								<span class="text-muted ml-2"
-									>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
-								>
-							{/if}
-						{:else}
-							<span class="text-tertiary ml-2 break-all">{field.value}</span>
 						{/if}
-					{/if}
-				</div>
+					</div>
+				{/if}
 			{/each}
 		{/if}
 	</div>
 
-	<!-- Footer Component (only in card view) -->
-	{#if footer && viewMode === 'card'}
-		{@render footer()}
+	<!-- Optional additional content -->
+	{#if children}
+		<div class={viewMode === 'list' ? 'flex items-center' : ''}>
+			{@render children()}
+		</div>
 	{/if}
 
 	<!-- Action Buttons - Fixed width in list view -->

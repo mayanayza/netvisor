@@ -7,7 +7,7 @@ use strum_macros::EnumDiscriminants;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, EnumDiscriminants)]
-#[strum_discriminants(derive(Hash, Serialize, Deserialize))]
+#[strum_discriminants(derive(Hash))]
 #[serde(tag = "type")]
 pub enum EntitySource {
     Manual,

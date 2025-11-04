@@ -7,10 +7,15 @@
 	import DiscoverySessionCard from '../cards/DiscoverySessionCard.svelte';
 	import { type DiscoveryUpdatePayload } from '../../types/api';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
-	import { daemons } from '$lib/features/daemons/store';
+	import { daemons, getDaemons } from '$lib/features/daemons/store';
+	import { loadData } from '$lib/shared/utils/dataLoader';
+	import Loading from '$lib/shared/components/feedback/Loading.svelte';
+
+	const loading = loadData([getDaemons]);
 
 	// Define field configuration for the DataTableControls
-	const discoveryFields: FieldConfig<DiscoveryUpdatePayload>[] = [
+	let discoveryFields: FieldConfig<DiscoveryUpdatePayload>[];
+	$: discoveryFields = [
 		{
 			key: 'name',
 			label: 'Name',
@@ -72,7 +77,9 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<TabHeader title="Discovery Sessions" subtitle="Monitor active discovery sessions" />
-	{#if $sessions.length === 0}
+	{#if $loading}
+		<Loading />
+	{:else if $sessions.length === 0}
 		<!-- Empty state -->
 		<EmptyState title="No discovery sessions running" subtitle="" />
 	{:else}

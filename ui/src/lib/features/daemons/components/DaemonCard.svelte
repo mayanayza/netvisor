@@ -68,16 +68,25 @@
 			},
 			{
 				label: 'Interfaces With',
-				value: daemon.capabilities.interfaced_subnet_ids
-					.map((s) => $subnets.find((subnet) => subnet.id == s))
-					.filter((s) => s != undefined)
-					.map((s) => {
-						return {
-							id: s.id,
-							label: s.name,
-							color: entities.getColorHelper('Subnet').string
-						};
-					})
+				value:
+					daemon.capabilities.interfaced_subnet_ids.length > 0
+						? daemon.capabilities.interfaced_subnet_ids
+								.map((s) => $subnets.find((subnet) => subnet.id == s))
+								.filter((s) => s != undefined)
+								.map((s) => {
+									return {
+										id: s.id,
+										label: s.name,
+										color: entities.getColorHelper('Subnet').string
+									};
+								})
+						: [
+								{
+									id: daemon.id,
+									label: 'No subnet interfaces',
+									color: 'gray'
+								}
+							]
 			}
 		],
 		actions: [

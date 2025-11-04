@@ -1,5 +1,5 @@
 import type { IconComponent } from '$lib/shared/utils/types';
-import type { Component } from 'svelte';
+import type { Component, Snippet } from 'svelte';
 
 export interface TagProps {
 	label: string;
@@ -32,7 +32,8 @@ export interface CardFieldItem {
 
 export interface CardField {
 	label: string;
-	value: string | CardFieldItem[] | undefined | null;
+	value?: string | CardFieldItem[] | undefined | null;
+	snippet?: Snippet; // Allow snippet as an alternative to value
 	color?: string; // Used for tags when value is an array
 	emptyText?: string; // Used when value is empty array
 }
