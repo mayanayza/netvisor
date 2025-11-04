@@ -6,6 +6,9 @@
 .idea/
 *.swp
 *.swo
+node_modules/
+*/node_modules/
+package-lock.json
 
 # OS
 .DS_Store
