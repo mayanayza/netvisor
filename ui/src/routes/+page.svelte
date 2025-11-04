@@ -20,7 +20,8 @@
 	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
 	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
 	import DiscoverySessionTab from '$lib/features/discovery/components/tabs/DiscoverySessionTab.svelte';
-	import DiscoveryRunsTab from '$lib/features/discovery/components/tabs/DiscoveryRunsTab.svelte';
+	import DiscoveryHistoryTab from '$lib/features/discovery/components/tabs/DiscoveryHistoryTab.svelte';
+	import DiscoveryScheduledTab from '$lib/features/discovery/components/tabs/DiscoveryScheduledTab.svelte';
 
 	let activeTab = 'topology';
 	let appInitialized = false;
@@ -142,9 +143,9 @@
 				{#if activeTab === 'discovery-sessions'}
 					<DiscoverySessionTab />
 				{:else if activeTab === 'discovery-scheduled'}
-					<DiscoveryRunsTab runType="Scheduled" />
+					<DiscoveryScheduledTab />
 				{:else if activeTab === 'discovery-history'}
-					<DiscoveryRunsTab runType="Historical" />
+					<DiscoveryHistoryTab />
 				{:else if activeTab === 'daemons'}
 					<DaemonTab />
 				{:else if activeTab === 'networks'}

@@ -63,8 +63,7 @@ pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
 pub struct DiscoverySession {
     pub info: DiscoverySessionInfo,
     pub gateway_ips: Vec<IpAddr>,
-    pub scanned_count: Arc<AtomicUsize>,
-    pub discovered_count: Arc<AtomicUsize>,
+    pub processed_count: Arc<AtomicUsize>,
 }
 
 impl DiscoverySession {
@@ -72,8 +71,7 @@ impl DiscoverySession {
         Self {
             info,
             gateway_ips,
-            scanned_count: Arc::new(AtomicUsize::new(0)),
-            discovered_count: Arc::new(AtomicUsize::new(0)),
+            processed_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 }
@@ -197,7 +195,7 @@ pub trait DiscoversNetworkedEntities:
 
     async fn initialize_discovery_session(
         &self,
-        total_to_scan: usize,
+        total_to_process: usize,
         request: DaemonDiscoveryRequest,
         daemon_id: Uuid,
     ) -> Result<(), Error> {
@@ -215,7 +213,7 @@ pub trait DiscoversNetworkedEntities:
             .ok_or_else(|| anyhow!("Network ID not set, aborting discovery session"))?;
 
         let session_info = DiscoverySessionInfo {
-            total_to_scan,
+            total_to_process,
             session_id: request.session_id,
             network_id,
             daemon_id,
@@ -248,9 +246,8 @@ pub trait DiscoversNetworkedEntities:
 
         self.report_discovery_update(DiscoverySessionUpdate {
             phase: DiscoveryPhase::Started,
-            completed: 0,
+            processed: 0,
             error: None,
-            discovered_count: 0,
             finished_at: None,
         })
         .await?;
@@ -266,11 +263,8 @@ pub trait DiscoversNetworkedEntities:
         let session = self.as_ref().get_session().await?;
         let session_id = session.info.session_id;
 
-        let final_scanned_count = session
-            .scanned_count
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let final_discovered_count = session
-            .discovered_count
+        let final_processed_count = session
+            .processed_count
             .load(std::sync::atomic::Ordering::Relaxed);
 
         match &discovery_result {
@@ -278,9 +272,8 @@ pub trait DiscoversNetworkedEntities:
                 tracing::info!("Discovery session {} completed successfully", session_id);
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Complete,
-                    completed: final_scanned_count,
+                    processed: final_processed_count,
                     error: None,
-                    discovered_count: final_discovered_count,
                     finished_at: Some(Utc::now()),
                 })
                 .await?;
@@ -289,9 +282,8 @@ pub trait DiscoversNetworkedEntities:
                 tracing::warn!("Discovery session {} was cancelled", session_id);
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Cancelled,
-                    completed: final_scanned_count,
+                    processed: final_processed_count,
                     error: None,
-                    discovered_count: final_discovered_count,
                     finished_at: Some(Utc::now()),
                 })
                 .await?;
@@ -305,9 +297,8 @@ pub trait DiscoversNetworkedEntities:
 
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Failed,
-                    completed: final_scanned_count,
+                    processed: final_processed_count,
                     error: Some(error),
-                    discovered_count: final_discovered_count,
                     finished_at: Some(Utc::now()),
                 })
                 .await?;
@@ -323,11 +314,7 @@ pub trait DiscoversNetworkedEntities:
             return Ok(());
         }
 
-        tracing::info!(
-            "Discovery session {} finished with {} discovered",
-            session_id,
-            final_discovered_count
-        );
+        tracing::info!("Discovery session {} finished", session_id,);
         Ok(())
     }
 
@@ -568,31 +555,22 @@ pub trait DiscoversNetworkedEntities:
     async fn periodic_scan_update(
         &self,
         frequency: usize,
-        last_reported_scanned: usize,
-        last_reported_discovered: usize,
-    ) -> Result<(usize, usize), Error> {
+        last_reported_processed: usize,
+    ) -> Result<usize, Error> {
         let session = self.as_ref().get_session().await?;
 
-        let current_scanned = session
-            .scanned_count
-            .load(std::sync::atomic::Ordering::Relaxed);
-        let current_discovered = session
-            .discovered_count
+        let current_processed = session
+            .processed_count
             .load(std::sync::atomic::Ordering::Relaxed);
 
-        if current_scanned >= last_reported_scanned + frequency
-            || last_reported_discovered > current_discovered
-        {
-            self.report_discovery_update(DiscoverySessionUpdate::scanning(
-                current_scanned,
-                current_discovered,
-            ))
-            .await?;
+        if current_processed >= last_reported_processed + frequency {
+            self.report_discovery_update(DiscoverySessionUpdate::scanning(current_processed))
+                .await?;
 
-            return Ok((current_scanned, current_discovered));
+            return Ok(current_processed);
         }
 
-        Ok((last_reported_scanned, last_reported_discovered))
+        Ok(last_reported_processed)
     }
 }
 

@@ -12,9 +12,8 @@ export interface DiscoveryUpdatePayload {
 	daemon_id: string;
 	discovery_type: DiscoveryType;
 	phase: 'Pending' | 'Starting' | 'Started' | 'Scanning' | 'Complete' | 'Failed' | 'Cancelled';
-	completed?: number;
-	total?: number;
-	discovered_count?: number;
+	processed?: number;
+	total_to_process?: number;
 	error?: string;
 	started_at?: string;
 	finished_at?: string;

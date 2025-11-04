@@ -63,8 +63,8 @@ function loadPersistedSessions(): DiscoveryUpdatePayload[] {
 export const sessions = writable<DiscoveryUpdatePayload[]>(loadPersistedSessions());
 export const cancelling = writable<Map<string, boolean>>(new Map());
 
-// Track last known discovered_count per session to detect changes
-const lastDiscoveredCount = new Map<string, number>();
+// Track last known processed per session to detect changes
+const lastProcessedCount = new Map<string, number>();
 
 let sseClient: SSEClientType<DiscoveryUpdatePayload> | null = null;
 
@@ -78,21 +78,21 @@ export function startDiscoverySSE() {
 		onMessage: (update) => {
 			sessions.update((current) => {
 				// Check if discovered_count increased
-				const lastCount = lastDiscoveredCount.get(update.session_id) || 0;
-				const currentCount = update.discovered_count || 0;
+				const lastCount = lastProcessedCount.get(update.session_id) || 0;
+				const currentCount = update.processed || 0;
 
 				if (currentCount > lastCount) {
-					// New hosts discovered - refresh data
+					// Refresh data
 					getHosts();
 					getServices();
 					getSubnets();
 					getDaemons();
-					lastDiscoveredCount.set(update.session_id, currentCount);
+					lastProcessedCount.set(update.session_id, currentCount);
 				}
 
 				// Handle terminal phases
 				if (update.phase === 'Complete') {
-					pushSuccess(`Discovery completed with ${update.discovered_count} hosts found`);
+					pushSuccess(`${update.discovery_type.type} discovery completed`);
 					// Final refresh on completion
 					getHosts();
 					getServices();
@@ -116,7 +116,7 @@ export function startDiscoverySSE() {
 						return m;
 					});
 
-					lastDiscoveredCount.delete(update.session_id);
+					lastProcessedCount.delete(update.session_id);
 
 					// Remove completed/cancelled/failed sessions
 					const updated = current.filter((session) => session.session_id !== update.session_id);
@@ -180,18 +180,36 @@ export function cleanupStaleDiscoverySessions() {
 }
 
 export async function initiateDiscovery(discovery_id: string) {
-	// Just make the request, don't update the store here
 	const result = await api.request<DiscoveryUpdatePayload, DiscoveryUpdatePayload[]>(
 		'/discovery/start-session',
-		null, // Don't pass the store
-		null, // Don't pass a mutator
+		null,
+		null,
 		{ method: 'POST', body: JSON.stringify(discovery_id) }
 	);
 
-	if (result?.success) {
-		startDiscoverySSE(); // Start SSE to receive the update
+	if (result?.success && result.data) {
+		// Add the session immediately to the store (only if it doesn't exist)
+		sessions.update((current) => {
+			// Check if session already exists
+			const existingIndex = current.findIndex((s) => s.session_id === result.data!.session_id);
+
+			let updated: DiscoveryUpdatePayload[];
+			if (existingIndex >= 0) {
+				// Update existing (shouldn't happen, but defensive)
+				updated = [...current];
+				updated[existingIndex] = result.data!;
+			} else {
+				// Add new session
+				updated = [...current, result.data!];
+			}
+
+			persistSessions(updated);
+			return updated;
+		});
+
+		startDiscoverySSE(); // Start SSE to receive updates
 		pushSuccess(
-			`${result.data?.discovery_type.type} discovery started with session ID ${result.data?.session_id}`
+			`${result.data.discovery_type.type} discovery session created with session ID ${result.data.session_id}`
 		);
 	}
 }
@@ -201,5 +219,18 @@ export async function cancelDiscovery(id: string) {
 	map.set(id, true);
 	cancelling.set(map);
 
-	await api.request<void, void>(`/discovery/${id}/cancel`, null, null, { method: 'POST' });
+	const result = await api.request<void, void>(`/discovery/${id}/cancel`, null, null, {
+		method: 'POST'
+	});
+
+	if (!result?.success) {
+		// If cancellation failed, remove the cancelling state
+		cancelling.update((c) => {
+			const m = new Map(c);
+			m.delete(id);
+			return m;
+		});
+		pushError('Failed to cancel discovery');
+	}
+	// If successful, the SSE will receive the "Cancelled" phase and handle cleanup
 }

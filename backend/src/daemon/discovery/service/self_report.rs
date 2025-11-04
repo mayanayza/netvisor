@@ -80,7 +80,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             .ok_or_else(|| anyhow::anyhow!("Network ID not set, aborting discovery session"))?;
 
         let session_info = DiscoverySessionInfo {
-            total_to_scan: 1,
+            total_to_process: 1,
             session_id: request.session_id,
             network_id,
             daemon_id,
@@ -220,9 +220,8 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         self.report_discovery_update(DiscoverySessionUpdate {
             phase: DiscoveryPhase::Complete,
-            completed: 1,
+            processed: 1,
             error: None,
-            discovered_count: 1,
             finished_at: Some(Utc::now()),
         })
         .await?;

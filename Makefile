@@ -109,13 +109,6 @@ install-dev-mac:
 	rustup component add rustfmt clippy
 	@echo "Installing Node.js dependencies..."
 	cd ui && npm install
-	@echo "Installing cargo-watch for hot reload..."
-	cargo install cargo-watch
-	@echo "Installing postgresql..."
-	brew install postgresql@17
-	echo 'export PATH="/opt/homebrew/opt/postgresql@17/bin:$$PATH"' >> ~/.zshrc
-	brew services start postgresql@17
-	@echo ""
 	@echo "Development dependencies installed!"
 	@echo "Note: Run 'source ~/.zshrc' to update your PATH, or restart your terminal"
 
@@ -125,7 +118,5 @@ install-dev-linux:
 	rustup component add rustfmt clippy
 	@echo "Installing Node.js dependencies..."
 	cd ui && npm install
-	@echo "Installing cargo-watch for hot reload..."
-	cargo install cargo-watch
 	@echo ""
 	@echo "Development dependencies installed!"

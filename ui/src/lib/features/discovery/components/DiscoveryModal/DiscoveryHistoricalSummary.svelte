@@ -61,11 +61,6 @@
 			<div class="flex-1">
 				<div class="flex items-center gap-2">
 					<span class="text-primary text-lg font-semibold">{payload.phase}</span>
-					{#if payload.discovered_count !== undefined}
-						<span class="text-secondary text-sm">
-							• {payload.discovered_count} host{payload.discovered_count !== 1 ? 's' : ''} discovered
-						</span>
-					{/if}
 				</div>
 				{#if payload.error}
 					<p class="mt-1 text-sm text-red-300">{payload.error}</p>
@@ -90,18 +85,18 @@
 			<div class="text-secondary text-sm">{payload.discovery_type.type}</div>
 		</div>
 
-		<!-- Progress -->
-		{#if payload.total !== undefined && payload.completed !== undefined}
+		<!-- Processed -->
+		{#if payload.total_to_process !== undefined && payload.processed !== undefined}
 			<div class="card p-4">
-				<div class="text-tertiary mb-1 text-xs font-medium uppercase tracking-wide">Progress</div>
+				<div class="text-tertiary mb-1 text-xs font-medium uppercase tracking-wide">Processed</div>
 				<div class="flex items-center gap-2">
 					<div class="text-secondary text-sm">
-						{payload.completed} / {payload.total}
+						{payload.processed} / {payload.total_to_process}
 					</div>
 					<div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-700">
 						<div
 							class="h-full bg-blue-500 transition-all"
-							style="width: {(payload.completed / payload.total) * 100}%"
+							style="width: {(payload.processed / payload.total_to_process) * 100}%"
 						></div>
 					</div>
 				</div>

@@ -164,12 +164,10 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
 
         let session = self.as_ref().get_session().await?;
 
-        let scanned_count = session.scanned_count.clone();
-        let discovered_count: Arc<std::sync::atomic::AtomicUsize> =
-            session.discovered_count.clone();
+        let scanned_count = session.processed_count.clone();
 
         // Report initial progress
-        self.report_discovery_update(DiscoverySessionUpdate::scanning(0, 0))
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(0))
             .await?;
 
         // Process all IPs concurrently, combining discovery and processing
@@ -209,11 +207,9 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                 hostname,
                             )
                             .await
+                            && let Ok((created_host, _)) = self.create_host(host, services).await
                         {
-                            discovered_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                            if let Ok((created_host, _)) = self.create_host(host, services).await {
-                                return Ok::<Option<Host>, Error>(Some(created_host));
-                            }
+                            return Ok::<Option<Host>, Error>(Some(created_host));
                         }
                         Ok(None)
                     }
@@ -227,8 +223,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             subnet.base.cidr
         );
         let mut stream_pin = Box::pin(results);
-        let mut last_reported_scan_count: usize = 0;
-        let mut last_reported_discovery_count: usize = 0;
+        let mut last_reported_processed_count: usize = 0;
         let mut successful_discoveries = Vec::new();
 
         while let Some(result) = stream_pin.next().await {
@@ -251,8 +246,8 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                 }
             }
 
-            (last_reported_scan_count, last_reported_discovery_count) = self
-                .periodic_scan_update(20, last_reported_scan_count, last_reported_discovery_count)
+            last_reported_processed_count = self
+                .periodic_scan_update(20, last_reported_processed_count)
                 .await?;
         }
 
