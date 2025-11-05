@@ -39,14 +39,49 @@ export interface SubnetRenderData {
 	colorHelper: ColorStyle;
 }
 
-export interface TopologyEdge extends Record<string, unknown> {
-	edge_type: string;
+interface TopologyEdgeBase extends Record<string, unknown> {
 	source: string;
 	label: string;
 	target: string;
 	source_handle: EdgeHandle;
 	target_handle: EdgeHandle;
 	is_multi_hop: boolean;
+}
+
+export type TopologyEdge = 
+	| (TopologyEdgeBase & RequestPathEdge)
+	| (TopologyEdgeBase & HubAndSpokeEdge)
+	| (TopologyEdgeBase & InterfaceEdge)
+	| (TopologyEdgeBase & ServiceVirtualizationEdge)
+	| (TopologyEdgeBase & HostVirtualizationEdge);
+
+export interface RequestPathEdge {
+	edge_type: "RequestPath",
+	group_id: string
+	source_binding_id: string
+	target_binding_id: string
+}
+
+export interface HubAndSpokeEdge {
+	edge_type: "HubAndSpoke",
+	group_id: string,
+	source_binding_id: string
+	target_binding_id: string
+}
+
+export interface InterfaceEdge {
+	edge_type: "Interface",
+	host_id: string
+}
+
+export interface ServiceVirtualizationEdge {
+	edge_type: "ServiceVirtualization",
+	containerizing_service_id: string
+}
+
+export interface HostVirtualizationEdge {
+	edge_type: "HostVirtualization",
+	vm_service_id: string
 }
 
 export interface TopologyResponse {

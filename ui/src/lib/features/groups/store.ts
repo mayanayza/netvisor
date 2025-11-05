@@ -1,4 +1,4 @@
-import { get, writable } from 'svelte/store';
+import { derived, get, writable, type Readable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { Group } from '$lib/features/groups/types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
@@ -72,4 +72,10 @@ export function createEmptyGroupFormData(): Group {
 		network_id: get(currentNetwork).id,
 		color: entities.getColorHelper('Group').string
 	};
+}
+
+export function getGroupById(id: string): Readable<Group | null> {
+	return derived([groups], ([$groups]) => {
+		return $groups.find((g) => g.id == id) || null;
+	});
 }

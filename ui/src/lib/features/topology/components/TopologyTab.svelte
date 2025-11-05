@@ -2,7 +2,7 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import TopologyViewer from './TopologyViewer.svelte';
-	import TopologyOptionsPanel from './options/TopologyOptionsPanel.svelte';
+	import TopologyOptionsPanel from './panel/TopologyOptionsPanel.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getTopology } from '../store';
 	import { RefreshCcw } from 'lucide-svelte';
@@ -11,8 +11,9 @@
 	import { getSubnets } from '$lib/features/subnets/store';
 	import ExportButton from './ExportButton.svelte';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
+	import { getGroups } from '$lib/features/groups/store';
 
-	const loading = loadData([getHosts, getServices, getSubnets, getTopology]);
+	const loading = loadData([getHosts, getServices, getSubnets, getGroups, getTopology]);
 </script>
 
 <SvelteFlowProvider>

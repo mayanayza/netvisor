@@ -49,8 +49,7 @@ async fn get_metadata_registry() -> Json<ApiResponse<MetadataRegistry>> {
         group_types: GroupType::iter()
             .map(|t| t.discriminant().to_metadata())
             .collect(),
-        edge_types: EdgeType::all_variants()
-            .into_iter()
+        edge_types: EdgeType::iter()
             .map(|t| t.to_metadata())
             .collect(),
         entities: Entity::iter().map(|e| e.to_metadata()).collect(),

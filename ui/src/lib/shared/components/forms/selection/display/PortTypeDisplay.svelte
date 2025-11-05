@@ -7,7 +7,6 @@
 		getIcon: (portType: TypeMetadata<PortTypeMetadata>) => createIconComponent(portType.icon),
 		getIconColor: () => entities.getColorHelper('Port').icon,
 		getTags: () => [],
-		getIsDisabled: () => false,
 		getCategory: (portType: TypeMetadata<PortTypeMetadata>) => portType.category
 	};
 </script>

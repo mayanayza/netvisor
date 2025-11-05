@@ -118,12 +118,9 @@
 				return false;
 			});
 			if (item && index !== undefined) {
-				const context = getOptionContext(item, index);
-				if (!displayComponent.getIsDisabled?.(item, context)) {
-					isOpen = false;
-					filterText = '';
-					onSelect(value);
-				}
+				isOpen = false;
+				filterText = '';
+				onSelect(value);
 			}
 		} catch (e) {
 			console.warn('Error in handleSelect:', e);
@@ -255,16 +252,10 @@
 								on:click={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
-									if (!displayComponent.getIsDisabled?.(option, context)) {
-										handleSelect(displayComponent.getId(option));
-									}
+									handleSelect(displayComponent.getId(option));
 								}}
-								class="w-full px-3 py-3 text-left transition-colors
-                       {!isLastInGroup || !isLastGroup ? 'border-b border-gray-600' : ''}
-                       {displayComponent.getIsDisabled?.(option, context)
-									? 'cursor-not-allowed opacity-50'
-									: 'hover:bg-gray-600'}"
-								disabled={displayComponent.getIsDisabled?.(option, context)}
+								class="w-full px-3 py-3 text-left hover:bg-gray-600 transition-colors
+                       {!isLastInGroup || !isLastGroup ? 'border-b border-gray-600' : ''}"
 							>
 								<ListSelectItem {context} item={option} {displayComponent} />
 							</button>

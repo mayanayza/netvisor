@@ -27,7 +27,6 @@
 			}
 			return tags;
 		},
-		getIsDisabled: () => false,
 		getCategory: () => null
 	};
 </script>

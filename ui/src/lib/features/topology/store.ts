@@ -1,10 +1,13 @@
 import { get, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
-import { type Node } from '@xyflow/svelte';
+import { type Edge, type Node } from '@xyflow/svelte';
 import { EdgeHandle, type TopologyResponse, type TopologyOptions } from './types/base';
 import { networks } from '../networks/store';
 import deepmerge from 'deepmerge';
 import { browser } from '$app/environment';
+
+export const selectedNode = writable<Node | null>(null);
+export const selectedEdge = writable<Edge | null>(null);
 
 const OPTIONS_STORAGE_KEY = 'netvisor_topology_options';
 const EXPANDED_STORAGE_KEY = 'netvisor_topology_options_expanded_state';

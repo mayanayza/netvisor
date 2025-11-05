@@ -9,7 +9,7 @@
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { getDistanceToNode, getNextHandle, topology } from '../store';
+	import { getDistanceToNode, getNextHandle, optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 
@@ -44,125 +44,81 @@
 	}
 
 	async function loadTopologyData() {
-		try {
-			if ($topology?.nodes && $topology?.edges) {
-				const flowNodes: Node[] = $topology.nodes.map((node): Node => {
+	try {
+		if ($topology?.nodes && $topology?.edges) {
+			// Create edges FIRST
+			const flowEdges: Edge[] = $topology.edges.map(
+				([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
+					const edgeType = edge.edge_type as string;
+					let edgeMetadata = edgeTypes.getMetadata(edgeType);
+					let edgeColorHelper = edgeTypes.getColorHelper(edgeType);
+
+					const dashArray = edgeMetadata.is_dashed ? 'stroke-dasharray: 5,5;' : '';
+					const markerStart = !edgeMetadata.has_start_marker
+						? undefined
+						: ({
+								type: 'arrow',
+								color: edgeColorHelper.rgb
+							} as EdgeMarkerType);
+					const markerEnd = !edgeMetadata.has_end_marker
+						? undefined
+						: ({
+								type: 'arrow',
+								color: edgeColorHelper.rgb
+							} as EdgeMarkerType);
+
 					return {
-						id: node.id,
-						type: node.node_type,
-						position: { x: node.position.x, y: node.position.y },
-						width: node.size.x,
-						height: node.size.y,
-						expandParent: true,
-						deletable: false,
-						parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
-						extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
-						data: node
-					};
-				});
-
-				const flowEdges: Edge[] = $topology.edges.map(
-					([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
-						const edgeType = edge.edge_type as string;
-						let edgeMetadata = edgeTypes.getMetadata(edgeType);
-						let edgeColorHelper = edgeTypes.getColorHelper(edgeType);
-
-						const dashArray = edgeMetadata.is_dashed ? 'stroke-dasharray: 5,5;' : '';
-						const markerStart = !edgeMetadata.has_start_marker
-							? undefined
-							: ({
-									type: 'arrow',
-									color: edgeColorHelper.rgb
-								} as EdgeMarkerType);
-						const markerEnd = !edgeMetadata.has_end_marker
-							? undefined
-							: ({
-									type: 'arrow',
-									color: edgeColorHelper.rgb
-								} as EdgeMarkerType);
-
-						return {
-							id: `edge-${index}`,
-							source: edge.source,
-							target: edge.target,
-							markerEnd,
-							markerStart,
-							sourceHandle: edge.source_handle.toString(),
-							targetHandle: edge.target_handle.toString(),
-
-							type: 'custom',
-							label: edge.label,
-							style: `stroke: ${edgeColorHelper.rgb}; stroke-width: 2px; ${dashArray}`,
-							data: edge
-						};
-					}
-				);
-
-				nodes.set(flowNodes);
-				edges.set(flowEdges);
-			}
-		} catch (err) {
-			pushError(`Failed to parse topology data ${err}`);
-		}
-	}
-
-	// Event handlers
-	// function onNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
-	// 	// selectedNodeId = node.id;
-	// }
-
-	function onEdgeClick({ edge, event }: { edge: Edge; event: MouseEvent }) {
-		// Get click coordinates relative to the flow canvas
-		const clickX = event.clientX;
-		const clickY = event.clientY;
-
-		// Find source and target nodes
-		const sourceNode = $nodes.find((n) => n.id === edge.source);
-		const targetNode = $nodes.find((n) => n.id === edge.target);
-
-		if (!sourceNode || !targetNode) {
-			console.warn('Could not find source or target node for edge');
-			return;
-		}
-
-		// Calculate which node the click was closer to
-		const distanceToSource = getDistanceToNode(clickX, clickY, sourceNode);
-		const distanceToTarget = getDistanceToNode(clickX, clickY, targetNode);
-		const isCloserToSource = distanceToSource < distanceToTarget;
-
-		// Get current handles from edge data
-		const currentTargetHandle = (edge.data?.targetHandle as EdgeHandle) || EdgeHandle.Top;
-		const currentSourceHandle = (edge.data?.sourceHandle as EdgeHandle) || EdgeHandle.Top;
-
-		// Cycle the appropriate handle
-		let newSourceHandle = currentSourceHandle;
-		let newTargetHandle = currentTargetHandle;
-
-		if (isCloserToSource) {
-			newSourceHandle = getNextHandle(currentSourceHandle);
-		} else {
-			newTargetHandle = getNextHandle(currentTargetHandle);
-		}
-
-		// Update the edge in the edges store
-		edges.set(
-			$edges.map((e) => {
-				if (e.id === edge.id) {
-					return {
-						...e,
-						sourceHandle: newSourceHandle.toString(),
-						targetHandle: newTargetHandle.toString(),
-						data: {
-							...e.data,
-							sourceHandle: newSourceHandle,
-							targetHandle: newTargetHandle
-						}
+						id: `edge-${index}`,
+						source: edge.source,
+						target: edge.target,
+						markerEnd,
+						markerStart,
+						sourceHandle: edge.source_handle.toString(),
+						targetHandle: edge.target_handle.toString(),
+						type: 'custom',
+						label: edge.label,
+						style: `stroke: ${edgeColorHelper.rgb}; stroke-width: 2px; ${dashArray}`,
+						data: edge
 					};
 				}
-				return e;
-			})
-		);
+			);
+
+			// Then create nodes WITH edges data
+			const flowNodes: Node[] = $topology.nodes.map((node): Node => {
+				return {
+					id: node.id,
+					type: node.node_type,
+					position: { x: node.position.x, y: node.position.y },
+					width: node.size.x,
+					height: node.size.y,
+					expandParent: true,
+					deletable: false,
+					parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
+					extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
+					data: { ...node, allEdges: flowEdges, allNodes: $topology.nodes }
+				};
+			});
+
+			nodes.set(flowNodes);
+			edges.set(flowEdges);
+		}
+	} catch (err) {
+		pushError(`Failed to parse topology data ${err}`);
 	}
+}
+
+	function onNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
+		selectedNode.set(node);
+		selectedEdge.set(null);
+		optionsPanelExpanded.set(true)
+	}
+
+	function onEdgeClick({ edge, event }: { edge: Edge; event: MouseEvent }) {
+		selectedEdge.set(edge);
+		selectedNode.set(null);
+		optionsPanelExpanded.set(true)
+	}
+
 </script>
 
 <div class="h-[calc(100vh-150px)] w-full overflow-hidden rounded-2xl border border-gray-700">
@@ -172,6 +128,7 @@
 		{nodeTypes}
 		edgeTypes={customEdgeTypes}
 		onedgeclick={onEdgeClick}
+		onnodeclick={onNodeClick}
 		fitView
 		noPanClass="nopan"
 		snapGrid={[25, 25]}
@@ -200,7 +157,6 @@
 		display: none !important;
 	}
 
-	:global(.svelte-flow__panel),
 	:global(.svelte-flow__attribution) {
 		background-color: #1f2937 !important; /* gray-800 */
 		border: 1px solid #374151 !important; /* gray-700 */

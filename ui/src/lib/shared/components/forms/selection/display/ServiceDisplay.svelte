@@ -38,7 +38,6 @@
 
 			return tags;
 		},
-		getIsDisabled: () => false,
 		getCategory: () => null
 	};
 </script>
@@ -49,6 +48,9 @@
 	import type { Service } from '$lib/features/services/types/base';
 	import type { TagProps } from '$lib/shared/components/data/types';
 	import { matchConfidenceLabel } from '$lib/shared/types';
+	import { getPortFromId } from '$lib/features/hosts/store';
+	import { get } from 'svelte/store';
+	import { formatPort } from '$lib/shared/utils/formatting';
 
 	export let item: Service;
 	export let context = {};

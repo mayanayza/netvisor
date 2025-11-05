@@ -8,24 +8,6 @@ pub const NODE_PADDING: Uxy = Uxy { x: 50, y: 50 };
 pub struct PlannerUtils;
 
 impl PlannerUtils {
-    /// Figure out closest shape to square that can contain children
-    pub fn calculate_grid_dimensions(children_count: usize) -> Uxy {
-        if children_count == 0 {
-            return Uxy { x: 1, y: 1 };
-        }
-
-        let x = (children_count as f64).sqrt().ceil() as usize;
-        let y = ((children_count as f64) / x as f64).ceil() as usize;
-        Uxy { x, y }
-    }
-
-    /// Calculate the coordinates of a child in a grid given its index
-    pub fn calculate_child_coordinates_in_grid(grid: &Uxy, child_idx: usize) -> Uxy {
-        Uxy {
-            x: child_idx % grid.x,
-            y: ((child_idx / grid.x) as f64).floor() as usize,
-        }
-    }
 
     /// Calculate container size from positioned nodes
     pub fn calculate_container_size_from_layouts(

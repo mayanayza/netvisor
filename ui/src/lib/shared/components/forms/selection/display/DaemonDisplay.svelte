@@ -8,7 +8,6 @@
 		getIcon: () => entities.getIconComponent('Daemon'),
 		getIconColor: () => entities.getColorHelper('Daemon').icon,
 		getTags: () => [],
-		getIsDisabled: () => false,
 		getCategory: () => null
 	};
 </script>

@@ -22,20 +22,20 @@
 	let textColor = $derived(colorHelper.text);
 </script>
 
-<div class="items-center space-x-2">
+<div class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap">
 	{#if icon}
 		<icon size={16} class={textColor}></icon>
 	{/if}
 
 	<!-- Main content -->
 	<span
-		class="inline-block {!disabled ? bgColor : 'bg-gray-700/30'} {!disabled
+		class="inline-flex items-center gap-1 {!disabled ? bgColor : 'bg-gray-700/30'} {!disabled
 			? textColor
-			: 'text-tertiary'} rounded px-2 py-1 text-xs"
+			: 'text-tertiary'} rounded px-2 py-0.5 text-xs font-medium"
 	>
-		{label}
+		<span class="truncate">{label}</span>
 		{#if badge.length > 0}
-			<span class="text-xs {textColor}">{badge}</span>
+			<span class="flex-shrink-0 {textColor}">{badge}</span>
 		{/if}
 	</span>
 </div>

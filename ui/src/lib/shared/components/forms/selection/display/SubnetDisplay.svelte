@@ -5,8 +5,10 @@
 		getDescription: (subnet: Subnet) => (subnet.name == subnet.cidr ? '' : subnet.cidr),
 		getIcon: (subnet: Subnet) => subnetTypes.getIconComponent(subnet.subnet_type),
 		getIconColor: (subnet: Subnet) => subnetTypes.getColorHelper(subnet.subnet_type).icon,
-		getTags: () => [],
-		getIsDisabled: () => false,
+		getTags: (subnet: Subnet) => [{
+			label: subnet.subnet_type,
+			color: subnetTypes.getColorHelper(subnet.subnet_type).string
+		}],
 		getCategory: () => null
 	};
 </script>

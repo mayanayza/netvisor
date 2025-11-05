@@ -97,7 +97,7 @@
 			<!-- Step 1: Target Selection -->
 			<div>
 				<!-- Source host info -->
-				<div class="mb-6 rounded-lg border border-gray-700 bg-gray-800/50 p-4">
+				<div class="mb-6 card">
 					<EntityDisplay context={{}} item={otherHost} displayComponent={HostDisplay} />
 				</div>
 

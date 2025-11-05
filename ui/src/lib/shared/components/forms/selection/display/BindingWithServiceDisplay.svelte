@@ -61,7 +61,6 @@
 
 			return tags;
 		},
-		getIsDisabled: () => false,
 		getCategory: (binding: Binding) => {
 			const service = get(getServiceForBinding(binding.id));
 			if (!service) return null;
