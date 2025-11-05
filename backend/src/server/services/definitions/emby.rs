@@ -22,8 +22,8 @@ impl ServiceDefinition for Emby {
         Pattern::Endpoint(PortBase::new_tcp(8096), "/emby/System/Info/Public", "Emby")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "emby"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/emby.svg"
     }
 }
 

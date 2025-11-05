@@ -33,8 +33,8 @@ impl ServiceDefinition for HpPrinter {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "hp"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/hp.svg"
     }
 
     fn logo_needs_white_background(&self) -> bool {

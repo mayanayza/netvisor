@@ -38,8 +38,8 @@ impl ServiceDefinition for SonosSpeaker {
         ])
     }
 
-    fn simple_icons_path(&self) -> &'static str {
-        "sonos"
+    fn logo_url(&self) -> &'static str {
+        "https://simpleicons.org/icons/sonos.svg"
     }
 
     fn logo_needs_white_background(&self) -> bool {

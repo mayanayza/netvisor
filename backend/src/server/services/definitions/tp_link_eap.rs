@@ -25,8 +25,8 @@ impl ServiceDefinition for TpLinkEap {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "tp-link"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tp-link.svg"
     }
 }
 

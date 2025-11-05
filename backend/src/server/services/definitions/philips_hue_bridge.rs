@@ -25,8 +25,8 @@ impl ServiceDefinition for PhilipsHueBridge {
         ])
     }
 
-    fn simple_icons_path(&self) -> &'static str {
-        "philipshue"
+    fn logo_url(&self) -> &'static str {
+        "https://simpleicons.org/icons/philipshue.svg"
     }
 
     fn logo_needs_white_background(&self) -> bool {

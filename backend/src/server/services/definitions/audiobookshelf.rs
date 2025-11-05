@@ -22,8 +22,8 @@ impl ServiceDefinition for AudioBookShelf {
         Pattern::Port(PortBase::new_tcp(13378))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "audiobookshelf"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/audiobookshelf.svg"
     }
 }
 

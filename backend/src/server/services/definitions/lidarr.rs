@@ -12,7 +12,7 @@ impl ServiceDefinition for Lidarr {
         "Lidarr"
     }
     fn description(&self) -> &'static str {
-        "a music collection manager for Usenet and BitTorrent users."
+        "A music collection manager for Usenet and BitTorrent users."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Lidarr {
         Pattern::Port(PortBase::new_tcp(8686))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Lidarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/lidarr.svg"
     }
 }
 

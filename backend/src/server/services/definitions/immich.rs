@@ -22,8 +22,8 @@ impl ServiceDefinition for Immich {
         Pattern::Endpoint(PortBase::new_tcp(2283), "/photos", "Immich")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Immich"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/immich.svg"
     }
 }
 

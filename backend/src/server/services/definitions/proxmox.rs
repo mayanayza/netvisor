@@ -25,8 +25,8 @@ impl ServiceDefinition for Proxmox {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "proxmox"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg"
     }
 }
 

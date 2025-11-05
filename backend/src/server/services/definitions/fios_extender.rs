@@ -25,8 +25,8 @@ impl ServiceDefinition for FiosExtender {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "fios"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/fios.svg"
     }
 }
 

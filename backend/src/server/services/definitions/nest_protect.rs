@@ -30,8 +30,8 @@ impl ServiceDefinition for NestProtect {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "google-home"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/google-home.svg"
     }
 }
 

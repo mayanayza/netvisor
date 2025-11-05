@@ -9,6 +9,7 @@ use dyn_clone::DynClone;
 use dyn_eq::DynEq;
 use dyn_hash::DynHash;
 use serde::{Deserialize, Serialize};
+use serial_test::serial;
 use std::hash::Hash;
 
 // Main trait used in service definition implementation
@@ -30,23 +31,13 @@ pub trait ServiceDefinition: HasId + DynClone + DynHash + DynEq + Send + Sync {
         false
     }
 
-    /// Path of service on https://dashboardicons.com/. For example, Home Assistant -> https://dashboardicons.com/icons/home-assistant. MUST SUPPORT SVG ICON FORMAT. If SVG is not supported, a fallback icon will be used instead.
-    fn dashboard_icons_path(&self) -> &'static str {
-        ""
-    }
-
-    /// Path of service on https://simpleicons.org/. For example, Home Assistant -> https://simpleicons.org/icons/homeassistant.svg. MUST SUPPORT SVG ICON FORMAT. If SVG is not supported, a fallback icon will be used instead.
-    fn simple_icons_path(&self) -> &'static str {
-        ""
-    }
-
-    /// Path of service on https://www.vectorlogo.zone. For example, Akamai -> https://www.vectorlogo.zone/logos/akamai/akamai-icon.svg. MUST SUPPORT SVG ICON FORMAT. If SVG is not supported, a fallback icon will be used instead.
-    fn vector_logo_zone_icons_path(&self) -> &'static str {
-        ""
-    }
-
-    /// Path of logo stored in ui/static/logos directory
-    fn static_file_path(&self) -> &'static str {
+    /// URL of icon, or static path if serving from /logos.
+    /// Examples:
+    /// Dashboard Icons: Home Assistant -> https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/home-assistant
+    /// Simple Icons: Home Assistant -> https://simpleicons.org/icons/homeassistant.svg.
+    /// Vector Logo Icons: Akamai -> https://www.vectorlogo.zone/logos/akamai/akamai-icon.svg
+    /// Static file: Netvisor -> /logos/netvisor-logo.png
+    fn logo_url(&self) -> &'static str {
         ""
     }
 
@@ -74,24 +65,8 @@ impl ServiceDefinition for Box<dyn ServiceDefinition> {
         ServiceDefinition::description(&**self)
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        ServiceDefinition::dashboard_icons_path(&**self)
-    }
-
-    fn simple_icons_path(&self) -> &'static str {
-        ServiceDefinition::simple_icons_path(&**self)
-    }
-
-    fn vector_logo_zone_icons_path(&self) -> &'static str {
-        ServiceDefinition::vector_logo_zone_icons_path(&**self)
-    }
-
-    fn static_file_path(&self) -> &'static str {
-        ServiceDefinition::static_file_path(&**self)
-    }
-
-    fn logo_needs_white_background(&self) -> bool {
-        ServiceDefinition::logo_needs_white_background(&**self)
+    fn logo_url(&self) -> &'static str {
+        ServiceDefinition::logo_url(&**self)
     }
 
     fn category(&self) -> ServiceCategory {
@@ -100,6 +75,14 @@ impl ServiceDefinition for Box<dyn ServiceDefinition> {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         ServiceDefinition::discovery_pattern(&**self)
+    }
+
+    fn is_generic(&self) -> bool {
+        ServiceDefinition::is_generic(&**self)
+    }
+
+    fn logo_needs_white_background(&self) -> bool {
+        ServiceDefinition::logo_needs_white_background(&**self)
     }
 }
 
@@ -131,10 +114,7 @@ impl ServiceDefinitionExt for Box<dyn ServiceDefinition> {
     }
 
     fn has_logo(&self) -> bool {
-        !self.vector_logo_zone_icons_path().is_empty()
-            || !self.dashboard_icons_path().is_empty()
-            || !self.simple_icons_path().is_empty()
-            || !self.static_file_path().is_empty()
+        !self.logo_url().is_empty()
     }
 
     fn manages_virtualization(&self) -> Option<&'static str> {
@@ -152,18 +132,8 @@ impl EntityMetadataProvider for Box<dyn ServiceDefinition> {
         ServiceDefinition::category(self).color()
     }
     fn icon(&self) -> &'static str {
-        let dashboard_icon = ServiceDefinition::dashboard_icons_path(self);
-        let simple_icon = ServiceDefinition::simple_icons_path(self);
-        let vector_zone_icon = ServiceDefinition::vector_logo_zone_icons_path(self);
-        let static_file_icon = ServiceDefinition::static_file_path(self);
-        if !dashboard_icon.is_empty() {
-            return dashboard_icon;
-        } else if !simple_icon.is_empty() {
-            return simple_icon;
-        } else if !vector_zone_icon.is_empty() {
-            return vector_zone_icon;
-        } else if !static_file_icon.is_empty() {
-            return static_file_icon;
+        if !self.logo_url().is_empty() {
+            return self.logo_url();
         }
         ServiceDefinition::category(self).icon()
     }
@@ -180,29 +150,13 @@ impl TypeMetadataProvider for Box<dyn ServiceDefinition> {
         ServiceDefinition::category(self).id()
     }
     fn metadata(&self) -> serde_json::Value {
-        let can_be_added = self.can_be_manually_added();
-        let manages_virtualization = self.manages_virtualization();
-        let is_gateway = self.is_gateway();
-        let logo_source = match self.icon() {
-            _ if self.icon() == ServiceDefinition::dashboard_icons_path(self) => {
-                Some("dashboard_icons")
-            }
-            _ if self.icon() == ServiceDefinition::simple_icons_path(self) => Some("simple_icons"),
-            _ if self.icon() == ServiceDefinition::vector_logo_zone_icons_path(self) => {
-                Some("vector_zone_icons")
-            }
-            _ if self.icon() == ServiceDefinition::static_file_path(self) => {
-                Some("static_file_icon")
-            }
-            _ => None,
-        };
-        let logo_needs_white_background = self.logo_needs_white_background();
         serde_json::json!({
-            "can_be_added": can_be_added,
-            "manages_virtualization": manages_virtualization,
-            "is_gateway": is_gateway,
-            "logo_source": logo_source,
-            "logo_needs_white_background": logo_needs_white_background,
+            "can_be_added": self.can_be_manually_added(),
+            "manages_virtualization": self.manages_virtualization(),
+            "is_gateway": self.is_gateway(),
+            "has_logo": self.has_logo(),
+            "logo_url": self.logo_url(),
+            "logo_needs_white_background": self.logo_needs_white_background(),
         })
     }
 }
@@ -301,7 +255,7 @@ mod tests {
         // Print registered services for debugging
         println!("Registered {} services:", registry.len());
         for service in &registry {
-            println!("  - {}", service.name());
+            println!("  - {}", ServiceDefinition::name(service));
         }
     }
 
@@ -312,7 +266,10 @@ mod tests {
 
         for service in registry {
             // Every service must have non-empty name
-            assert!(!service.name().is_empty(), "Service has empty name");
+            assert!(
+                !ServiceDefinition::name(&service).is_empty(),
+                "Service has empty name"
+            );
 
             // Name should be reasonable length (< 25 chars)
             assert!(
@@ -365,5 +322,125 @@ mod tests {
                 "Description mismatch after serialization"
             );
         }
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn test_service_definition_logo_urls_resolve() {
+    let registry = ServiceDefinitionRegistry::all_service_definitions();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .expect("Failed to create HTTP client");
+
+    const ALLOWED_DOMAINS: &[&str] = &["cdn.jsdelivr.net", "simpleicons.org", "vectorlogo.zone"];
+
+    for service in registry {
+        let logo_url = service.logo_url();
+
+        // Skip services without logo URLs
+        if logo_url.is_empty() {
+            continue;
+        }
+
+        // Check if it's a local file path or external URL
+        if logo_url.starts_with('/') {
+            // Local file path like /logos/netvisor-logo.png
+            assert!(
+                logo_url.starts_with("/logos/"),
+                "Service '{}' has local logo URL '{}' that doesn't start with /logos/",
+                ServiceDefinition::name(&service),
+                logo_url
+            );
+            // We can't verify local files exist in tests, so just validate the path format
+            continue;
+        }
+
+        // Must be a URL - parse it
+        let url = match reqwest::Url::parse(logo_url) {
+            Ok(url) => url,
+            Err(e) => {
+                panic!(
+                    "Service '{}' has invalid logo URL '{}': {}",
+                    ServiceDefinition::name(&service),
+                    logo_url,
+                    e
+                );
+            }
+        };
+
+        // Check domain is in allowed list
+        let domain = url.domain().unwrap_or("");
+        let is_allowed = ALLOWED_DOMAINS
+            .iter()
+            .any(|allowed| domain.ends_with(allowed));
+
+        assert!(
+            is_allowed,
+            "Service '{}' has logo URL '{}' from unauthorized domain '{}'. \
+             Allowed domains: {}",
+            ServiceDefinition::name(&service),
+            logo_url,
+            domain,
+            ALLOWED_DOMAINS.join(", ")
+        );
+
+        // Attempt to fetch the logo URL
+        match client.head(logo_url).send().await {
+            Ok(response) => {
+                assert!(
+                    response.status().is_success(),
+                    "Service '{}' has logo URL '{}' that returned status {}",
+                    ServiceDefinition::name(&service),
+                    logo_url,
+                    response.status()
+                );
+
+                // Verify Content-Type is an image
+                if let Some(content_type) = response.headers().get("content-type") {
+                    let content_type_str = content_type.to_str().unwrap_or("");
+                    assert!(
+                        content_type_str.starts_with("image/")
+                            || content_type_str.starts_with("text/plain"),
+                        "Service '{}' has logo URL '{}' with non-image Content-Type: {}",
+                        ServiceDefinition::name(&service),
+                        logo_url,
+                        content_type_str
+                    );
+                }
+            }
+            Err(e) => {
+                panic!(
+                    "Service '{}' has logo URL '{}' that failed to resolve: {}",
+                    ServiceDefinition::name(&service),
+                    logo_url,
+                    e
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[serial]
+fn test_service_definition_description_starts_with_capital() {
+    let registry = ServiceDefinitionRegistry::all_service_definitions();
+
+    for service in registry {
+        let description = ServiceDefinition::description(&service);
+
+        // Skip empty descriptions (already caught by another test)
+        if description.is_empty() {
+            continue;
+        }
+
+        let first_char = description.chars().next().unwrap();
+        assert!(
+            first_char.is_uppercase(),
+            "Service '{}' has description '{}' that doesn't start with a capital letter",
+            ServiceDefinition::name(&service),
+            description
+        );
     }
 }

@@ -22,8 +22,8 @@ impl ServiceDefinition for OpnSense {
         Pattern::Endpoint(PortBase::Http, "/", "opnsense")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "opnsense"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/opnsense.svg"
     }
 }
 

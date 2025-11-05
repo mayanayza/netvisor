@@ -12,7 +12,7 @@ impl ServiceDefinition for Authentik {
         "Authentik"
     }
     fn description(&self) -> &'static str {
-        "a self-hosted, open source identity provider"
+        "A self-hosted, open source identity provider"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -25,8 +25,8 @@ impl ServiceDefinition for Authentik {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Authentik"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg"
     }
 }
 

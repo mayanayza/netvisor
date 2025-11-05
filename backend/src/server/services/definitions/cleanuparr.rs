@@ -22,8 +22,8 @@ impl ServiceDefinition for Cleanuparr {
         Pattern::Port(PortBase::new_tcp(11011))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Cleanuparr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cleanuperr.svg"
     }
 }
 

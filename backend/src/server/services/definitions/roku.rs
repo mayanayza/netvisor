@@ -27,8 +27,8 @@ impl ServiceDefinition for RokuDevice {
         ])
     }
 
-    fn simple_icons_path(&self) -> &'static str {
-        "roku"
+    fn logo_url(&self) -> &'static str {
+        "https://simpleicons.org/icons/roku.svg"
     }
 }
 

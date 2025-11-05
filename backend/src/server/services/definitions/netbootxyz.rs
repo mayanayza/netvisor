@@ -22,8 +22,8 @@ impl ServiceDefinition for Netbootxyz {
         Pattern::Endpoint(PortBase::new_tcp(61208), "/", "Netbootxyz")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Netbootxyz"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/netbootxyz.svg"
     }
 }
 

@@ -37,18 +37,8 @@ export interface MetadataRegistry {
 export interface ServicedDefinitionMetadata {
 	can_be_added: boolean;
 	manages_virtualization: 'vms' | 'containers';
-	logo_source: 'dashboard_icons' | 'simple_icons' | 'vector_zone_icons' | 'static_file_icon' | null;
-}
-
-function isValidLogoSource(
-	value: unknown
-): value is 'dashboard_icons' | 'simple_icons' | 'vector_zone_icons' {
-	return (
-		value === 'dashboard_icons' ||
-		value === 'simple_icons' ||
-		value === 'vector_zone_icons' ||
-		value === 'static_file_icon'
-	);
+	has_logo: boolean;
+	logo_url: string;
 }
 
 export interface SubnetTypeMetadata {
@@ -150,17 +140,18 @@ function createTypeMetadataHelpers<T extends TypeMetadataKeys>(category: T) {
 			if (
 				item?.metadata &&
 				typeof item.metadata === 'object' &&
-				'logo_source' in item.metadata &&
-				isValidLogoSource(item.metadata.logo_source)
+				'has_logo' in item.metadata &&
+				item.metadata.has_logo &&
+				'logo_url' in item.metadata
 			) {
 				if ('logo_needs_white_background' in item.metadata) {
 					return createLogoIconComponent(
 						iconName,
-						item.metadata.logo_source,
+						item.metadata.logo_url as string,
 						!!item.metadata.logo_needs_white_background
 					);
 				}
-				return createLogoIconComponent(iconName, item.metadata.logo_source);
+				return createLogoIconComponent(iconName, item.metadata.logo_url as string);
 			}
 
 			return createIconComponent(iconName);

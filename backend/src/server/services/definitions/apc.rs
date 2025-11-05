@@ -22,8 +22,8 @@ impl ServiceDefinition for APC {
         Pattern::Endpoint(PortBase::Http, "/", "APC")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Apc"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/apc.svg"
     }
 }
 

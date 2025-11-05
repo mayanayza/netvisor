@@ -12,7 +12,7 @@ impl ServiceDefinition for Tautulli {
         "Tautulli"
     }
     fn description(&self) -> &'static str {
-        "monitor, view analytics, and receive notifications about your Plex Media Server."
+        "Monitor, view analytics, and receive notifications about your Plex Media Server."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Tautulli {
         Pattern::Endpoint(PortBase::new_tcp(8181), "/", "Tautulli")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Tautulli"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tautulli.svg"
     }
 }
 

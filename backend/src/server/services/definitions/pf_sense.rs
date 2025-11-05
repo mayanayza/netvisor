@@ -22,8 +22,8 @@ impl ServiceDefinition for PfSense {
         Pattern::Endpoint(PortBase::Http, "/", "pfsense")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "pfsense"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pfsense.svg"
     }
 }
 
