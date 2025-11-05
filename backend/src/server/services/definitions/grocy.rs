@@ -12,7 +12,7 @@ impl ServiceDefinition for Grocy {
         "Grocy"
     }
     fn description(&self) -> &'static str {
-        "web-based self-hosted groceries & household management solution"
+        "Web-based self-hosted groceries & household management solution"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::HomeAutomation
@@ -25,8 +25,8 @@ impl ServiceDefinition for Grocy {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Grocy"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grocy.svg"
     }
 }
 

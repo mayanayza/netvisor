@@ -22,8 +22,8 @@ impl ServiceDefinition for Fortinet {
         Pattern::Endpoint(PortBase::Http, "/", "fortinet")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "fortinet"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/fortinet.svg"
     }
 }
 

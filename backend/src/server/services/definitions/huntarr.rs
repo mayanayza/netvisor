@@ -12,7 +12,7 @@ impl ServiceDefinition for Huntarr {
         "Huntarr"
     }
     fn description(&self) -> &'static str {
-        "finds missing media and upgrades your existing content."
+        "Finds missing media and upgrades your existing content."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Huntarr {
         Pattern::Port(PortBase::new_tcp(9705))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Huntarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/huntarr.png"
     }
 }
 

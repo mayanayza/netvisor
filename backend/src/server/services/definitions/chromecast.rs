@@ -28,8 +28,8 @@ impl ServiceDefinition for ChromecastDevice {
         ])
     }
 
-    fn simple_icons_path(&self) -> &'static str {
-        "googlecast"
+    fn logo_url(&self) -> &'static str {
+        "https://simpleicons.org/icons/googlecast.svg"
     }
 }
 

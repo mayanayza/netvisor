@@ -25,8 +25,8 @@ impl ServiceDefinition for CUPS {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "cups"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cups.svg"
     }
 }
 

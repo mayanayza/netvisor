@@ -25,8 +25,8 @@ impl ServiceDefinition for Prometheus {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "prometheus"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prometheus.svg"
     }
 }
 

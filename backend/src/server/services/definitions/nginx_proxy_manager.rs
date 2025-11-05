@@ -22,8 +22,8 @@ impl ServiceDefinition for NginxProxyManager {
         Pattern::Endpoint(PortBase::Http, "", "nginx proxy manager")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "nginx-proxy-manager"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nginx-proxy-manager.svg"
     }
 }
 

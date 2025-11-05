@@ -22,8 +22,8 @@ impl ServiceDefinition for Memos {
         Pattern::Endpoint(PortBase::new_tcp(5230), "/explore", "Memos")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Memos"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/memos.png"
     }
 }
 

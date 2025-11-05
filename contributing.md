@@ -310,8 +310,8 @@ impl ServiceDefinition for Grafana {
         )
     }
     
-    fn dashboard_icons_path(&self) -> &'static str { 
-        "grafana"
+    fn logo_url(&self) -> &'static str { 
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/service-logo.svg"
     }
 }
 
@@ -520,31 +520,32 @@ fn is_generic(&self) -> bool {
 
 #### Service Icons
 
-NetVisor supports icons from three sources. All icons **must support SVG format**.
+NetVisor supports icons from three sources.
 
 **Dashboard Icons** (Recommended - has the most service icons):
 
-```rust
-fn dashboard_icons_path(&self) -> &'static str { 
-    "home-assistant"  // From dashboardicons.com/icons/home-assistant
-}
-```
+`https://dashboardicons.com/icons/home-assistant`
+
+Search for the service and press the link button to get a URL like
+
+`"https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/home-assistant.svg"`
+
 
 **Simple Icons**:
 
-```rust
-fn simple_icons_path(&self) -> &'static str { 
-    "plex"  // From simpleicons.org/icons/plex.svg
-}
-```
+`simpleicons.org/icons/`
+
+Search for the service and right click an image to open in a new tab and get the URL like:
+
+`https://simpleicons.org/icons/homeassistant.svg`
 
 **Vector Logo Zone**:
 
-```rust
-fn vector_logo_zone_icons_path(&self) -> &'static str { 
-    "akamai/akamai-icon"  // From vectorlogo.zone/logos/akamai/akamai-icon.svg
-}
-```
+`vectorlogo.zone/logos/`
+
+Search for the service then press the clipboard button to get a URL like:
+
+`https://www.vectorlogo.zone/logos/akamai/akamai-icon.svg`
 
 **White Background** (for dark logos):
 
@@ -557,7 +558,7 @@ fn logo_needs_white_background(&self) -> bool {
 Browse available icons:
 
 - Dashboard Icons: <https://dashboardicons.com/>
-- Simple Icons: <https://simpleicons.org/>
+- Simple Icons: <https://simpleicons.org/icons/>
 - Vector Logo Zone: <https://www.vectorlogo.zone/>
 
 ### Complete Examples

@@ -12,7 +12,7 @@ impl ServiceDefinition for Komga {
         "Komga"
     }
     fn description(&self) -> &'static str {
-        "a media server for your comics, mangas, BDs, magazines and eBooks."
+        "A media server for your comics, mangas, BDs, magazines and eBooks."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Komga {
         Pattern::Endpoint(PortBase::new_tcp(25600), "/", "Komga")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Komga"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/komga.svg"
     }
 }
 

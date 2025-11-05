@@ -12,7 +12,7 @@ impl ServiceDefinition for Radarr {
         "Radarr"
     }
     fn description(&self) -> &'static str {
-        "a movie collection manager for Usenet and BitTorrent users."
+        "A movie collection manager for Usenet and BitTorrent users."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Radarr {
         Pattern::Port(PortBase::new_tcp(7878))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Radarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/radarr.svg"
     }
 }
 

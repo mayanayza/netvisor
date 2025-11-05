@@ -22,8 +22,8 @@ impl ServiceDefinition for NextCloud {
         Pattern::Endpoint(PortBase::Http, "/", "nextcloud")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "nextcloud"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nextcloud.svg"
     }
 }
 

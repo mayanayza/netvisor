@@ -12,7 +12,7 @@ impl ServiceDefinition for PfBlockerNg {
         "pfBlockerNG"
     }
     fn description(&self) -> &'static str {
-        "pfSense package for DNS/IP blocking"
+        "PfSense package for DNS/IP blocking"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::AdBlock
@@ -28,8 +28,8 @@ impl ServiceDefinition for PfBlockerNg {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "pfsense"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pfsense.svg"
     }
 }
 

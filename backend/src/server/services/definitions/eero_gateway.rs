@@ -21,8 +21,8 @@ impl ServiceDefinition for EeroGateway {
         Pattern::AllOf(vec![Pattern::MacVendor(Vendor::EERO), Pattern::IsGateway])
     }
 
-    fn vector_logo_zone_icons_path(&self) -> &'static str {
-        "eero/eero-icon"
+    fn logo_url(&self) -> &'static str {
+        "https://www.vectorlogo.zone/logos/eero/eero-icon.svg"
     }
 
     fn logo_needs_white_background(&self) -> bool {

@@ -22,8 +22,8 @@ impl ServiceDefinition for Prowlarr {
         Pattern::Port(PortBase::new_tcp(3232))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Prowlarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prowlarr.svg"
     }
 }
 

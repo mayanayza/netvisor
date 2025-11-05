@@ -22,8 +22,8 @@ impl ServiceDefinition for CoolerControl {
         Pattern::Endpoint(PortBase::new_tcp(11987), "/", "CoolerControl")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Cooler Control"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cooler-control.svg"
     }
 }
 

@@ -22,8 +22,8 @@ impl ServiceDefinition for Cloudflared {
         Pattern::Endpoint(PortBase::Http, "/metrics", "cloudflared")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "cloudflare"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cloudflare.svg"
     }
 }
 

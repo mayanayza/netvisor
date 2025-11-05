@@ -12,7 +12,7 @@ impl ServiceDefinition for Jump {
         "Jump"
     }
     fn description(&self) -> &'static str {
-        "a self-hosted startpage and real-time status page"
+        "A self-hosted startpage and real-time status page"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Dashboard

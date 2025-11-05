@@ -22,8 +22,8 @@ impl ServiceDefinition for Graylog {
         Pattern::Endpoint(PortBase::new_tcp(9000), "/", "Graylog")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Graylog"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/graylog.svg"
     }
 }
 

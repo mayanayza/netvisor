@@ -32,8 +32,8 @@ impl ServiceDefinition for RingDoorbell {
         ])
     }
 
-    fn simple_icons_path(&self) -> &'static str {
-        "ring"
+    fn logo_url(&self) -> &'static str {
+        "https://simpleicons.org/icons/ring.svg"
     }
 }
 

@@ -55,8 +55,8 @@ impl ServiceDefinition for DockerContainer {
         true
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "docker"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg"
     }
 }
 

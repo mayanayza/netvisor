@@ -22,8 +22,8 @@ impl ServiceDefinition for HomeAssistant {
         Pattern::Endpoint(PortBase::new_tcp(8123), "/auth/authorize", "home assistant")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "home-assistant"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/home-assistant.svg"
     }
 }
 

@@ -22,8 +22,8 @@ impl ServiceDefinition for Lubelogger {
         Pattern::Endpoint(PortBase::HttpAlt, "/", "LubeLogger")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Lubelogger"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/lubelogger.png"
     }
 }
 

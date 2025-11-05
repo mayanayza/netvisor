@@ -22,8 +22,8 @@ impl ServiceDefinition for Synology {
         Pattern::Endpoint(PortBase::Http, "/", "synology")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "synology"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/synology.svg"
     }
 }
 

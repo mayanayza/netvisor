@@ -25,8 +25,8 @@ impl ServiceDefinition for UnifiAccessPoint {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "unifi"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unifi.svg"
     }
 }
 

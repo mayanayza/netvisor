@@ -22,8 +22,8 @@ impl ServiceDefinition for Mealie {
         Pattern::Endpoint(PortBase::new_tcp(9000), "/", "Mealie")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Mealie"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mealie.svg"
     }
 }
 

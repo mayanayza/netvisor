@@ -12,7 +12,7 @@ impl ServiceDefinition for Jellyseerr {
         "Jellyseerr"
     }
     fn description(&self) -> &'static str {
-        "open source software application for managing requests for your media library."
+        "Open source software application for managing requests for your media library."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Jellyseerr {
         Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Jellyseerr")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Jellyseerr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyseerr.svg"
     }
 }
 

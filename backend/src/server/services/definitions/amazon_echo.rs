@@ -28,8 +28,8 @@ impl ServiceDefinition for AmazonEcho {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "alexa"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/alexa.svg"
     }
 }
 
