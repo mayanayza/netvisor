@@ -26,8 +26,8 @@ impl ServiceDefinition for WgDashboard {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "wireguard"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wireguard.svg"
     }
 }
 

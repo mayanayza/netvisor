@@ -26,8 +26,8 @@ impl ServiceDefinition for PowerDNS {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "powerdns"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/powerdns.svg"
     }
 }
 

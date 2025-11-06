@@ -22,8 +22,8 @@ impl ServiceDefinition for Homarr {
         Pattern::Port(PortBase::new_tcp(7575))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Homarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homarr.svg"
     }
 }
 

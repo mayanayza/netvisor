@@ -12,7 +12,7 @@ impl ServiceDefinition for Bazarr {
         "Bazarr"
     }
     fn description(&self) -> &'static str {
-        "a companion application to Sonarr and Radarr that manages and downloads subtitles"
+        "A companion application to Sonarr and Radarr that manages and downloads subtitles"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Bazarr {
         Pattern::Port(PortBase::new_tcp(6767))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Bazarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/bazarr.svg"
     }
 }
 

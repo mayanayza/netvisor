@@ -12,7 +12,7 @@ impl ServiceDefinition for Sonarr {
         "Sonarr"
     }
     fn description(&self) -> &'static str {
-        "a TV collection manager for Usenet and BitTorrent users."
+        "A TV collection manager for Usenet and BitTorrent users."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Sonarr {
         Pattern::Port(PortBase::new_tcp(8989))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Sonarr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sonarr.svg"
     }
 }
 

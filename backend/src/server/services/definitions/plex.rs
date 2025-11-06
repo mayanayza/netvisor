@@ -22,8 +22,8 @@ impl ServiceDefinition for Plex {
         Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "plex"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/plex.svg"
     }
 }
 

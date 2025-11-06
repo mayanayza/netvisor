@@ -22,8 +22,8 @@ impl ServiceDefinition for UptimeKuma {
         Pattern::Endpoint(PortBase::Http, "/", "Uptime Kuma")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "uptime-kuma"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/uptime-kuma.svg"
     }
 }
 

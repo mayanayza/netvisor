@@ -22,8 +22,8 @@ impl ServiceDefinition for NUT {
         Pattern::Port(PortBase::new_tcp(3493))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Nut"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nut.svg"
     }
 }
 

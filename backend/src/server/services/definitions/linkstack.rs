@@ -12,7 +12,7 @@ impl ServiceDefinition for LinkStack {
         "LinkStack"
     }
     fn description(&self) -> &'static str {
-        "a highly customizable link sharing platform"
+        "A highly customizable link sharing platform"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Dashboard
@@ -22,8 +22,8 @@ impl ServiceDefinition for LinkStack {
         Pattern::Endpoint(PortBase::HttpAlt, "/", "LinkStack")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Linkstack"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/linkstack.svg"
     }
 }
 

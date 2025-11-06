@@ -22,8 +22,8 @@ impl ServiceDefinition for Syncthing {
         Pattern::Endpoint(PortBase::Http, "/", "Syncthing")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "syncthing"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/syncthing.svg"
     }
 }
 

@@ -22,8 +22,8 @@ impl ServiceDefinition for Grafana {
         Pattern::Endpoint(PortBase::Http, "/", "grafana")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "grafana"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg"
     }
 }
 

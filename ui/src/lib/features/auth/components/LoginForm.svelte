@@ -38,18 +38,5 @@
 			required={true}
 			field={password}
 		/>
-
-		<!-- Remember Me -->
-		<div class="flex items-center">
-			<input
-				id="remember-me"
-				type="checkbox"
-				bind:checked={formData.remember_me}
-				class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500"
-			/>
-			<label for="remember-me" class="ml-2 block text-sm text-gray-300">
-				Remember me for 30 days
-			</label>
-		</div>
 	</div>
 </div>

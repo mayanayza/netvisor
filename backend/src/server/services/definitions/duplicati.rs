@@ -22,8 +22,8 @@ impl ServiceDefinition for Duplicati {
         Pattern::Endpoint(PortBase::Http, "/", "Duplicati")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "duplicati"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/duplicati.svg"
     }
 }
 

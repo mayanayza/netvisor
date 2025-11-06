@@ -173,15 +173,15 @@ export function createIconComponent(iconName: string | null): IconComponent {
 // Icon helper that turns a string into an SVG
 export function createLogoIconComponent(
 	iconName: string | null,
-	iconSource: 'vector_zone_icons' | 'simple_icons' | 'dashboard_icons' | 'static_file_icon',
-	use_white_background: boolean = false
+	iconUrl: string,
+	useWhiteBackground: boolean = false
 ): IconComponent {
 	if (!iconName || iconName == null) return LucideIcons.HelpCircle;
 
 	// Create a wrapper component that pre-binds the iconName
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const BoundLogoIcon = ($$payload: any, $$props: Omit<any, 'iconName'>) => {
-		return LogoIcon($$payload, { iconName, iconSource, use_white_background, ...$$props });
+		return LogoIcon($$payload, { iconName, iconUrl, useWhiteBackground, ...$$props });
 	};
 
 	return BoundLogoIcon;

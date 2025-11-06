@@ -22,8 +22,8 @@ impl ServiceDefinition for NetvisorDaemon {
         Pattern::Endpoint(PortBase::new_tcp(60073), "/api/health", "netvisor")
     }
 
-    fn static_file_path(&self) -> &'static str {
-        "netvisor-logo.png"
+    fn logo_url(&self) -> &'static str {
+        "/logos/netvisor-logo.png"
     }
 }
 

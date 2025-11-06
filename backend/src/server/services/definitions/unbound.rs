@@ -25,8 +25,8 @@ impl ServiceDefinition for Unbound {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "unbound"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unbound.svg"
     }
 }
 

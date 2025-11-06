@@ -12,7 +12,7 @@ impl ServiceDefinition for Glances {
         "Glances"
     }
     fn description(&self) -> &'static str {
-        "an open-source system cross-platform monitoring tool."
+        "An open-source system cross-platform monitoring tool."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Monitoring
@@ -22,8 +22,8 @@ impl ServiceDefinition for Glances {
         Pattern::Endpoint(PortBase::new_tcp(61208), "/", "Glances")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Glances"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glances.svg"
     }
 }
 

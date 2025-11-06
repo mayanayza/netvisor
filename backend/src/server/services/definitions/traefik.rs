@@ -22,8 +22,8 @@ impl ServiceDefinition for Traefik {
         Pattern::Endpoint(PortBase::Http, "/dashboard", "traefik")
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "traefik"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/traefik.svg"
     }
 }
 

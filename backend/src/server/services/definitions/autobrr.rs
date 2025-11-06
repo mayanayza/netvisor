@@ -12,7 +12,7 @@ impl ServiceDefinition for Autobrr {
         "Autobrr"
     }
     fn description(&self) -> &'static str {
-        "the modern autodl-irssi replacement."
+        "The modern autodl-irssi replacement."
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Media
@@ -22,8 +22,8 @@ impl ServiceDefinition for Autobrr {
         Pattern::Port(PortBase::new_tcp(7474))
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "Autobrr"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/autobrr.svg"
     }
 }
 

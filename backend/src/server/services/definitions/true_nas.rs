@@ -25,8 +25,8 @@ impl ServiceDefinition for TrueNAS {
         ])
     }
 
-    fn dashboard_icons_path(&self) -> &'static str {
-        "truenas"
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/truenas.svg"
     }
 }
 
