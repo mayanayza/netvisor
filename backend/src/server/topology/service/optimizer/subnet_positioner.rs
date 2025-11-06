@@ -130,40 +130,12 @@ impl<'a> SubnetPositioner<'a> {
             }
         }
 
-        tracing::debug!(
-            "Subnet optimization complete after {} iterations",
-            iteration
-        );
-
         // NOW snap all positions to grid for visual alignment
-        tracing::debug!("Snapping all subnet positions to grid...");
         for subnet_id in &subnet_ids {
             if let Some(subnet) = nodes.iter_mut().find(|n| n.id == *subnet_id) {
                 let original_x = subnet.position.x;
                 let snapped_x = Self::snap_to_grid(original_x as f64);
                 subnet.position.x = snapped_x;
-                
-                if original_x != snapped_x {
-                    tracing::debug!(
-                        "  Subnet {} - snapped x: {} -> {} (delta={})",
-                        subnet_id,
-                        original_x,
-                        snapped_x,
-                        snapped_x - original_x
-                    );
-                }
-            }
-        }
-
-        // Log final positions
-        for subnet_id in &subnet_ids {
-            if let Some(subnet) = nodes.iter().find(|n| n.id == *subnet_id) {
-                tracing::debug!(
-                    "  Final subnet {} at x={} (grid-snapped), width={}",
-                    subnet_id,
-                    subnet.position.x,
-                    subnet.size.x
-                );
             }
         }
     }
@@ -266,16 +238,6 @@ impl<'a> SubnetPositioner<'a> {
         } else {
             proposed_x
         };
-
-        if bounded_proposed_x != proposed_x {
-            tracing::debug!(
-                "    Subnet {} - bounded movement from {} to {} (max_move={})",
-                subnet_id,
-                proposed_x,
-                bounded_proposed_x,
-                max_move
-            );
-        }
 
         // Check against other subnets in the same row
         for other in nodes.iter() {
