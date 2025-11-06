@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::server::topology::{
@@ -6,23 +6,11 @@ use crate::server::topology::{
         context::TopologyContext, optimizer::utils::OptimizerUtils, planner::utils::NODE_PADDING,
     },
     types::{
-        base::Ixy,
-        edges::{Edge, EdgeHandle, EdgeType},
+        base::{Ixy, Uxy},
+        edges::{Edge, EdgeHandle},
         nodes::{Node, NodeType},
     },
 };
-
-enum HorizontalDirection {
-    Left,
-    Right,
-    Neutral,
-}
-
-enum VerticalDirection {
-    Up,
-    Down,
-    Neutral,
-}
 
 /// Position constraints for a node based on its inter-subnet edge handles
 #[derive(Debug, Clone, Default)]
@@ -39,28 +27,10 @@ struct NodeConstraints {
     is_infra: bool,
 }
 
-impl NodeConstraints {
-    fn can_swap_with(&self, other: &NodeConstraints, is_horizontal: bool) -> bool {
-        // Cannot swap across infra/non-infra boundary
-        if self.is_infra != other.is_infra {
-            return false;
-        }
-
-        if is_horizontal {
-            // Can swap horizontally if neither has left/right constraints
-            !self.pin_left && !self.pin_right && !other.pin_left && !other.pin_right
-        } else {
-            // Can swap vertically if neither has top/bottom constraints
-            !self.pin_top && !self.pin_bottom && !other.pin_top && !other.pin_bottom
-        }
-    }
-}
-
 /// Parameters for zone optimization to reduce function argument count
 struct OptimizeZoneParams<'a> {
     edges: &'a [&'a Edge],
     constraints: &'a HashMap<Uuid, NodeConstraints>,
-    vm_providers: &'a HashMap<Uuid, HashSet<Uuid>>,
     subnet_positions: &'a HashMap<Uuid, Ixy>,
 }
 
@@ -83,9 +53,6 @@ impl<'a> ChildPositioner<'a> {
     pub fn optimize_positions(&self, nodes: &mut [Node], edges: &[Edge]) {
         // Build constraint map for all nodes
         let constraints = self.build_constraint_map(nodes, edges);
-
-        // Find VM provider relationships
-        let vm_providers = self.find_vm_provider_hubs(edges);
 
         let subnet_positions: HashMap<Uuid, Ixy> = nodes
             .iter()
@@ -136,7 +103,6 @@ impl<'a> ChildPositioner<'a> {
             let params = OptimizeZoneParams {
                 edges: &all_edges,
                 constraints: &constraints,
-                vm_providers: &vm_providers,
                 subnet_positions: &subnet_positions,
             };
 
@@ -163,8 +129,8 @@ impl<'a> ChildPositioner<'a> {
 
         // Then add edge handle constraints
         for edge in edges {
-            // Only consider inter-subnet edges (not intra-subnet, not VM edges)
-            if self.context.edge_is_intra_subnet(edge) || self.is_vm_edge(edge) {
+            // Only consider inter-subnet edges (not intra-subnet)
+            if self.context.edge_is_intra_subnet(edge) {
                 continue;
             }
 
@@ -198,29 +164,6 @@ impl<'a> ChildPositioner<'a> {
         constraints
     }
 
-    /// Check if an edge is a VM edge
-    fn is_vm_edge(&self, edge: &Edge) -> bool {
-        matches!(edge.edge_type, EdgeType::HostVirtualization)
-    }
-
-    /// Find VM provider hubs (nodes with multiple VM connections)
-    fn find_vm_provider_hubs(&self, edges: &[Edge]) -> HashMap<Uuid, HashSet<Uuid>> {
-        let mut providers: HashMap<Uuid, HashSet<Uuid>> = HashMap::new();
-
-        for edge in edges {
-            if self.is_vm_edge(edge) {
-                providers
-                    .entry(edge.source)
-                    .or_default()
-                    .insert(edge.target);
-            }
-        }
-
-        // Only keep providers with 3+ VMs
-        providers.retain(|_, vms| vms.len() >= 3);
-        providers
-    }
-
     /// Optimize a zone using force-directed scoring and grid swaps
     fn optimize_zone_with_swaps(
         &self,
@@ -228,103 +171,252 @@ impl<'a> ChildPositioner<'a> {
         node_ids: &[Uuid],
         params: &OptimizeZoneParams,
     ) {
-        const MAX_ITERATIONS: usize = 50;
+        const MAX_ITERATIONS: usize = 100;
 
-        // Try swapping ALL pairs of nodes in the zone (both horizontal and vertical swaps)
-        for _iteration in 0..MAX_ITERATIONS {
-            let mut improved = false;
+        tracing::debug!("Starting zone optimization with {} nodes", node_ids.len());
 
-            // Try all possible pairs of nodes
-            for i in 0..node_ids.len() {
-                for j in (i + 1)..node_ids.len() {
-                    let node_a = node_ids[i];
-                    let node_b = node_ids[j];
+        let initial_score =
+            self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
+        let mut best_score = initial_score;
+        let mut no_improvement_count = 0;
 
-                    let node_a_info = nodes.iter().find(|n| n.id == node_a);
-                    let node_b_info = nodes.iter().find(|n| n.id == node_b);
+        // Optimize with gradually decreasing tolerance (simulated annealing)
+        for iteration in 0..MAX_ITERATIONS {
+            let tolerance_pct = 0.05 * (1.0 - (iteration as f64 / MAX_ITERATIONS as f64));
+            let tolerance = best_score * tolerance_pct;
 
-                    if let (Some(a), Some(b)) = (node_a_info, node_b_info) {
-                        // Determine if this would be a horizontal or vertical swap
-                        let is_horizontal = a.position.y == b.position.y;
-                        let is_vertical = a.position.x == b.position.x;
+            let swaps_made = self.try_all_swaps(nodes, node_ids, params, tolerance);
 
-                        // Try horizontal swap if they're in the same row
-                        if is_horizontal {
-                            improved |= self.try_swap_pair(nodes, node_a, node_b, params, true);
-                        }
+            let new_score =
+                self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
 
-                        // Try vertical swap if they're in the same column
-                        if is_vertical {
-                            improved |= self.try_swap_pair(nodes, node_a, node_b, params, false);
-                        }
-                    }
-                }
+            if new_score < best_score {
+                best_score = new_score;
+                no_improvement_count = 0;
+                tracing::debug!(
+                    "  Iteration {}: {} swaps, new best score: {:.2}",
+                    iteration,
+                    swaps_made,
+                    new_score
+                );
+            } else {
+                no_improvement_count += 1;
             }
 
-            if !improved {
+            if no_improvement_count >= 5 {
+                tracing::debug!("  Converged after {} iterations", iteration + 1);
                 break;
             }
         }
+
+        tracing::debug!(
+            "  Optimization complete: {:.2} -> {:.2} ({:.1}% improvement)",
+            initial_score,
+            best_score,
+            ((initial_score - best_score) / initial_score * 100.0)
+        );
     }
 
-    /// Try swapping a specific pair of nodes
-    fn try_swap_pair(
+    /// Try swapping every pair of nodes
+    fn try_all_swaps(
+        &self,
+        nodes: &mut [Node],
+        node_ids: &[Uuid],
+        params: &OptimizeZoneParams,
+        tolerance: f64,
+    ) -> usize {
+        let mut swaps_made = 0;
+
+        // Try swapping every pair of nodes
+        for i in 0..node_ids.len() {
+            for j in (i + 1)..node_ids.len() {
+                let node_a = node_ids[i];
+                let node_b = node_ids[j];
+
+                if self.try_swap(nodes, node_a, node_b, params, tolerance) {
+                    swaps_made += 1;
+                }
+            }
+        }
+
+        swaps_made
+    }
+
+    /// Try swapping two nodes' positions completely
+    fn try_swap(
         &self,
         nodes: &mut [Node],
         node_a: Uuid,
         node_b: Uuid,
         params: &OptimizeZoneParams,
-        is_horizontal: bool,
+        tolerance: f64,
     ) -> bool {
-        // Check if swap is allowed by constraints
+        // Get constraints and info for both nodes
         let constraint_a = params.constraints.get(&node_a).cloned().unwrap_or_default();
         let constraint_b = params.constraints.get(&node_b).cloned().unwrap_or_default();
 
-        if !constraint_a.can_swap_with(&constraint_b, is_horizontal) {
+        // Cannot swap across infra/non-infra boundary
+        if constraint_a.is_infra != constraint_b.is_infra {
             return false;
         }
 
-        // Calculate current score
-        let current_score = self.calculate_layout_score(
-            nodes,
-            params.edges,
-            params.vm_providers,
-            params.subnet_positions,
-        );
+        // Get current positions and sizes
+        let mut node_a_info: Option<(Ixy, Uxy)> = None;
+        let mut node_b_info: Option<(Ixy, Uxy)> = None;
 
-        // Try swap
-        self.swap_positions(nodes, node_a, node_b, is_horizontal);
+        for node in nodes.iter() {
+            if node.id == node_a {
+                node_a_info = Some((node.position, node.size));
+            } else if node.id == node_b {
+                node_b_info = Some((node.position, node.size));
+            }
+        }
+
+        let ((a_pos, a_size), (b_pos, b_size)) = match (node_a_info, node_b_info) {
+            (Some(a), Some(b)) => (a, b),
+            _ => return false,
+        };
+
+        // Check if swap violates positional constraints
+        let dx = b_pos.x - a_pos.x;
+        let dy = b_pos.y - a_pos.y;
+
+        if dx != 0 {
+            // Would change x position
+            if constraint_a.pin_left
+                || constraint_a.pin_right
+                || constraint_b.pin_left
+                || constraint_b.pin_right
+            {
+                return false;
+            }
+        }
+
+        if dy != 0 {
+            // Would change y position
+            if constraint_a.pin_top
+                || constraint_a.pin_bottom
+                || constraint_b.pin_top
+                || constraint_b.pin_bottom
+            {
+                return false;
+            }
+        }
+
+        // Check if swap would cause overlaps
+        for node in nodes.iter() {
+            if node.id == node_a || node.id == node_b {
+                continue;
+            }
+
+            // Check if node_a at node_b's position would overlap with this node
+            if self.utils.rectangles_overlap(
+                Ixy {
+                    x: b_pos.x,
+                    y: b_pos.y,
+                },
+                Uxy {
+                    x: a_size.x,
+                    y: a_size.y,
+                },
+                Ixy {
+                    x: node.position.x,
+                    y: node.position.y,
+                },
+                Uxy {
+                    x: node.size.x,
+                    y: node.size.y,
+                },
+            ) {
+                return false;
+            }
+
+            // Check if node_b at node_a's position would overlap with this node
+            if self.utils.rectangles_overlap(
+                Ixy {
+                    x: a_pos.x,
+                    y: a_pos.y,
+                },
+                Uxy {
+                    x: b_size.x,
+                    y: b_size.y,
+                },
+                Ixy {
+                    x: node.position.x,
+                    y: node.position.y,
+                },
+                Uxy {
+                    x: node.size.x,
+                    y: node.size.y,
+                },
+            ) {
+                return false;
+            }
+        }
+
+        // Calculate current score
+        let current_score =
+            self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
+
+        // Perform swap
+        for node in nodes.iter_mut() {
+            if node.id == node_a {
+                node.position = b_pos;
+            } else if node.id == node_b {
+                node.position = a_pos;
+            }
+        }
 
         // Calculate new score
-        let new_score = self.calculate_layout_score(
-            nodes,
-            params.edges,
-            params.vm_providers,
-            params.subnet_positions,
-        );
+        let new_score = self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
 
-        if new_score < current_score {
-            // Keep the swap
+        let score_delta = new_score - current_score;
+
+        // Accept if better OR within tolerance
+        if new_score < current_score + tolerance {
+            // Log successful swaps that aren't strict improvements
+            if score_delta > 0.0 && score_delta <= tolerance {
+                tracing::debug!(
+                    "    Accepted swap with tolerance: delta={:.2}, tolerance={:.2}",
+                    score_delta,
+                    tolerance
+                );
+            }
             true
         } else {
             // Revert swap
-            self.swap_positions(nodes, node_a, node_b, is_horizontal);
+            for node in nodes.iter_mut() {
+                if node.id == node_a {
+                    node.position = a_pos;
+                } else if node.id == node_b {
+                    node.position = b_pos;
+                }
+            }
+
+            // Log rejected swaps that were close
+            if score_delta > 0.0 && score_delta < tolerance * 2.0 {
+                tracing::debug!(
+                    "    Rejected swap: delta={:.2}, tolerance={:.2}",
+                    score_delta,
+                    tolerance
+                );
+            }
+
             false
         }
     }
 
     /// Calculate a score for the current layout (lower is better)
-    /// Uses force-directed principles to score edge lengths and VM clustering
+    /// Uses force-directed principles to score edge lengths
     fn calculate_layout_score(
         &self,
         nodes: &[Node],
         edges: &[&Edge],
-        vm_providers: &HashMap<Uuid, HashSet<Uuid>>,
         subnet_positions: &HashMap<Uuid, Ixy>,
     ) -> f64 {
         let mut score = 0.0;
 
-        // 1. Edge length cost (spring energy)
+        // Edge length cost (spring energy)
         for edge in edges {
             let source = nodes.iter().find(|n| n.id == edge.source);
             let target = nodes.iter().find(|n| n.id == edge.target);
@@ -337,168 +429,21 @@ impl<'a> ChildPositioner<'a> {
                 let dy = (tgt_pos.y - src_pos.y) as f64;
                 let distance = (dx * dx + dy * dy).sqrt();
 
-                // Weight inter-subnet edges more heavily
+                // Weight inter-subnet edges more heavily (they're the important ones)
                 let weight = if self.context.edge_is_intra_subnet(edge) {
-                    1.0
+                    0.5 // Intra-subnet edges are less important
                 } else {
-                    2.0
+                    10.0 // Inter-subnet edges are critical
                 };
 
                 score += distance * weight;
             }
         }
 
-        // 2. VM clustering cost (deviation from ideal circular arrangement)
-        const IDEAL_VM_RADIUS: f64 = 200.0;
-
-        for (provider_id, vm_ids) in vm_providers {
-            let provider = nodes.iter().find(|n| n.id == *provider_id);
-            if provider.is_none() {
-                continue;
-            }
-            let provider_node = provider.unwrap();
-            let provider_pos = provider_node.position;
-            let provider_is_infra = match provider_node.node_type {
-                NodeType::InterfaceNode { is_infra, .. } => is_infra,
-                _ => false,
-            };
-
-            for vm_id in vm_ids {
-                let vm = nodes.iter().find(|n| n.id == *vm_id);
-                if vm.is_none() {
-                    continue;
-                }
-                let vm_node = vm.unwrap();
-                let vm_pos = vm_node.position;
-                let vm_is_infra = match vm_node.node_type {
-                    NodeType::InterfaceNode { is_infra, .. } => is_infra,
-                    _ => false,
-                };
-
-                let dx = (vm_pos.x - provider_pos.x) as f64;
-                let dy = (vm_pos.y - provider_pos.y) as f64;
-                let distance = (dx * dx + dy * dy).sqrt();
-
-                // Check if VM and provider are on opposite sides of infra boundary
-                let crosses_infra_boundary = vm_is_infra != provider_is_infra;
-
-                if crosses_infra_boundary {
-                    // Heavily penalize horizontal distance when crossing boundary
-                    let horizontal_distance = dx.abs();
-                    let h_cost = horizontal_distance * 3.0;
-                    score += h_cost;
-
-                    // Also penalize vertical distance but less
-                    let vertical_distance = dy.abs();
-                    let v_cost = vertical_distance * 0.5;
-                    score += v_cost;
-                } else {
-                    // Same infra status - use normal circular clustering
-                    let deviation = (distance - IDEAL_VM_RADIUS).abs();
-                    let dev_cost = deviation * 3.0; // Heavily weight VM clustering
-                    score += dev_cost;
-                }
-            }
-
-            // Also add direct distance penalty for VMs that are too close in Euclidean space
-            let vm_ids_vec: Vec<_> = vm_ids.iter().collect();
-            for i in 0..vm_ids_vec.len() {
-                for j in (i + 1)..vm_ids_vec.len() {
-                    let vm1 = nodes.iter().find(|n| n.id == *vm_ids_vec[i]);
-                    let vm2 = nodes.iter().find(|n| n.id == *vm_ids_vec[j]);
-
-                    if let (Some(v1), Some(v2)) = (vm1, vm2) {
-                        let dx = (v2.position.x - v1.position.x) as f64;
-                        let dy = (v2.position.y - v1.position.y) as f64;
-                        let distance = (dx * dx + dy * dy).sqrt().max(1.0);
-
-                        // Penalize VMs that are too close
-                        if distance < 150.0 {
-                            score += (150.0 - distance) * 0.3;
-                        }
-                    }
-                }
-            }
-
-            // Penalize non-VM nodes that are too close to this VM provider
-            // This helps keep the "cluster" around the provider clear
-            for node in nodes.iter() {
-                // Skip if this is a VM of this provider
-                if vm_ids.contains(&node.id) {
-                    continue;
-                }
-
-                // Skip if this is the provider itself
-                if node.id == *provider_id {
-                    continue;
-                }
-
-                // Skip subnet nodes
-                if matches!(node.node_type, NodeType::SubnetNode { .. }) {
-                    continue;
-                }
-
-                let dx = (node.position.x - provider_pos.x) as f64;
-                let dy = (node.position.y - provider_pos.y) as f64;
-                let distance = (dx * dx + dy * dy).sqrt();
-
-                // Penalize non-VM nodes that are within the ideal VM radius
-                if distance < IDEAL_VM_RADIUS {
-                    let intrusion_cost = (IDEAL_VM_RADIUS - distance) * 0.8;
-                    score += intrusion_cost;
-                }
-            }
-        }
-
         score
     }
 
-    /// Swap two nodes' positions along a single axis
-    fn swap_positions(
-        &self,
-        nodes: &mut [Node],
-        node_a_id: Uuid,
-        node_b_id: Uuid,
-        is_horizontal: bool,
-    ) {
-        let mut pos_a: Option<isize> = None;
-        let mut pos_b: Option<isize> = None;
-
-        for node in nodes.iter() {
-            if node.id == node_a_id {
-                pos_a = Some(if is_horizontal {
-                    node.position.x
-                } else {
-                    node.position.y
-                });
-            } else if node.id == node_b_id {
-                pos_b = Some(if is_horizontal {
-                    node.position.x
-                } else {
-                    node.position.y
-                });
-            }
-        }
-
-        if let (Some(a_pos), Some(b_pos)) = (pos_a, pos_b) {
-            for node in nodes.iter_mut() {
-                if node.id == node_a_id {
-                    if is_horizontal {
-                        node.position.x = b_pos;
-                    } else {
-                        node.position.y = b_pos;
-                    }
-                } else if node.id == node_b_id {
-                    if is_horizontal {
-                        node.position.x = a_pos;
-                    } else {
-                        node.position.y = a_pos;
-                    }
-                }
-            }
-        }
-    }
-
+    // compress_vertical_spacing with logging
     pub fn compress_vertical_spacing(&self, nodes: &mut [Node]) {
         let mut nodes_by_subnet_and_x: HashMap<(Uuid, isize), Vec<usize>> = HashMap::new();
 
@@ -512,25 +457,52 @@ impl<'a> ChildPositioner<'a> {
             }
         });
 
-        for ((_, _), indices) in nodes_by_subnet_and_x.iter_mut() {
+        // For each subnet, find the minimum Y position across all columns
+        let mut min_y_by_subnet: HashMap<Uuid, isize> = HashMap::new();
+
+        for ((subnet_id, _), indices) in nodes_by_subnet_and_x.iter() {
+            for &idx in indices {
+                let y = nodes[idx].position.y;
+                min_y_by_subnet
+                    .entry(*subnet_id)
+                    .and_modify(|min_y| *min_y = (*min_y).min(y))
+                    .or_insert(y);
+            }
+        }
+
+        // Compress each column
+        for ((subnet_id, _), indices) in nodes_by_subnet_and_x.iter_mut() {
+            // Sort by Y position
             indices.sort_by(|&a, &b| nodes[a].position.y.cmp(&nodes[b].position.y));
 
-            for i in 1..indices.len() {
-                let prev_idx = indices[i - 1];
-                let curr_idx = indices[i];
+            // Start from the subnet's minimum Y
+            let start_y = min_y_by_subnet.get(subnet_id).copied().unwrap_or(0);
 
-                let above_bottom_padded = nodes[prev_idx].position.y
-                    + nodes[prev_idx].size.y as isize
-                    + NODE_PADDING.y as isize;
+            if indices.len() == 1 {
+                let idx = indices[0];
+                nodes[idx].position.y = start_y;
+            } else {
+                // Multiple nodes - compress them starting from start_y
+                let first_idx = indices[0];
+                nodes[first_idx].position.y = start_y;
 
-                nodes[curr_idx].position.y = above_bottom_padded;
+                for i in 1..indices.len() {
+                    let prev_idx = indices[i - 1];
+                    let curr_idx = indices[i];
+
+                    let above_bottom_padded = nodes[prev_idx].position.y
+                        + nodes[prev_idx].size.y as isize
+                        + NODE_PADDING.y as isize;
+
+                    nodes[curr_idx].position.y = above_bottom_padded;
+                }
             }
         }
     }
 
     /// Fix intra-subnet edge handles based on actual node positions
     pub fn fix_intra_subnet_handles(&self, edges: &[Edge], nodes: &[Node]) -> Vec<Edge> {
-        edges
+        let result: Vec<Edge> = edges
             .iter()
             .map(|edge| {
                 if !self.context.edge_is_intra_subnet(edge) {
@@ -552,58 +524,76 @@ impl<'a> ChildPositioner<'a> {
                     edge.clone()
                 }
             })
-            .collect()
+            .collect();
+
+        result
     }
 
-    /// Calculate optimal edge handles based on relative node positions
+    /// Calculate optimal edge handles by trying all combinations and selecting shortest path
     fn calculate_optimal_handles(&self, source: &Node, target: &Node) -> (EdgeHandle, EdgeHandle) {
-        let dx = target.position.x - source.position.x;
-        let dy = target.position.y - source.position.y;
+        // Define relative position vector from source to target (using centers)
+        let src_center_x = source.position.x + (source.size.x as isize / 2);
+        let src_center_y = source.position.y + (source.size.y as isize / 2);
+        let tgt_center_x = target.position.x + (target.size.x as isize / 2);
+        let tgt_center_y = target.position.y + (target.size.y as isize / 2);
 
-        let horizontal_dir = if dx > 50 {
-            HorizontalDirection::Right
-        } else if dx < -50 {
-            HorizontalDirection::Left
-        } else {
-            HorizontalDirection::Neutral
-        };
+        let relative_x = (tgt_center_x - src_center_x) as f64;
+        let relative_y = (tgt_center_y - src_center_y) as f64;
 
-        let vertical_dir = if dy > 50 {
-            VerticalDirection::Down
-        } else if dy < -50 {
-            VerticalDirection::Up
-        } else {
-            VerticalDirection::Neutral
-        };
+        let avg_dimension =
+            ((source.size.x + source.size.y + target.size.x + target.size.y) / 4) as f64;
+        let scale = avg_dimension * 0.1;
 
-        match (horizontal_dir, vertical_dir) {
-            (HorizontalDirection::Right, VerticalDirection::Neutral) => {
-                (EdgeHandle::Right, EdgeHandle::Left)
-            }
-            (HorizontalDirection::Left, VerticalDirection::Neutral) => {
-                (EdgeHandle::Left, EdgeHandle::Right)
-            }
-            (HorizontalDirection::Neutral, VerticalDirection::Down) => {
-                (EdgeHandle::Bottom, EdgeHandle::Top)
-            }
-            (HorizontalDirection::Neutral, VerticalDirection::Up) => {
-                (EdgeHandle::Top, EdgeHandle::Bottom)
-            }
-            (HorizontalDirection::Right, VerticalDirection::Down) => {
-                (EdgeHandle::Right, EdgeHandle::Top)
-            }
-            (HorizontalDirection::Right, VerticalDirection::Up) => {
-                (EdgeHandle::Right, EdgeHandle::Bottom)
-            }
-            (HorizontalDirection::Left, VerticalDirection::Down) => {
-                (EdgeHandle::Left, EdgeHandle::Top)
-            }
-            (HorizontalDirection::Left, VerticalDirection::Up) => {
-                (EdgeHandle::Left, EdgeHandle::Bottom)
-            }
-            (HorizontalDirection::Neutral, VerticalDirection::Neutral) => {
-                (EdgeHandle::Top, EdgeHandle::Bottom)
+        // Define all handle combinations with their direction vectors
+        let all_handles = [
+            (EdgeHandle::Top, 0.0, -scale),
+            (EdgeHandle::Bottom, 0.0, scale),
+            (EdgeHandle::Left, -scale, 0.0),
+            (EdgeHandle::Right, scale, 0.0),
+        ];
+
+        let mut best_combination = (EdgeHandle::Top, EdgeHandle::Bottom);
+        let mut best_distance = f64::MAX;
+        let mut all_scores = Vec::new();
+
+        // Try all 16 combinations
+        for &(src_handle, src_dx, src_dy) in &all_handles {
+            for &(tgt_handle, tgt_dx, tgt_dy) in &all_handles {
+                let start_x = 0.0 + src_dx;
+                let start_y = 0.0 + src_dy;
+
+                let end_x = relative_x + tgt_dx;
+                let end_y = relative_y + tgt_dy;
+
+                let path_x = end_x - start_x;
+                let path_y = end_y - start_y;
+
+                // Calculate Manhattan distance
+                let distance = path_x.abs() + path_y.abs();
+
+                // Calculate routing complexity penalty
+                // Prefer handles that align with the primary direction of travel
+                let is_aligned = if relative_x.abs() > relative_y.abs() {
+                    // Primarily horizontal movement
+                    src_handle.is_horizontal() && tgt_handle.is_horizontal()
+                } else {
+                    // Primarily vertical movement
+                    src_handle.is_vertical() && tgt_handle.is_vertical()
+                };
+
+                // Add small penalty for non-aligned routing (breaks ties)
+                let complexity_penalty = if is_aligned { 0.0 } else { 0.1 };
+                let total_score = distance + complexity_penalty;
+
+                all_scores.push((src_handle, tgt_handle, distance, total_score));
+
+                if total_score < best_distance {
+                    best_distance = total_score;
+                    best_combination = (src_handle, tgt_handle);
+                }
             }
         }
+
+        best_combination
     }
 }

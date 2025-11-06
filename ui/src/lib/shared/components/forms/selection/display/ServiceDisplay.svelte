@@ -1,13 +1,33 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	export const ServiceDisplay: EntityDisplayComponent<Service, object> = {
+	interface InterfaceIds {
+		interfaceIds: string[];
+	}
+
+	export const ServiceDisplay: EntityDisplayComponent<Service, InterfaceIds> = {
 		getId: (service: Service) => service.id,
 		getLabel: (service: Service) => service.name,
-		getDescription: (service: Service) => {
+		getDescription: (service: Service, context) => {
 			let descriptionItems = [];
-			let binding_count = service.bindings.length;
-			descriptionItems.push(binding_count + ' binding' + (binding_count == 1 ? '' : 's'));
+
+			let bindingsOnInterface = service.bindings.filter((b) =>
+				b.interface_id
+					? context.interfaceIds.includes(b.interface_id) || context.interfaceIds.length == 0
+					: true
+			).length;
+
+			descriptionItems.push(`${bindingsOnInterface} binding${bindingsOnInterface > 1 ? 's' : ''} 
+			on ${
+				context.interfaceIds.length == 0
+					? 'all interfaces'
+					: context.interfaceIds
+							.map((i) => {
+								const iface = get(getInterfaceFromId(i));
+								return iface ? formatInterface(iface) : 'Unknown Interface';
+							})
+							.join(', ')
+			}`);
 
 			if (service.source.type == 'DiscoveryWithMatch') {
 				let confidence = service.source.details.confidence;
@@ -38,7 +58,6 @@
 
 			return tags;
 		},
-		getIsDisabled: () => false,
 		getCategory: () => null
 	};
 </script>
@@ -49,9 +68,11 @@
 	import type { Service } from '$lib/features/services/types/base';
 	import type { TagProps } from '$lib/shared/components/data/types';
 	import { matchConfidenceLabel } from '$lib/shared/types';
+	import { formatInterface, getInterfaceFromId } from '$lib/features/hosts/store';
+	import { get } from 'svelte/store';
 
 	export let item: Service;
-	export let context = {};
+	export let context: InterfaceIds;
 </script>
 
 <ListSelectItem {item} {context} displayComponent={ServiceDisplay} />

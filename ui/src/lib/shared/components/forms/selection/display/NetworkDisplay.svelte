@@ -8,7 +8,6 @@
 		getIcon: () => entities.getIconComponent('Network'),
 		getIconColor: () => entities.getColorHelper('Network').icon,
 		getTags: () => [],
-		getIsDisabled: () => false,
 		getCategory: () => null
 	};
 </script>

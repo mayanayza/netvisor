@@ -17,7 +17,6 @@
 				color: serviceType.color
 			}
 		],
-		getIsDisabled: () => false,
 		getCategory: (serviceType: TypeMetadata<ServicedDefinitionMetadata>) => serviceType.category
 	};
 </script>

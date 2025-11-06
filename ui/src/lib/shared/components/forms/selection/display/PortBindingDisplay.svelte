@@ -22,7 +22,6 @@
 		getIcon: () => Link2,
 		getIconColor: () => entities.getColorHelper('Port').icon,
 		getTags: () => [],
-		getIsDisabled: () => false,
 		getCategory: (binding: PortBinding) => {
 			const service = get(getServiceForBinding(binding.id));
 			if (!service) return null;

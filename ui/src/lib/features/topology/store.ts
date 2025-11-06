@@ -1,10 +1,13 @@
 import { get, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
-import { type Node } from '@xyflow/svelte';
+import { type Edge, type Node } from '@xyflow/svelte';
 import { EdgeHandle, type TopologyResponse, type TopologyOptions } from './types/base';
 import { networks } from '../networks/store';
 import deepmerge from 'deepmerge';
 import { browser } from '$app/environment';
+
+export const selectedNode = writable<Node | null>(null);
+export const selectedEdge = writable<Edge | null>(null);
 
 const OPTIONS_STORAGE_KEY = 'netvisor_topology_options';
 const EXPANDED_STORAGE_KEY = 'netvisor_topology_options_expanded_state';
@@ -148,30 +151,4 @@ export function getNextHandle(currentHandle: EdgeHandle): EdgeHandle {
 	const currentIndex = cycle.indexOf(currentHandle);
 	const nextIndex = (currentIndex + 1) % cycle.length;
 	return cycle[nextIndex];
-}
-
-function getAbsoluteNodePosition(nodeId: string): { x: number; y: number } | null {
-	// Find the DOM element for the node
-	const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
-	if (!nodeElement) return null;
-
-	const rect = nodeElement.getBoundingClientRect();
-	return {
-		x: rect.left + rect.width / 2, // Center X
-		y: rect.top + rect.height / 2 // Center Y
-	};
-}
-
-// Calculate distance between click point and node centers
-export function getDistanceToNode(clickX: number, clickY: number, node: Node): number {
-	const nodePosition = getAbsoluteNodePosition(node.id);
-
-	if (nodePosition) {
-		const nodeCenterX = nodePosition.x + (node.width || 0) / 2;
-		const nodeCenterY = nodePosition.y + (node.height || 0) / 2;
-
-		return Math.sqrt(Math.pow(clickX - nodeCenterX, 2) + Math.pow(clickY - nodeCenterY, 2));
-	}
-
-	return Infinity;
 }

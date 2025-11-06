@@ -5,7 +5,7 @@
 	export const HostDisplay: EntityDisplayComponent<Host, object> = {
 		getId: (host: Host) => host.id,
 		getLabel: (host: Host) => host.name,
-		getDescription: (host: Host) => get(getHostTargetString(host)) || 'Unknown Host',
+		getDescription: (host: Host) => host.hostname || 'No Hostname',
 		getIcon: (host: Host) => {
 			let firstService = host.services.length > 0 ? get(getServiceById(host.services[0])) : null;
 			if (firstService) {
@@ -20,10 +20,9 @@
 
 			return services.map((service) => ({
 				label: serviceDefinitions.getName(service.service_definition),
-				color: serviceDefinitions.getColorString(service.service_definition)
+				color: entities.getColorHelper('Service').string
 			}));
-		},
-		getIsDisabled: () => false
+		}
 	};
 </script>
 
@@ -31,7 +30,6 @@
 	import { getServiceById, getServicesForHost } from '$lib/features/services/store';
 	import type { EntityDisplayComponent } from '../types';
 	import ListSelectItem from '../ListSelectItem.svelte';
-	import { getHostTargetString } from '$lib/features/hosts/store';
 	import { get } from 'svelte/store';
 
 	export let item: Host;

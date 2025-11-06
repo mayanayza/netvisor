@@ -18,7 +18,6 @@
 		getIcon: () => Link2,
 		getIconColor: () => entities.getColorHelper('Interface').icon,
 		getTags: () => [],
-		getIsDisabled: () => false,
 		getCategory: (binding: InterfaceBinding) => {
 			const service = get(getServiceForBinding(binding.id));
 			if (!service) return null;

@@ -48,7 +48,6 @@
 		getIcon: () => entities.getIconComponent('Port'),
 		getIconColor: () => entities.getColorHelper('Port').icon,
 		getTags: () => [],
-		getIsDisabled: () => false,
 		getCategory: () => null
 	};
 </script>

@@ -9,7 +9,7 @@
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { getDistanceToNode, getNextHandle, topology } from '../store';
+	import { optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 
@@ -17,7 +17,7 @@
 	import SubnetNode from './SubnetNode.svelte';
 	import InterfaceNode from './InterfaceNode.svelte';
 	import CustomEdge from './CustomEdge.svelte';
-	import { EdgeHandle, type TopologyEdge } from '../types/base';
+	import { type TopologyEdge } from '../types/base';
 	import { onMount } from 'svelte';
 
 	// Define node types
@@ -46,6 +46,7 @@
 	async function loadTopologyData() {
 		try {
 			if ($topology?.nodes && $topology?.edges) {
+				// Create nodes FIRST
 				const flowNodes: Node[] = $topology.nodes.map((node): Node => {
 					return {
 						id: node.id,
@@ -61,8 +62,16 @@
 					};
 				});
 
-				const flowEdges: Edge[] = $topology.edges.map(
-					([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
+				// Set nodes first and wait for next tick
+				nodes.set(flowNodes);
+				await new Promise((resolve) => setTimeout(resolve, 0));
+
+				// Create edges AFTER nodes are set
+				const flowEdges: Edge[] = $topology.edges
+					.filter(
+						([, , edge]: [number, number, TopologyEdge]) => edge.edge_type != 'HostVirtualization'
+					)
+					.map(([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
 						const edgeType = edge.edge_type as string;
 						let edgeMetadata = edgeTypes.getMetadata(edgeType);
 						let edgeColorHelper = edgeTypes.getColorHelper(edgeType);
@@ -89,16 +98,13 @@
 							markerStart,
 							sourceHandle: edge.source_handle.toString(),
 							targetHandle: edge.target_handle.toString(),
-
 							type: 'custom',
 							label: edge.label,
 							style: `stroke: ${edgeColorHelper.rgb}; stroke-width: 2px; ${dashArray}`,
 							data: edge
 						};
-					}
-				);
+					});
 
-				nodes.set(flowNodes);
 				edges.set(flowEdges);
 			}
 		} catch (err) {
@@ -106,62 +112,16 @@
 		}
 	}
 
-	// Event handlers
-	// function onNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
-	// 	// selectedNodeId = node.id;
-	// }
+	function onNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
+		selectedNode.set(node);
+		selectedEdge.set(null);
+		optionsPanelExpanded.set(true);
+	}
 
-	function onEdgeClick({ edge, event }: { edge: Edge; event: MouseEvent }) {
-		// Get click coordinates relative to the flow canvas
-		const clickX = event.clientX;
-		const clickY = event.clientY;
-
-		// Find source and target nodes
-		const sourceNode = $nodes.find((n) => n.id === edge.source);
-		const targetNode = $nodes.find((n) => n.id === edge.target);
-
-		if (!sourceNode || !targetNode) {
-			console.warn('Could not find source or target node for edge');
-			return;
-		}
-
-		// Calculate which node the click was closer to
-		const distanceToSource = getDistanceToNode(clickX, clickY, sourceNode);
-		const distanceToTarget = getDistanceToNode(clickX, clickY, targetNode);
-		const isCloserToSource = distanceToSource < distanceToTarget;
-
-		// Get current handles from edge data
-		const currentTargetHandle = (edge.data?.targetHandle as EdgeHandle) || EdgeHandle.Top;
-		const currentSourceHandle = (edge.data?.sourceHandle as EdgeHandle) || EdgeHandle.Top;
-
-		// Cycle the appropriate handle
-		let newSourceHandle = currentSourceHandle;
-		let newTargetHandle = currentTargetHandle;
-
-		if (isCloserToSource) {
-			newSourceHandle = getNextHandle(currentSourceHandle);
-		} else {
-			newTargetHandle = getNextHandle(currentTargetHandle);
-		}
-
-		// Update the edge in the edges store
-		edges.set(
-			$edges.map((e) => {
-				if (e.id === edge.id) {
-					return {
-						...e,
-						sourceHandle: newSourceHandle.toString(),
-						targetHandle: newTargetHandle.toString(),
-						data: {
-							...e.data,
-							sourceHandle: newSourceHandle,
-							targetHandle: newTargetHandle
-						}
-					};
-				}
-				return e;
-			})
-		);
+	function onEdgeClick({ edge }: { edge: Edge; event: MouseEvent }) {
+		selectedEdge.set(edge);
+		selectedNode.set(null);
+		optionsPanelExpanded.set(true);
 	}
 </script>
 
@@ -172,6 +132,7 @@
 		{nodeTypes}
 		edgeTypes={customEdgeTypes}
 		onedgeclick={onEdgeClick}
+		onnodeclick={onNodeClick}
 		fitView
 		noPanClass="nopan"
 		snapGrid={[25, 25]}
@@ -200,7 +161,6 @@
 		display: none !important;
 	}
 
-	:global(.svelte-flow__panel),
 	:global(.svelte-flow__attribution) {
 		background-color: #1f2937 !important; /* gray-800 */
 		border: 1px solid #374151 !important; /* gray-700 */

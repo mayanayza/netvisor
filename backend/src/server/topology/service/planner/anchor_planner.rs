@@ -10,54 +10,57 @@ pub struct ChildAnchorPlanner;
 
 impl ChildAnchorPlanner {
     /// Analyze edges to determine figure out if they need to change anchor points to avoid intersecting with other nodes
-    /// Returns edges
+    /// Mutates handles for inter-subnet edges only, but returns ALL edges for this interface
     pub fn plan_anchors(
         interface_id: Uuid,
         edges: &mut [Edge],
         ctx: &TopologyContext,
     ) -> Vec<Edge> {
-        // Find all non-intra subnet edges involving this child
-        let child_edges: Vec<Edge> = edges
+        // Find all INTER-SUBNET edges involving this child for anchor planning
+        let inter_subnet_edges: Vec<&Edge> = edges
             .iter()
             .filter(|edge| {
                 (edge.source == interface_id || edge.target == interface_id)
                     && !ctx.edge_is_intra_subnet(edge)
             })
-            .cloned()
             .collect();
 
-        if child_edges.is_empty() {
-            return vec![];
+        // Only do anchor planning if there are inter-subnet edges
+        if !inter_subnet_edges.is_empty() {
+            // Determine if this interface has infra services
+            let is_infra = ctx.is_interface_infra(interface_id);
+
+            // Count anchors by handle direction (only for inter-subnet edges)
+            let mut handle_counts: HashMap<EdgeHandle, usize> = HashMap::new();
+
+            for edge in &inter_subnet_edges {
+                // Determine which handle applies to this child
+                let relevant_handle = if edge.source == interface_id {
+                    &edge.source_handle
+                } else {
+                    &edge.target_handle
+                };
+
+                *handle_counts.entry(*relevant_handle).or_insert(0) += 1;
+            }
+
+            // If we need to override handles, mutate ONLY inter-subnet edges
+            if let Some(override_handle) =
+                Self::determine_override_handle(&handle_counts, is_infra, interface_id, edges, ctx)
+            {
+                edges.iter_mut().for_each(|edge| {
+                    // Only mutate inter-subnet edges
+                    if (edge.source == interface_id || edge.target == interface_id)
+                        && !ctx.edge_is_intra_subnet(edge)
+                    {
+                        edge.source_handle = override_handle;
+                        edge.target_handle = override_handle;
+                    }
+                });
+            }
         }
 
-        // Determine if this interface has infra services
-        let is_infra = ctx.is_interface_infra(interface_id);
-
-        // Count anchors by handle direction
-        let mut handle_counts: HashMap<EdgeHandle, usize> = HashMap::new();
-
-        for edge in &child_edges {
-            // Determine which handle applies to this child
-            let relevant_handle = if edge.source == interface_id {
-                &edge.source_handle
-            } else {
-                &edge.target_handle
-            };
-
-            *handle_counts.entry(*relevant_handle).or_insert(0) += 1;
-        }
-
-        if let Some(override_handle) =
-            Self::determine_override_handle(&handle_counts, is_infra, interface_id, edges, ctx)
-        {
-            edges.iter_mut().for_each(|edge| {
-                if edge.source == interface_id || edge.target == interface_id {
-                    edge.source_handle = override_handle;
-                    edge.target_handle = override_handle;
-                }
-            });
-        }
-
+        // Return ALL edges for this interface (inter-subnet + intra-subnet, including VM edges)
         edges
             .iter()
             .filter(|edge| edge.source == interface_id || edge.target == interface_id)

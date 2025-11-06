@@ -26,19 +26,65 @@
 
 	<!-- Label and description -->
 	<div class="min-w-0 flex-1 text-left">
-		<div class="flex items-center gap-3">
-			<span class="text-secondary block truncate">{displayComponent.getLabel(item, context)}</span>
-			<!-- Tags -->
+		<div class="flex min-w-0 items-start gap-2">
+			<span class="text-secondary flex-shrink-0 truncate"
+				>{displayComponent.getLabel(item, context)}</span
+			>
+			<!-- Tags with horizontal scrolling -->
 			{#if tags.length > 0}
-				<div class="flex gap-1">
-					{#each tags as tag, i (`${tag.label}-${i}`)}
-						<Tag label={tag.label} color={tag.color} />
-					{/each}
+				<div class="tags-scroll-container min-w-0 flex-1">
+					<div class="flex gap-1">
+						{#each tags as tag, i (`${tag.label}-${i}`)}
+							<Tag label={tag.label} color={tag.color} />
+						{/each}
+					</div>
 				</div>
 			{/if}
 		</div>
 		{#if description.length > 0}
-			<span class="text-tertiary mt-2 block truncate text-xs">{description}</span>
+			<span class="text-tertiary mt-1 block truncate text-xs">{description}</span>
 		{/if}
 	</div>
 </div>
+
+<style>
+	.tags-scroll-container {
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: thin;
+		scrollbar-color: #4b5563 transparent;
+		/* Hide scrollbar by default, show on hover */
+		scrollbar-width: none;
+	}
+
+	.tags-scroll-container::-webkit-scrollbar {
+		height: 4px;
+		display: none;
+	}
+
+	.tags-scroll-container:hover {
+		scrollbar-width: thin;
+	}
+
+	.tags-scroll-container:hover::-webkit-scrollbar {
+		display: block;
+	}
+
+	.tags-scroll-container::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.tags-scroll-container::-webkit-scrollbar-thumb {
+		background-color: #4b5563;
+		border-radius: 2px;
+	}
+
+	.tags-scroll-container::-webkit-scrollbar-thumb:hover {
+		background-color: #6b7280;
+	}
+
+	/* Ensure inner flex container doesn't wrap */
+	.tags-scroll-container > div {
+		flex-wrap: nowrap;
+	}
+</style>

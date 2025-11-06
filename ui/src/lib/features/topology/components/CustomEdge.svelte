@@ -83,7 +83,7 @@
 	}
 
 	let [edgePath, labelX, labelY] = $derived.by(() => {
-		const isMultiHop = (data?.is_multi_hop as boolean) || false;
+		const isMultiHop = (edgeData.is_multi_hop as boolean) || false;
 		const offset = calculateDynamicOffset(isMultiHop);
 
 		const basePathProperties = {

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use uuid::Uuid;
 
 use crate::server::{
@@ -9,63 +7,21 @@ use crate::server::{
         base::Service, definitions::ServiceDefinitionExt, virtualization::ServiceVirtualization,
     },
     subnets::types::base::Subnet,
-    topology::{
-        service::optimizer::utils::OptimizerUtils,
-        types::{
-            api::TopologyRequestOptions,
-            base::Ixy,
-            edges::Edge,
-            nodes::{Node, NodeType},
-        },
+    topology::types::{
+        api::TopologyRequestOptions,
+        edges::Edge,
+        nodes::{Node, NodeType},
     },
 };
 
-/// Composite quality score for graph layout
-/// Lower scores are better (minimizing edge crossings and edge length)
-#[derive(Debug, Clone, Copy)]
-pub struct LayoutQuality {
-    pub total_edge_length: f64,
-    pub edge_crossings: usize,
-    /// Weighted combination: crossings are heavily penalized
-    /// Formula: (crossings * 10000) + edge_length
-    /// This ensures that reducing crossings is prioritized over reducing edge length
-    pub weighted_score: f64,
-}
-
-impl LayoutQuality {
-    pub fn new(total_edge_length: f64, edge_crossings: usize) -> Self {
-        // Crossings are weighted heavily (10000x) because they severely impact readability
-        let weighted_score = (edge_crossings as f64 * 10000.0) + total_edge_length;
-        Self {
-            total_edge_length,
-            edge_crossings,
-            weighted_score,
-        }
-    }
-
-    /// Returns true if this quality is better (lower score) than other
-    pub fn is_better_than(&self, other: &LayoutQuality) -> bool {
-        self.weighted_score < other.weighted_score
-    }
-
-    /// Returns the relative improvement as a percentage
-    pub fn improvement_percentage(&self, previous: &LayoutQuality) -> f64 {
-        if previous.weighted_score == 0.0 {
-            return 0.0;
-        }
-        ((previous.weighted_score - self.weighted_score) / previous.weighted_score) * 100.0
-    }
-}
-
 /// Central context for topology building operations
-/// Reduces parameter passing and provides helper methods
+/// Provides topology-specific business logic and data access
 pub struct TopologyContext<'a> {
     pub hosts: &'a [Host],
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
     pub groups: &'a [Group],
     pub options: &'a TopologyRequestOptions,
-    utils: OptimizerUtils,
 }
 
 impl<'a> TopologyContext<'a> {
@@ -82,9 +38,12 @@ impl<'a> TopologyContext<'a> {
             services,
             groups,
             options,
-            utils: OptimizerUtils::new(),
         }
     }
+
+    // ============================================================================
+    // Data Access Methods
+    // ============================================================================
 
     pub fn get_subnet_by_id(&self, subnet_id: Uuid) -> Option<&'a Subnet> {
         self.subnets.iter().find(|s| s.id == subnet_id)
@@ -115,56 +74,6 @@ impl<'a> TopologyContext<'a> {
             .collect()
     }
 
-    pub fn get_node_subnet(&self, node_id: Uuid, nodes: &[Node]) -> Option<Uuid> {
-        nodes
-            .iter()
-            .find(|n| n.id == node_id)
-            .map(|node| match node.node_type {
-                NodeType::InterfaceNode { subnet_id, .. } => subnet_id,
-                NodeType::SubnetNode { .. } => node.id,
-            })
-    }
-
-    pub fn interface_will_have_node(&self, interface_id: &Uuid) -> bool {
-        !self
-            .get_services_bound_to_interface(*interface_id)
-            .is_empty()
-    }
-
-    pub fn service_will_have_node(&self, service_id: &Uuid) -> bool {
-        self.get_service_by_id(*service_id)
-            .map(|s| !s.base.bindings.is_empty())
-            .unwrap_or(true)
-    }
-
-    pub fn edge_is_intra_subnet(&self, edge: &Edge) -> bool {
-        if let (Some(source_subnet), Some(target_subnet)) = (
-            self.get_subnet_from_interface_id(edge.source),
-            self.get_subnet_from_interface_id(edge.target),
-        ) {
-            return source_subnet.id == target_subnet.id;
-        }
-        false
-    }
-
-    pub fn edge_is_multi_hop(
-        &self,
-        source_interface_id: &Uuid,
-        target_interface_id: &Uuid,
-    ) -> bool {
-        if let (Some(source_subnet), Some(target_subnet)) = (
-            self.get_subnet_from_interface_id(*source_interface_id),
-            self.get_subnet_from_interface_id(*target_interface_id),
-        ) {
-            let vertical_order_difference = source_subnet.base.subnet_type.vertical_order()
-                as isize
-                - target_subnet.base.subnet_type.vertical_order() as isize;
-
-            return vertical_order_difference.abs() > 1;
-        }
-        false
-    }
-
     pub fn get_subnet_from_interface_id(&self, interface_id: Uuid) -> Option<&'a Subnet> {
         let interface = self
             .hosts
@@ -179,6 +88,10 @@ impl<'a> TopologyContext<'a> {
             .iter()
             .find(|h| h.base.interfaces.iter().any(|i| i.id == interface_id))
     }
+
+    // ============================================================================
+    // Virtualization Relationship Methods
+    // ============================================================================
 
     pub fn get_host_is_virtualized_by(&self, host_id: &Uuid) -> Option<&Service> {
         if let Some(host) = self.get_host_by_id(*host_id)
@@ -205,6 +118,20 @@ impl<'a> TopologyContext<'a> {
         }
         None
     }
+
+    pub fn get_node_subnet(&self, node_id: Uuid, nodes: &[Node]) -> Option<Uuid> {
+        nodes
+            .iter()
+            .find(|n| n.id == node_id)
+            .map(|node| match node.node_type {
+                NodeType::InterfaceNode { subnet_id, .. } => subnet_id,
+                NodeType::SubnetNode { .. } => node.id,
+            })
+    }
+
+    // ============================================================================
+    // Infrastructure Zone Methods
+    // ============================================================================
 
     pub fn get_interfaces_with_infra_service(&self, subnet: &Subnet) -> Vec<Option<Uuid>> {
         self.services
@@ -263,39 +190,51 @@ impl<'a> TopologyContext<'a> {
         has_infra && has_non_infra
     }
 
-    /// Calculate overall quality score for the current graph layout
-    /// This implements a composite quality metric combining:
-    /// 1. Total edge length (aesthetic - shorter edges are cleaner)
-    /// 2. Edge crossings (critical - crossings severely hurt readability)
-    ///
-    /// Used to guide optimization and detect convergence
-    pub fn calculate_layout_quality(&self, nodes: &[Node], edges: &[Edge]) -> LayoutQuality {
-        let total_edge_length = self.utils.calculate_total_edge_length(nodes, edges);
-        let edge_crossings = self.count_edge_crossings(nodes, edges);
+    // ============================================================================
+    // Edge Classification Methods
+    // ============================================================================
 
-        LayoutQuality::new(total_edge_length, edge_crossings)
+    pub fn edge_is_intra_subnet(&self, edge: &Edge) -> bool {
+        if let (Some(source_subnet), Some(target_subnet)) = (
+            self.get_subnet_from_interface_id(edge.source),
+            self.get_subnet_from_interface_id(edge.target),
+        ) {
+            return source_subnet.id == target_subnet.id;
+        }
+        false
     }
 
-    /// Count the number of edge crossings in the graph
-    /// Uses geometric intersection detection on inter-subnet edges
-    /// Each pair of intersecting edges counts as one crossing
-    fn count_edge_crossings(&self, nodes: &[Node], edges: &[Edge]) -> usize {
-        let subnet_positions: HashMap<Uuid, Ixy> = nodes
-            .iter()
-            .filter_map(|n| match n.node_type {
-                NodeType::SubnetNode { .. } => Some((n.id, n.position)),
-                _ => None,
-            })
-            .collect();
+    pub fn edge_is_multi_hop(
+        &self,
+        source_interface_id: &Uuid,
+        target_interface_id: &Uuid,
+    ) -> bool {
+        if let (Some(source_subnet), Some(target_subnet)) = (
+            self.get_subnet_from_interface_id(*source_interface_id),
+            self.get_subnet_from_interface_id(*target_interface_id),
+        ) {
+            let vertical_order_difference = source_subnet.base.subnet_type.vertical_order()
+                as isize
+                - target_subnet.base.subnet_type.vertical_order() as isize;
 
-        let node_map: HashMap<Uuid, Node> = nodes.iter().map(|n| (n.id, n.clone())).collect();
+            return vertical_order_difference.abs() > 1;
+        }
+        false
+    }
 
-        let inter_subnet_edges: Vec<&Edge> = edges
-            .iter()
-            .filter(|e| !self.edge_is_intra_subnet(e))
-            .collect();
+    // ============================================================================
+    // Node Existence Checks
+    // ============================================================================
 
-        self.utils
-            .count_edge_crossings(&inter_subnet_edges, &node_map, &subnet_positions)
+    pub fn interface_will_have_node(&self, interface_id: &Uuid) -> bool {
+        !self
+            .get_services_bound_to_interface(*interface_id)
+            .is_empty()
+    }
+
+    pub fn service_will_have_node(&self, service_id: &Uuid) -> bool {
+        self.get_service_by_id(*service_id)
+            .map(|s| !s.base.bindings.is_empty())
+            .unwrap_or(true)
     }
 }

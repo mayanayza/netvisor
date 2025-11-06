@@ -6,7 +6,7 @@ use crate::server::{
     topology::service::planner::utils::NODE_PADDING,
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Uxy {
     pub x: usize,
     pub y: usize,
@@ -66,7 +66,7 @@ impl Uxy {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Ixy {
     pub x: isize,
     pub y: isize,
