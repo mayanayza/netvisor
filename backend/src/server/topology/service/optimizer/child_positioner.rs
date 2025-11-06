@@ -175,7 +175,8 @@ impl<'a> ChildPositioner<'a> {
 
         tracing::debug!("Starting zone optimization with {} nodes", node_ids.len());
 
-        let initial_score = self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
+        let initial_score =
+            self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
         let mut best_score = initial_score;
         let mut no_improvement_count = 0;
 
@@ -186,7 +187,8 @@ impl<'a> ChildPositioner<'a> {
 
             let swaps_made = self.try_all_swaps(nodes, node_ids, params, tolerance);
 
-            let new_score = self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
+            let new_score =
+                self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
 
             if new_score < best_score {
                 best_score = new_score;
@@ -250,16 +252,8 @@ impl<'a> ChildPositioner<'a> {
         tolerance: f64,
     ) -> bool {
         // Get constraints and info for both nodes
-        let constraint_a = params
-            .constraints
-            .get(&node_a)
-            .cloned()
-            .unwrap_or_default();
-        let constraint_b = params
-            .constraints
-            .get(&node_b)
-            .cloned()
-            .unwrap_or_default();
+        let constraint_a = params.constraints.get(&node_a).cloned().unwrap_or_default();
+        let constraint_b = params.constraints.get(&node_b).cloned().unwrap_or_default();
 
         // Cannot swap across infra/non-infra boundary
         if constraint_a.is_infra != constraint_b.is_infra {
@@ -317,35 +311,52 @@ impl<'a> ChildPositioner<'a> {
 
             // Check if node_a at node_b's position would overlap with this node
             if self.utils.rectangles_overlap(
-                b_pos.x,
-                b_pos.y,
-                a_size.x,
-                a_size.y,
-                node.position.x,
-                node.position.y,
-                node.size.x,
-                node.size.y,
+                Ixy {
+                    x: b_pos.x,
+                    y: b_pos.y,
+                },
+                Uxy {
+                    x: a_size.x,
+                    y: a_size.y,
+                },
+                Ixy {
+                    x: node.position.x,
+                    y: node.position.y,
+                },
+                Uxy {
+                    x: node.size.x,
+                    y: node.size.y,
+                },
             ) {
                 return false;
             }
 
             // Check if node_b at node_a's position would overlap with this node
             if self.utils.rectangles_overlap(
-                a_pos.x,
-                a_pos.y,
-                b_size.x,
-                b_size.y,
-                node.position.x,
-                node.position.y,
-                node.size.x,
-                node.size.y,
+                Ixy {
+                    x: a_pos.x,
+                    y: a_pos.y,
+                },
+                Uxy {
+                    x: b_size.x,
+                    y: b_size.y,
+                },
+                Ixy {
+                    x: node.position.x,
+                    y: node.position.y,
+                },
+                Uxy {
+                    x: node.size.x,
+                    y: node.size.y,
+                },
             ) {
                 return false;
             }
         }
 
         // Calculate current score
-        let current_score = self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
+        let current_score =
+            self.calculate_layout_score(nodes, params.edges, params.subnet_positions);
 
         // Perform swap
         for node in nodes.iter_mut() {
@@ -411,12 +422,8 @@ impl<'a> ChildPositioner<'a> {
             let target = nodes.iter().find(|n| n.id == edge.target);
 
             if let (Some(src), Some(tgt)) = (source, target) {
-                let src_pos = self
-                    .utils
-                    .get_absolute_node_center(src, subnet_positions);
-                let tgt_pos = self
-                    .utils
-                    .get_absolute_node_center(tgt, subnet_positions);
+                let src_pos = self.utils.get_absolute_node_center(src, subnet_positions);
+                let tgt_pos = self.utils.get_absolute_node_center(tgt, subnet_positions);
 
                 let dx = (tgt_pos.x - src_pos.x) as f64;
                 let dy = (tgt_pos.y - src_pos.y) as f64;
@@ -436,6 +443,7 @@ impl<'a> ChildPositioner<'a> {
         score
     }
 
+    // compress_vertical_spacing with logging
     pub fn compress_vertical_spacing(&self, nodes: &mut [Node]) {
         let mut nodes_by_subnet_and_x: HashMap<(Uuid, isize), Vec<usize>> = HashMap::new();
 
@@ -451,7 +459,7 @@ impl<'a> ChildPositioner<'a> {
 
         // For each subnet, find the minimum Y position across all columns
         let mut min_y_by_subnet: HashMap<Uuid, isize> = HashMap::new();
-        
+
         for ((subnet_id, _), indices) in nodes_by_subnet_and_x.iter() {
             for &idx in indices {
                 let y = nodes[idx].position.y;
@@ -468,15 +476,16 @@ impl<'a> ChildPositioner<'a> {
             indices.sort_by(|&a, &b| nodes[a].position.y.cmp(&nodes[b].position.y));
 
             // Start from the subnet's minimum Y
-            let start_y = min_y_by_subnet.get(&subnet_id).copied().unwrap_or(0);
-            
+            let start_y = min_y_by_subnet.get(subnet_id).copied().unwrap_or(0);
+
             if indices.len() == 1 {
-                // Single node in column - move it to start_y
-                nodes[indices[0]].position.y = start_y;
+                let idx = indices[0];
+                nodes[idx].position.y = start_y;
             } else {
                 // Multiple nodes - compress them starting from start_y
-                nodes[indices[0]].position.y = start_y;
-                
+                let first_idx = indices[0];
+                nodes[first_idx].position.y = start_y;
+
                 for i in 1..indices.len() {
                     let prev_idx = indices[i - 1];
                     let curr_idx = indices[i];
@@ -493,10 +502,7 @@ impl<'a> ChildPositioner<'a> {
 
     /// Fix intra-subnet edge handles based on actual node positions
     pub fn fix_intra_subnet_handles(&self, edges: &[Edge], nodes: &[Node]) -> Vec<Edge> {
-        let intra_count = edges.iter().filter(|e| self.context.edge_is_intra_subnet(e)).count();
-        tracing::debug!("Fixing handles for {} intra-subnet edges", intra_count);
-        
-        edges
+        let result: Vec<Edge> = edges
             .iter()
             .map(|edge| {
                 if !self.context.edge_is_intra_subnet(edge) {
@@ -518,15 +524,13 @@ impl<'a> ChildPositioner<'a> {
                     edge.clone()
                 }
             })
-            .collect()
+            .collect();
+
+        result
     }
 
     /// Calculate optimal edge handles by trying all combinations and selecting shortest path
-    fn calculate_optimal_handles(
-        &self,
-        source: &Node,
-        target: &Node,
-    ) -> (EdgeHandle, EdgeHandle) {
+    fn calculate_optimal_handles(&self, source: &Node, target: &Node) -> (EdgeHandle, EdgeHandle) {
         // Define relative position vector from source to target (using centers)
         let src_center_x = source.position.x + (source.size.x as isize / 2);
         let src_center_y = source.position.y + (source.size.y as isize / 2);
@@ -536,45 +540,55 @@ impl<'a> ChildPositioner<'a> {
         let relative_x = (tgt_center_x - src_center_x) as f64;
         let relative_y = (tgt_center_y - src_center_y) as f64;
 
-        // Handle vectors represent the direction of exit/entry
-        // Scale them to be small compared to inter-node distances
-        // Using 10% of average node dimension
-        let avg_dimension = ((source.size.x + source.size.y + target.size.x + target.size.y) / 4) as f64;
+        let avg_dimension =
+            ((source.size.x + source.size.y + target.size.x + target.size.y) / 4) as f64;
         let scale = avg_dimension * 0.1;
 
         // Define all handle combinations with their direction vectors
         let all_handles = [
-            (EdgeHandle::Top, 0.0, -scale),     // Exit upward
-            (EdgeHandle::Bottom, 0.0, scale),   // Exit downward
-            (EdgeHandle::Left, -scale, 0.0),    // Exit left
-            (EdgeHandle::Right, scale, 0.0),    // Exit right
+            (EdgeHandle::Top, 0.0, -scale),
+            (EdgeHandle::Bottom, 0.0, scale),
+            (EdgeHandle::Left, -scale, 0.0),
+            (EdgeHandle::Right, scale, 0.0),
         ];
 
         let mut best_combination = (EdgeHandle::Top, EdgeHandle::Bottom);
         let mut best_distance = f64::MAX;
+        let mut all_scores = Vec::new();
 
         // Try all 16 combinations
         for &(src_handle, src_dx, src_dy) in &all_handles {
             for &(tgt_handle, tgt_dx, tgt_dy) in &all_handles {
-                // Calculate actual start and end points with handle offsets
-                // Start point = source center + source handle vector
-                // End point = target center + target handle vector
-                // Distance = end - start
-                
-                let start_x = 0.0 + src_dx;  // Source at origin
+                let start_x = 0.0 + src_dx;
                 let start_y = 0.0 + src_dy;
-                
-                let end_x = relative_x + tgt_dx;  // Target at relative position
+
+                let end_x = relative_x + tgt_dx;
                 let end_y = relative_y + tgt_dy;
-                
+
                 let path_x = end_x - start_x;
                 let path_y = end_y - start_y;
-                
-                // Calculate Manhattan distance (better matches actual edge routing)
+
+                // Calculate Manhattan distance
                 let distance = path_x.abs() + path_y.abs();
 
-                if distance < best_distance {
-                    best_distance = distance;
+                // Calculate routing complexity penalty
+                // Prefer handles that align with the primary direction of travel
+                let is_aligned = if relative_x.abs() > relative_y.abs() {
+                    // Primarily horizontal movement
+                    src_handle.is_horizontal() && tgt_handle.is_horizontal()
+                } else {
+                    // Primarily vertical movement
+                    src_handle.is_vertical() && tgt_handle.is_vertical()
+                };
+
+                // Add small penalty for non-aligned routing (breaks ties)
+                let complexity_penalty = if is_aligned { 0.0 } else { 0.1 };
+                let total_score = distance + complexity_penalty;
+
+                all_scores.push((src_handle, tgt_handle, distance, total_score));
+
+                if total_score < best_distance {
+                    best_distance = total_score;
                     best_combination = (src_handle, tgt_handle);
                 }
             }

@@ -8,7 +8,6 @@ pub const NODE_PADDING: Uxy = Uxy { x: 50, y: 50 };
 pub struct PlannerUtils;
 
 impl PlannerUtils {
-
     /// Calculate container size from positioned nodes
     pub fn calculate_container_size_from_layouts(
         layouts: &HashMap<Uuid, NodeLayout>,

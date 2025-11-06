@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::server::topology::{
     service::context::TopologyContext,
     types::{
-        base::Ixy,
+        base::{Ixy, Uxy},
         edges::Edge,
         nodes::{Node, NodeType},
     },
@@ -114,14 +114,6 @@ impl OptimizerUtils {
     ) -> LayoutQuality {
         let total_edge_length = self.calculate_total_edge_length(nodes, edges);
         let edge_crossings = self.count_edge_crossings(nodes, edges);
-
-        tracing::debug!(
-            "Quality breakdown: crossings={} (weight={}), length={:.2} (weight={:.2})",
-            edge_crossings,
-            edge_crossings as f64 * 10000.0,
-            total_edge_length,
-            total_edge_length
-        );
 
         LayoutQuality::new(total_edge_length, edge_crossings)
     }
@@ -253,25 +245,15 @@ impl OptimizerUtils {
     // Geometric Utilities
     // ============================================================================
 
-pub fn rectangles_overlap(
-    &self,
-    x1: isize,
-    y1: isize,
-    w1: usize,
-    h1: usize,
-    x2: isize,
-    y2: isize,
-    w2: usize,
-    h2: usize,
-) -> bool {
-    let w1 = w1 as isize;
-    let h1 = h1 as isize;
-    let w2 = w2 as isize;
-    let h2 = h2 as isize;
-    
-    // Rectangles don't overlap if one is completely to the left/right/above/below the other
-    !(x1 + w1 <= x2 || x2 + w2 <= x1 || y1 + h1 <= y2 || y2 + h2 <= y1)
-}
+    pub fn rectangles_overlap(&self, p1: Ixy, d1: Uxy, p2: Ixy, d2: Uxy) -> bool {
+        let w1 = d1.x as isize;
+        let h1 = d1.y as isize;
+        let w2 = d2.x as isize;
+        let h2 = d2.y as isize;
+
+        // Rectangles don't overlap if one is completely to the left/right/above/below the other
+        !(p1.x + w1 <= p2.x || p2.x + w2 <= p1.x || p1.y + h1 <= p2.y || p2.y + h2 <= p1.y)
+    }
     /// Test if two line segments intersect
     fn segments_intersect(&self, p1: Ixy, p2: Ixy, p3: Ixy, p4: Ixy) -> bool {
         let x1 = p1.x as f64;
@@ -388,7 +370,7 @@ pub fn rectangles_overlap(
         if total_weight == 0.0 {
             // If all weights are zero, fall back to unweighted median
             let values: Vec<f64> = weighted_values.iter().map(|(v, _)| *v).collect();
-            return if values.len() % 2 == 0 {
+            return if values.len().is_multiple_of(2) {
                 (values[values.len() / 2 - 1] + values[values.len() / 2]) / 2.0
             } else {
                 values[values.len() / 2]

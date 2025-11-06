@@ -142,7 +142,7 @@
 						{@render field.snippet()}
 					</div>
 				{:else}
-					<div class="text-sm">
+					<div class="flex text-sm">
 						<span class="text-secondary">{field.label}:</span>
 						{#if field.value}
 							{#if isArrayValue(field.value)}

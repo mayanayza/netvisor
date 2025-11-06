@@ -80,9 +80,8 @@ impl SubnetLayoutPlanner {
     ) -> Option<String> {
         // P1: Show virtualization provider, if any
         if let Some(service) = ctx.get_host_is_virtualized_by(&host.id) {
-            
             let virtualization_service_host = ctx.get_host_by_id(service.base.host_id);
-            
+
             let host_interface_subnet_ids: Vec<Uuid> = host
                 .base
                 .interfaces
@@ -132,19 +131,14 @@ impl SubnetLayoutPlanner {
                                 .count()
                                 == 1
                         {
-
-                            let on = virtualization_service_host.map(|h| h.base.name.clone()).unwrap_or(interface.base.ip_address.to_string());
+                            let on = virtualization_service_host
+                                .map(|h| h.base.name.clone())
+                                .unwrap_or(interface.base.ip_address.to_string());
 
                             if on == service.base.name {
-                                return Some(format!(
-                                    "VM: {}",
-                                    service.base.name
-                                ));
+                                return Some(format!("VM: {}", service.base.name));
                             } else {
-                                return Some(format!(
-                                    "VM: {} on {}",
-                                    service.base.name, on
-                                ));
+                                return Some(format!("VM: {} on {}", service.base.name, on));
                             }
                         }
                         return Some(format!("VM: {}", service.base.name));

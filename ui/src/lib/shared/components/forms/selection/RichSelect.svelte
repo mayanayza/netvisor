@@ -254,7 +254,7 @@
 									e.stopPropagation();
 									handleSelect(displayComponent.getId(option));
 								}}
-								class="w-full px-3 py-3 text-left hover:bg-gray-600 transition-colors
+								class="w-full px-3 py-3 text-left transition-colors hover:bg-gray-600
                        {!isLastInGroup || !isLastGroup ? 'border-b border-gray-600' : ''}"
 							>
 								<ListSelectItem {context} item={option} {displayComponent} />

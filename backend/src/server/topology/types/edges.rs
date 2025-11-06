@@ -1,5 +1,5 @@
 use crate::server::{
-    groups::types::{GroupTypeDiscriminants},
+    groups::types::GroupTypeDiscriminants,
     shared::{
         constants::Entity,
         types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
@@ -67,6 +67,10 @@ impl EdgeHandle {
 
     pub fn is_horizontal(&self) -> bool {
         matches!(self, EdgeHandle::Left | EdgeHandle::Right)
+    }
+
+    pub fn is_vertical(&self) -> bool {
+        matches!(self, EdgeHandle::Top | EdgeHandle::Bottom)
     }
 
     /// Determine edge handle orientations based on subnet layer and priority
@@ -214,16 +218,39 @@ impl EdgeHandle {
 }
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, EnumDiscriminants, IntoStaticStr, EnumIter
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    EnumDiscriminants,
+    IntoStaticStr,
+    EnumIter,
 )]
 #[strum_discriminants(derive(Display, Hash, Serialize, Deserialize, EnumIter))]
 #[serde(tag = "edge_type")]
 pub enum EdgeType {
-    Interface{host_id: Uuid}, // Connecting hosts with interfaces in multiple subnets
-    HostVirtualization{vm_service_id: Uuid},
-    ServiceVirtualization{containerizing_service_id: Uuid},
-    RequestPath{group_id: Uuid, source_binding_id: Uuid, target_binding_id: Uuid},
-    HubAndSpoke{group_id: Uuid, source_binding_id: Uuid, target_binding_id: Uuid},
+    Interface {
+        host_id: Uuid,
+    }, // Connecting hosts with interfaces in multiple subnets
+    HostVirtualization {
+        vm_service_id: Uuid,
+    },
+    ServiceVirtualization {
+        containerizing_service_id: Uuid,
+    },
+    RequestPath {
+        group_id: Uuid,
+        source_binding_id: Uuid,
+        target_binding_id: Uuid,
+    },
+    HubAndSpoke {
+        group_id: Uuid,
+        source_binding_id: Uuid,
+        target_binding_id: Uuid,
+    },
 }
 
 impl HasId for EdgeType {
@@ -235,21 +262,21 @@ impl HasId for EdgeType {
 impl EntityMetadataProvider for EdgeType {
     fn color(&self) -> &'static str {
         match self {
-            EdgeType::RequestPath{..} => Entity::Group.color(),
-            EdgeType::HubAndSpoke{..} => Entity::Group.color(),
-            EdgeType::Interface{..} => Entity::Host.color(),
-            EdgeType::HostVirtualization{..} => Entity::Virtualization.color(),
-            EdgeType::ServiceVirtualization{..} => Entity::Virtualization.color(),
+            EdgeType::RequestPath { .. } => Entity::Group.color(),
+            EdgeType::HubAndSpoke { .. } => Entity::Group.color(),
+            EdgeType::Interface { .. } => Entity::Host.color(),
+            EdgeType::HostVirtualization { .. } => Entity::Virtualization.color(),
+            EdgeType::ServiceVirtualization { .. } => Entity::Virtualization.color(),
         }
     }
 
     fn icon(&self) -> &'static str {
         match self {
-            EdgeType::RequestPath{..} => GroupTypeDiscriminants::RequestPath.icon(),
-            EdgeType::HubAndSpoke{..} => GroupTypeDiscriminants::HubAndSpoke.icon(),
-            EdgeType::Interface{..} => Entity::Host.icon(),
-            EdgeType::HostVirtualization{..} => Entity::Virtualization.icon(),
-            EdgeType::ServiceVirtualization{..} => Entity::Virtualization.icon(),
+            EdgeType::RequestPath { .. } => GroupTypeDiscriminants::RequestPath.icon(),
+            EdgeType::HubAndSpoke { .. } => GroupTypeDiscriminants::HubAndSpoke.icon(),
+            EdgeType::Interface { .. } => Entity::Host.icon(),
+            EdgeType::HostVirtualization { .. } => Entity::Virtualization.icon(),
+            EdgeType::ServiceVirtualization { .. } => Entity::Virtualization.icon(),
         }
     }
 }
@@ -257,39 +284,39 @@ impl EntityMetadataProvider for EdgeType {
 impl TypeMetadataProvider for EdgeType {
     fn name(&self) -> &'static str {
         match self {
-            EdgeType::RequestPath{..} => EdgeStyle::SmoothStep.into(),
-            EdgeType::HubAndSpoke{..} => GroupTypeDiscriminants::HubAndSpoke.name(),
-            EdgeType::Interface{..} => "Host Interface",
-            EdgeType::HostVirtualization{..} => "Virtualized Host",
-            EdgeType::ServiceVirtualization{..} => "Virtualized Service",
+            EdgeType::RequestPath { .. } => EdgeStyle::SmoothStep.into(),
+            EdgeType::HubAndSpoke { .. } => GroupTypeDiscriminants::HubAndSpoke.name(),
+            EdgeType::Interface { .. } => "Host Interface",
+            EdgeType::HostVirtualization { .. } => "Virtualized Host",
+            EdgeType::ServiceVirtualization { .. } => "Virtualized Service",
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
         let edge_style: &str = match &self {
-            EdgeType::RequestPath{..} => EdgeStyle::SmoothStep.into(),
-            EdgeType::HubAndSpoke{..} => EdgeStyle::SmoothStep.into(),
-            EdgeType::Interface{..} => EdgeStyle::SmoothStep.into(),
-            EdgeType::HostVirtualization{..} => EdgeStyle::Straight.into(),
-            EdgeType::ServiceVirtualization{..} => EdgeStyle::SmoothStep.into(),
+            EdgeType::RequestPath { .. } => EdgeStyle::SmoothStep.into(),
+            EdgeType::HubAndSpoke { .. } => EdgeStyle::SmoothStep.into(),
+            EdgeType::Interface { .. } => EdgeStyle::SmoothStep.into(),
+            EdgeType::HostVirtualization { .. } => EdgeStyle::Straight.into(),
+            EdgeType::ServiceVirtualization { .. } => EdgeStyle::SmoothStep.into(),
         };
 
         let is_dashed = match &self {
-            EdgeType::RequestPath{..} => false,
-            EdgeType::HubAndSpoke{..} => false,
-            EdgeType::Interface{..} => true,
-            EdgeType::HostVirtualization{..} => true,
-            EdgeType::ServiceVirtualization{..} => true,
+            EdgeType::RequestPath { .. } => false,
+            EdgeType::HubAndSpoke { .. } => false,
+            EdgeType::Interface { .. } => true,
+            EdgeType::HostVirtualization { .. } => true,
+            EdgeType::ServiceVirtualization { .. } => true,
         };
 
         let has_start_marker = false;
 
         let has_end_marker = match &self {
-            EdgeType::RequestPath{..} => true,
-            EdgeType::HubAndSpoke{..} => true,
-            EdgeType::Interface{..} => false,
-            EdgeType::HostVirtualization{..} => false,
-            EdgeType::ServiceVirtualization{..} => false,
+            EdgeType::RequestPath { .. } => true,
+            EdgeType::HubAndSpoke { .. } => true,
+            EdgeType::Interface { .. } => false,
+            EdgeType::HostVirtualization { .. } => false,
+            EdgeType::ServiceVirtualization { .. } => false,
         };
 
         serde_json::json!({
@@ -312,8 +339,12 @@ mod tests {
         // This will fail to compile if GroupType adds/removes variants
         // without updating EdgeType
         let group_types: Vec<GroupTypeDiscriminants> = GroupTypeDiscriminants::iter().collect();
-        
-        assert_eq!(group_types.len(), 2, "Update EdgeType to match GroupType variants!");
+
+        assert_eq!(
+            group_types.len(),
+            2,
+            "Update EdgeType to match GroupType variants!"
+        );
         assert!(group_types.contains(&GroupTypeDiscriminants::RequestPath));
         assert!(group_types.contains(&GroupTypeDiscriminants::HubAndSpoke));
     }

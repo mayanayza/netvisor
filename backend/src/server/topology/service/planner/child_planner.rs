@@ -30,10 +30,8 @@ impl ChildNodePlanner {
 
         // Get the current subnet's topology position
         let current_subnet_id = children.first().and_then(|c| {
-            c.interface_id.and_then(|iid| {
-                ctx.get_interface_by_id(Some(iid))
-                    .map(|i| i.base.subnet_id)
-            })
+            c.interface_id
+                .and_then(|iid| ctx.get_interface_by_id(Some(iid)).map(|i| i.base.subnet_id))
         });
 
         let current_subnet = current_subnet_id.and_then(|id| ctx.get_subnet_by_id(id));
@@ -50,17 +48,17 @@ impl ChildNodePlanner {
         // Build VM provider -> VMs mapping by looking at ALL edges
         let mut vm_clusters: HashMap<Uuid, Vec<Uuid>> = HashMap::new();
         let mut vm_to_provider: HashMap<Uuid, Uuid> = HashMap::new();
-        
+
         // Collect all VM edges from all children
         for child in children {
             for edge in &child.edges {
                 if matches!(edge.edge_type, EdgeType::HostVirtualization { .. }) {
                     let provider_iid = edge.source;
                     let vm_iid = edge.target;
-                    
+
                     // Map VMs to their provider
                     vm_to_provider.insert(vm_iid, provider_iid);
-                    
+
                     // Add to cluster if not already present
                     let cluster = vm_clusters.entry(provider_iid).or_default();
                     if !cluster.contains(&vm_iid) {
@@ -69,7 +67,7 @@ impl ChildNodePlanner {
                 }
             }
         }
-        
+
         // Analyze each VM cluster for cross-infra splitting
         let mut cluster_crosses_infra: HashMap<Uuid, bool> = HashMap::new();
         for (provider_iid, vm_iids) in vm_clusters.iter() {
@@ -83,7 +81,7 @@ impl ChildNodePlanner {
                     has_cross_infra = true;
                 }
             }
-            
+
             if has_cross_infra {
                 cluster_crosses_infra.insert(*provider_iid, true);
             }
@@ -96,15 +94,20 @@ impl ChildNodePlanner {
             // Collect all interface IDs in this cluster (provider + VMs)
             let mut cluster_interface_ids = vec![*provider_iid];
             cluster_interface_ids.extend(vm_iids.iter());
-            
+
             // Calculate combined force from ALL cluster members' inter-subnet edges
             let mut total_force = Ixy::default();
             let mut edge_count = 0;
-            
+
             for interface_id in cluster_interface_ids.iter() {
-                if let Some(child) = children.iter().find(|c| c.interface_id == Some(*interface_id)) {
+                if let Some(child) = children
+                    .iter()
+                    .find(|c| c.interface_id == Some(*interface_id))
+                {
                     for e in &child.edges {
-                        if !ctx.edge_is_intra_subnet(e) && !matches!(e.edge_type, EdgeType::HostVirtualization { .. }) {
+                        if !ctx.edge_is_intra_subnet(e)
+                            && !matches!(e.edge_type, EdgeType::HostVirtualization { .. })
+                        {
                             // Get the other interface this edge connects to
                             let other_interface_id = if child.interface_id == Some(e.source) {
                                 e.target
@@ -121,11 +124,14 @@ impl ChildNodePlanner {
 
                             if let Some(other_subnet) = other_subnet {
                                 let other_vertical = other_subnet.base.subnet_type.vertical_order();
-                                let other_horizontal = other_subnet.base.subnet_type.horizontal_order();
+                                let other_horizontal =
+                                    other_subnet.base.subnet_type.horizontal_order();
 
                                 // Force is based on relative subnet topology
-                                let vertical_force = (current_vertical as isize) - (other_vertical as isize);
-                                let horizontal_force = (other_horizontal as isize) - (current_horizontal as isize);
+                                let vertical_force =
+                                    (current_vertical as isize) - (other_vertical as isize);
+                                let horizontal_force =
+                                    (other_horizontal as isize) - (current_horizontal as isize);
 
                                 total_force.x += horizontal_force;
                                 total_force.y += vertical_force;
@@ -135,22 +141,25 @@ impl ChildNodePlanner {
                     }
                 }
             }
-            
+
             // Average the forces if we have multiple edges
             if edge_count > 0 {
                 total_force.x = (total_force.x as f32 / edge_count as f32) as isize;
                 total_force.y = (total_force.y as f32 / edge_count as f32) as isize;
             }
-            
+
             // CRITICAL: If cluster crosses infra boundary, adjust horizontal force
             // We don't want to pull the cluster apart - instead pull both sides toward boundary
-            let cluster_crosses_boundary = cluster_crosses_infra.get(provider_iid).copied().unwrap_or(false);
+            let cluster_crosses_boundary = cluster_crosses_infra
+                .get(provider_iid)
+                .copied()
+                .unwrap_or(false);
             if cluster_crosses_boundary {
                 // Neutralize any horizontal force that would split the cluster
                 // Instead, we'll apply boundary-specific forces to each side separately
                 total_force.x = 0;
             }
-            
+
             cluster_target_positions.insert(*provider_iid, total_force);
         }
 
@@ -159,15 +168,17 @@ impl ChildNodePlanner {
             .iter()
             .map(|c| {
                 let mut force_direction = Ixy::default();
-                
+
                 // Check if this child is part of a VM cluster
-                let vm_provider_id = c.interface_id.and_then(|id| vm_to_provider.get(&id).copied());
-                
+                let vm_provider_id = c
+                    .interface_id
+                    .and_then(|id| vm_to_provider.get(&id).copied());
+
                 // FIRST: Calculate inter-subnet edge forces and track which axes they control
                 let mut inter_subnet_force = Ixy::default();
                 let mut has_horizontal_inter_edge = false;
                 let mut has_vertical_inter_edge = false;
-                
+
                 for e in &c.edges {
                     let is_intra_subnet = ctx.edge_is_intra_subnet(e);
                     let is_vm_edge = matches!(e.edge_type, EdgeType::HostVirtualization { .. });
@@ -203,7 +214,8 @@ impl ChildNodePlanner {
                         let other_horizontal = other_subnet.base.subnet_type.horizontal_order();
 
                         // Calculate force based on relative subnet positions
-                        let vertical_force = (current_vertical as isize) - (other_vertical as isize);
+                        let vertical_force =
+                            (current_vertical as isize) - (other_vertical as isize);
                         let horizontal_force =
                             (other_horizontal as isize) - (current_horizontal as isize);
 
@@ -234,7 +246,7 @@ impl ChildNodePlanner {
                     if let Some(cluster_pos) = cluster_target_positions.get(&provider_id) {
                         // Base cluster force
                         let cluster_weight = 500.0; // Medium-strong weight
-                        
+
                         let cluster_x = if !has_horizontal_inter_edge {
                             cluster_pos.x * cluster_weight as isize
                         } else {
@@ -245,16 +257,22 @@ impl ChildNodePlanner {
                         } else {
                             0
                         };
-                        
+
                         force_direction.x += cluster_x;
                         force_direction.y += cluster_y;
-                        
+
                         // ADDITIONAL: If cluster crosses infra boundary, pull toward boundary (horizontal only)
-                        if !has_horizontal_inter_edge && cluster_crosses_infra.get(&provider_id).copied().unwrap_or(false) {
-                            let vm_is_infra = c.interface_id
+                        if !has_horizontal_inter_edge
+                            && cluster_crosses_infra
+                                .get(&provider_id)
+                                .copied()
+                                .unwrap_or(false)
+                        {
+                            let vm_is_infra = c
+                                .interface_id
                                 .map(|iid| ctx.is_interface_infra(iid))
                                 .unwrap_or(false);
-                            
+
                             // STRONG boundary force to keep split clusters together
                             let boundary_weight = 800.0; // Very strong - almost as strong as inter-subnet edges
                             let boundary_force = if vm_is_infra {
@@ -262,10 +280,9 @@ impl ChildNodePlanner {
                             } else {
                                 -1.0 // Non-infra VMs get pulled left (toward boundary)
                             };
-                            
+
                             let boundary_x = (boundary_force * boundary_weight) as isize;
                             force_direction.x += boundary_x;
-                            
                         }
                     }
                 } else if !has_horizontal_inter_edge || !has_vertical_inter_edge {
@@ -274,46 +291,52 @@ impl ChildNodePlanner {
                         matches!(e.edge_type, EdgeType::HostVirtualization { .. })
                             && c.interface_id == Some(e.source)
                     });
-                    
+
                     if is_vm_provider {
                         // VM provider - position based on cluster
-                        if let Some(cluster_pos) = cluster_target_positions.get(&c.interface_id.unwrap()) {
+                        if let Some(cluster_pos) =
+                            cluster_target_positions.get(&c.interface_id.unwrap())
+                        {
                             let cluster_weight = 500.0;
-                            
+
                             if !has_horizontal_inter_edge {
                                 force_direction.x += cluster_pos.x * cluster_weight as isize;
                             }
                             if !has_vertical_inter_edge {
                                 force_direction.y += cluster_pos.y * cluster_weight as isize;
                             }
-                            
+
                             // If cluster crosses infra boundary, provider should stay near boundary center
-                            if !has_horizontal_inter_edge && cluster_crosses_infra.get(&c.interface_id.unwrap()).copied().unwrap_or(false) {
+                            if !has_horizontal_inter_edge
+                                && cluster_crosses_infra
+                                    .get(&c.interface_id.unwrap())
+                                    .copied()
+                                    .unwrap_or(false)
+                            {
                                 // Neutralize horizontal cluster force and apply boundary positioning force
                                 // Position provider at/near the infra boundary (between infra and non-infra sides)
                                 force_direction.x = 0; // Reset cluster force
-                                
-                                let provider_is_infra = c.interface_id
+
+                                let provider_is_infra = c
+                                    .interface_id
                                     .map(|iid| ctx.is_interface_infra(iid))
                                     .unwrap_or(false);
-                                
+
                                 // Medium-strong force to position at boundary
                                 // This should be strong enough to position near the VMs but weaker than VM boundary forces
                                 let provider_boundary_weight = 500.0;
-                                let boundary_force = if provider_is_infra {
-                                    1.0
-                                } else {
-                                    -1.0
-                                };
-                                
-                                force_direction.x += (boundary_force * provider_boundary_weight) as isize;
+                                let boundary_force = if provider_is_infra { 1.0 } else { -1.0 };
+
+                                force_direction.x +=
+                                    (boundary_force * provider_boundary_weight) as isize;
                             }
                         }
                     } else {
                         // Regular node - calculate remaining forces for uncontrolled axes
                         let remaining_force = c.edges.iter().fold(Ixy::default(), |mut acc, e| {
                             let is_intra_subnet = ctx.edge_is_intra_subnet(e);
-                            let is_vm_edge = matches!(e.edge_type, EdgeType::HostVirtualization { .. });
+                            let is_vm_edge =
+                                matches!(e.edge_type, EdgeType::HostVirtualization { .. });
 
                             // Skip VM edges
                             if is_vm_edge {
@@ -361,10 +384,13 @@ impl ChildNodePlanner {
                                     .and_then(|i| ctx.get_subnet_by_id(i.base.subnet_id));
 
                                 if let Some(other_subnet) = other_subnet {
-                                    let other_vertical = other_subnet.base.subnet_type.vertical_order();
-                                    let other_horizontal = other_subnet.base.subnet_type.horizontal_order();
+                                    let other_vertical =
+                                        other_subnet.base.subnet_type.vertical_order();
+                                    let other_horizontal =
+                                        other_subnet.base.subnet_type.horizontal_order();
 
-                                    let vertical_force = (current_vertical as isize) - (other_vertical as isize);
+                                    let vertical_force =
+                                        (current_vertical as isize) - (other_vertical as isize);
                                     let horizontal_force =
                                         (other_horizontal as isize) - (current_horizontal as isize);
 
@@ -381,7 +407,7 @@ impl ChildNodePlanner {
 
                             acc
                         });
-                        
+
                         // Add remaining forces to what we already have from inter-subnet edges
                         force_direction.x += remaining_force.x;
                         force_direction.y += remaining_force.y;
@@ -429,7 +455,7 @@ impl ChildNodePlanner {
                 matches!(e.edge_type, EdgeType::HostVirtualization { .. })
                     && child_b.interface_id == Some(e.source)
             });
-            
+
             // VM providers always come first
             if a_is_provider && !b_is_provider {
                 return Ordering::Less;
@@ -437,9 +463,11 @@ impl ChildNodePlanner {
             if !a_is_provider && b_is_provider {
                 return Ordering::Greater;
             }
-            
+
             // For non-providers or when both are providers, sort by force magnitude
-            force_b.x.abs()
+            force_b
+                .x
+                .abs()
                 .max(force_b.y.abs())
                 .partial_cmp(&force_a.x.abs().max(force_a.y.abs()))
                 .unwrap_or(Ordering::Equal)

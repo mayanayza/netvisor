@@ -20,17 +20,16 @@ use validator::Validate;
     IntoStaticStr,
     EnumDiscriminants,
 )]
-#[strum_discriminants(derive(IntoStaticStr, EnumIter, Hash, Deserialize, Serialize))]
+#[strum_discriminants(derive(IntoStaticStr, EnumIter, Hash, Deserialize, Serialize, Default))]
 #[serde(tag = "group_type")]
 pub enum GroupType {
-    RequestPath { service_bindings: Vec<Uuid> },
-    HubAndSpoke { service_bindings: Vec<Uuid> },
-}
-
-impl Default for GroupTypeDiscriminants {
-    fn default() -> Self {
-        GroupTypeDiscriminants::RequestPath
-    }
+    #[strum_discriminants(default)]
+    RequestPath {
+        service_bindings: Vec<Uuid>,
+    },
+    HubAndSpoke {
+        service_bindings: Vec<Uuid>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Validate, Deserialize)]

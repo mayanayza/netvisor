@@ -1,19 +1,19 @@
 <script lang="ts" context="module">
-	import type { Host } from '$lib/features/hosts/types/base';
 	import { entities, groupTypes } from '$lib/shared/stores/metadata';
 
 	export const GroupDisplay: EntityDisplayComponent<Group, object> = {
 		getId: (group: Group) => group.id,
 		getLabel: (group: Group) => group.name,
-		getDescription: (group: Group) => "",
+		getDescription: (group: Group) =>
+			`${group.service_bindings.length} binding${group.service_bindings.length > 0 ? 's' : ''} in group`,
 		getIcon: (group: Group) => groupTypes.getIconComponent(group.group_type),
-		getIconColor: () => entities.getColorHelper("Group").icon,
+		getIconColor: () => entities.getColorHelper('Group').icon,
 		getTags: (group: Group) => [
 			{
 				label: groupTypes.getName(group.group_type),
-				color: groupTypes.getColorHelper(group.group_type).string,
+				color: groupTypes.getColorHelper(group.group_type).string
 			}
-		],
+		]
 	};
 </script>
 

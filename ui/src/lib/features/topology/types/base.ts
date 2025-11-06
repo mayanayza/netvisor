@@ -48,7 +48,7 @@ interface TopologyEdgeBase extends Record<string, unknown> {
 	is_multi_hop: boolean;
 }
 
-export type TopologyEdge = 
+export type TopologyEdge =
 	| (TopologyEdgeBase & RequestPathEdge)
 	| (TopologyEdgeBase & HubAndSpokeEdge)
 	| (TopologyEdgeBase & InterfaceEdge)
@@ -56,32 +56,32 @@ export type TopologyEdge =
 	| (TopologyEdgeBase & HostVirtualizationEdge);
 
 export interface RequestPathEdge {
-	edge_type: "RequestPath",
-	group_id: string
-	source_binding_id: string
-	target_binding_id: string
+	edge_type: 'RequestPath';
+	group_id: string;
+	source_binding_id: string;
+	target_binding_id: string;
 }
 
 export interface HubAndSpokeEdge {
-	edge_type: "HubAndSpoke",
-	group_id: string,
-	source_binding_id: string
-	target_binding_id: string
+	edge_type: 'HubAndSpoke';
+	group_id: string;
+	source_binding_id: string;
+	target_binding_id: string;
 }
 
 export interface InterfaceEdge {
-	edge_type: "Interface",
-	host_id: string
+	edge_type: 'Interface';
+	host_id: string;
 }
 
 export interface ServiceVirtualizationEdge {
-	edge_type: "ServiceVirtualization",
-	containerizing_service_id: string
+	edge_type: 'ServiceVirtualization';
+	containerizing_service_id: string;
 }
 
 export interface HostVirtualizationEdge {
-	edge_type: "HostVirtualization",
-	vm_service_id: string
+	edge_type: 'HostVirtualization';
+	vm_service_id: string;
 }
 
 export interface TopologyResponse {

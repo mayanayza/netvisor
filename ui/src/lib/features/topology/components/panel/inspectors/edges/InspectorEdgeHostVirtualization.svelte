@@ -5,23 +5,27 @@
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { getHostFromId } from '$lib/features/hosts/store';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
-	
+
 	let { edge, vmServiceId }: { edge: Edge; vmServiceId: string } = $props();
-	
+
 	let vmService = $derived(getServiceById(vmServiceId));
 	let hypervisorHost = $derived(getHostFromId(edge.target));
 </script>
 
 <div class="space-y-3">
 	{#if $vmService}
-		<span class="text-secondary block text-sm font-medium mb-2">VM Service</span>
+		<span class="text-secondary mb-2 block text-sm font-medium">VM Service</span>
 		<div class="card">
-			<EntityDisplayWrapper context={{}} item={$vmService} displayComponent={ServiceDisplay} />
+			<EntityDisplayWrapper
+				context={{ interfaceIds: [] }}
+				item={$vmService}
+				displayComponent={ServiceDisplay}
+			/>
 		</div>
 	{/if}
-	
+
 	{#if $hypervisorHost}
-		<span class="text-secondary block text-sm font-medium mb-2">Hypervisor Host</span>
+		<span class="text-secondary mb-2 block text-sm font-medium">Hypervisor Host</span>
 		<div class="card">
 			<EntityDisplayWrapper context={{}} item={$hypervisorHost} displayComponent={HostDisplay} />
 		</div>

@@ -142,7 +142,9 @@ impl EdgeBuilder {
                                 return vec![Edge {
                                     source: origin_interface.id,
                                     target: *first_subnet_id,
-                                    edge_type: EdgeType::ServiceVirtualization{containerizing_service_id: s.id},
+                                    edge_type: EdgeType::ServiceVirtualization {
+                                        containerizing_service_id: s.id,
+                                    },
                                     label: Some(format!("{} @ {}", s.base.name, host.base.name)),
                                     source_handle,
                                     target_handle,
@@ -185,7 +187,9 @@ impl EdgeBuilder {
                                 return Some(Edge {
                                     source: origin_interface.id,
                                     target: container_binding_interface_id,
-                                    edge_type: EdgeType::ServiceVirtualization{containerizing_service_id: s.id},
+                                    edge_type: EdgeType::ServiceVirtualization {
+                                        containerizing_service_id: s.id,
+                                    },
                                     label: Some(format!("{} on {}", s.base.name, host.base.name)),
                                     source_handle,
                                     target_handle,
@@ -273,7 +277,9 @@ impl EdgeBuilder {
                                 return Some(Edge {
                                     source: *proxmox_service_interface_id,
                                     target: i.id,
-                                    edge_type: EdgeType::HostVirtualization{vm_service_id: *proxmox_service_id},
+                                    edge_type: EdgeType::HostVirtualization {
+                                        vm_service_id: *proxmox_service_id,
+                                    },
                                     label: None,
                                     source_handle,
                                     target_handle,
@@ -336,7 +342,7 @@ impl EdgeBuilder {
                             Some(Edge {
                                 source: origin_interface.id,
                                 target: interface.id,
-                                edge_type: EdgeType::Interface{host_id: host.id},
+                                edge_type: EdgeType::Interface { host_id: host.id },
                                 label: Some(host.base.name.to_string()),
                                 source_handle,
                                 target_handle,
@@ -448,8 +454,16 @@ impl EdgeBuilder {
                 source: source_interface,
                 target: target_interface,
                 edge_type: match group.base.group_type {
-                    GroupType::HubAndSpoke { .. } => EdgeType::HubAndSpoke { source_binding_id, target_binding_id, group_id: group.id },
-                    GroupType::RequestPath { .. } => EdgeType::RequestPath { source_binding_id, target_binding_id, group_id: group.id }
+                    GroupType::HubAndSpoke { .. } => EdgeType::HubAndSpoke {
+                        source_binding_id,
+                        target_binding_id,
+                        group_id: group.id,
+                    },
+                    GroupType::RequestPath { .. } => EdgeType::RequestPath {
+                        source_binding_id,
+                        target_binding_id,
+                        group_id: group.id,
+                    },
                 },
                 label,
                 source_handle,

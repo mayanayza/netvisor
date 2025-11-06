@@ -9,7 +9,7 @@
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { getDistanceToNode, getNextHandle, optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../store';
+	import { optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 
@@ -17,7 +17,7 @@
 	import SubnetNode from './SubnetNode.svelte';
 	import InterfaceNode from './InterfaceNode.svelte';
 	import CustomEdge from './CustomEdge.svelte';
-	import { EdgeHandle, type TopologyEdge } from '../types/base';
+	import { type TopologyEdge } from '../types/base';
 	import { onMount } from 'svelte';
 
 	// Define node types
@@ -44,81 +44,85 @@
 	}
 
 	async function loadTopologyData() {
-	try {
-		if ($topology?.nodes && $topology?.edges) {
-			// Create edges FIRST
-			const flowEdges: Edge[] = $topology.edges.map(
-				([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
-					const edgeType = edge.edge_type as string;
-					let edgeMetadata = edgeTypes.getMetadata(edgeType);
-					let edgeColorHelper = edgeTypes.getColorHelper(edgeType);
-
-					const dashArray = edgeMetadata.is_dashed ? 'stroke-dasharray: 5,5;' : '';
-					const markerStart = !edgeMetadata.has_start_marker
-						? undefined
-						: ({
-								type: 'arrow',
-								color: edgeColorHelper.rgb
-							} as EdgeMarkerType);
-					const markerEnd = !edgeMetadata.has_end_marker
-						? undefined
-						: ({
-								type: 'arrow',
-								color: edgeColorHelper.rgb
-							} as EdgeMarkerType);
-
+		try {
+			if ($topology?.nodes && $topology?.edges) {
+				// Create nodes FIRST
+				const flowNodes: Node[] = $topology.nodes.map((node): Node => {
 					return {
-						id: `edge-${index}`,
-						source: edge.source,
-						target: edge.target,
-						markerEnd,
-						markerStart,
-						sourceHandle: edge.source_handle.toString(),
-						targetHandle: edge.target_handle.toString(),
-						type: 'custom',
-						label: edge.label,
-						style: `stroke: ${edgeColorHelper.rgb}; stroke-width: 2px; ${dashArray}`,
-						data: edge
+						id: node.id,
+						type: node.node_type,
+						position: { x: node.position.x, y: node.position.y },
+						width: node.size.x,
+						height: node.size.y,
+						expandParent: true,
+						deletable: false,
+						parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
+						extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
+						data: node
 					};
-				}
-			);
+				});
 
-			// Then create nodes WITH edges data
-			const flowNodes: Node[] = $topology.nodes.map((node): Node => {
-				return {
-					id: node.id,
-					type: node.node_type,
-					position: { x: node.position.x, y: node.position.y },
-					width: node.size.x,
-					height: node.size.y,
-					expandParent: true,
-					deletable: false,
-					parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
-					extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
-					data: { ...node, allEdges: flowEdges, allNodes: $topology.nodes }
-				};
-			});
+				// Set nodes first and wait for next tick
+				nodes.set(flowNodes);
+				await new Promise((resolve) => setTimeout(resolve, 0));
 
-			nodes.set(flowNodes);
-			edges.set(flowEdges);
+				// Create edges AFTER nodes are set
+				const flowEdges: Edge[] = $topology.edges
+					.filter(
+						([, , edge]: [number, number, TopologyEdge]) => edge.edge_type != 'HostVirtualization'
+					)
+					.map(([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
+						const edgeType = edge.edge_type as string;
+						let edgeMetadata = edgeTypes.getMetadata(edgeType);
+						let edgeColorHelper = edgeTypes.getColorHelper(edgeType);
+
+						const dashArray = edgeMetadata.is_dashed ? 'stroke-dasharray: 5,5;' : '';
+						const markerStart = !edgeMetadata.has_start_marker
+							? undefined
+							: ({
+									type: 'arrow',
+									color: edgeColorHelper.rgb
+								} as EdgeMarkerType);
+						const markerEnd = !edgeMetadata.has_end_marker
+							? undefined
+							: ({
+									type: 'arrow',
+									color: edgeColorHelper.rgb
+								} as EdgeMarkerType);
+
+						return {
+							id: `edge-${index}`,
+							source: edge.source,
+							target: edge.target,
+							markerEnd,
+							markerStart,
+							sourceHandle: edge.source_handle.toString(),
+							targetHandle: edge.target_handle.toString(),
+							type: 'custom',
+							label: edge.label,
+							style: `stroke: ${edgeColorHelper.rgb}; stroke-width: 2px; ${dashArray}`,
+							data: edge
+						};
+					});
+
+				edges.set(flowEdges);
+			}
+		} catch (err) {
+			pushError(`Failed to parse topology data ${err}`);
 		}
-	} catch (err) {
-		pushError(`Failed to parse topology data ${err}`);
 	}
-}
 
 	function onNodeClick({ node }: { node: Node; event: MouseEvent | TouchEvent }) {
 		selectedNode.set(node);
 		selectedEdge.set(null);
-		optionsPanelExpanded.set(true)
+		optionsPanelExpanded.set(true);
 	}
 
-	function onEdgeClick({ edge, event }: { edge: Edge; event: MouseEvent }) {
+	function onEdgeClick({ edge }: { edge: Edge; event: MouseEvent }) {
 		selectedEdge.set(edge);
 		selectedNode.set(null);
-		optionsPanelExpanded.set(true)
+		optionsPanelExpanded.set(true);
 	}
-
 </script>
 
 <div class="h-[calc(100vh-150px)] w-full overflow-hidden rounded-2xl border border-gray-700">

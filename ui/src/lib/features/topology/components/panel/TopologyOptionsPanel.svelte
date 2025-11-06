@@ -17,14 +17,18 @@
 </script>
 
 <!-- Floating Panel -->
-<div class="topology-options absolute left-4 top-4 z-10 duration-300 {$optionsPanelExpanded ? 'w-96' : 'w-auto'}">
+<div
+	class="topology-options absolute left-4 top-4 z-10 duration-300 {$optionsPanelExpanded
+		? 'w-96'
+		: 'w-auto'}"
+>
 	<div class="card p-0 shadow-lg">
 		{#if $optionsPanelExpanded}
 			<!-- Header with tabs and collapse button -->
 			<div class="flex items-center border-b border-gray-700">
 				<!-- Collapse button -->
 				<button
-					class="btn-icon p-3 rounded-xl"
+					class="btn-icon rounded-xl p-3"
 					onclick={() => optionsPanelExpanded.set(false)}
 					aria-label="Collapse panel"
 				>
@@ -33,30 +37,26 @@
 				<!-- Tab buttons -->
 				<button
 					class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'options'
-						? 'border-b-2 border-blue-500 text-primary'
+						? 'text-primary border-b-2 border-blue-500'
 						: 'text-secondary hover:text-primary'}"
 					onclick={() => (activeTab = 'options')}
 				>
-					<Settings class="inline h-4 w-4 mr-1" />
+					<Settings class="mr-1 inline h-4 w-4" />
 					Options
 				</button>
 				<button
-					class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab ===
-					'inspector'
-						? 'border-b-2 border-blue-500 text-primary'
+					class="flex-1 px-4 py-3 text-sm font-medium transition-colors {activeTab === 'inspector'
+						? 'text-primary border-b-2 border-blue-500'
 						: 'text-secondary hover:text-primary'}"
 					onclick={() => (activeTab = 'inspector')}
 				>
-					<Info class="inline h-4 w-4 mr-1" />
+					<Info class="mr-1 inline h-4 w-4" />
 					Inspector
 				</button>
 			</div>
 
 			<!-- Tab content -->
-			<div
-				class="overflow-y-auto p-3"
-				style="max-height: calc(100vh - 250px);"
-			>
+			<div class="overflow-y-auto p-3" style="max-height: calc(100vh - 250px);">
 				{#if activeTab === 'options'}
 					<OptionsContent />
 				{:else if activeTab === 'inspector'}
@@ -65,7 +65,7 @@
 					{:else if $selectedEdge}
 						<InspectorEdge edge={$selectedEdge} />
 					{:else}
-						<div class="text-tertiary text-center text-sm py-8">
+						<div class="text-tertiary py-8 text-center text-sm">
 							Click on a node or edge to inspect it
 						</div>
 					{/if}
