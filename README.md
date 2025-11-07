@@ -1,6 +1,6 @@
 # NetVisor
 
-**Automatically discover and visually document network topology.**
+**Automatically discover and visually document network infrastructure.**
 
 NetVisor scans your network, identifies hosts and services, and generates an interactive visualization showing how everything connects, letting you easily create and maintain network documentation.
 
