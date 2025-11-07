@@ -64,6 +64,10 @@ struct Cli {
     /// API key
     #[arg(long)]
     daemon_api_key: Option<String>,
+
+    /// Docker socket proxy
+    #[arg(long)]
+    docker_proxy: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -79,6 +83,7 @@ impl From<Cli> for CliArgs {
             heartbeat_interval: cli.heartbeat_interval,
             concurrent_scans: cli.concurrent_scans,
             daemon_api_key: cli.daemon_api_key,
+            docker_proxy: cli.docker_proxy,
         }
     }
 }
