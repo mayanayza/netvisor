@@ -585,7 +585,7 @@ impl Pattern<'_> {
 mod tests {
     use std::net::IpAddr;
 
-    use crate::server::discovery::r#impl::types::DiscoveryType;
+    use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
     use crate::server::services::r#impl::base::Service;
     use crate::server::services::r#impl::virtualization::ServiceVirtualization;
     use crate::tests::{network, user};
@@ -647,7 +647,10 @@ mod tests {
                 host_id: Uuid::new_v4(),
                 network_id: Uuid::new_v4(),
                 daemon_id: Uuid::new_v4(),
-                discovery_type: DiscoveryType::Network { subnet_ids: None },
+                discovery_type: DiscoveryType::Network {
+                    subnet_ids: None,
+                    host_naming_fallback: HostNamingFallback::BestService,
+                },
                 gateway_ips: vec![],
                 endpoint_responses,
                 virtualization: None,

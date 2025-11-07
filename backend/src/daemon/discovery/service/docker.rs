@@ -18,7 +18,7 @@ use tokio_util::sync::CancellationToken;
 use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
-use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::hosts::r#impl::base::HostBase;
 use crate::server::hosts::r#impl::interfaces::ALL_INTERFACES_IP;
 use crate::server::hosts::r#impl::ports::Port;
@@ -56,6 +56,7 @@ type IpPortHashMap = HashMap<IpAddr, Vec<PortBase>>;
 pub struct DockerScanDiscovery {
     docker_client: OnceLock<Docker>,
     host_id: Uuid,
+    host_naming_fallback: HostNamingFallback,
 }
 
 pub struct ProcessContainerParams<'a> {
@@ -72,6 +73,7 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::Docker {
             host_id: self.domain.host_id,
+            host_naming_fallback: self.domain.host_naming_fallback,
         }
     }
 
@@ -145,10 +147,11 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
 }
 
 impl DockerScanDiscovery {
-    pub fn new(host_id: Uuid) -> Self {
+    pub fn new(host_id: Uuid, host_naming_fallback: HostNamingFallback) -> Self {
         Self {
             docker_client: OnceLock::new(),
             host_id,
+            host_naming_fallback,
         }
     }
 }
@@ -440,7 +443,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     })),
                 };
 
-                if let Ok(Some((mut host, services))) = self.process_host(params, None).await {
+                if let Ok(Some((mut host, services))) = self
+                    .process_host(params, None, self.domain.host_naming_fallback)
+                    .await
+                {
                     host.id = self.domain.host_id;
 
                     if let Ok((created_host, created_services)) =
@@ -538,6 +544,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         )),
                     },
                     None,
+                    self.domain.host_naming_fallback,
                 )
                 .await
             {
