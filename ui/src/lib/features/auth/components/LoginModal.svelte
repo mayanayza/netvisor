@@ -71,6 +71,17 @@
 				{loading ? 'Signing in...' : 'Sign In'}
 			</button>
 
+			<!-- OIDC Button -->
+			<div class="absolute bottom-8 text-center">
+				<p class="mb-2 text-sm text-gray-400">Or sign in with</p>
+				<button
+					on:click={handleOidcLogin}
+					class="rounded bg-gray-700 px-6 py-2 text-white hover:bg-gray-600"
+				>
+					OIDC Provider
+				</button>
+			</div>
+
 			<!-- Register Link -->
 			{#if onSwitchToRegister}
 				<div class="text-center">

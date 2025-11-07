@@ -58,31 +58,29 @@ impl AuthService {
             return Err(anyhow!("Username already taken"));
         }
 
-        // Get seed user (user without password)
+       // Find seed user (only exists if NO users have been created yet)
         let seed_user: Option<User> = all_users
             .iter()
-            .find(|u| u.base.password_hash.is_none())
+            .find(|u| {
+                u.base.password_hash.is_none() 
+                && u.base.oidc_subject.is_none()
+            })
             .cloned();
 
         let user = if let Some(mut seed_user) = seed_user {
-            tracing::info!("First registration - claiming seed user: {}", seed_user.id);
-
-            // Update the seed user with credentials
+            // First user ever - claim seed user
+            tracing::info!("First user registration - claiming seed user");
             seed_user.base.username = request.username.clone();
-            seed_user.base.name = request.username.clone(); // Also update name for consistency
+            seed_user.base.name = request.username.clone();
             seed_user.set_password(hash_password(&request.password)?);
-
             self.user_service.update(&mut seed_user).await?
         } else {
-            // No legacy users - create new user with password
-            let new_user = User::new(UserBase {
-                username: request.username,
-                password_hash: Some(hash_password(&request.password)?),
-                name: "default".to_owned(),
-            });
-
+            // Not first user - create new user + network
+            let new_user = User::new(UserBase::new_password(
+                request.username,
+                hash_password(&request.password)?
+            ));
             let (user, _) = self.user_service.create_user(new_user).await?;
-
             user
         };
 

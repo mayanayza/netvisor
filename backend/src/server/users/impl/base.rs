@@ -16,9 +16,15 @@ pub struct UserBase {
     #[validate(length(min = 0, max = 100))]
     #[serde(default)]
     pub username: String,
-    /// Password hash - None for legacy users created before auth migration
+    /// Password hash - None for legacy users created before auth migration or users using OIDC
     #[serde(skip_serializing)] // Never send password hash to client
     pub password_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oidc_provider: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oidc_subject: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oidc_linked_at: Option<DateTime<Utc>>
 }
 
 impl Default for UserBase {
@@ -27,6 +33,9 @@ impl Default for UserBase {
             name: "Default Name".to_string(),
             username: "default-username".to_string(),
             password_hash: None,
+            oidc_linked_at: None,
+            oidc_provider: None,
+            oidc_subject: None,
         }
     }
 }
@@ -37,6 +46,31 @@ impl UserBase {
             name: "Username".to_string(),
             username: "default-username".to_string(),
             password_hash: None,
+            oidc_linked_at: None,
+            oidc_provider: None,
+            oidc_subject: None,
+        }
+    }
+
+    pub fn new_oidc(username: String, oidc_subject: String, oidc_provider: Option<String>) -> Self {
+        Self {
+            name: username.clone(),
+            username,
+            password_hash: None,
+            oidc_linked_at: Some(Utc::now()),
+            oidc_provider,
+            oidc_subject: Some(oidc_subject)
+        }
+    }
+
+    pub fn new_password(username: String, password_hash: String) -> Self {
+        Self {
+            name: username.clone(),
+            username,
+            password_hash: Some(password_hash),
+            oidc_linked_at: None,
+            oidc_provider: None,
+            oidc_subject: None
         }
     }
 }
@@ -111,6 +145,9 @@ impl StorableEntity for User {
                     name,
                     username,
                     password_hash,
+                    oidc_linked_at,
+                    oidc_provider,
+                    oidc_subject
                 },
         } = self.clone();
 
@@ -122,6 +159,9 @@ impl StorableEntity for User {
                 "password_hash",
                 "created_at",
                 "updated_at",
+                "oidc_linked_at",
+                "oidc_provider",
+                "oidc_subject"
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -130,6 +170,9 @@ impl StorableEntity for User {
                 SqlValue::OptionalString(password_hash),
                 SqlValue::Timestamp(created_at),
                 SqlValue::Timestamp(updated_at),
+                SqlValue::OptionTimestamp(oidc_linked_at),
+                SqlValue::OptionalString(oidc_provider),
+                SqlValue::OptionalString(oidc_subject),
             ],
         ))
     }
@@ -143,6 +186,9 @@ impl StorableEntity for User {
                 name: row.get("name"),
                 username: row.get("username"),
                 password_hash: row.get("password_hash"),
+                oidc_linked_at: row.get("oidc_linked_at"),
+                oidc_provider: row.get("oidc_provider"),
+                oidc_subject: row.get("oidc_subject")
             },
         })
     }

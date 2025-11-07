@@ -58,3 +58,15 @@ pub struct SessionUser {
     pub user_id: Uuid,
     pub name: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct OidcCallbackParams {
+    pub code: String,
+    pub state: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LinkOidcRequest {
+    pub code: String,
+    pub state: String,
+}

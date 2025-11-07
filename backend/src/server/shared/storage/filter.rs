@@ -95,6 +95,13 @@ impl EntityFilter {
         self
     }
 
+    pub fn oidc_subject(mut self, subject: String) -> Self {
+        self.conditions.push(format!("oidc_subject = {}", self.values.len()+1));
+        self.values.push(SqlValue::String(subject));
+        self.conditions.push("oidc_provider IS NOT NULL".to_string());
+        self
+    }
+
     pub fn to_where_clause(&self) -> String {
         if self.conditions.is_empty() {
             String::new()
