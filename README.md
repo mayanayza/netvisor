@@ -241,6 +241,23 @@ The Manage section groups all network organization and configuration tabs:
   <img src="./media/groups_tab.png" width="800" alt="Groups Tab">
 </p>
 
+**📡 Daemons**: Manage daemons and view their capabilities. You can view:
+- What subnets daemons have interfaces with
+- Whether the daemon has access to the docker socket
+- When a daemon registered and was last seen
+
+<p align="center">
+  <img src="./media/daemons_tab.png" width="800" alt="Daemons Tab">
+</p>
+
+**🔑 API Keys**: Manage API Keys. You can manage:
+- If an API key is enabled, disabled, and when it last expired
+
+<p align="center">
+  <img src="./media/api_keys_tab.png" width="800" alt="API Keys Tab">
+</p>
+
+
 #### 🗺️ Topology
 
 Generate and customize interactive network visualizations. The topology view:
@@ -270,7 +287,11 @@ If the host running the daemon is also running Docker, the daemon automatically 
 
 ### 🌐 Network Scanning
 
-The daemon scans all IPv4 addresses on subnets it is configured to scan. For each IP on the network, the daemon:
+The daemon scans all IPv4 addresses on subnets it is configured to scan. 
+
+**By Default:** The daemon will scan the subnets it has an interface with. You can also choose additional subnets it doesn't have an interface with if you think it can reach it with network requests.
+
+For each IP on the network, the daemon:
 
 - **Detects open ports**: Scans for active TCP ports
 - **Identifies services**: Uses rule-based pattern matching to recognize running services from:
