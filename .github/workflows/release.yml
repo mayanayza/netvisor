@@ -8,9 +8,14 @@ jobs:
   test-and-update-fixtures:
     name: Run Tests and Update Fixtures
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Need write permission to push
     
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0  # Fetch all history so we can push
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -26,28 +31,27 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
       
       - name: Run all tests
-        working-directory: backend
-        run: |
-          cd ..
-          make test
+        run: make test
       
-      - name: Update DB fixture
+      - name: Update fixtures
         run: |
           mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
-          echo "✅ Updated netvisor.sql fixture"
-      
-      - name: Update daemon config fixture
-        run: |
           mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
-          echo "✅ Updated daemon_config.json fixture"
+          echo "✅ Updated test fixtures"
       
-      - name: Commit fixture updates
+      - name: Commit and push fixture updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json
-          git diff --staged --quiet || git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
-          git push
+          
+          if git diff --staged --quiet; then
+            echo "No fixture changes to commit"
+          else
+            git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
+            git push origin main
+            echo "✅ Pushed fixture updates to main"
+          fi
           
   build-binaries:
     name: Build Daemon Binaries

@@ -136,13 +136,24 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
                 .await?;
 
             // Filter out docker bridge subnets, those are handled in docker discovery
+            // Filter out subnets with
             let subnets: Vec<Subnet> = subnets
                 .into_iter()
                 .filter(|s| {
-                    s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge
+
+                    if s.base.cidr.network_length() < 10 {
+                        tracing::warn!("Skipping {} with CIDR {}, scanning would take too long", s.base.name, s.base.cidr);
+                        return false
+                    }
+
+                    if s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge {
+                        tracing::warn!("Skipping {} with CIDR {}, docker bridge subnets are scanning in docker discovery", s.base.name, s.base.cidr);
+                        return false
+                    }
+
+                    true
                 })
                 .collect();
-
             let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
             try_join_all(subnet_futures).await?
         };
