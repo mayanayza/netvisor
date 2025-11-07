@@ -139,7 +139,9 @@ pub async fn delete_handler(
 
     let host_filter = EntityFilter::unfiltered().host_id(&id);
     if daemon_service.get_one(host_filter).await?.is_some() {
-        return Err(ApiError::conflict("Can't delete a host with an associated daemon. Delete the daemon first."));
+        return Err(ApiError::conflict(
+            "Can't delete a host with an associated daemon. Delete the daemon first.",
+        ));
     }
 
     // Verify entity exists
@@ -147,7 +149,7 @@ pub async fn delete_handler(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found(format!("Host '{}' not found",  id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Host '{}' not found", id)))?;
 
     service
         .delete(&id)
