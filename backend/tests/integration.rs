@@ -392,8 +392,8 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
         .into());
     }
 
-    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src/tests/daemon_config-next.json");
+    let fixture_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tests/daemon_config-next.json");
     std::fs::write(&fixture_path, output.stdout)?;
 
     println!("✅ Generated daemon_config-next.json from test daemon");
