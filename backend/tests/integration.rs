@@ -1,12 +1,12 @@
-use netvisor::server::auth::types::api::{LoginRequest, RegisterRequest};
-use netvisor::server::daemons::types::api::DiscoveryUpdatePayload;
-use netvisor::server::daemons::types::base::Daemon;
-use netvisor::server::networks::types::Network;
+use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
+use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
+use netvisor::server::daemons::r#impl::base::Daemon;
+use netvisor::server::networks::r#impl::Network;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
-use netvisor::server::services::types::base::Service;
+use netvisor::server::services::r#impl::base::Service;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
-use netvisor::server::users::types::base::User;
+use netvisor::server::users::r#impl::base::User;
 use std::process::{Child, Command};
 use uuid::Uuid;
 
@@ -342,7 +342,7 @@ async fn verify_home_assistant_discovered(
     .await
 }
 
-async fn generate_fixtures() -> Result<(), Box<dyn std::error::Error>> {
+async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
             "exec",
@@ -370,6 +370,33 @@ async fn generate_fixtures() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write(&fixture_path, output.stdout)?;
 
     println!("✅ Generated netvisor-next.sql from test data");
+    Ok(())
+}
+
+async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    // Get daemon config from running container
+    let output = std::process::Command::new("docker")
+        .args([
+            "exec",
+            "netvisor-daemon-1",
+            "cat",
+            "/root/.config/netvisor/daemon/config.json",
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to read daemon config: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .into());
+    }
+
+    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src/tests/daemon_config-next.json");
+    std::fs::write(&fixture_path, output.stdout)?;
+
+    println!("✅ Generated daemon_config-next.json from test daemon");
     Ok(())
 }
 
@@ -412,9 +439,13 @@ async fn test_full_integration() {
         .expect("Failed to find Home Assistant");
 
     // Generate fixtures
-    generate_fixtures()
+    generate_db_fixture()
         .await
-        .expect("Failed to generate fixtures");
+        .expect("Failed to generate db fixture");
+
+    generate_daemon_config_fixture()
+        .await
+        .expect("Failed to generate db fixture");
 
     println!("\n✅ All integration tests passed!");
     println!("   ✓ User authenticated");

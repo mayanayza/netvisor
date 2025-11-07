@@ -1,10 +1,10 @@
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
-use crate::server::daemons::types::api::DaemonCapabilities;
+use crate::server::daemons::r#impl::api::DaemonCapabilities;
 use crate::{
     daemon::shared::storage::ConfigStore,
     server::{
-        daemons::types::api::{DaemonRegistrationRequest, DaemonRegistrationResponse},
+        daemons::r#impl::api::{DaemonRegistrationRequest, DaemonRegistrationResponse},
         shared::types::api::ApiResponse,
     },
 };

@@ -3,6 +3,7 @@ export interface DaemonBase {
 	network_id: string;
 	ip: string;
 	port: number;
+	last_seen: string;
 	api_key: string | null;
 	capabilities: {
 		has_docker_socket: boolean;
@@ -12,6 +13,6 @@ export interface DaemonBase {
 
 export interface Daemon extends DaemonBase {
 	id: string;
-	registered_at: string;
-	last_seen: string;
+	created_at: string;
+	updated_at: string;
 }

@@ -1,21 +1,38 @@
 use crate::server::{
     networks::{
+        r#impl::{Network, NetworkBase},
         service::NetworkService,
-        types::{Network, NetworkBase},
     },
-    users::{storage::UserStorage, types::base::User},
+    shared::{
+        services::traits::CrudService,
+        storage::{
+            generic::GenericPostgresStorage,
+            traits::{StorableEntity, Storage},
+        },
+    },
+    users::r#impl::base::User,
 };
 use anyhow::Result;
+use async_trait::async_trait;
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub struct UserService {
-    user_storage: Arc<dyn UserStorage>,
+    user_storage: Arc<GenericPostgresStorage<User>>,
     network_service: Arc<NetworkService>,
 }
 
+#[async_trait]
+impl CrudService<User> for UserService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<User>> {
+        &self.user_storage
+    }
+}
+
 impl UserService {
-    pub fn new(user_storage: Arc<dyn UserStorage>, network_service: Arc<NetworkService>) -> Self {
+    pub fn new(
+        user_storage: Arc<GenericPostgresStorage<User>>,
+        network_service: Arc<NetworkService>,
+    ) -> Self {
         Self {
             user_storage,
             network_service,
@@ -26,55 +43,15 @@ impl UserService {
     pub async fn create_user(&self, user: User) -> Result<(User, Network)> {
         let created_user = self.user_storage.create(&User::new(user.base)).await?;
 
-        tracing::info!(
-            "Created user {}: {}",
-            created_user.base.name,
-            created_user.id
-        );
-
         let mut network = Network::new(NetworkBase::new(created_user.id));
         network.base.is_default = true;
 
-        let created_network = self.network_service.create_network(network).await?;
+        let created_network = self.network_service.create(network).await?;
 
         self.network_service
             .seed_default_data(created_network.id)
             .await?;
 
         Ok((created_user, created_network))
-    }
-
-    /// Get user by ID
-    pub async fn get_user(&self, id: &Uuid) -> Result<Option<User>> {
-        self.user_storage.get_by_id(id).await
-    }
-
-    /// Get all users
-    pub async fn get_all_users(&self) -> Result<Vec<User>> {
-        self.user_storage.get_all().await
-    }
-
-    /// Update user
-    pub async fn update_user(&self, mut user: User) -> Result<User> {
-        let now = chrono::Utc::now();
-        user.updated_at = now;
-
-        self.user_storage.update(&user).await?;
-
-        tracing::info!("Updated user {}: {}", user.base.name, user.id);
-        Ok(user)
-    }
-
-    /// Delete user
-    pub async fn delete_user(&self, id: &Uuid) -> Result<()> {
-        // Get user to find hosts to update
-        let user = self
-            .get_user(id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("User not found"))?;
-
-        self.user_storage.delete(id).await?;
-        tracing::info!("Deleted user {}: {}", user.base.name, user.id);
-        Ok(())
     }
 }

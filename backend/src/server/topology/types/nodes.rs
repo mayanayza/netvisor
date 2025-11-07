@@ -1,8 +1,6 @@
+use crate::server::subnets::r#impl::types::SubnetType;
+use crate::server::topology::types::base::{Ixy, Uxy};
 use crate::server::topology::types::edges::Edge;
-use crate::server::{
-    subnets::types::base::SubnetType,
-    topology::types::base::{Ixy, Uxy},
-};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;

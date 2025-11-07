@@ -1,4 +1,4 @@
-use crate::server::services::types::definitions::ServiceDefinition;
+use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::shared::types::metadata::HasId;
 use inventory;
 

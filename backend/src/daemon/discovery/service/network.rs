@@ -3,22 +3,20 @@ use crate::daemon::discovery::service::base::{
     SCAN_TIMEOUT,
 };
 use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySessionUpdate};
-use crate::server::discovery::types::base::DiscoveryType;
-use crate::server::hosts::types::ports::TransportProtocol;
-use crate::server::hosts::types::{
+use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::hosts::r#impl::ports::TransportProtocol;
+use crate::server::hosts::r#impl::{
     interfaces::{Interface, InterfaceBase},
     ports::PortBase,
 };
-use crate::server::services::types::base::{Service, ServiceMatchBaselineParams};
+use crate::server::services::r#impl::base::{Service, ServiceMatchBaselineParams};
 use crate::server::shared::types::api::ApiResponse;
-use crate::server::subnets::types::base::SubnetTypeDiscriminants;
+use crate::server::subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants};
 use crate::{
     daemon::utils::base::DaemonUtils,
     server::{
-        daemons::types::api::DaemonDiscoveryRequest,
-        hosts::types::base::Host,
-        services::types::endpoints::EndpointResponse,
-        subnets::types::base::{Subnet, SubnetType},
+        daemons::r#impl::api::DaemonDiscoveryRequest, hosts::r#impl::base::Host,
+        services::r#impl::endpoints::EndpointResponse, subnets::r#impl::base::Subnet,
     },
 };
 use dhcproto::Encodable;

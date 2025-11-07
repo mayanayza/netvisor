@@ -1,8 +1,11 @@
 use crate::server::{
-    auth::types::api::{LoginRequest, RegisterRequest},
+    auth::r#impl::api::{LoginRequest, RegisterRequest},
     config::AppState,
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
-    users::types::base::User,
+    shared::{
+        services::traits::CrudService,
+        types::api::{ApiError, ApiResponse, ApiResult},
+    },
+    users::r#impl::base::User,
 };
 use axum::{Router, extract::State, response::Json, routing::post};
 use std::sync::Arc;
@@ -74,7 +77,7 @@ async fn get_current_user(
     let user = state
         .services
         .user_service
-        .get_user(&user_id)
+        .get_by_id(&user_id)
         .await?
         .ok_or_else(|| ApiError::not_found("User not found".to_string()))?;
 

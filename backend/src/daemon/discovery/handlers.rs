@@ -4,9 +4,9 @@ use crate::daemon::discovery::service::docker::DockerScanDiscovery;
 use crate::daemon::discovery::service::network::NetworkScanDiscovery;
 use crate::daemon::discovery::service::self_report::SelfReportDiscovery;
 use crate::daemon::runtime::types::DaemonAppState;
-use crate::server::discovery::types::base::DiscoveryType;
+use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::{
-    daemons::types::api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
+    daemons::r#impl::api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{Router, extract::State, response::Json, routing::post};

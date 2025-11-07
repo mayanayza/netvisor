@@ -1,5 +1,5 @@
-use crate::server::discovery::types::base::DiscoveryType;
-use crate::server::services::types::patterns::MatchDetails;
+use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::services::r#impl::patterns::MatchDetails;
 use chrono::DateTime;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

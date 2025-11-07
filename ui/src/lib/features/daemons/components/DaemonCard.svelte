@@ -43,8 +43,8 @@
 				value: host ? host.name : 'Unknown Host'
 			},
 			{
-				label: 'Registered',
-				value: formatTimestamp(daemon.registered_at)
+				label: 'Created',
+				value: formatTimestamp(daemon.created_at)
 			},
 			{
 				label: 'Last Seen',

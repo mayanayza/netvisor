@@ -1,4 +1,7 @@
-use crate::server::{config::AppState, shared::types::api::ApiError};
+use crate::server::{
+    config::AppState,
+    shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
+};
 use axum::{
     extract::FromRequestParts,
     http::request::Parts,
@@ -65,11 +68,12 @@ where
             && let Ok(auth_str) = auth_header.to_str()
             && let Some(api_key) = auth_str.strip_prefix("Bearer ")
         {
+            let api_key_filter = EntityFilter::unfiltered().api_key(api_key.to_owned());
             // Look up daemon by API key
             if let Ok(Some(daemon)) = app_state
                 .services
                 .daemon_service
-                .get_daemon_by_api_key(api_key)
+                .get_one(api_key_filter)
                 .await
             {
                 return Ok(AuthenticatedEntity::Daemon(daemon.base.network_id));

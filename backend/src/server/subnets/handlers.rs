@@ -1,37 +1,49 @@
+use crate::server::shared::handlers::traits::{
+    CrudHandlers, delete_handler, get_by_id_handler, update_handler,
+};
+use crate::server::shared::types::api::ApiError;
 use crate::server::{
-    auth::middleware::{AuthenticatedEntity, AuthenticatedUser},
+    auth::middleware::AuthenticatedEntity,
     config::AppState,
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
-    subnets::types::base::Subnet,
+    shared::{
+        services::traits::CrudService,
+        storage::filter::EntityFilter,
+        types::api::{ApiResponse, ApiResult},
+    },
+    subnets::r#impl::base::Subnet,
 };
-use axum::{
-    Router,
-    extract::{Path, State},
-    response::Json,
-    routing::{delete, get, post, put},
-};
+use axum::routing::{delete, get, post, put};
+use axum::{Router, extract::State, response::Json};
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create_subnet))
+        .route("/", post(create_handler))
         .route("/", get(get_all_subnets))
-        .route("/{id}", put(update_subnet))
-        .route("/{id}", delete(delete_subnet))
+        .route("/{id}", put(update_handler::<Subnet>))
+        .route("/{id}", delete(delete_handler::<Subnet>))
+        .route("/{id}", get(get_by_id_handler::<Subnet>))
 }
 
-async fn create_subnet(
+pub async fn create_handler(
     State(state): State<Arc<AppState>>,
-    _authenticated: AuthenticatedEntity,
+    _entity: AuthenticatedEntity,
     Json(request): Json<Subnet>,
 ) -> ApiResult<Json<ApiResponse<Subnet>>> {
-    tracing::info!("Received subnet creation request: {:?}", request);
+    if let Err(err) = request.validate() {
+        return Err(ApiError::bad_request(&format!(
+            "Subnet validation failed: {}",
+            err
+        )));
+    }
 
-    let service = &state.services.subnet_service;
-    let created_subnet = service.create_subnet(request).await?;
+    let service = Subnet::get_service(&state);
+    let created = service
+        .create(request)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 
-    Ok(Json(ApiResponse::success(created_subnet)))
+    Ok(Json(ApiResponse::success(created)))
 }
 
 async fn get_all_subnets(
@@ -44,54 +56,23 @@ async fn get_all_subnets(
         AuthenticatedEntity::Daemon(network_id) => {
             vec![network_id]
         }
-        AuthenticatedEntity::User(user_id) => state
-            .services
-            .network_service
-            .get_all_networks(&user_id)
-            .await?
-            .iter()
-            .map(|n| n.id)
-            .collect(),
+        AuthenticatedEntity::User(user_id) => {
+            let filter = EntityFilter::unfiltered().user_id(&user_id);
+
+            state
+                .services
+                .network_service
+                .get_all(filter)
+                .await?
+                .iter()
+                .map(|n| n.id)
+                .collect()
+        }
     };
 
-    let subnets = service.get_all_subnets(&network_ids).await?;
+    let filter = EntityFilter::unfiltered().network_ids(&network_ids);
+
+    let subnets = service.get_all(filter).await?;
 
     Ok(Json(ApiResponse::success(subnets)))
-}
-
-async fn update_subnet(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<Uuid>,
-    _user: AuthenticatedUser,
-    Json(request): Json<Subnet>,
-) -> ApiResult<Json<ApiResponse<Subnet>>> {
-    let service = &state.services.subnet_service;
-
-    let mut subnet = service
-        .get_subnet(&id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(format!("Subnet '{}' not found", &id)))?;
-
-    subnet.base = request.base;
-
-    let updated_subnet = service.update_subnet(subnet).await?;
-
-    Ok(Json(ApiResponse::success(updated_subnet)))
-}
-
-async fn delete_subnet(
-    State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
-    Path(id): Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<()>>> {
-    let service = &state.services.subnet_service;
-
-    // Check if host exists
-    if service.get_subnet(&id).await?.is_none() {
-        return Err(ApiError::not_found(format!("Subnet '{}' not found", &id)));
-    }
-
-    service.delete_subnet(&id).await?;
-
-    Ok(Json(ApiResponse::success(())))
 }

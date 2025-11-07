@@ -1,0 +1,136 @@
+use std::fmt::Display;
+
+use crate::server::{networks::service::NetworkService, shared::handlers::traits::CrudHandlers};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
+use sqlx::postgres::PgRow;
+use uuid::Uuid;
+use validator::Validate;
+
+use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
+
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct NetworkBase {
+    #[validate(length(min = 0, max = 100))]
+    pub name: String,
+    pub user_id: Uuid,
+    pub is_default: bool,
+}
+
+impl NetworkBase {
+    pub fn new(user_id: Uuid) -> Self {
+        Self {
+            user_id,
+            name: "My Network".to_string(),
+            is_default: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Network {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[serde(flatten)]
+    pub base: NetworkBase,
+}
+
+impl Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.base.name, self.id)
+    }
+}
+
+impl CrudHandlers for Network {
+    type Service = NetworkService;
+
+    fn get_service(state: &crate::server::config::AppState) -> &Self::Service {
+        &state.services.network_service
+    }
+}
+
+impl StorableEntity for Network {
+    type BaseData = NetworkBase;
+
+    fn table_name() -> &'static str {
+        "networks"
+    }
+
+    fn get_base(&self) -> Self::BaseData {
+        self.base.clone()
+    }
+
+    fn new(base: Self::BaseData) -> Self {
+        let now = chrono::Utc::now();
+        Self {
+            base,
+            id: Uuid::new_v4(),
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    fn updated_at(&self) -> DateTime<Utc> {
+        self.updated_at
+    }
+
+    fn set_updated_at(&mut self, time: DateTime<Utc>) {
+        self.updated_at = time;
+    }
+
+    fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error> {
+        let Self {
+            id,
+            created_at,
+            updated_at,
+            base:
+                Self::BaseData {
+                    name,
+                    user_id,
+                    is_default,
+                },
+        } = self.clone();
+
+        Ok((
+            vec![
+                "id",
+                "created_at",
+                "updated_at",
+                "name",
+                "user_id",
+                "is_default",
+            ],
+            vec![
+                SqlValue::Uuid(id),
+                SqlValue::Timestamp(created_at),
+                SqlValue::Timestamp(updated_at),
+                SqlValue::String(name),
+                SqlValue::Uuid(user_id),
+                SqlValue::Bool(is_default),
+            ],
+        ))
+    }
+
+    fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
+        Ok(Network {
+            id: row.get("id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            base: NetworkBase {
+                name: row.get("name"),
+                user_id: row.get("user_id"),
+                is_default: row.get("is_default"),
+            },
+        })
+    }
+}

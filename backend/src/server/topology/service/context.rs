@@ -1,12 +1,12 @@
 use uuid::Uuid;
 
 use crate::server::{
-    groups::types::Group,
-    hosts::types::{base::Host, interfaces::Interface, virtualization::HostVirtualization},
-    services::types::{
+    groups::r#impl::base::Group,
+    hosts::r#impl::{base::Host, interfaces::Interface, virtualization::HostVirtualization},
+    services::r#impl::{
         base::Service, definitions::ServiceDefinitionExt, virtualization::ServiceVirtualization,
     },
-    subnets::types::base::Subnet,
+    subnets::r#impl::base::Subnet,
     topology::types::{
         api::TopologyRequestOptions,
         edges::Edge,

@@ -1,9 +1,16 @@
 use crate::server::{
     auth::middleware::{AuthenticatedDaemon, AuthenticatedUser},
     config::AppState,
-    daemons::types::api::DiscoveryUpdatePayload,
-    discovery::types::base::{Discovery, RunType},
-    shared::types::api::{ApiError, ApiResponse, ApiResult},
+    daemons::r#impl::api::DiscoveryUpdatePayload,
+    discovery::r#impl::{base::Discovery, types::RunType},
+    shared::{
+        handlers::traits::{
+            create_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
+        },
+        services::traits::CrudService,
+        storage::filter::EntityFilter,
+        types::api::{ApiError, ApiResponse, ApiResult},
+    },
 };
 use axum::{
     Router,
@@ -22,77 +29,16 @@ use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", post(create_handler::<Discovery>))
+        .route("/", get(get_all_handler::<Discovery>))
+        .route("/{id}", put(update_handler::<Discovery>))
+        .route("/{id}", delete(delete_handler::<Discovery>))
+        .route("/{id}", get(get_by_id_handler::<Discovery>))
         .route("/start-session", post(start_session))
         .route("/active-sessions", get(get_active_sessions))
         .route("/{session_id}/cancel", post(cancel_discovery))
         .route("/{session_id}/update", post(receive_discovery_update))
         .route("/stream", get(discovery_stream))
-        .route("/", post(create_discovery))
-        .route("/", get(get_all_discoveries))
-        .route("/{id}", put(update_discovery))
-        .route("/{id}", delete(delete_discovery))
-}
-
-async fn create_discovery(
-    State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
-    Json(request): Json<Discovery>,
-) -> ApiResult<Json<ApiResponse<Discovery>>> {
-    let service = &state.services.discovery_service;
-
-    let created_discovery = service.create_discovery(request).await?;
-
-    Ok(Json(ApiResponse::success(created_discovery)))
-}
-
-async fn get_all_discoveries(
-    State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
-) -> ApiResult<Json<ApiResponse<Vec<Discovery>>>> {
-    let service = &state.services.discovery_service;
-
-    let network_ids: Vec<Uuid> = state
-        .services
-        .network_service
-        .get_all_networks(&user.0)
-        .await?
-        .iter()
-        .map(|n| n.id)
-        .collect();
-
-    let groups = service.get_all_discoveries(&network_ids).await?;
-
-    Ok(Json(ApiResponse::success(groups)))
-}
-
-async fn update_discovery(
-    State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
-    Path(id): Path<Uuid>,
-    Json(request): Json<Discovery>,
-) -> ApiResult<Json<ApiResponse<Discovery>>> {
-    let service = &state.services.discovery_service;
-
-    let mut discovery = service
-        .get_discovery(&id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(format!("Discovery '{}' not found", &id)))?;
-
-    discovery.base = request.base;
-    let updated_discovery = service.update_discovery(discovery).await?;
-
-    Ok(Json(ApiResponse::success(updated_discovery)))
-}
-
-async fn delete_discovery(
-    State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
-    Path(id): Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<()>>> {
-    let service = &state.services.discovery_service;
-
-    service.delete_discovery(&id).await?;
-    Ok(Json(ApiResponse::success(())))
 }
 
 /// Receive discovery progress update from daemon
@@ -120,7 +66,7 @@ async fn start_session(
     let mut discovery = state
         .services
         .discovery_service
-        .get_discovery(&discovery_id)
+        .get_by_id(&discovery_id)
         .await?
         .ok_or_else(|| ApiError::not_found(format!("Discovery '{}' not found", &discovery_id)))?;
 
@@ -182,10 +128,12 @@ async fn get_active_sessions(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<DiscoveryUpdatePayload>>>> {
+    let user_filter = EntityFilter::unfiltered().user_id(&user.0);
+
     let network_ids: Vec<Uuid> = state
         .services
         .network_service
-        .get_all_networks(&user.0)
+        .get_all(user_filter)
         .await?
         .iter()
         .map(|n| n.id)

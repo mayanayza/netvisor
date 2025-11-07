@@ -1,8 +1,12 @@
 use crate::server::{
-    auth::types::api::{LoginRequest, RegisterRequest},
+    auth::r#impl::api::{LoginRequest, RegisterRequest},
+    shared::{
+        services::traits::CrudService,
+        storage::{filter::EntityFilter, traits::StorableEntity},
+    },
     users::{
+        r#impl::base::{User, UserBase},
         service::UserService,
-        types::base::{User, UserBase},
     },
 };
 use anyhow::{Result, anyhow};
@@ -39,7 +43,10 @@ impl AuthService {
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
 
         // Get all users
-        let all_users = self.user_service.get_all_users().await?;
+        let all_users = self
+            .user_service
+            .get_all(EntityFilter::unfiltered())
+            .await?;
 
         // Check if username already taken by a user with a password
         let username_exists = all_users.iter().any(|u| {
@@ -65,13 +72,14 @@ impl AuthService {
             seed_user.base.name = request.username.clone(); // Also update name for consistency
             seed_user.set_password(hash_password(&request.password)?);
 
-            self.user_service.update_user(seed_user).await?
+            self.user_service.update(&mut seed_user).await?
         } else {
             // No legacy users - create new user with password
-            let new_user = User::new(UserBase::new(
-                request.username,
-                hash_password(&request.password)?,
-            ));
+            let new_user = User::new(UserBase {
+                username: request.username,
+                password_hash: Some(hash_password(&request.password)?),
+                name: "default".to_owned(),
+            });
 
             let (user, _) = self.user_service.create_user(new_user).await?;
 
@@ -140,7 +148,10 @@ impl AuthService {
     /// Attempt login without rate limiting
     async fn try_login(&self, request: &LoginRequest) -> Result<User> {
         // Get user by username (case-insensitive)
-        let all_users = self.user_service.get_all_users().await?;
+        let all_users = self
+            .user_service
+            .get_all(EntityFilter::unfiltered())
+            .await?;
         let user = all_users
             .iter()
             .find(|u| u.base.username.to_lowercase() == request.name.to_lowercase())
@@ -161,7 +172,10 @@ impl AuthService {
 
     /// Get user by username
     pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>> {
-        let all_users = self.user_service.get_all_users().await?;
+        let all_users = self
+            .user_service
+            .get_all(EntityFilter::unfiltered())
+            .await?;
         Ok(all_users
             .iter()
             .find(|u| u.base.username.to_lowercase() == name.to_lowercase())

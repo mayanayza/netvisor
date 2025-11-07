@@ -2,8 +2,12 @@ use serial_test::serial;
 
 use crate::{
     server::{
-        services::types::bindings::Binding,
-        shared::types::entities::{DiscoveryMetadata, EntitySource},
+        services::r#impl::bindings::Binding,
+        shared::{
+            services::traits::CrudService,
+            storage::{filter::EntityFilter, traits::Storage},
+            types::entities::{DiscoveryMetadata, EntitySource},
+        },
     },
     tests::*,
 };
@@ -15,12 +19,9 @@ async fn test_host_deduplication_on_create() {
 
     let (_, network) = services.user_service.create_user(user()).await.unwrap();
 
-    let start_host_count = storage
-        .hosts
-        .get_all(&vec![network.id])
-        .await
-        .unwrap()
-        .len();
+    let filter = EntityFilter::unfiltered().network_ids(&[network.id]);
+
+    let start_host_count = storage.hosts.get_all(filter.clone()).await.unwrap().len();
 
     // Create first host
     let mut host1 = host(&network.id);
@@ -48,12 +49,7 @@ async fn test_host_deduplication_on_create() {
     assert_eq!(created1.id, created2.id);
 
     // Verify only one host in DB
-    let end_host_count = storage
-        .hosts
-        .get_all(&vec![network.id])
-        .await
-        .unwrap()
-        .len();
+    let end_host_count = storage.hosts.get_all(filter).await.unwrap().len();
     assert_eq!(start_host_count + 1, end_host_count);
 }
 
@@ -72,7 +68,7 @@ async fn test_host_upsert_merges_new_data() {
     let subnet1 = subnet(&network.id);
     services
         .subnet_service
-        .create_subnet(subnet1.clone())
+        .create(subnet1.clone())
         .await
         .unwrap();
     host1.base.interfaces = vec![interface(&subnet1.id)];
@@ -91,7 +87,7 @@ async fn test_host_upsert_merges_new_data() {
     let subnet2 = subnet(&network.id);
     services
         .subnet_service
-        .create_subnet(subnet2.clone())
+        .create(subnet2.clone())
         .await
         .unwrap();
     host2.base.interfaces = vec![interface(&subnet1.id), interface(&subnet2.id)];
@@ -122,7 +118,7 @@ async fn test_host_consolidation() {
     let subnet_obj = subnet(&network.id);
     services
         .subnet_service
-        .create_subnet(subnet_obj.clone())
+        .create(subnet_obj.clone())
         .await
         .unwrap();
 
@@ -163,13 +159,13 @@ async fn test_host_consolidation() {
     assert!(consolidated.base.services.contains(&created_svc.id));
 
     // Host2 should be deleted
-    let host2_after = services.host_service.get_host(&created2.id).await.unwrap();
+    let host2_after = services.host_service.get_by_id(&created2.id).await.unwrap();
     assert!(host2_after.is_none());
 
     // Service should now belong to host1
     let svc_after = services
         .service_service
-        .get_service(&created_svc.id)
+        .get_by_id(&created_svc.id)
         .await
         .unwrap()
         .unwrap();
