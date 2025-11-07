@@ -488,6 +488,7 @@ Both the server and daemon support multiple configuration methods with the follo
 | Concurrent Scans | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | `15` | Maximum number of hosts to scan in parallel during discovery |
 | Network ID | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | `None` | Network ID to report discoveries to (auto-assigned for integrated daemon) |
 | API Key | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | `None` | API key for daemon authentication with server (generated via UI) |
+| Docker Proxy | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | `None` | Optional HTTP proxy to use to connect to docker |
 
 #### Configuration File Location
 
