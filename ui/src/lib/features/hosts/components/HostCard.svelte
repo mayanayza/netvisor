@@ -7,6 +7,7 @@
 	import type { Group } from '$lib/features/groups/types/base';
 	import { getServiceById, getServicesForHost } from '$lib/features/services/store';
 	import { get } from 'svelte/store';
+	import { daemons } from '$lib/features/daemons/store';
 
 	export let host: Host;
 	export let hostGroups: Group[] = [];
@@ -15,6 +16,8 @@
 	export let onHide: (host: Host) => void = () => {};
 	export let onConsolidate: (host: Host) => void = () => {};
 	export let viewMode: 'card' | 'list';
+
+	export let hasDaemon = $daemons.some((d) => d.host_id == host.id);
 
 	$: hostServicesStore = getServicesForHost(host.id);
 	$: hostServices = $hostServicesStore;
@@ -130,7 +133,8 @@
 				label: 'Delete Host',
 				icon: Trash2,
 				class: 'btn-icon-danger',
-				onClick: () => onDelete(host)
+				onClick: () => onDelete(host),
+				disabled: hasDaemon
 			},
 			{
 				label: 'Consolidate',

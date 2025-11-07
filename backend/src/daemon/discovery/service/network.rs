@@ -3,7 +3,7 @@ use crate::daemon::discovery::service::base::{
     SCAN_TIMEOUT,
 };
 use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySessionUpdate};
-use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::hosts::r#impl::ports::TransportProtocol;
 use crate::server::hosts::r#impl::{
     interfaces::{Interface, InterfaceBase},
@@ -49,11 +49,15 @@ use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, Res
 #[derive(Default)]
 pub struct NetworkScanDiscovery {
     subnet_ids: Option<Vec<Uuid>>,
+    host_naming_fallback: HostNamingFallback,
 }
 
 impl NetworkScanDiscovery {
-    pub fn new(subnet_ids: Option<Vec<Uuid>>) -> Self {
-        Self { subnet_ids }
+    pub fn new(subnet_ids: Option<Vec<Uuid>>, host_naming_fallback: HostNamingFallback) -> Self {
+        Self {
+            subnet_ids,
+            host_naming_fallback,
+        }
     }
 }
 
@@ -62,7 +66,10 @@ impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
 #[async_trait]
 impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
-        DiscoveryType::Network { subnet_ids: None }
+        DiscoveryType::Network {
+            subnet_ids: None,
+            host_naming_fallback: HostNamingFallback::BestService,
+        }
     }
 
     async fn discover(
@@ -203,6 +210,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                     virtualization: &None,
                                 },
                                 hostname,
+                                self.domain.host_naming_fallback,
                             )
                             .await
                             && let Ok((created_host, _)) = self.create_host(host, services).await

@@ -27,10 +27,27 @@ use crate::server::{
 )]
 #[serde(tag = "type")]
 pub enum DiscoveryType {
-    SelfReport { host_id: Uuid },
+    SelfReport {
+        host_id: Uuid,
+    },
     // None = all interfaced subnets
-    Network { subnet_ids: Option<Vec<Uuid>> },
-    Docker { host_id: Uuid },
+    Network {
+        subnet_ids: Option<Vec<Uuid>>,
+        #[serde(default)]
+        host_naming_fallback: HostNamingFallback,
+    },
+    Docker {
+        host_id: Uuid,
+        #[serde(default)]
+        host_naming_fallback: HostNamingFallback,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default)]
+pub enum HostNamingFallback {
+    Ip,
+    #[default]
+    BestService,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

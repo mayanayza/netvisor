@@ -166,9 +166,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         // Create host base
         let host_base = HostBase {
-            name: hostname
-                .clone()
-                .unwrap_or(format!("Netvisor-Daemon-{}", local_ip)),
+            name: hostname.clone().unwrap_or(format!("{}", local_ip)),
             hostname,
             network_id,
             description: Some("NetVisor daemon".to_string()),

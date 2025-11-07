@@ -7,7 +7,7 @@ use crate::server::{
     },
     discovery::r#impl::{
         base::{Discovery, DiscoveryBase},
-        types::{DiscoveryType, RunType},
+        types::{DiscoveryType, HostNamingFallback, RunType},
     },
     hosts::r#impl::base::{Host, HostBase},
     shared::{
@@ -149,7 +149,10 @@ async fn register_daemon(
                     last_run: None,
                     enabled: true,
                 },
-                discovery_type: DiscoveryType::Docker { host_id: host.id },
+                discovery_type: DiscoveryType::Docker {
+                    host_id: host.id,
+                    host_naming_fallback: HostNamingFallback::BestService,
+                },
                 name: format!("Docker @ {}", request.daemon_ip),
                 daemon_id: request.daemon_id,
                 network_id: request.network_id,
@@ -166,7 +169,10 @@ async fn register_daemon(
                 last_run: None,
                 enabled: true,
             },
-            discovery_type: DiscoveryType::Network { subnet_ids: None },
+            discovery_type: DiscoveryType::Network {
+                subnet_ids: None,
+                host_naming_fallback: HostNamingFallback::BestService,
+            },
             name: format!("Network Scan @ {}", request.daemon_ip),
             daemon_id: request.daemon_id,
             network_id: request.network_id,

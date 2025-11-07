@@ -62,9 +62,10 @@ impl CrudService<Subnet> for SubnetService {
                                     match (&metadata.discovery_type, &other_m.discovery_type) {
                                         // Only return existing if they originate from the same host
                                         (
-                                            DiscoveryType::Docker { host_id },
+                                            DiscoveryType::Docker { host_id, .. },
                                             DiscoveryType::Docker {
                                                 host_id: other_host_id,
+                                                ..
                                             },
                                         ) => host_id == other_host_id,
                                         // Always return existing for other types

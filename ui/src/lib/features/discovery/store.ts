@@ -47,7 +47,8 @@ export function createEmptyDiscoveryFormData(): Discovery {
 		updated_at: utcTimeZoneSentinel,
 		discovery_type: {
 			type: 'Network',
-			subnet_ids: []
+			subnet_ids: [],
+			host_naming_fallback: 'BestService'
 		},
 		run_type: {
 			type: 'Scheduled',

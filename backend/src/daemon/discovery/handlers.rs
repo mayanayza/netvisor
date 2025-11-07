@@ -45,21 +45,27 @@ async fn handle_discovery_request(
             cancel_token,
             manager.clone(),
         ),
-        DiscoveryType::Docker { host_id } => spawn_discovery(
+        DiscoveryType::Docker {
+            host_id,
+            host_naming_fallback,
+        } => spawn_discovery(
             DiscoveryRunner::new(
                 state.services.discovery_service.clone(),
                 state.services.discovery_manager.clone(),
-                DockerScanDiscovery::new(*host_id),
+                DockerScanDiscovery::new(*host_id, *host_naming_fallback),
             ),
             request.clone(),
             cancel_token,
             manager.clone(),
         ),
-        DiscoveryType::Network { subnet_ids } => spawn_discovery(
+        DiscoveryType::Network {
+            subnet_ids,
+            host_naming_fallback,
+        } => spawn_discovery(
             DiscoveryRunner::new(
                 state.services.discovery_service.clone(),
                 state.services.discovery_manager.clone(),
-                NetworkScanDiscovery::new(subnet_ids.clone()),
+                NetworkScanDiscovery::new(subnet_ids.clone(), *host_naming_fallback),
             ),
             request.clone(),
             cancel_token,

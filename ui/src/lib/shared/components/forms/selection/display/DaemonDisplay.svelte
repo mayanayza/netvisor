@@ -3,7 +3,8 @@
 
 	export const DaemonDisplay: EntityDisplayComponent<Daemon, object> = {
 		getId: (daemon: Daemon) => daemon.id,
-		getLabel: (daemon: Daemon) => get(getHostFromId(daemon.host_id))?.name || 'Unknown Daemon',
+		getLabel: (daemon: Daemon) =>
+			get(getHostFromId(daemon.host_id))?.name || daemon.ip || 'Unknown Daemon',
 		getDescription: (daemon: Daemon) => get(getHostFromId(daemon.host_id))?.description || '',
 		getIcon: () => entities.getIconComponent('Daemon'),
 		getIconColor: () => entities.getColorHelper('Daemon').icon,

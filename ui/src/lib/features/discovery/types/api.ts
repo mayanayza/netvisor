@@ -24,11 +24,13 @@ export type DiscoveryType = Network | Docker | SelfReport;
 export interface Network {
 	type: 'Network';
 	subnet_ids: string[];
+	host_naming_fallback: 'Ip' | 'BestService';
 }
 
 export interface Docker {
 	type: 'Docker';
 	host_id: string;
+	host_naming_fallback: 'Ip' | 'BestService';
 }
 
 export interface SelfReport {
