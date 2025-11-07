@@ -178,6 +178,11 @@
 		@apply border-l-2 border-blue-500 bg-purple-900/30;
 	}
 
+	/* Datetime picker styling */
+	input[type='datetime-local'] {
+		color-scheme: dark;
+	}
+
 	/* List items (for ListSelectItem, cards, etc) */
 	.list-item {
 		@apply rounded-lg border border-gray-700 bg-gray-800/50 p-4;

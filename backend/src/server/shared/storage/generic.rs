@@ -59,12 +59,14 @@ where
     ) -> Result<sqlx::query::Query<'q, Postgres, PgArguments>, anyhow::Error> {
         let value = match value {
             SqlValue::Uuid(v) => query.bind(v),
+            SqlValue::OptionalUuid(v) => query.bind(v),
             SqlValue::String(v) => query.bind(v),
             SqlValue::U16(v) => query.bind(Into::<i32>::into(*v)),
             SqlValue::I32(v) => query.bind(v),
             SqlValue::Bool(v) => query.bind(v),
             SqlValue::Json(v) => query.bind(v),
             SqlValue::Timestamp(v) => query.bind(v),
+            SqlValue::OptionTimestamp(v) => query.bind(v),
             SqlValue::UuidArray(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::OptionalString(v) => query.bind(v),
             SqlValue::EntitySource(v) => query.bind(serde_json::to_value(v)?),
@@ -128,10 +130,6 @@ where
         let row = query.fetch_optional(&self.pool).await?;
 
         let result = row.map(|r| T::from_row(&r)).transpose()?;
-
-        if let Some(result) = &result {
-            tracing::debug!("Retrieved {} from {}", result, T::table_name());
-        }
 
         Ok(result)
     }

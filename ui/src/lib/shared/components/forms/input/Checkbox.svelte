@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let topologyOption: boolean;
+	export let field: boolean;
 	export let title: string;
 	export let description: string;
 </script>
@@ -8,7 +8,7 @@
 	<div class="flex items-center gap-2">
 		<input
 			type="checkbox"
-			bind:checked={topologyOption}
+			bind:checked={field}
 			class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-1 focus:ring-blue-500"
 		/>
 		<span class="text-primary text-sm">{title}</span>

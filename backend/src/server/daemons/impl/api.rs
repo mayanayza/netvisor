@@ -26,7 +26,6 @@ pub struct DaemonRegistrationRequest {
     pub network_id: Uuid,
     pub daemon_ip: IpAddr,
     pub daemon_port: u16,
-    pub api_key: String,
     pub capabilities: DaemonCapabilities,
 }
 

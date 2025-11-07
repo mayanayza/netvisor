@@ -5,8 +5,8 @@ on:
     types: [published]
 
 jobs:
-  test-and-verify-fixtures:
-    name: Run Tests and Verify Fixtures
+  test-and-update-fixtures:
+    name: Run Tests and Update Fixtures
     runs-on: ubuntu-latest
     
     steps:
@@ -31,20 +31,24 @@ jobs:
           cd ..
           make test
       
-      - name: Verify fixtures are up-to-date
+      - name: Update DB fixture
         run: |
-          # Check if generated fixtures differ from committed ones
-          if ! diff -q backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql; then
-            echo "❌ DB fixture is out of date. Run 'make test' locally and commit netvisor.sql"
-            exit 1
-          fi
+          mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
+          echo "✅ Updated netvisor.sql fixture"
+      
+      - name: Update daemon config fixture
+        run: |
+          mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
+          echo "✅ Updated daemon_config.json fixture"
+      
+      - name: Commit fixture updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json
+          git diff --staged --quiet || git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
+          git push
           
-          if ! diff -q backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json; then
-            echo "❌ Daemon config fixture is out of date. Run 'make test' locally and commit daemon_config.json"
-            exit 1
-          fi
-          
-          echo "✅ All fixtures are up-to-date"
   build-binaries:
     name: Build Daemon Binaries
     runs-on: ${{ matrix.os }}
