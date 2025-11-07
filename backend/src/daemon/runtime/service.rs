@@ -118,7 +118,6 @@ impl DaemonRuntimeService {
                 network_id,
                 daemon_ip,
                 daemon_port,
-                api_key,
                 capabilities: DaemonCapabilities {
                     has_docker_socket,
                     interfaced_subnet_ids: Vec::new(),
@@ -130,6 +129,7 @@ impl DaemonRuntimeService {
             let response = self
                 .client
                 .post(format!("{}/api/daemons/register", server_target))
+                .header("Authorization", format!("Bearer {}", api_key))
                 .json(&registration_request)
                 .send()
                 .await?;

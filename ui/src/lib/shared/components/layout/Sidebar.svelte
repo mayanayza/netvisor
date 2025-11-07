@@ -48,12 +48,13 @@
 			id: 'manage',
 			label: 'Manage',
 			items: [
-				{ id: 'daemons', label: 'Daemons', icon: entities.getIconComponent('Daemon') },
 				{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
 				{ id: 'subnets', label: 'Subnets', icon: entities.getIconComponent('Subnet') },
 				{ id: 'groups', label: 'Groups', icon: entities.getIconComponent('Group') },
 				{ id: 'hosts', label: 'Hosts', icon: entities.getIconComponent('Host') },
-				{ id: 'services', label: 'Services', icon: entities.getIconComponent('Service') }
+				{ id: 'services', label: 'Services', icon: entities.getIconComponent('Service') },
+				{ id: 'daemons', label: 'Daemons', icon: entities.getIconComponent('Daemon') },
+				{ id: 'api-keys', label: 'API Keys', icon: entities.getIconComponent('ApiKey') }
 			]
 		}
 	];

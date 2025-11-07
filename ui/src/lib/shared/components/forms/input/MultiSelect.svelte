@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	export let topologyOption: string[];
+	export let field: string[];
 	export let getOptionLabel: (option: T) => string = (option: T) => option as string;
 	export let getOptionValue: (option: T) => string = (option: T) => option as string;
 	export let options: T[];
@@ -22,10 +22,7 @@
 		class="text-primary w-full rounded-md border border-gray-600 bg-gray-700 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 	>
 		{#each options as option (getOptionValue(option))}
-			<option
-				value={getOptionValue(option)}
-				selected={topologyOption.includes(getOptionValue(option))}
-			>
+			<option value={getOptionValue(option)} selected={field.includes(getOptionValue(option))}>
 				{getOptionLabel(option)}
 			</option>
 		{/each}

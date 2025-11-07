@@ -138,6 +138,7 @@ secrecy = "0.10.3"
 sha2 = "0.10.9"
 hex = "0.4.3"
 tokio-cron-scheduler = "0.15.1"
+axum-macros = "0.5.0"
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]

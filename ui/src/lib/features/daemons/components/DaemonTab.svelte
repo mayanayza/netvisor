@@ -33,11 +33,6 @@
 		daemon = null;
 	}
 
-	function handleGenerateApiKey(generateApiDaemon: Daemon) {
-		showCreateDaemonModal = true;
-		daemon = generateApiDaemon;
-	}
-
 	const daemonFields: FieldConfig<Daemon>[] = [
 		{
 			key: 'name',
@@ -88,12 +83,7 @@
 	{:else}
 		<DataControls items={$daemons} fields={daemonFields} storageKey="netvisor-daemons-table-state">
 			{#snippet children(item: Daemon, viewMode: 'card' | 'list')}
-				<DaemonCard
-					daemon={item}
-					{viewMode}
-					onDelete={handleDeleteDaemon}
-					onGenerateApi={handleGenerateApiKey}
-				/>
+				<DaemonCard daemon={item} {viewMode} onDelete={handleDeleteDaemon} />
 			{/snippet}
 		</DataControls>
 	{/if}

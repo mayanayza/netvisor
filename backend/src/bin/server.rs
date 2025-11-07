@@ -6,6 +6,7 @@ use clap::Parser;
 use netvisor::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
+        api_keys::r#impl::base::{ApiKey, ApiKeyBase},
         config::{AppState, CliArgs, ServerConfig},
         shared::{
             handlers::factory::create_router,
@@ -94,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
     // Create app state
     let state = AppState::new(config).await?;
     let user_service = state.services.user_service.clone();
-    let daemon_service = state.services.daemon_service.clone();
+    let api_key_service = state.services.api_key_service.clone();
     let discovery_service = state.services.discovery_service.clone();
 
     // Create discovery cleanup task
@@ -188,12 +189,18 @@ async fn main() -> anyhow::Result<()> {
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
-        let api_key = daemon_service.generate_api_key();
-        daemon_service
-            .create_pending_api_key(network.id, api_key.clone())
+        let api_key = api_key_service
+            .create(ApiKey::new(ApiKeyBase {
+                key: "".to_string(),
+                name: "Integrated Daemon API Key".to_string(),
+                last_used: None,
+                expires_at: None,
+                network_id: network.id,
+                is_enabled: true,
+            }))
             .await?;
 
-        initialize_local_daemon(integrated_daemon_url, network.id, api_key).await?;
+        initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
     } else {
         tracing::debug!("Server already has data, skipping seed data");
     }
