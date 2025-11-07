@@ -51,6 +51,10 @@ struct Cli {
     /// Use secure session cookies (if serving UI behind HTTPS)
     #[arg(long)]
     use_secure_session_cookies: Option<bool>,
+
+    /// Enable or disable registration flow
+    #[arg(long)]
+    disable_registration: bool,
 }
 
 impl From<Cli> for CliArgs {
@@ -62,6 +66,7 @@ impl From<Cli> for CliArgs {
             database_url: cli.database_url,
             integrated_daemon_url: cli.integrated_daemon_url,
             use_secure_session_cookies: cli.use_secure_session_cookies,
+            disable_registration: cli.disable_registration,
         }
     }
 }

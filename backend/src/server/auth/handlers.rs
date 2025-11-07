@@ -25,6 +25,10 @@ async fn register(
     session: Session,
     Json(request): Json<RegisterRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
+    if state.config.disable_registration {
+        return Err(ApiError::forbidden("User registration is disabled"));
+    }
+
     let user = state.services.auth_service.register(request).await?;
 
     // Store user_id in session
