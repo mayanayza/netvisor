@@ -1,6 +1,7 @@
 use crate::server::auth::middleware::{AuthenticatedEntity, AuthenticatedUser};
-use crate::server::shared::handlers::traits::{delete_handler, get_all_handler, get_by_id_handler};
+use crate::server::shared::handlers::traits::{CrudHandlers, get_all_handler, get_by_id_handler};
 use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::{
     config::AppState,
@@ -24,7 +25,7 @@ use validator::Validate;
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_all_handler::<Host>))
-        .route("/{id}", delete(delete_handler::<Host>))
+        .route("/{id}", delete(delete_handler))
         .route("/{id}", get(get_by_id_handler::<Host>))
         .route("/", post(create_host))
         .route("/{id}", put(update_host))
@@ -125,4 +126,35 @@ async fn consolidate_hosts(
         .await?;
 
     Ok(Json(ApiResponse::success(updated_host)))
+}
+
+pub async fn delete_handler(
+    State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let service = Host::get_service(&state);
+
+    let daemon_service = &state.services.daemon_service;
+
+    let host_filter = EntityFilter::unfiltered().host_id(&id);
+    if daemon_service.get_one(host_filter).await?.is_some() {
+        return Err(ApiError::conflict(
+            "Can't delete a host with an associated daemon. Delete the daemon first.",
+        ));
+    }
+
+    // Verify entity exists
+    service
+        .get_by_id(&id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?
+        .ok_or_else(|| ApiError::not_found(format!("Host '{}' not found", id)))?;
+
+    service
+        .delete(&id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+    Ok(Json(ApiResponse::success(())))
 }
