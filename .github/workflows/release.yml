@@ -5,6 +5,46 @@ on:
     types: [published]
 
 jobs:
+  test-and-verify-fixtures:
+    name: Run Tests and Verify Fixtures
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+      
+      - name: Run all tests
+        working-directory: backend
+        run: |
+          cd ..
+          make test
+      
+      - name: Verify fixtures are up-to-date
+        run: |
+          # Check if generated fixtures differ from committed ones
+          if ! diff -q backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql; then
+            echo "❌ DB fixture is out of date. Run 'make test' locally and commit netvisor.sql"
+            exit 1
+          fi
+          
+          if ! diff -q backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json; then
+            echo "❌ Daemon config fixture is out of date. Run 'make test' locally and commit daemon_config.json"
+            exit 1
+          fi
+          
+          echo "✅ All fixtures are up-to-date"
   build-binaries:
     name: Build Daemon Binaries
     runs-on: ${{ matrix.os }}

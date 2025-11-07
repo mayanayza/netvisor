@@ -7,8 +7,12 @@ use netvisor::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
         config::{AppState, CliArgs, ServerConfig},
-        shared::handlers::create_router,
-        users::types::base::{User, UserBase},
+        shared::{
+            handlers::factory::create_router,
+            services::traits::CrudService,
+            storage::{filter::EntityFilter, traits::StorableEntity},
+        },
+        users::r#impl::base::{User, UserBase},
     },
 };
 use tower::ServiceBuilder;
@@ -175,7 +179,7 @@ async fn main() -> anyhow::Result<()> {
     // Start cron for discovery scheduler
     discovery_service.start_scheduler().await?;
 
-    let all_users = user_service.get_all_users().await?;
+    let all_users = user_service.get_all(EntityFilter::unfiltered()).await?;
 
     // First load - populate seed data
     if all_users.is_empty() {

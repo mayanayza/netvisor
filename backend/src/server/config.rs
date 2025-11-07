@@ -1,3 +1,4 @@
+use crate::server::shared::services::factory::ServiceFactory;
 use anyhow::{Error, Result};
 use figment::{
     Figment,
@@ -6,7 +7,7 @@ use figment::{
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
 
-use crate::server::shared::{services::ServiceFactory, types::storage::StorageFactory};
+use crate::server::shared::storage::factory::StorageFactory;
 
 /// CLI arguments structure (for figment integration)
 #[derive(Debug)]

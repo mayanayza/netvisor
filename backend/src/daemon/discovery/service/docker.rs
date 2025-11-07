@@ -18,27 +18,29 @@ use tokio_util::sync::CancellationToken;
 use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
-use crate::server::discovery::types::base::DiscoveryType;
-use crate::server::hosts::types::base::HostBase;
-use crate::server::hosts::types::interfaces::ALL_INTERFACES_IP;
-use crate::server::hosts::types::ports::Port;
-use crate::server::services::types::base::{Service, ServiceBase, ServiceMatchBaselineParams};
-use crate::server::services::types::bindings::{Binding, BindingDiscriminants};
-use crate::server::services::types::definitions::ServiceDefinition;
-use crate::server::services::types::endpoints::{Endpoint, EndpointResponse};
-use crate::server::services::types::patterns::MatchDetails;
-use crate::server::services::types::virtualization::{DockerVirtualization, ServiceVirtualization};
-use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
-use crate::server::subnets::types::base::{
-    Subnet, SubnetBase, SubnetType, SubnetTypeDiscriminants,
+use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::hosts::r#impl::base::HostBase;
+use crate::server::hosts::r#impl::interfaces::ALL_INTERFACES_IP;
+use crate::server::hosts::r#impl::ports::Port;
+use crate::server::services::r#impl::base::{Service, ServiceBase, ServiceMatchBaselineParams};
+use crate::server::services::r#impl::bindings::{Binding, BindingDiscriminants};
+use crate::server::services::r#impl::definitions::ServiceDefinition;
+use crate::server::services::r#impl::endpoints::{Endpoint, EndpointResponse};
+use crate::server::services::r#impl::patterns::MatchDetails;
+use crate::server::services::r#impl::virtualization::{
+    DockerVirtualization, ServiceVirtualization,
 };
+use crate::server::shared::storage::traits::StorableEntity;
+use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
+use crate::server::subnets::r#impl::base::{Subnet, SubnetBase};
+use crate::server::subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants};
 use crate::{
     daemon::discovery::service::base::{
         CreatesDiscoveredEntities, DiscoversNetworkedEntities, DiscoveryRunner,
     },
     server::{
-        daemons::types::api::DaemonDiscoveryRequest,
-        hosts::types::{
+        daemons::r#impl::api::DaemonDiscoveryRequest,
+        hosts::r#impl::{
             base::Host,
             interfaces::{Interface, InterfaceBase},
             ports::PortBase,

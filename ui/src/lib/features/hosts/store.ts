@@ -27,7 +27,7 @@ export async function createHost(data: HostWithServicesRequest) {
 
 export async function updateHost(data: HostWithServicesRequest) {
 	return await api.request<Host, Host[]>(
-		`/hosts`,
+		`/hosts/${data.host.id}`,
 		hosts,
 		(updatedHost, current) => {
 			return current.map((n) => (n.id === data.host.id ? updatedHost : n));

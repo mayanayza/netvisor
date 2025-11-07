@@ -9,9 +9,9 @@ use crate::{
         manager::DaemonDiscoverySessionManager, types::base::DiscoveryCriticalError,
     },
     server::{
-        discovery::types::base::DiscoveryType,
-        groups::types::Group,
-        services::types::{
+        discovery::r#impl::types::DiscoveryType,
+        groups::r#impl::base::Group,
+        services::r#impl::{
             base::{
                 DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
                 ServiceMatchServiceParams,
@@ -37,8 +37,8 @@ use crate::{
         utils::base::{PlatformDaemonUtils, create_system_utils},
     },
     server::{
-        daemons::types::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
-        hosts::types::{
+        daemons::r#impl::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
+        hosts::r#impl::{
             api::HostWithServicesRequest,
             base::{Host, HostBase},
             ports::{Port, PortBase},
@@ -46,14 +46,14 @@ use crate::{
         },
         services::{
             definitions::{ServiceDefinitionRegistry, gateway::Gateway},
-            types::{
+            r#impl::{
                 base::Service,
                 bindings::Binding,
                 definitions::{ServiceDefinition, ServiceDefinitionExt},
             },
         },
         shared::types::{api::ApiResponse, metadata::HasId},
-        subnets::types::base::Subnet,
+        subnets::r#impl::base::Subnet,
     },
 };
 

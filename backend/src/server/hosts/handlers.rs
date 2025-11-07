@@ -1,15 +1,19 @@
 use crate::server::auth::middleware::{AuthenticatedEntity, AuthenticatedUser};
+use crate::server::shared::handlers::traits::{delete_handler, get_all_handler, get_by_id_handler};
+use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::{
     config::AppState,
-    hosts::types::{api::HostWithServicesRequest, base::Host},
-    services::types::base::Service,
+    hosts::r#impl::{api::HostWithServicesRequest, base::Host},
+    services::r#impl::base::Service,
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
+use axum::routing::{delete, get};
 use axum::{
     Router,
     extract::{Path, State},
     response::Json,
-    routing::{delete, get, post, put},
+    routing::{post, put},
 };
 use futures::future::try_join_all;
 use itertools::{Either, Itertools};
@@ -19,10 +23,11 @@ use validator::Validate;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(get_all_handler::<Host>))
+        .route("/{id}", delete(delete_handler::<Host>))
+        .route("/{id}", get(get_by_id_handler::<Host>))
         .route("/", post(create_host))
-        .route("/", get(get_all_hosts))
-        .route("/", put(update_host))
-        .route("/{id}", delete(delete_host))
+        .route("/{id}", put(update_host))
         .route(
             "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),
@@ -44,51 +49,14 @@ async fn create_host(
         )));
     }
 
-    // If services is None, there are no services to create
-    let (host, services) = if let Some(services) = request.services {
-        for service in &services {
-            if let Err(e) = service.base.validate() {
-                tracing::error!("Service validation failed: {:?}", e);
-                return Err(ApiError::bad_request(&format!(
-                    "Service validation failed: {}",
-                    e
-                )));
-            }
-        }
-
-        let (host, services) = host_service
-            .create_host_with_services(request.host, services)
-            .await?;
-
-        (host, Some(services))
-    } else {
-        (host_service.create_host(request.host).await?, None)
-    };
+    let (host, services) = host_service
+        .create_host_with_services(request.host, request.services.unwrap_or_default())
+        .await?;
 
     Ok(Json(ApiResponse::success(HostWithServicesRequest {
         host,
-        services,
+        services: Some(services),
     })))
-}
-
-async fn get_all_hosts(
-    State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
-) -> ApiResult<Json<ApiResponse<Vec<Host>>>> {
-    let service = &state.services.host_service;
-
-    let network_ids: Vec<Uuid> = state
-        .services
-        .network_service
-        .get_all_networks(&user.0)
-        .await?
-        .iter()
-        .map(|n| n.id)
-        .collect();
-
-    let hosts = service.get_all_hosts(&network_ids).await?;
-
-    Ok(Json(ApiResponse::success(hosts)))
 }
 
 async fn update_host(
@@ -134,7 +102,7 @@ async fn consolidate_hosts(
     let host_service = &state.services.host_service;
 
     let destination_host = host_service
-        .get_host(&destination_host_id)
+        .get_by_id(&destination_host_id)
         .await?
         .ok_or_else(|| {
             ApiError::not_found(format!(
@@ -143,7 +111,7 @@ async fn consolidate_hosts(
             ))
         })?;
     let other_host = host_service
-        .get_host(&other_host_id)
+        .get_by_id(&other_host_id)
         .await?
         .ok_or_else(|| {
             ApiError::not_found(format!(
@@ -157,21 +125,4 @@ async fn consolidate_hosts(
         .await?;
 
     Ok(Json(ApiResponse::success(updated_host)))
-}
-
-async fn delete_host(
-    State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
-    Path(id): Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<()>>> {
-    let service = &state.services.host_service;
-
-    // Check if host exists
-    if service.get_host(&id).await?.is_none() {
-        return Err(ApiError::not_found(format!("Host '{}' not found", &id)));
-    }
-
-    service.delete_host(&id, true).await?;
-
-    Ok(Json(ApiResponse::success(())))
 }

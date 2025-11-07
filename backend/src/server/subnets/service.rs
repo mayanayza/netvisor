@@ -1,30 +1,37 @@
 use crate::server::{
-    discovery::types::base::DiscoveryType,
+    discovery::r#impl::types::DiscoveryType,
     hosts::service::HostService,
-    shared::types::entities::EntitySource,
-    subnets::{storage::SubnetStorage, types::base::Subnet},
+    shared::{
+        services::traits::CrudService,
+        storage::{
+            filter::EntityFilter,
+            generic::GenericPostgresStorage,
+            traits::{StorableEntity, Storage},
+        },
+        types::entities::EntitySource,
+    },
+    subnets::r#impl::base::Subnet,
 };
 use anyhow::Result;
+use async_trait::async_trait;
 use futures::future::try_join_all;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct SubnetService {
-    storage: Arc<dyn SubnetStorage>,
+    storage: Arc<GenericPostgresStorage<Subnet>>,
     host_service: Arc<HostService>,
 }
 
-impl SubnetService {
-    pub fn new(storage: Arc<dyn SubnetStorage>, host_service: Arc<HostService>) -> Self {
-        Self {
-            storage,
-            host_service,
-        }
+#[async_trait]
+impl CrudService<Subnet> for SubnetService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Subnet>> {
+        &self.storage
     }
 
-    /// Create a new subnet
-    pub async fn create_subnet(&self, subnet: Subnet) -> Result<Subnet> {
-        let all_subnets = self.storage.get_all(&[subnet.base.network_id]).await?;
+    async fn create(&self, subnet: Subnet) -> Result<Subnet, anyhow::Error> {
+        let filter = EntityFilter::unfiltered().network_ids(&[subnet.base.network_id]);
+        let all_subnets = self.storage.get_all(filter).await?;
 
         let subnet = if subnet.id == Uuid::nil() {
             Subnet::new(subnet.base)
@@ -95,35 +102,15 @@ impl SubnetService {
         Ok(subnet_from_storage)
     }
 
-    pub async fn get_subnet(&self, id: &Uuid) -> Result<Option<Subnet>> {
-        self.storage.get_by_id(id).await
-    }
-
-    pub async fn get_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Subnet>> {
-        self.storage.get_by_ids(ids).await
-    }
-
-    pub async fn get_all_subnets(&self, network_ids: &[Uuid]) -> Result<Vec<Subnet>> {
-        self.storage.get_all(network_ids).await
-    }
-
-    pub async fn update_subnet(&self, mut subnet: Subnet) -> Result<Subnet> {
-        subnet.updated_at = chrono::Utc::now();
-        self.storage.update(&subnet).await?;
-        tracing::info!("Updated subnet {}: {}", subnet.base.name, subnet.id);
-        Ok(subnet)
-    }
-
-    pub async fn delete_subnet(&self, id: &Uuid) -> Result<()> {
+    async fn delete(&self, id: &Uuid) -> Result<()> {
         let subnet = self
-            .get_subnet(id)
+            .get_by_id(id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Subnet not found"))?;
 
-        let hosts = self
-            .host_service
-            .get_all_hosts(&[subnet.base.network_id])
-            .await?;
+        let filter = EntityFilter::unfiltered().network_ids(&[subnet.base.network_id]);
+
+        let hosts = self.host_service.get_all(filter).await?;
         let update_futures = hosts.into_iter().filter_map(|mut host| {
             let has_subnet = host.base.interfaces.iter().any(|i| &i.base.subnet_id == id);
             if has_subnet {
@@ -144,5 +131,17 @@ impl SubnetService {
         self.storage.delete(id).await?;
         tracing::info!("Deleted subnet {}: {}", subnet.base.name, subnet.id);
         Ok(())
+    }
+}
+
+impl SubnetService {
+    pub fn new(
+        storage: Arc<GenericPostgresStorage<Subnet>>,
+        host_service: Arc<HostService>,
+    ) -> Self {
+        Self {
+            storage,
+            host_service,
+        }
     }
 }

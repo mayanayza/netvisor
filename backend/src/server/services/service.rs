@@ -1,22 +1,27 @@
 use crate::server::{
-    groups::{service::GroupService, types::GroupType},
+    groups::{
+        r#impl::{base::Group, types::GroupType},
+        service::GroupService,
+    },
     hosts::{
+        r#impl::{base::Host, interfaces::Interface},
         service::HostService,
-        types::{base::Host, interfaces::Interface},
     },
-    services::{
-        storage::ServiceStorage,
-        types::{
-            base::Service,
-            bindings::Binding,
-            patterns::{MatchConfidence, MatchDetails, MatchReason},
-        },
+    services::r#impl::{
+        base::Service,
+        bindings::Binding,
+        patterns::{MatchConfidence, MatchDetails, MatchReason},
     },
-    shared::types::entities::{EntitySource, EntitySourceDiscriminants},
+    shared::{
+        services::traits::CrudService,
+        storage::{filter::EntityFilter, generic::GenericPostgresStorage, traits::Storage},
+        types::entities::{EntitySource, EntitySourceDiscriminants},
+    },
 };
 use anyhow::anyhow;
 use anyhow::{Error, Result};
-use futures::{future::try_join_all, lock::Mutex};
+use async_trait::async_trait;
+use futures::lock::Mutex;
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
@@ -25,15 +30,25 @@ use strum::IntoDiscriminant;
 use uuid::Uuid;
 
 pub struct ServiceService {
-    storage: Arc<dyn ServiceStorage>,
+    storage: Arc<GenericPostgresStorage<Service>>,
     host_service: OnceLock<Arc<HostService>>,
     group_service: Arc<GroupService>,
     group_update_lock: Arc<Mutex<()>>,
     service_locks: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
 }
 
+#[async_trait]
+impl CrudService<Service> for ServiceService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Service>> {
+        &self.storage
+    }
+}
+
 impl ServiceService {
-    pub fn new(storage: Arc<dyn ServiceStorage>, group_service: Arc<GroupService>) -> Self {
+    pub fn new(
+        storage: Arc<GenericPostgresStorage<Service>>,
+        group_service: Arc<GroupService>,
+    ) -> Self {
         Self {
             storage,
             group_service,
@@ -59,7 +74,8 @@ impl ServiceService {
         let lock = self.get_service_lock(&service.id).await;
         let _guard = lock.lock().await;
 
-        let existing_services = self.get_services_for_host(&service.base.host_id).await?;
+        let filter = EntityFilter::unfiltered().host_id(&service.base.host_id);
+        let existing_services = self.get_all(filter).await?;
 
         let service_from_storage = match existing_services
             .into_iter()
@@ -205,7 +221,7 @@ impl ServiceService {
             (existing_source, _) => existing_source,
         };
 
-        self.storage.update(&existing_service).await?;
+        self.storage.update(&mut existing_service).await?;
 
         let mut data = Vec::new();
 
@@ -231,18 +247,6 @@ impl ServiceService {
         Ok(existing_service)
     }
 
-    pub async fn get_service(&self, id: &Uuid) -> Result<Option<Service>> {
-        self.storage.get_by_id(id).await
-    }
-
-    pub async fn get_all_services(&self, network_ids: &[Uuid]) -> Result<Vec<Service>> {
-        self.storage.get_all(network_ids).await
-    }
-
-    pub async fn get_services_for_host(&self, host_id: &Uuid) -> Result<Vec<Service>> {
-        self.storage.get_services_for_host(host_id).await
-    }
-
     pub async fn update_service(&self, mut service: Service) -> Result<Service> {
         let lock = self.get_service_lock(&service.id).await;
         let _guard = lock.lock().await;
@@ -250,16 +254,14 @@ impl ServiceService {
         tracing::debug!("Updating service: {:?}", service);
 
         let current_service = self
-            .get_service(&service.id)
+            .get_by_id(&service.id)
             .await?
             .ok_or_else(|| anyhow!("Could not find service"))?;
 
         self.update_group_service_bindings(&current_service, Some(&service))
             .await?;
 
-        service.updated_at = chrono::Utc::now();
-
-        self.storage.update(&service).await?;
+        self.storage.update(&mut service).await?;
         tracing::info!(
             "Updated service {} for host {}",
             service,
@@ -280,10 +282,8 @@ impl ServiceService {
             updates
         );
 
-        let groups = self
-            .group_service
-            .get_all_groups(&[current_service.base.network_id])
-            .await?;
+        let filter = EntityFilter::unfiltered().network_ids(&[current_service.base.network_id]);
+        let groups = self.group_service.get_all(filter).await?;
 
         let _guard = self.group_update_lock.lock().await;
 
@@ -303,31 +303,35 @@ impl ServiceService {
             None => Vec::new(),
         };
 
-        let group_futures =
-            groups
-                .into_iter()
-                .filter_map(|mut group| match &mut group.base.group_type {
-                    GroupType::RequestPath { service_bindings }
-                    | GroupType::HubAndSpoke { service_bindings } => {
-                        let initial_bindings_length = service_bindings.len();
+        let groups_to_update: Vec<Group> = groups
+            .into_iter()
+            .filter_map(|mut group| match &mut group.base.group_type {
+                GroupType::RequestPath { service_bindings }
+                | GroupType::HubAndSpoke { service_bindings } => {
+                    let initial_bindings_length = service_bindings.len();
 
-                        service_bindings.retain(|sb| {
-                            if current_service_binding_ids.contains(sb) {
-                                return updated_service_binding_ids.contains(sb);
-                            }
-                            true
-                        });
-
-                        if service_bindings.len() != initial_bindings_length {
-                            return Some(self.group_service.update_group(group));
+                    service_bindings.retain(|sb| {
+                        if current_service_binding_ids.contains(sb) {
+                            return updated_service_binding_ids.contains(sb);
                         }
+                        true
+                    });
+
+                    if service_bindings.len() != initial_bindings_length {
+                        Some(group)
+                    } else {
                         None
                     }
-                });
+                }
+            })
+            .collect();
+
+        // Execute updates sequentially
+        for mut group in groups_to_update {
+            self.group_service.update(&mut group).await?;
+        }
 
         tracing::info!("Updated group bindings referencing {}", current_service);
-
-        try_join_all(group_futures).await?;
 
         Ok(())
     }
@@ -436,7 +440,7 @@ impl ServiceService {
         let _guard = lock.lock().await;
 
         let service = self
-            .get_service(id)
+            .get_by_id(id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Service {} not found", id))?;
 

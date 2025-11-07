@@ -1,16 +1,17 @@
 use crate::server::{
-    daemons::{
-        storage::DaemonStorage,
-        types::{
-            api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
-            base::Daemon,
-        },
+    daemons::r#impl::{
+        api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
+        base::Daemon,
     },
-    hosts::types::ports::PortBase,
-    services::types::endpoints::{ApplicationProtocol, Endpoint},
-    shared::types::api::ApiResponse,
+    hosts::r#impl::ports::PortBase,
+    services::r#impl::endpoints::{ApplicationProtocol, Endpoint},
+    shared::{
+        services::traits::CrudService, storage::generic::GenericPostgresStorage,
+        types::api::ApiResponse,
+    },
 };
 use anyhow::{Error, Result, anyhow};
+use async_trait::async_trait;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -19,14 +20,21 @@ use std::{
 use uuid::Uuid;
 
 pub struct DaemonService {
-    daemon_storage: Arc<dyn DaemonStorage>,
+    daemon_storage: Arc<GenericPostgresStorage<Daemon>>,
     client: reqwest::Client,
     // network_id to API key
     pending_api_keys: Arc<Mutex<HashMap<Uuid, Vec<String>>>>,
 }
 
+#[async_trait]
+impl CrudService<Daemon> for DaemonService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Daemon>> {
+        &self.daemon_storage
+    }
+}
+
 impl DaemonService {
-    pub fn new(daemon_storage: Arc<dyn DaemonStorage>) -> Self {
+    pub fn new(daemon_storage: Arc<GenericPostgresStorage<Daemon>>) -> Self {
         Self {
             daemon_storage,
             client: reqwest::Client::new(),
@@ -83,50 +91,6 @@ impl DaemonService {
         }
     }
 
-    /// Register a new daemon
-    pub async fn register_daemon(&self, daemon: Daemon) -> Result<Daemon> {
-        self.daemon_storage.create(&daemon).await?;
-        Ok(daemon)
-    }
-
-    /// Get daemon by ID
-    pub async fn get_daemon(&self, id: &Uuid) -> Result<Option<Daemon>> {
-        self.daemon_storage.get_by_id(id).await
-    }
-
-    /// Get daemon by host ID
-    pub async fn get_host_daemon(&self, host_id: &Uuid) -> Result<Option<Daemon>> {
-        self.daemon_storage.get_by_host_id(host_id).await
-    }
-
-    /// Get daemon by API key hash
-    pub async fn get_daemon_by_api_key(&self, api_key: &str) -> Result<Option<Daemon>> {
-        self.daemon_storage.get_by_api_key(api_key).await
-    }
-
-    /// Get all registered daemons
-    pub async fn get_all_daemons(&self, network_ids: &[Uuid]) -> Result<Vec<Daemon>> {
-        self.daemon_storage.get_all(network_ids).await
-    }
-
-    /// Update daemon
-    pub async fn update_daemon(&self, daemon: Daemon) -> Result<Daemon> {
-        let daemon = self.daemon_storage.update(&daemon).await?;
-        Ok(daemon)
-    }
-
-    /// Update daemon heartbeat
-    pub async fn receive_heartbeat(&self, mut daemon: Daemon) -> Result<Daemon> {
-        daemon.last_seen = chrono::Utc::now();
-        let daemon = self.daemon_storage.update(&daemon).await?;
-        Ok(daemon)
-    }
-
-    /// Delete daemon
-    pub async fn delete_daemon(&self, id: Uuid) -> Result<()> {
-        self.daemon_storage.delete(&id).await
-    }
-
     /// Send discovery request to daemon
     pub async fn send_discovery_request(
         &self,
@@ -134,7 +98,7 @@ impl DaemonService {
         request: DaemonDiscoveryRequest,
     ) -> Result<(), Error> {
         let daemon = self
-            .get_daemon(daemon_id)
+            .get_by_id(daemon_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Could not find daemon {}", daemon_id))?;
 
