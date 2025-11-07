@@ -1,4 +1,5 @@
 use crate::server::{
+    api_keys,
     auth::r#impl::api::{LoginRequest, RegisterRequest},
     config::AppState,
     shared::{
@@ -18,6 +19,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/me", post(get_current_user))
+        .nest("/keys", api_keys::handlers::create_router())
 }
 
 async fn register(
@@ -25,6 +27,10 @@ async fn register(
     session: Session,
     Json(request): Json<RegisterRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
+    if state.config.disable_registration {
+        return Err(ApiError::forbidden("User registration is disabled"));
+    }
+
     let user = state.services.auth_service.register(request).await?;
 
     // Store user_id in session

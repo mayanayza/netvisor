@@ -374,14 +374,41 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Error>> {
-    // Get daemon config from running container
-    let output = std::process::Command::new("docker")
+    // First, find the config file location in the container
+    let find_output = std::process::Command::new("docker")
         .args([
             "exec",
             "netvisor-daemon-1",
-            "cat",
-            "/root/.config/netvisor/daemon/config.json",
+            "find",
+            "/root/.config",
+            "-name",
+            "config.json",
+            "-type",
+            "f",
         ])
+        .output()?;
+
+    if !find_output.status.success() {
+        return Err(format!(
+            "Failed to find daemon config: {}",
+            String::from_utf8_lossy(&find_output.stderr)
+        )
+        .into());
+    }
+
+    let config_path = String::from_utf8_lossy(&find_output.stdout)
+        .trim()
+        .to_string();
+
+    if config_path.is_empty() {
+        return Err("No config.json found in container".into());
+    }
+
+    println!("Found daemon config at: {}", config_path);
+
+    // Now read the config file
+    let output = std::process::Command::new("docker")
+        .args(["exec", "netvisor-daemon-1", "cat", &config_path])
         .output()?;
 
     if !output.status.success() {

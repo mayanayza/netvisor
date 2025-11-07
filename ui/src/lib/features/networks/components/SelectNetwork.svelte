@@ -2,6 +2,7 @@
 	import { networks } from '../store';
 
 	export let selectedNetworkId: string | null;
+	export let disabled: boolean = false;
 
 	$: if (!selectedNetworkId && $networks.length > 0) {
 		selectedNetworkId = $networks[0].id;
@@ -10,7 +11,7 @@
 
 <div>
 	<label for="network" class="text-secondary mb-2 block text-sm font-medium"> Network </label>
-	<select id="network" bind:value={selectedNetworkId} class="input-field">
+	<select id="network" {disabled} bind:value={selectedNetworkId} class="input-field">
 		{#each $networks as network (network.id)}
 			<option class="select-option" value={network.id}>{network.name}</option>
 		{/each}

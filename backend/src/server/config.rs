@@ -18,6 +18,7 @@ pub struct CliArgs {
     pub database_url: Option<String>,
     pub integrated_daemon_url: Option<String>,
     pub use_secure_session_cookies: Option<bool>,
+    pub disable_registration: bool,
 }
 
 /// Flattened server configuration struct
@@ -44,6 +45,9 @@ pub struct ServerConfig {
 
     /// URL for daemon running in same docker stack or in other local context
     pub use_secure_session_cookies: bool,
+
+    /// URL for daemon running in same docker stack or in other local context
+    pub disable_registration: bool,
 }
 
 impl Default for ServerConfig {
@@ -56,6 +60,7 @@ impl Default for ServerConfig {
             web_external_path: None,
             use_secure_session_cookies: false,
             integrated_daemon_url: None,
+            disable_registration: false,
         }
     }
 }
@@ -87,6 +92,8 @@ impl ServerConfig {
         if let Some(use_secure_session_cookies) = cli_args.use_secure_session_cookies {
             figment = figment.merge(("use_secure_session_cookies", use_secure_session_cookies));
         }
+
+        figment = figment.merge(("disable_registration", cli_args.disable_registration));
 
         let config: ServerConfig = figment
             .extract()

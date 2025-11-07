@@ -241,6 +241,23 @@ The Manage section groups all network organization and configuration tabs:
   <img src="./media/groups_tab.png" width="800" alt="Groups Tab">
 </p>
 
+**📡 Daemons**: Manage daemons and view their capabilities. You can view:
+- What subnets daemons have interfaces with
+- Whether the daemon has access to the docker socket
+- When a daemon registered and was last seen
+
+<p align="center">
+  <img src="./media/daemons_tab.png" width="800" alt="Daemons Tab">
+</p>
+
+**🔑 API Keys**: Manage API Keys. You can manage:
+- If an API key is enabled, disabled, and when it last expired
+
+<p align="center">
+  <img src="./media/api_keys_tab.png" width="800" alt="API Keys Tab">
+</p>
+
+
 #### 🗺️ Topology
 
 Generate and customize interactive network visualizations. The topology view:
@@ -270,7 +287,11 @@ If the host running the daemon is also running Docker, the daemon automatically 
 
 ### 🌐 Network Scanning
 
-The daemon scans all IPv4 addresses on subnets it is configured to scan. For each IP on the network, the daemon:
+The daemon scans all IPv4 addresses on subnets it is configured to scan. 
+
+**By Default:** The daemon will scan the subnets it has an interface with. You can also choose additional subnets it doesn't have an interface with if you think it can reach it with network requests.
+
+For each IP on the network, the daemon:
 
 - **Detects open ports**: Scans for active TCP ports
 - **Identifies services**: Uses rule-based pattern matching to recognize running services from:
@@ -488,6 +509,7 @@ Both the server and daemon support multiple configuration methods with the follo
 | Concurrent Scans | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | `15` | Maximum number of hosts to scan in parallel during discovery |
 | Network ID | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | `None` | Network ID to report discoveries to (auto-assigned for integrated daemon) |
 | API Key | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | `None` | API key for daemon authentication with server (generated via UI) |
+| Docker Proxy | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | `None` | Optional HTTP proxy to use to connect to docker |
 
 #### Configuration File Location
 
@@ -522,6 +544,7 @@ The server supports the following configuration options:
 | Database URL | `--database-url` | `NETVISOR_DATABASE_URL` | `postgresql://postgres:password@localhost:5432/netvisor` | PostgreSQL connection string |
 | Use Secure Cookies | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Enable secure session cookies for HTTPS deployments |
 | Integrated Daemon URL | `--integrated-daemon-url` | `NETVISOR_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL where the server can reach the integrated daemon |
+| Disable Registration | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | `http://172.17.0.1:60073` | Flag to disable new user registration |
 
 #### Session Cookie Security
 

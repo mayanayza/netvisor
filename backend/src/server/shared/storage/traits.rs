@@ -58,6 +58,7 @@ pub trait StorableEntity: Sized + Clone + Send + Sync + 'static {
 #[derive(Clone)]
 pub enum SqlValue {
     Uuid(Uuid),
+    OptionalUuid(Option<Uuid>),
     String(String),
     OptionalString(Option<String>),
     I32(i32),
@@ -65,6 +66,7 @@ pub enum SqlValue {
     Bool(bool),
     Json(serde_json::Value),
     Timestamp(DateTime<Utc>),
+    OptionTimestamp(Option<DateTime<Utc>>),
     UuidArray(Vec<Uuid>),
     IpCidr(IpCidr),
     IpAddr(IpAddr),

@@ -5,14 +5,16 @@ use tower_sessions::{Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
 
 use crate::server::{
-    daemons::r#impl::base::Daemon, discovery::r#impl::base::Discovery, groups::r#impl::base::Group,
-    hosts::r#impl::base::Host, networks::r#impl::Network, services::r#impl::base::Service,
+    api_keys::r#impl::base::ApiKey, daemons::r#impl::base::Daemon,
+    discovery::r#impl::base::Discovery, groups::r#impl::base::Group, hosts::r#impl::base::Host,
+    networks::r#impl::Network, services::r#impl::base::Service,
     shared::storage::generic::GenericPostgresStorage, subnets::r#impl::base::Subnet,
     users::r#impl::base::User,
 };
 
 pub struct StorageFactory {
     pub sessions: SessionManagerLayer<PostgresStore>,
+    pub api_keys: Arc<GenericPostgresStorage<ApiKey>>,
     pub users: Arc<GenericPostgresStorage<User>>,
     pub networks: Arc<GenericPostgresStorage<Network>>,
     pub hosts: Arc<GenericPostgresStorage<Host>>,
@@ -50,6 +52,7 @@ impl StorageFactory {
         Ok(Self {
             sessions,
             discovery: Arc::new(GenericPostgresStorage::new(pool.clone())),
+            api_keys: Arc::new(GenericPostgresStorage::new(pool.clone())),
             users: Arc::new(GenericPostgresStorage::new(pool.clone())),
             networks: Arc::new(GenericPostgresStorage::new(pool.clone())),
             hosts: Arc::new(GenericPostgresStorage::new(pool.clone())),

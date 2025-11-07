@@ -9,43 +9,33 @@
 	import { entities } from '$lib/shared/stores/metadata';
 	import dockerTemplate from '$lib/templates/docker-compose.daemon.yml?raw';
 	import { writable, type Writable } from 'svelte/store';
-	import { createNewApiKey, updateApiKey } from '../store';
 	import type { Daemon } from '../types/base';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import { RotateCcwKey } from 'lucide-svelte';
+	import { createEmptyApiKeyFormData, createNewApiKey } from '$lib/features/api_keys/store';
 
 	export let isOpen = false;
 	export let onClose: () => void;
 	export let daemon: Daemon | null = null;
 
-	let apiKeyStore: Writable<string | null> = writable(null);
-	$: apiKey = $apiKeyStore;
+	let keyStore: Writable<string | null> = writable(null);
+	$: key = $keyStore;
 	let selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
 
 	function handleOnClose() {
-		apiKeyStore.set(null);
+		keyStore.set(null);
 		onClose();
 	}
 
 	async function handleCreateNewApiKey() {
-		const generatedKey = await createNewApiKey(selectedNetworkId);
+		let newApiKey = createEmptyApiKeyFormData();
+		newApiKey.network_id = selectedNetworkId;
+
+		const generatedKey = await createNewApiKey(newApiKey);
 		if (generatedKey) {
-			apiKeyStore.set(generatedKey);
+			keyStore.set(generatedKey);
 		} else {
 			pushError('Failed to generate API key');
-		}
-	}
-
-	async function handleUpdateApiKey() {
-		if (daemon) {
-			const generatedKey = await updateApiKey(daemon.id);
-			if (generatedKey) {
-				apiKeyStore.set(generatedKey);
-			} else {
-				pushError('Failed to generate API key');
-			}
-		} else {
-			pushError('No daemon provided to generate API key for');
 		}
 	}
 
@@ -62,16 +52,16 @@
 	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${apiKey ? `--daemon-api-key ${apiKey}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key}` : ''}`;
 
 	let dockerCompose = '';
-	$: if (apiKey) {
+	$: if (key) {
 		dockerCompose = populateDockerCompose(
 			dockerTemplate,
 			serverTarget,
 			serverPort,
 			selectedNetworkId,
-			apiKey
+			key
 		);
 	}
 
@@ -80,13 +70,12 @@
 		serverTarget: string,
 		serverPort: string,
 		networkId: string,
-		apiKey: string
+		key: string
 	): string {
 		// Replace lines that contain env vars
 		let splitString = '# Daemon configuration';
 		let [beforeKey, afterKey] = template.split(splitString);
-		template =
-			beforeKey + splitString + '\n' + `      - NETVISOR_DAEMON_API_KEY=${apiKey}` + afterKey;
+		template = beforeKey + splitString + '\n' + `      - NETVISOR_DAEMON_API_KEY=${key}` + afterKey;
 
 		return template
 			.split('\n')
@@ -111,7 +100,7 @@
 <EditModal
 	{isOpen}
 	title="Create Daemon"
-	cancelLabel="Cancel"
+	cancelLabel="Close"
 	onCancel={handleOnClose}
 	showSave={false}
 	size="xl"
@@ -122,17 +111,6 @@
 	</svelte:fragment>
 
 	<div class="space-y-4">
-		<h3 class="text-primary text-lg font-medium">
-			{daemon ? 'Create New API Key' : 'Update API Key'}
-		</h3>
-
-		{#if daemon && !daemon.api_key}
-			<InlineWarning
-				title="Daemon missing API key"
-				body="This daemon does not have an API key set in its config file. Please press the button below to generate one, then use the daemon start command or relaunch the docker compose."
-			/>
-		{/if}
-
 		{#if !daemon}
 			<SelectNetwork bind:selectedNetworkId></SelectNetwork>
 		{/if}
@@ -141,7 +119,8 @@
 			<div class="flex items-start gap-2">
 				<button
 					class="btn-primary m-1 flex-shrink-0 self-stretch"
-					on:click={daemon ? handleUpdateApiKey : handleCreateNewApiKey}
+					disabled={!!key}
+					on:click={handleCreateNewApiKey}
 				>
 					<RotateCcwKey />
 					<span>Generate Key</span>
@@ -151,13 +130,18 @@
 					<CodeContainer
 						language="bash"
 						expandable={false}
-						code={apiKey ? apiKey : 'Press Generate Key...'}
+						code={key ? key : 'Press Generate Key...'}
 					/>
 				</div>
 			</div>
+			{#if !key}
+				<div class="text-secondary mt-3">
+					This will create a new API key, which you can manage later in the API Keys tab.
+				</div>
+			{/if}
 		</div>
 
-		{#if !daemon && apiKey}
+		{#if !daemon && key}
 			<div class="text-secondary mt-3">
 				<b>Option 1.</b> Run the install script, then start the daemon
 			</div>
@@ -169,29 +153,23 @@
 			<div class="text-secondary mt-3"><b>Option 2.</b> Run this docker-compose</div>
 
 			<CodeContainer language="yaml" expandable={false} code={dockerCompose} />
-		{:else if daemon}
-			{#if daemon.api_key && !apiKey}
-				<InlineWarning
-					title="The existing API key will be invalidated when you generate a new key."
-				/>
-			{:else if apiKey}
-				<InlineWarning
-					title="This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below."
-				/>
+		{:else if daemon && key && selectedNetworkId}
+			<InlineWarning
+				title="This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below."
+			/>
 
-				<div class="text-secondary mt-3">
-					<b>Option 1.</b> Stop the daemon process, and use this command to start it
-				</div>
-				<CodeContainer language="bash" expandable={false} code={runCommand} />
-				<div class="text-secondary mt-3">
-					<b>Option 2.</b> Stop the daemon container, and add this environment variable
-				</div>
-				<CodeContainer
-					language="bash"
-					expandable={false}
-					code={`- NETVISOR_DAEMON_API_KEY=${apiKey}\n`}
-				/>
-			{/if}
+			<div class="text-secondary mt-3">
+				<b>Option 1.</b> Stop the daemon process, and use this command to start it
+			</div>
+			<CodeContainer language="bash" expandable={false} code={runCommand} />
+			<div class="text-secondary mt-3">
+				<b>Option 2.</b> Stop the daemon container, and add this environment variable
+			</div>
+			<CodeContainer
+				language="bash"
+				expandable={false}
+				code={`- NETVISOR_DAEMON_API_KEY=${key}\n`}
+			/>
 		{/if}
 	</div>
 </EditModal>

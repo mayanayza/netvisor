@@ -1,0 +1,15 @@
+{
+  "server_target": "http://server",
+  "network_id": "34a11e2d-c6a5-4c99-ae3a-8652cefb3006",
+  "server_port": 60072,
+  "daemon_port": 60073,
+  "name": "netvisor-daemon",
+  "log_level": "debug",
+  "heartbeat_interval": 30,
+  "bind_address": "0.0.0.0",
+  "concurrent_scans": 15,
+  "id": "89ff8a1d-ab03-42f9-9ff4-58906242e198",
+  "last_heartbeat": null,
+  "host_id": "ff3a869b-7ff4-4ab4-870e-9cd19c536bc9",
+  "daemon_api_key": "82f926bcaf214b5e9e475af72a233c80"
+}

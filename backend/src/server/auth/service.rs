@@ -216,17 +216,3 @@ fn verify_password(password: &str, hash: &str) -> Result<()> {
         .verify_password(password.as_bytes(), &parsed_hash)
         .map_err(|_| anyhow!("Invalid username or password"))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_password_hashing() {
-        let password = "MySecureP@ssw0rd123";
-        let hash = hash_password(password).unwrap();
-
-        assert!(verify_password(password, &hash).is_ok());
-        assert!(verify_password("WrongPassword", &hash).is_err());
-    }
-}

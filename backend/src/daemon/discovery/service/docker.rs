@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use bollard::API_DEFAULT_VERSION;
 use bollard::{
     Docker,
     query_parameters::{InspectContainerOptions, ListContainersOptions, ListNetworksOptions},
@@ -225,8 +226,14 @@ impl DiscoveryRunner<DockerScanDiscovery> {
     pub async fn new_local_docker_client(&self) -> Result<Docker, Error> {
         tracing::debug!("Connecting to Docker daemon");
 
-        let client = Docker::connect_with_local_defaults()
-            .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?;
+        let client =
+            if let Ok(Some(docker_proxy)) = self.as_ref().config_store.get_docker_proxy().await {
+                Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
+                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+            } else {
+                Docker::connect_with_local_defaults()
+                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+            };
 
         client.ping().await?;
 

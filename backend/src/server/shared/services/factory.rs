@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::service::AuthService, daemons::service::DaemonService,
+    api_keys::service::ApiKeyService, auth::service::AuthService, daemons::service::DaemonService,
     discovery::service::DiscoveryService, groups::service::GroupService,
     hosts::service::HostService, networks::service::NetworkService,
     services::service::ServiceService, shared::storage::factory::StorageFactory,
@@ -20,10 +20,12 @@ pub struct ServiceFactory {
     pub topology_service: Arc<TopologyService>,
     pub service_service: Arc<ServiceService>,
     pub discovery_service: Arc<DiscoveryService>,
+    pub api_key_service: Arc<ApiKeyService>,
 }
 
 impl ServiceFactory {
     pub async fn new(storage: &StorageFactory) -> Result<Self> {
+        let api_key_service = Arc::new(ApiKeyService::new(storage.api_keys.clone()));
         let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
         let group_service = Arc::new(GroupService::new(storage.groups.clone()));
 
@@ -78,6 +80,7 @@ impl ServiceFactory {
             topology_service,
             service_service,
             discovery_service,
+            api_key_service,
         })
     }
 }

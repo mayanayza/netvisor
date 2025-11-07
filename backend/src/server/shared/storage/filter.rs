@@ -82,7 +82,7 @@ impl EntityFilter {
 
     pub fn api_key(mut self, api_key: String) -> Self {
         self.conditions
-            .push(format!("api_key = ${}", self.values.len() + 1));
+            .push(format!("key = ${}", self.values.len() + 1));
         self.values.push(SqlValue::String(api_key));
         self
     }
