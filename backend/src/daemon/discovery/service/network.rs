@@ -146,7 +146,7 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
                         return false
                     }
 
-                    if s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge {
+                    if s.base.subnet_type.discriminant() == SubnetTypeDiscriminants::DockerBridge {
                         tracing::warn!("Skipping {} with CIDR {}, docker bridge subnets are scanning in docker discovery", s.base.name, s.base.cidr);
                         return false
                     }
