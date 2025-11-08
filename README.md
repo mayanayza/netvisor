@@ -11,7 +11,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 > 💡 **Prefer not to self-host?** [Join the waitlist](https://netvisor.io) for NetVisor Cloud
 > 
 <p align="center">
-  <img src="./media/topology_full.png" width="1200" alt="Example Visualization">
+  <img src="./media/872shots_so.png" width="1200" alt="Example Visualization">
 </p>
 
 ## Why NetVisor?
