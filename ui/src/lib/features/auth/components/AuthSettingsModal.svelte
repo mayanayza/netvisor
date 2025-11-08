@@ -13,6 +13,8 @@
 	export let isOpen = false;
 	export let onClose: () => void;
 
+	$: user = $currentUser;
+
 	let activeSection: 'main' | 'credentials' = 'main';
 	let isLinkingOidc = false;
 	let loading = false;
@@ -38,7 +40,7 @@
 		activeSection = 'main';
 		formData = { email: '', password: '', confirmPassword: '' };
 		isLinkingOidc = false;
-		email.set($currentUser?.email || '');
+		email.set(user?.email || '');
 	}
 
 	async function linkOidcAccount() {
@@ -66,7 +68,7 @@
 			const updateRequest: { email?: string; password?: string } = {};
 
 			// Add email if it changed and OIDC is not linked
-			if (formData.email !== $currentUser?.email) {
+			if (formData.email !== user?.email) {
 				updateRequest.email = formData.email;
 			}
 
@@ -102,7 +104,7 @@
 		if (activeSection === 'credentials') {
 			activeSection = 'main';
 			formData = { email: '', password: '', confirmPassword: '' };
-			email.set($currentUser?.email || '');
+			email.set(user?.email || '');
 		} else {
 			onClose();
 		}
@@ -114,7 +116,7 @@
 		onClose();
 	}
 
-	$: hasOidc = !!$currentUser?.oidc_provider;
+	$: hasOidc = !!user?.oidc_provider;
 	$: modalTitle = activeSection === 'main' ? 'Account Settings' : 'Update Credentials';
 	$: showSave = activeSection === 'credentials';
 	$: cancelLabel = activeSection === 'main' ? 'Close' : 'Back';
@@ -138,7 +140,7 @@
 	</svelte:fragment>
 
 	{#if activeSection === 'main'}
-		{#if $currentUser}
+		{#if user}
 			<div class="space-y-6">
 				<!-- User Info -->
 				<div class="card card-static">
@@ -146,11 +148,11 @@
 					<div class="space-y-2">
 						<div class="flex justify-between">
 							<span class="text-secondary text-sm">Email:</span>
-							<span class="text-primary text-sm">{$currentUser.email}</span>
+							<span class="text-primary text-sm">{user.email}</span>
 						</div>
 						<div class="flex justify-between">
 							<span class="text-secondary text-sm">User ID:</span>
-							<span class="text-primary font-mono text-xs">{$currentUser.id}</span>
+							<span class="text-primary font-mono text-xs">{user.id}</span>
 						</div>
 					</div>
 				</div>
@@ -172,7 +174,7 @@
 								<button
 									on:click={() => {
 										activeSection = 'credentials';
-										email.set($currentUser.email);
+										email.set(user.email);
 									}}
 									class="btn-primary"
 								>
@@ -190,8 +192,8 @@
 										<p class="text-primary text-sm font-medium">OIDC Provider</p>
 										{#if hasOidc}
 											<p class="text-secondary text-xs">
-												{$currentUser.oidc_provider} - Linked on {new Date(
-													$currentUser.oidc_linked_at || ''
+												{user.oidc_provider} - Linked on {new Date(
+													user.oidc_linked_at || ''
 												).toLocaleDateString()}
 											</p>
 										{:else}

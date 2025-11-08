@@ -164,12 +164,7 @@
 	const sectionHeaderClass =
 		'text-secondary hover:text-primary flex w-full items-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-gray-800/50';
 
-	function getNavItemClass(item: NavItem): string {
-		const isActive = activeTab === item.id;
-		return `flex w-full items-center rounded-lg font-medium transition-colors ${
-			isActive ? 'text-primary border border-blue-600 bg-blue-700' : inactiveButtonClass
-		}`;
-	}
+	const baseClasses = 'flex w-full items-center rounded-lg font-medium transition-colors';
 </script>
 
 <div
@@ -224,7 +219,10 @@
 										<li>
 											<button
 												on:click={() => handleItemClick(item)}
-												class={getNavItemClass(item)}
+												class="{baseClasses} {activeTab === item.id ||
+												(item.id === 'account' && showAuthSettings)
+													? 'text-primary border border-blue-600 bg-blue-700'
+													: inactiveButtonClass}"
 												style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 												title={collapsed ? item.label : ''}
 											>
@@ -243,7 +241,10 @@
 						<li>
 							<button
 								on:click={() => handleItemClick(configItem)}
-								class={getNavItemClass(configItem)}
+								class="{baseClasses} {activeTab === configItem.id ||
+								(configItem.id === 'account' && showAuthSettings)
+									? 'text-primary border border-blue-600 bg-blue-700'
+									: inactiveButtonClass}"
 								style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 								title={collapsed ? configItem.label : ''}
 							>
@@ -267,7 +268,10 @@
 					<li>
 						<button
 							on:click={() => handleItemClick(item)}
-							class={getNavItemClass(item)}
+							class="{baseClasses} {activeTab === item.id ||
+							(item.id === 'account' && showAuthSettings)
+								? 'text-primary border border-blue-600 bg-blue-700'
+								: inactiveButtonClass}"
 							style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 							title={collapsed ? item.label : ''}
 						>
