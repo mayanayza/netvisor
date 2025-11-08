@@ -17,13 +17,16 @@ WHERE oidc_provider IS NOT NULL AND oidc_subject IS NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
 
 -- Migrate existing usernames/names to email format
--- If it has @, assume it's already an email; otherwise append @example.com
+-- If it has @, assume it's already an email; otherwise trim special chars and append @example.com
 UPDATE users 
 SET email = CASE 
     WHEN username IS NOT NULL AND username != '' AND username LIKE '%@%' THEN username
-    WHEN username IS NOT NULL AND username != '' THEN username || '@example.com'
+    WHEN username IS NOT NULL AND username != '' THEN 
+        -- Remove leading/trailing underscores and other non-alphanumeric chars
+        TRIM(BOTH '_' FROM REGEXP_REPLACE(username, '^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', 'g')) || '@example.com'
     WHEN name IS NOT NULL AND name != '' AND name LIKE '%@%' THEN name
-    WHEN name IS NOT NULL AND name != '' THEN name || '@example.com'
+    WHEN name IS NOT NULL AND name != '' THEN 
+        TRIM(BOTH '_' FROM REGEXP_REPLACE(name, '^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', 'g')) || '@example.com'
     ELSE 'user@example.com'
 END
 WHERE email IS NULL;
