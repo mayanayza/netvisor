@@ -40,7 +40,7 @@ impl Default for UserBase {
 impl UserBase {
     pub fn new_seed() -> Self {
         Self {
-            email: EmailAddress::new_unchecked("user@example.com"),
+            email: EmailAddress::new_unchecked(format!("{}@netvisor.io", Uuid::new_v4())),
             password_hash: None,
             oidc_linked_at: None,
             oidc_provider: None,
