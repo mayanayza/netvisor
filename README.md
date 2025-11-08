@@ -609,10 +609,10 @@ For internal networks without HTTPS, keep this setting as `false` (default).
 
 To use OIDC, you'll need to set the following:
 
-NETVISOR_OIDC_ISSUER_URL=https://your-provider.com/application/o/netvisor/
-NETVISOR_OIDC_CLIENT_ID=your-client-id
-NETVISOR_OIDC_CLIENT_SECRET=your-client-secret
-NETVISOR_OIDC_PROVIDER_NAME=oidc-display-name
+NETVISOR_OIDC_ISSUER_URL=https://your-provider.com/application/o/netvisor/<br>
+NETVISOR_OIDC_CLIENT_ID=your-client-id<br>
+NETVISOR_OIDC_CLIENT_SECRET=your-client-secret<br>
+NETVISOR_OIDC_PROVIDER_NAME=oidc-display-name<br>
 
 When configuring your OIDC provider, use this callback URL:
 ```
