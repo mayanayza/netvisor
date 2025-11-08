@@ -52,6 +52,7 @@ jobs:
   build-binaries:
     name: Build Daemon Binaries
     runs-on: ${{ matrix.os }}
+    needs: test-and-update-fixtures
     strategy:
       matrix:
         include:
