@@ -8,9 +8,57 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 ![Daemon](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/daemon-ci.yml?label=daemon-ci) ![Server](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/server-ci.yml?label=server-ci) ![UI](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/ui-ci.yml?label=ui-ci)
 [![Discord](https://img.shields.io/discord/1432872786828726392?logo=discord&label=discord&labelColor=white&color=7289da)](https://discord.gg/b7ffQr8AcZ)
 
+> 💡 **Prefer not to self-host?** [Join the waitlist](https://netvisor.io) for NetVisor Cloud
+> 
 <p align="center">
   <img src="./media/topology_full.png" width="1200" alt="Example Visualization">
 </p>
+
+## Why NetVisor?
+
+**The Problem**: Maintaining accurate network documentation is tedious. Networks evolve constantly—new services get deployed, IPs change, containers spin up and down—and documentation falls out of date before it's even complete.
+
+**The Solution**: NetVisor automatically discovers your entire network infrastructure and generates living documentation that stays current with your network's reality.
+
+### Key Features
+
+**🔍 Automatic Discovery**
+- Scans networks to identify all hosts and services
+- Detects 50+ services including Plex, Home Assistant, Proxmox, Docker, Kubernetes, Pi-hole, and more
+- Maps Docker containers and Proxmox VMs with their relationships
+- Supports multiple VLANs through distributed scanning
+
+**🗺️ Interactive Visualization**
+- Auto-generates network topology diagrams showing how everything connects
+- Visualizes subnets, hosts, services, and their relationships
+- Customizable layouts with drag-and-drop editing
+- Export diagrams as PNG for documentation or presentations
+
+**📊 Network Organization**
+- Group services by application architecture or function
+- Track infrastructure dependencies and data flows
+- Consolidate duplicate host entries
+- Organize external resources (cloud services, remote hosts)
+
+**🔄 Living Documentation**
+- Schedule recurring discovery scans (daily/weekly/etc.)
+- Real-time updates as your network changes
+- Historical tracking of network evolution
+- Self-hosted with full data privacy
+
+### Perfect For
+
+- **Home Lab Enthusiasts**: Document your ever-growing infrastructure
+- **IT Professionals**: Maintain accurate network inventory without manual spreadsheets  
+- **System Administrators**: Visualize complex multi-VLAN environments
+- **DevOps Teams**: Map containerized services and their dependencies
+- **MSPs**: Manage multiple client networks with separate environments
+
+---
+
+**Want hosted NetVisor without the setup?** Join the waitlist for our upcoming cloud service at [netvisor.io](https://netvisor.io)
+
+---
 
 ## Table of Contents
 
@@ -703,6 +751,19 @@ rmdir /s %APPDATA%\netvisor\daemon
 ---
 
 ## ❓ FAQ
+
+### Is there a hosted/cloud version?
+
+We're working on **NetVisor Cloud**, a fully managed service that eliminates the need to run your own server. You'll get:
+- Instant setup with no infrastructure management
+- Automatic updates and maintenance
+- Secure cloud storage
+- Team collaboration features
+- Multi-network management
+
+**[Join the waitlist at netvisor.io](https://netvisor.io)** to be notified when it launches.
+
+For now, NetVisor is available as a self-hosted solution that you can run on your own infrastructure.
 
 ### Where does NetVisor store my data?
 
