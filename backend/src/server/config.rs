@@ -23,7 +23,7 @@ pub struct CliArgs {
     pub oidc_client_id: Option<String>,
     pub oidc_client_secret: Option<String>,
     pub oidc_redirect_url: Option<String>,
-    pub oidc_provider_name: Option<String>
+    pub oidc_provider_name: Option<String>,
 }
 
 /// Flattened server configuration struct
@@ -85,7 +85,7 @@ impl Default for ServerConfig {
             oidc_client_secret: None,
             oidc_issuer_url: None,
             oidc_redirect_url: None,
-            oidc_provider_name: None
+            oidc_provider_name: None,
         }
     }
 }
@@ -133,7 +133,6 @@ impl ServerConfig {
             figment = figment.merge(("oidc_provider_name", oidc_provider_name));
         }
 
-
         figment = figment.merge(("disable_registration", cli_args.disable_registration));
 
         let config: ServerConfig = figment
@@ -152,7 +151,7 @@ pub struct AppState {
     pub config: ServerConfig,
     pub storage: StorageFactory,
     pub services: ServiceFactory,
-    pub oidc_client: Option<Arc<OidcClient>>
+    pub oidc_client: Option<Arc<OidcClient>>,
 }
 
 impl AppState {
@@ -161,17 +160,28 @@ impl AppState {
             StorageFactory::new(&config.database_url(), config.use_secure_session_cookies).await?;
         let services = ServiceFactory::new(&storage).await?;
 
-        let oidc_client = if let (Some(issuer_url), Some(redirect_url), Some(client_id), Some(client_secret)) = (&config.oidc_issuer_url, &config.oidc_redirect_url, &config.oidc_client_id, &config.oidc_client_secret) {
-            Some(Arc::new(OidcClient::new(issuer_url.to_owned(), client_id.to_owned(), client_secret.to_owned(), redirect_url.to_owned())))
-        } else {
-            None
-        };        
+        let oidc_client =
+            if let (Some(issuer_url), Some(redirect_url), Some(client_id), Some(client_secret)) = (
+                &config.oidc_issuer_url,
+                &config.oidc_redirect_url,
+                &config.oidc_client_id,
+                &config.oidc_client_secret,
+            ) {
+                Some(Arc::new(OidcClient::new(
+                    issuer_url.to_owned(),
+                    client_id.to_owned(),
+                    client_secret.to_owned(),
+                    redirect_url.to_owned(),
+                )))
+            } else {
+                None
+            };
 
         Ok(Arc::new(Self {
             config,
             storage,
             services,
-            oidc_client
+            oidc_client,
         }))
     }
 }

@@ -123,18 +123,6 @@ export const minLength =
 		};
 	};
 
-// Username pattern validator (alphanumeric and underscore only)
-export const usernamePattern = (): Validator => (value: string) => {
-	if (!value) return { valid: true, name: 'usernamePattern' };
-
-	const usernameRegex = /^[a-zA-Z0-9_]+$/;
-	return {
-		valid: usernameRegex.test(value),
-		name: 'Username can only contain letters, numbers, and underscores',
-		message: 'Username can only contain letters, numbers, and underscores'
-	};
-};
-
 // Password complexity validator
 export const passwordComplexity = (): Validator => (value: string) => {
 	if (!value) return { valid: false, name: 'passwordComplexity', message: 'Password is required' };

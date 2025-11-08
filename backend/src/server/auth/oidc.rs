@@ -1,9 +1,9 @@
 use anyhow::Result;
 use openidconnect::{
-    reqwest::Client as ReqwestClient,
+    AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
     core::{CoreClient, CoreProviderMetadata, CoreResponseType},
-    AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl,
-    Nonce, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
+    reqwest::Client as ReqwestClient,
 };
 use serde::{Deserialize, Serialize};
 
@@ -129,7 +129,9 @@ impl OidcClient {
         Ok(OidcUserInfo {
             subject: claims.subject().to_string(),
             email: claims.email().map(|e| e.to_string()),
-            name: claims.name().and_then(|n| n.get(None).map(|s| s.to_string())),
+            name: claims
+                .name()
+                .and_then(|n| n.get(None).map(|s| s.to_string())),
         })
     }
 }

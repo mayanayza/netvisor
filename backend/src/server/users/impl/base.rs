@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
-use anyhow::Result;
+use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
+use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -11,11 +12,7 @@ use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UserBase {
-    #[validate(length(min = 0, max = 100))]
-    pub name: String,
-    #[validate(length(min = 0, max = 100))]
-    #[serde(default)]
-    pub username: String,
+    pub email: EmailAddress,
     /// Password hash - None for legacy users created before auth migration or users using OIDC
     #[serde(skip_serializing)] // Never send password hash to client
     pub password_hash: Option<String>,
@@ -24,14 +21,13 @@ pub struct UserBase {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oidc_subject: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub oidc_linked_at: Option<DateTime<Utc>>
+    pub oidc_linked_at: Option<DateTime<Utc>>,
 }
 
 impl Default for UserBase {
     fn default() -> Self {
         Self {
-            name: "Default Name".to_string(),
-            username: "default-username".to_string(),
+            email: EmailAddress::new_unchecked("user@example.com"),
             password_hash: None,
             oidc_linked_at: None,
             oidc_provider: None,
@@ -43,8 +39,7 @@ impl Default for UserBase {
 impl UserBase {
     pub fn new_seed() -> Self {
         Self {
-            name: "Username".to_string(),
-            username: "default-username".to_string(),
+            email: EmailAddress::new_unchecked("user@example.com"),
             password_hash: None,
             oidc_linked_at: None,
             oidc_provider: None,
@@ -52,25 +47,27 @@ impl UserBase {
         }
     }
 
-    pub fn new_oidc(username: String, oidc_subject: String, oidc_provider: Option<String>) -> Self {
+    pub fn new_oidc(
+        email: EmailAddress,
+        oidc_subject: String,
+        oidc_provider: Option<String>,
+    ) -> Self {
         Self {
-            name: username.clone(),
-            username,
+            email,
             password_hash: None,
             oidc_linked_at: Some(Utc::now()),
             oidc_provider,
-            oidc_subject: Some(oidc_subject)
+            oidc_subject: Some(oidc_subject),
         }
     }
 
-    pub fn new_password(username: String, password_hash: String) -> Self {
+    pub fn new_password(email: EmailAddress, password_hash: String) -> Self {
         Self {
-            name: username.clone(),
-            username,
+            email,
             password_hash: Some(password_hash),
             oidc_linked_at: None,
             oidc_provider: None,
-            oidc_subject: None
+            oidc_subject: None,
         }
     }
 }
@@ -93,7 +90,7 @@ impl User {
 
 impl Display for User {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.base.name, self.id)
+        write!(f, "{}: {}", self.base.email, self.id)
     }
 }
 
@@ -142,31 +139,28 @@ impl StorableEntity for User {
             updated_at,
             base:
                 Self::BaseData {
-                    name,
-                    username,
+                    email,
                     password_hash,
                     oidc_linked_at,
                     oidc_provider,
-                    oidc_subject
+                    oidc_subject,
                 },
         } = self.clone();
 
         Ok((
             vec![
                 "id",
-                "name",
-                "username",
+                "email",
                 "password_hash",
                 "created_at",
                 "updated_at",
                 "oidc_linked_at",
                 "oidc_provider",
-                "oidc_subject"
+                "oidc_subject",
             ],
             vec![
                 SqlValue::Uuid(id),
-                SqlValue::String(name),
-                SqlValue::String(username),
+                SqlValue::Email(email),
                 SqlValue::OptionalString(password_hash),
                 SqlValue::Timestamp(created_at),
                 SqlValue::Timestamp(updated_at),
@@ -178,17 +172,19 @@ impl StorableEntity for User {
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
+        let email: EmailAddress = serde_json::from_str(&row.get::<String, _>("email"))
+            .or(Err(Error::msg("Failed to deserialize email")))?;
+
         Ok(User {
             id: row.get("id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             base: UserBase {
-                name: row.get("name"),
-                username: row.get("username"),
+                email,
                 password_hash: row.get("password_hash"),
                 oidc_linked_at: row.get("oidc_linked_at"),
                 oidc_provider: row.get("oidc_provider"),
-                oidc_subject: row.get("oidc_subject")
+                oidc_subject: row.get("oidc_subject"),
             },
         })
     }

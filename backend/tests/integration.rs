@@ -1,3 +1,4 @@
+use email_address::EmailAddress;
 use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
@@ -11,7 +12,6 @@ use std::process::{Child, Command};
 use uuid::Uuid;
 
 const BASE_URL: &str = "http://localhost:60072";
-const TEST_USERNAME: &str = "testuser";
 const TEST_PASSWORD: &str = "TestPassword123!";
 
 struct ContainerManager {
@@ -93,9 +93,9 @@ impl TestClient {
     }
 
     /// Register a new user and automatically login
-    async fn register(&self, username: &str, password: &str) -> Result<User, String> {
+    async fn register(&self, email: &EmailAddress, password: &str) -> Result<User, String> {
         let register_request = RegisterRequest {
-            username: username.to_string(),
+            email: email.clone(),
             password: password.to_string(),
         };
 
@@ -111,9 +111,9 @@ impl TestClient {
     }
 
     /// Login with existing credentials
-    async fn login(&self, username: &str, password: &str) -> Result<User, String> {
+    async fn login(&self, email: &EmailAddress, password: &str) -> Result<User, String> {
         let login_request = LoginRequest {
-            name: username.to_string(),
+            email: email.clone(),
             password: password.to_string(),
         };
 
@@ -216,16 +216,18 @@ where
 async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
     println!("\n=== Authenticating Test User ===");
 
+    let test_email: EmailAddress = EmailAddress::new_unchecked("user@example.com");
+
     // Try to register (will fail if user exists, which is fine)
-    match client.register(TEST_USERNAME, TEST_PASSWORD).await {
+    match client.register(&test_email, TEST_PASSWORD).await {
         Ok(user) => {
-            println!("✅ Registered new user: {}", user.base.username);
+            println!("✅ Registered new user: {}", user.base.email);
             Ok(user)
         }
         Err(e) if e.contains("already taken") => {
             // User exists, just login
             println!("User already exists, logging in...");
-            client.login(TEST_USERNAME, TEST_PASSWORD).await
+            client.login(&test_email, TEST_PASSWORD).await
         }
         Err(e) => Err(e),
     }
@@ -441,7 +443,7 @@ async fn test_full_integration() {
     let user = setup_authenticated_user(&client)
         .await
         .expect("Failed to authenticate user");
-    println!("✅ Authenticated as: {}", user.base.username);
+    println!("✅ Authenticated as: {}", user.base.email);
 
     // Wait for network
     println!("\n=== Waiting for Network ===");

@@ -6,15 +6,18 @@ use crate::server::{
     shared::{
         services::traits::CrudService,
         storage::{
-            filter::EntityFilter, generic::GenericPostgresStorage, traits::{StorableEntity, Storage}
+            filter::EntityFilter,
+            generic::GenericPostgresStorage,
+            traits::{StorableEntity, Storage},
         },
     },
     users::r#impl::base::{User, UserBase},
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use uuid::Uuid;
+use email_address::EmailAddress;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct UserService {
     user_storage: Arc<GenericPostgresStorage<User>>,
@@ -63,11 +66,11 @@ impl UserService {
     /// Create new user with OIDC (no password)
     pub async fn create_user_with_oidc(
         &self,
-        username: String,
+        email: EmailAddress,
         oidc_subject: String,
         oidc_provider: Option<String>,
     ) -> Result<User> {
-        let user = User::new(UserBase::new_oidc(username, oidc_subject, oidc_provider));
+        let user = User::new(UserBase::new_oidc(email, oidc_subject, oidc_provider));
 
         let (created_user, _) = self.create_user(user).await?;
         Ok(created_user)
@@ -76,17 +79,22 @@ impl UserService {
     /// Create new user with password (no OIDC)
     pub async fn create_user_with_password(
         &self,
-        username: String,
+        email: EmailAddress,
         password_hash: String,
     ) -> Result<User> {
-        let user = User::new(UserBase::new_password(username, password_hash));
+        let user = User::new(UserBase::new_password(email, password_hash));
 
         let (created_user, _) = self.create_user(user).await?;
         Ok(created_user)
     }
 
     /// Link OIDC to existing user
-    pub async fn link_oidc(&self, user_id: &Uuid, oidc_subject: String, oidc_provider: Option<String>) -> Result<User> {
+    pub async fn link_oidc(
+        &self,
+        user_id: &Uuid,
+        oidc_subject: String,
+        oidc_provider: Option<String>,
+    ) -> Result<User> {
         let mut user = self
             .get_by_id(user_id)
             .await?

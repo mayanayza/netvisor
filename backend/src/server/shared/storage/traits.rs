@@ -3,6 +3,7 @@ use std::net::IpAddr;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cidr::IpCidr;
+use email_address::EmailAddress;
 use sqlx::postgres::PgRow;
 use uuid::Uuid;
 
@@ -65,6 +66,7 @@ pub enum SqlValue {
     U16(u16),
     Bool(bool),
     Json(serde_json::Value),
+    Email(EmailAddress),
     Timestamp(DateTime<Utc>),
     OptionTimestamp(Option<DateTime<Utc>>),
     UuidArray(Vec<Uuid>),

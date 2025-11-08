@@ -1,18 +1,13 @@
-use std::sync::LazyLock;
-
-use regex::Regex;
+use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-
-static USERNAME_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9_]+$").unwrap());
 
 /// Login request from client
 /// Note: 'name' is used as the username
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct LoginRequest {
-    #[validate(length(min = 3, max = 50, message = "Name must be 3-50 characters"))]
-    pub name: String,
+    pub email: EmailAddress,
 
     #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
     pub password: String,
@@ -22,12 +17,7 @@ pub struct LoginRequest {
 /// Note: 'name' is used as the username
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct RegisterRequest {
-    #[validate(length(min = 3, max = 50, message = "Name must be 3-50 characters"))]
-    #[validate(regex(
-        path = "USERNAME_REGEX",
-        message = "Name can only contain letters, numbers, and underscores"
-    ))]
-    pub username: String,
+    pub email: EmailAddress,
 
     #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
     #[validate(custom(function = "validate_password_complexity"))]
@@ -65,8 +55,14 @@ pub struct OidcCallbackParams {
     pub state: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LinkOidcRequest {
-    pub code: String,
-    pub state: String,
+#[derive(Debug, Deserialize)]
+pub struct SetPasswordRequest {
+    pub password: String,
+}
+
+// Query params for authorize
+#[derive(Debug, Deserialize)]
+pub struct OidcAuthorizeParams {
+    pub link: Option<bool>,
+    pub return_url: Option<String>,
 }

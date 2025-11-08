@@ -14,13 +14,14 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
+use email_address::EmailAddress;
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use tokio::sync::RwLock;
 use validator::Validate;
 
 pub struct AuthService {
     user_service: Arc<UserService>,
-    login_attempts: Arc<RwLock<HashMap<String, (u32, Instant)>>>,
+    login_attempts: Arc<RwLock<HashMap<EmailAddress, (u32, Instant)>>>,
 }
 
 impl AuthService {
@@ -48,37 +49,30 @@ impl AuthService {
             .get_all(EntityFilter::unfiltered())
             .await?;
 
-        // Check if username already taken by a user with a password
-        let username_exists = all_users.iter().any(|u| {
-            u.base.username.to_lowercase() == request.username.to_lowercase()
-                && u.base.password_hash.is_some()
-        });
+        // Check if email already taken
+        let username_exists = all_users.iter().any(|u| u.base.email == request.email);
 
         if username_exists {
-            return Err(anyhow!("Username already taken"));
+            return Err(anyhow!("Email address already taken"));
         }
 
-       // Find seed user (only exists if NO users have been created yet)
+        // Find seed user (only exists if NO users have been created yet)
         let seed_user: Option<User> = all_users
             .iter()
-            .find(|u| {
-                u.base.password_hash.is_none() 
-                && u.base.oidc_subject.is_none()
-            })
+            .find(|u| u.base.password_hash.is_none() && u.base.oidc_subject.is_none())
             .cloned();
 
         let user = if let Some(mut seed_user) = seed_user {
             // First user ever - claim seed user
             tracing::info!("First user registration - claiming seed user");
-            seed_user.base.username = request.username.clone();
-            seed_user.base.name = request.username.clone();
+            seed_user.base.email = request.email.clone();
             seed_user.set_password(hash_password(&request.password)?);
             self.user_service.update(&mut seed_user).await?
         } else {
             // Not first user - create new user + network
             let new_user = User::new(UserBase::new_password(
-                request.username,
-                hash_password(&request.password)?
+                request.email,
+                hash_password(&request.password)?,
             ));
             let (user, _) = self.user_service.create_user(new_user).await?;
             user
@@ -91,15 +85,13 @@ impl AuthService {
     /// Login with username and password
     /// Returns User (session management handled by tower-sessions)
     pub async fn login(&self, request: LoginRequest) -> Result<User> {
-        tracing::debug!("Login request received: {:?}", request);
-
         // Validate request
         request
             .validate()
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
 
         // Check if account is locked due to too many failed attempts
-        self.check_login_lockout(&request.name).await?;
+        self.check_login_lockout(&request.email).await?;
 
         // Attempt login
         let result = self.try_login(&request).await;
@@ -108,7 +100,7 @@ impl AuthService {
         match result {
             Ok(user) => {
                 // Success - clear attempts
-                self.login_attempts.write().await.remove(&request.name);
+                self.login_attempts.write().await.remove(&request.email);
                 tracing::info!("User {} logged in successfully", user.id);
                 Ok(user)
             }
@@ -116,7 +108,7 @@ impl AuthService {
                 // Failure - increment attempts
                 let mut attempts = self.login_attempts.write().await;
                 let entry = attempts
-                    .entry(request.name.clone())
+                    .entry(request.email.clone())
                     .or_insert((0, Instant::now()));
                 entry.0 += 1;
                 entry.1 = Instant::now();
@@ -126,9 +118,9 @@ impl AuthService {
     }
 
     /// Check if user is locked out due to too many login attempts
-    async fn check_login_lockout(&self, name: &str) -> Result<()> {
+    async fn check_login_lockout(&self, email: &EmailAddress) -> Result<()> {
         let attempts = self.login_attempts.read().await;
-        if let Some((count, last_attempt)) = attempts.get(name)
+        if let Some((count, last_attempt)) = attempts.get(email)
             && *count >= Self::MAX_LOGIN_ATTEMPTS
         {
             let elapsed = last_attempt.elapsed().as_secs();
@@ -152,8 +144,8 @@ impl AuthService {
             .await?;
         let user = all_users
             .iter()
-            .find(|u| u.base.username.to_lowercase() == request.name.to_lowercase())
-            .ok_or_else(|| anyhow!("Invalid username or password"))?;
+            .find(|u| u.base.email == request.email)
+            .ok_or_else(|| anyhow!("Invalid email or password"))?;
 
         // Check if user has a password set
         let password_hash = user
@@ -168,16 +160,13 @@ impl AuthService {
         Ok(user.clone())
     }
 
-    /// Get user by username
-    pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>> {
+    /// Get user by email
+    pub async fn get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>> {
         let all_users = self
             .user_service
             .get_all(EntityFilter::unfiltered())
             .await?;
-        Ok(all_users
-            .iter()
-            .find(|u| u.base.username.to_lowercase() == name.to_lowercase())
-            .cloned())
+        Ok(all_users.iter().find(|u| u.base.email == *email).cloned())
     }
 
     /// Cleanup old login attempts (called periodically from background task)
@@ -193,7 +182,7 @@ impl AuthService {
 }
 
 /// Hash a password using Argon2id
-fn hash_password(password: &str) -> Result<String> {
+pub fn hash_password(password: &str) -> Result<String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
 
@@ -206,7 +195,7 @@ fn hash_password(password: &str) -> Result<String> {
 }
 
 /// Verify a password against a hash
-fn verify_password(password: &str, hash: &str) -> Result<()> {
+pub fn verify_password(password: &str, hash: &str) -> Result<()> {
     let parsed_hash =
         PasswordHash::new(hash).map_err(|e| anyhow!("Invalid password hash: {}", e))?;
 

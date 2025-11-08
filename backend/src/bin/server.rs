@@ -92,7 +92,7 @@ impl From<Cli> for CliArgs {
             oidc_client_secret: cli.oidc_client_secret,
             oidc_issuer_url: cli.oidc_issuer_url,
             oidc_provider_name: cli.oidc_provider_name,
-            oidc_redirect_url: cli.oidc_redirect_url
+            oidc_redirect_url: cli.oidc_redirect_url,
         }
     }
 }
