@@ -56,6 +56,26 @@ struct Cli {
     /// Enable or disable registration flow
     #[arg(long)]
     disable_registration: bool,
+
+    /// OIDC client ID
+    #[arg(long)]
+    oidc_client_id: Option<String>,
+
+    /// OIDC client secret
+    #[arg(long)]
+    oidc_client_secret: Option<String>,
+
+    /// OIDC issuer url
+    #[arg(long)]
+    oidc_issuer_url: Option<String>,
+
+    /// OIDC issuer url
+    #[arg(long)]
+    oidc_provider_name: Option<String>,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    oidc_redirect_url: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -68,6 +88,11 @@ impl From<Cli> for CliArgs {
             integrated_daemon_url: cli.integrated_daemon_url,
             use_secure_session_cookies: cli.use_secure_session_cookies,
             disable_registration: cli.disable_registration,
+            oidc_client_id: cli.oidc_client_id,
+            oidc_client_secret: cli.oidc_client_secret,
+            oidc_issuer_url: cli.oidc_issuer_url,
+            oidc_provider_name: cli.oidc_provider_name,
+            oidc_redirect_url: cli.oidc_redirect_url,
         }
     }
 }

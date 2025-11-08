@@ -41,7 +41,7 @@ export async function login(request: LoginRequest): Promise<boolean> {
 
 	if (result && result.success && result.data) {
 		isAuthenticated.set(true);
-		pushSuccess(`Welcome back, ${result.data.username}!`);
+		pushSuccess(`Welcome back, ${result.data.email}!`);
 		return true;
 	}
 
@@ -65,7 +65,7 @@ export async function register(request: RegisterRequest): Promise<boolean> {
 
 	if (result && result.success && result.data) {
 		isAuthenticated.set(true);
-		pushSuccess(`Welcome, ${result.data.username}!`);
+		pushSuccess(`Welcome, ${result.data.email}!`);
 		return true;
 	}
 

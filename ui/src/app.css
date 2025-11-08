@@ -96,6 +96,10 @@
 		@apply hover:ring-1 hover:ring-gray-600;
 		@apply rounded-2xl p-6 shadow-xl transition-all duration-300 ease-in-out;
 	}
+
+	.card-static {
+		@apply hover:ring-0;
+	}
 	/* Card dividers/borders */
 	.card-divider-h {
 		@apply border-t border-gray-700;

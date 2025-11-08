@@ -12,6 +12,7 @@
 	import { groups } from '$lib/features/groups/store';
 	import { networks } from '$lib/features/networks/store';
 	import { subnets } from '$lib/features/subnets/store';
+	import { pushError } from '$lib/shared/stores/feedback';
 
 	$: if (!$isAuthenticated) {
 		resetTopologyOptions();
@@ -23,6 +24,17 @@
 	}
 
 	onMount(async () => {
+		// Check for OIDC error in URL
+		const error = $page.url.searchParams.get('error');
+		if (error) {
+			pushError(decodeURIComponent(error));
+
+			// Clean up URL
+			const cleanUrl = new URL($page.url);
+			cleanUrl.searchParams.delete('error');
+			window.history.replaceState({}, '', cleanUrl.toString());
+		}
+
 		// Check authentication status
 		await checkAuth();
 

@@ -13,7 +13,7 @@
 	let loading = false;
 
 	let formData: RegisterRequest & { confirmPassword: string } = {
-		username: '',
+		email: '',
 		password: '',
 		confirmPassword: ''
 	};
@@ -25,7 +25,7 @@
 
 	function resetForm() {
 		formData = {
-			username: '',
+			email: '',
 			password: '',
 			confirmPassword: ''
 		};
@@ -36,7 +36,7 @@
 		try {
 			// Only pass username and password to onRegister
 			await onRegister({
-				username: formData.username,
+				email: formData.email,
 				password: formData.password
 			});
 		} finally {
