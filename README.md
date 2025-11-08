@@ -155,9 +155,10 @@ You can deploy additional daemons at any time after setting up your first networ
 1. **Access the UI** at `http://<your-server-ip>:60072`
 
 2. **Create your account**: On first load, you'll see the registration page
-   - Enter a username
+   - Enter an email
    - Enter a password (minimum 12 characters with uppercase, lowercase, number, and special character)
    - Click **Register** to create your account
+   - Alternatively: NetVisor supports OIDC. Go to [OIDC Setup](#oidc-setup) for more details.
 
 <p align="center">
   <img src="./media/registration.png" width="400" alt="Registration Screen">
@@ -593,12 +594,30 @@ The server supports the following configuration options:
 | Use Secure Cookies | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Enable secure session cookies for HTTPS deployments |
 | Integrated Daemon URL | `--integrated-daemon-url` | `NETVISOR_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL where the server can reach the integrated daemon |
 | Disable Registration | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | `http://172.17.0.1:60073` | Flag to disable new user registration |
+| OIDC Issuer URL | `--oidc-issuer-url` | `NETVISOR_OIDC_ISSUER_URL` | - | The OIDC provider's issuer URL (must end with `/`). Example: `https://authentik.company.com/application/o/netvisor/` |
+| OIDC Client ID | `--oidc-client-id` | `NETVISOR_OIDC_CLIENT_ID` | - | OAuth2 client ID from your OIDC provider |
+| OIDC Client Secret | `--oidc-client-secret` | `NETVISOR_OIDC_CLIENT_SECRET` | - | OAuth2 client secret from your OIDC provider |
+| OIDC Provider Name | `--oidc-provider-name` | `NETVISOR_OIDC_PROVIDER_NAME` | - | Display name shown in the UI (e.g., `Authentik`, `Keycloak`, `Auth0`) |
 
 #### Session Cookie Security
 
 **Important**: Set `NETVISOR_USE_SECURE_SESSION_COOKIES=true` when running NetVisor behind HTTPS (reverse proxy or direct TLS). This ensures session cookies are marked as secure and only transmitted over HTTPS.
 
 For internal networks without HTTPS, keep this setting as `false` (default).
+
+#### OIDC Setup
+
+To use OIDC, you'll need to set the following:
+
+NETVISOR_OIDC_ISSUER_URL=https://your-provider.com/application/o/netvisor/
+NETVISOR_OIDC_CLIENT_ID=your-client-id
+NETVISOR_OIDC_CLIENT_SECRET=your-client-secret
+NETVISOR_OIDC_PROVIDER_NAME=oidc-display-name
+
+When configuring your OIDC provider, use this callback URL:
+```
+http://your-netvisor-domain:60072/api/auth/oidc/callback
+```
 
 ### UI Configuration
 
