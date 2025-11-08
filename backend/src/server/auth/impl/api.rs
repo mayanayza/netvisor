@@ -56,8 +56,9 @@ pub struct OidcCallbackParams {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SetPasswordRequest {
-    pub password: String,
+pub struct UpdateEmailPasswordRequest {
+    pub password: Option<String>,
+    pub email: Option<EmailAddress>,
 }
 
 // Query params for authorize

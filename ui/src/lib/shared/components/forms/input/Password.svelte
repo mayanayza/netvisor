@@ -1,7 +1,7 @@
 <!-- ui/src/lib/shared/components/forms/input/PasswordInput.svelte -->
 <script lang="ts">
 	import { field } from 'svelte-forms';
-	import { required } from 'svelte-forms/validators';
+	import { required as requiredValidation } from 'svelte-forms/validators';
 	import { minLength, passwordComplexity, passwordMatch } from '../validators';
 	import type { FormApi } from '../types';
 	import TextInput from './TextInput.svelte';
@@ -12,14 +12,16 @@
 	export let confirmValue: string = '';
 	export let label: string = 'Password';
 	export let confirmLabel: string = 'Confirm Password';
+	export let required: boolean = true;
 
 	// Create form fields with validation
-	const password = field('password', value, [required(), minLength(12), passwordComplexity()]);
+	let passwordValidation = [minLength(12), passwordComplexity()];
+	if (required) passwordValidation.push(requiredValidation());
+	const password = field('password', value, passwordValidation);
 
-	const confirmPassword = field('confirmPassword', confirmValue, [
-		required(),
-		passwordMatch(() => $password.value)
-	]);
+	let confirmPasswordValidation = [passwordMatch(() => $password.value)];
+	if (required) confirmPasswordValidation.push(requiredValidation());
+	const confirmPassword = field('confirmPassword', confirmValue, confirmPasswordValidation);
 
 	// Update parent values when field values change
 	$: value = $password.value;
@@ -46,7 +48,7 @@
 			type="password"
 			{formApi}
 			placeholder="Create a strong password"
-			required={true}
+			{required}
 			field={password}
 		/>
 
@@ -80,7 +82,7 @@
 			type="password"
 			{formApi}
 			placeholder="Re-enter your password"
-			required={true}
+			{required}
 			field={confirmPassword}
 		/>
 	{/if}

@@ -84,7 +84,7 @@ where
             SqlValue::IpAddr(v) => query.bind(serde_json::to_string(v)?),
             SqlValue::RunType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::DiscoveryType(v) => query.bind(serde_json::to_value(v)?),
-            SqlValue::Email(v) => query.bind(serde_json::to_string(v)?),
+            SqlValue::Email(v) => query.bind(v.as_str()),
         };
 
         Ok(value)

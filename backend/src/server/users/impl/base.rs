@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::str::FromStr;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 use anyhow::{Error, Result};
@@ -172,8 +173,8 @@ impl StorableEntity for User {
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        let email: EmailAddress = serde_json::from_str(&row.get::<String, _>("email"))
-            .or(Err(Error::msg("Failed to deserialize email")))?;
+        let email = EmailAddress::from_str(&row.get::<String, _>("email"))
+            .map_err(|e| Error::msg(format!("Failed to parse email: {}", e)))?;
 
         Ok(User {
             id: row.get("id"),

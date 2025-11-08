@@ -1,24 +1,33 @@
-<!-- ui/src/lib/features/auth/components/AuthSettingsModal.svelte -->
 <script lang="ts">
 	import { currentUser, logout } from '$lib/features/auth/store';
 	import { api } from '$lib/shared/utils/api';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import { Link, Key, LogOut, User } from 'lucide-svelte';
+	import { field } from 'svelte-forms';
+	import { email as emailValidator, required } from 'svelte-forms/validators';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
+	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 
 	export let isOpen = false;
 	export let onClose: () => void;
 
-	let activeSection: 'main' | 'password' = 'main';
+	let activeSection: 'main' | 'credentials' = 'main';
 	let isLinkingOidc = false;
 	let loading = false;
 
-	let formData: { password: string; confirmPassword: string } = {
+	let formData: { email: string; password: string; confirmPassword: string } = {
+		email: '',
 		password: '',
 		confirmPassword: ''
 	};
+
+	// Email field with validation
+	const email = field('email', formData.email, [required(), emailValidator()]);
+
+	// Update formData when field value changes
+	$: formData.email = $email.value;
 
 	// Reset to main view when modal opens
 	$: if (isOpen) {
@@ -27,13 +36,13 @@
 
 	function resetModal() {
 		activeSection = 'main';
-		formData = { password: '', confirmPassword: '' };
+		formData = { email: '', password: '', confirmPassword: '' };
 		isLinkingOidc = false;
+		email.set($currentUser?.email || '');
 	}
 
 	async function linkOidcAccount() {
 		isLinkingOidc = true;
-		// Pass current URL as return_url parameter
 		const returnUrl = encodeURIComponent(window.location.origin);
 		window.location.href = `/api/auth/oidc/authorize?link=true&return_url=${returnUrl}`;
 	}
@@ -50,20 +59,39 @@
 		}
 	}
 
-	async function handleSavePassword() {
+	async function handleSaveCredentials() {
 		loading = true;
 		try {
-			const result = await api.request('/auth/set-password', currentUser, (user) => user, {
+			// Build request with only changed/provided fields
+			const updateRequest: { email?: string; password?: string } = {};
+
+			// Add email if it changed and OIDC is not linked
+			if (formData.email !== $currentUser?.email) {
+				updateRequest.email = formData.email;
+			}
+
+			// Add password if provided
+			if (formData.password) {
+				updateRequest.password = formData.password;
+			}
+
+			// Check if there's anything to update
+			if (Object.keys(updateRequest).length === 0) {
+				pushError('No changes to save');
+				return;
+			}
+
+			const result = await api.request('/auth/update', currentUser, (user) => user, {
 				method: 'POST',
-				body: JSON.stringify({ password: formData.password })
+				body: JSON.stringify(updateRequest)
 			});
 
 			if (result?.success) {
-				pushSuccess('Password updated successfully');
+				pushSuccess('Credentials updated successfully');
 				activeSection = 'main';
-				formData = { password: '', confirmPassword: '' };
+				formData = { email: '', password: '', confirmPassword: '' };
 			} else {
-				pushError('Failed to set password');
+				pushError(result?.error || 'Failed to update credentials');
 			}
 		} finally {
 			loading = false;
@@ -71,9 +99,10 @@
 	}
 
 	function handleCancel() {
-		if (activeSection === 'password') {
+		if (activeSection === 'credentials') {
 			activeSection = 'main';
-			formData = { password: '', confirmPassword: '' };
+			formData = { email: '', password: '', confirmPassword: '' };
+			email.set($currentUser?.email || '');
 		} else {
 			onClose();
 		}
@@ -86,8 +115,8 @@
 	}
 
 	$: hasOidc = !!$currentUser?.oidc_provider;
-	$: modalTitle = activeSection === 'main' ? 'Account Settings' : 'Set Password';
-	$: showSave = activeSection === 'password';
+	$: modalTitle = activeSection === 'main' ? 'Account Settings' : 'Update Credentials';
+	$: showSave = activeSection === 'credentials';
 	$: cancelLabel = activeSection === 'main' ? 'Close' : 'Back';
 </script>
 
@@ -95,11 +124,11 @@
 	{isOpen}
 	title={modalTitle}
 	{loading}
-	saveLabel="Save Password"
+	saveLabel="Save Changes"
 	{showSave}
 	showCancel={true}
 	{cancelLabel}
-	onSave={showSave ? handleSavePassword : null}
+	onSave={showSave ? handleSaveCredentials : null}
 	onCancel={handleCancel}
 	size="md"
 	let:formApi
@@ -109,89 +138,111 @@
 	</svelte:fragment>
 
 	{#if activeSection === 'main'}
-		<div class="space-y-6">
-			<!-- User Info -->
-			<div class="card card-static">
-				<h3 class="text-primary mb-3 text-sm font-semibold">User Information</h3>
-				<div class="space-y-2">
-					<div class="flex justify-between">
-						<span class="text-secondary text-sm">Email:</span>
-						<span class="text-primary text-sm">{$currentUser?.email}</span>
-					</div>
-					<div class="flex justify-between">
-						<span class="text-secondary text-sm">User ID:</span>
-						<span class="text-primary font-mono text-xs">{$currentUser?.id}</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Authentication Methods -->
-			<div>
-				<h3 class="text-primary mb-3 text-sm font-semibold">Authentication Methods</h3>
-				<div class="space-y-3">
-					<!-- Password -->
-					<div class="card card-static">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								<Key class="text-secondary h-4 w-4 flex-shrink-0" />
-								<div>
-									<p class="text-primary text-sm font-medium">Password</p>
-									<p class="text-secondary text-xs">Set or update your password</p>
-								</div>
-							</div>
-							<button on:click={() => (activeSection = 'password')} class="btn-primary">
-								Set Password
-							</button>
+		{#if $currentUser}
+			<div class="space-y-6">
+				<!-- User Info -->
+				<div class="card card-static">
+					<h3 class="text-primary mb-3 text-sm font-semibold">User Information</h3>
+					<div class="space-y-2">
+						<div class="flex justify-between">
+							<span class="text-secondary text-sm">Email:</span>
+							<span class="text-primary text-sm">{$currentUser.email}</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-secondary text-sm">User ID:</span>
+							<span class="text-primary font-mono text-xs">{$currentUser.id}</span>
 						</div>
 					</div>
+				</div>
 
-					<!-- OIDC -->
-					<div class="card card-static">
-						<div class="flex items-center justify-between">
-							<div class="mr-2 flex items-center gap-2">
-								<Link class="text-secondary h-4 w-4 flex-shrink-0" />
-								<div>
-									<p class="text-primary text-sm font-medium">OIDC Provider</p>
-									{#if hasOidc}
-										<p class="text-secondary text-xs">
-											{$currentUser?.oidc_provider} - Linked on {new Date(
-												$currentUser?.oidc_linked_at || ''
-											).toLocaleDateString()}
-										</p>
-									{:else}
-										<p class="text-secondary text-xs">Not linked</p>
-									{/if}
+				<!-- Authentication Methods -->
+				<div>
+					<h3 class="text-primary mb-3 text-sm font-semibold">Authentication Methods</h3>
+					<div class="space-y-3">
+						<!-- Email & Password -->
+						<div class="card card-static">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<Key class="text-secondary h-4 w-4 flex-shrink-0" />
+									<div>
+										<p class="text-primary text-sm font-medium">Email & Password</p>
+										<p class="text-secondary text-xs">Update email and password</p>
+									</div>
 								</div>
-							</div>
-							{#if hasOidc}
-								<button on:click={unlinkOidcAccount} class="btn-danger"> Unlink </button>
-							{:else}
-								<button on:click={linkOidcAccount} disabled={isLinkingOidc} class="btn-primary">
-									{isLinkingOidc ? 'Redirecting...' : 'Link'}
+								<button
+									on:click={() => {
+										activeSection = 'credentials';
+										email.set($currentUser.email);
+									}}
+									class="btn-primary"
+								>
+									Update
 								</button>
-							{/if}
+							</div>
+						</div>
+
+						<!-- OIDC -->
+						<div class="card card-static">
+							<div class="flex items-center justify-between">
+								<div class="mr-2 flex items-center gap-2">
+									<Link class="text-secondary h-4 w-4 flex-shrink-0" />
+									<div>
+										<p class="text-primary text-sm font-medium">OIDC Provider</p>
+										{#if hasOidc}
+											<p class="text-secondary text-xs">
+												{$currentUser.oidc_provider} - Linked on {new Date(
+													$currentUser.oidc_linked_at || ''
+												).toLocaleDateString()}
+											</p>
+										{:else}
+											<p class="text-secondary text-xs">Not linked</p>
+										{/if}
+									</div>
+								</div>
+								{#if hasOidc}
+									<button on:click={unlinkOidcAccount} class="btn-danger"> Unlink </button>
+								{:else}
+									<button on:click={linkOidcAccount} disabled={isLinkingOidc} class="btn-primary">
+										{isLinkingOidc ? 'Redirecting...' : 'Link'}
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
 
-			<!-- Logout -->
-			<div class="card card-static">
-				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						<LogOut class="text-secondary h-4 w-4" />
-						<span class="text-primary text-sm">Sign out of your account</span>
+				<!-- Logout -->
+				<div class="card card-static">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<LogOut class="text-secondary h-4 w-4" />
+							<span class="text-primary text-sm">Sign out of your account</span>
+						</div>
+						<button on:click={handleLogout} class="btn-secondary"> Logout </button>
 					</div>
-					<button on:click={handleLogout} class="btn-secondary"> Logout </button>
+				</div>
+			</div>
+		{:else}
+			<div class="text-secondary py-8 text-center">Loading user information...</div>
+		{/if}
+	{:else if activeSection === 'credentials'}
+		<div class="space-y-2">
+			<p class="text-secondary mb-2 text-sm">Update your email address and/or password</p>
+			<div class="space-y-6">
+				<!-- Email field  -->
+				<TextInput label="Email" id="email" {formApi} placeholder="Enter email" field={email} />
+
+				<!-- Password fields -->
+				<div class="space-y-2">
+					<Password
+						{formApi}
+						bind:value={formData.password}
+						bind:confirmValue={formData.confirmPassword}
+						showConfirm={true}
+						required={false}
+					/>
 				</div>
 			</div>
 		</div>
-	{:else if activeSection === 'password'}
-		<Password
-			{formApi}
-			bind:value={formData.password}
-			bind:confirmValue={formData.confirmPassword}
-			showConfirm={true}
-		/>
 	{/if}
 </EditModal>

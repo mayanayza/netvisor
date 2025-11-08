@@ -3,7 +3,7 @@ use crate::server::{
     auth::{
         r#impl::api::{
             LoginRequest, OidcAuthorizeParams, OidcCallbackParams, RegisterRequest,
-            SetPasswordRequest,
+            UpdateEmailPasswordRequest,
         },
         oidc::OidcPendingAuth,
         service::hash_password,
@@ -35,7 +35,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/logout", post(logout))
         .route("/me", post(get_current_user))
         .nest("/keys", api_keys::handlers::create_router())
-        .route("/set-password", post(set_password))
+        .route("/update", post(update_password_auth))
         .route("/oidc/authorize", get(oidc_authorize))
         .route("/oidc/callback", get(oidc_callback))
         .route("/oidc/unlink", post(unlink_oidc_account))
@@ -109,10 +109,10 @@ async fn get_current_user(
     Ok(Json(ApiResponse::success(user)))
 }
 
-async fn set_password(
+async fn update_password_auth(
     State(state): State<Arc<AppState>>,
     session: Session,
-    Json(request): Json<SetPasswordRequest>,
+    Json(request): Json<UpdateEmailPasswordRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     let user_id: Uuid = session
         .get("user_id")
@@ -127,8 +127,14 @@ async fn set_password(
         .await?
         .ok_or_else(|| ApiError::not_found("User not found".to_string()))?;
 
-    // Hash and set password
-    user.set_password(hash_password(&request.password)?);
+    if let Some(password) = request.password {
+        user.set_password(hash_password(&password)?);
+    }
+
+    if let Some(email) = request.email {
+        user.base.email = email
+    }
+
     state.services.user_service.update(&mut user).await?;
 
     Ok(Json(ApiResponse::success(user)))
@@ -385,7 +391,7 @@ async fn oidc_callback(
                 .find(|u| u.base.password_hash.is_none() && u.base.oidc_subject.is_none())
                 .cloned();
 
-            let fallback_email_str = format!("user_{}@example.com", &user_info.subject[..8]);
+            let fallback_email_str = format!("user{}@example.com", &user_info.subject[..8]);
 
             let email_str = user_info
                 .email

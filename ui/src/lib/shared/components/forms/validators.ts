@@ -84,19 +84,6 @@ export const maxLength =
 		};
 	};
 
-// Required field validator for non-editing contexts
-export const requiredForNew =
-	(isEditing: boolean): Validator =>
-	(value: string) => {
-		if (isEditing) return { valid: true, name: 'requiredForNew' };
-
-		return {
-			valid: Boolean(value && value.trim()),
-			name: 'This field is required for new entries',
-			message: 'This field is required for new entries'
-		};
-	};
-
 // Port range validator
 export const portRange = (): Validator => (value: number | string) => {
 	if (!value && value !== 0) return { valid: true, name: 'portRange' };
@@ -113,8 +100,7 @@ export const portRange = (): Validator => (value: number | string) => {
 export const minLength =
 	(min: number): Validator =>
 	(value: string) => {
-		if (!value)
-			return { valid: false, name: 'minLength', message: `Must be at least ${min} characters` };
+		if (!value) return { valid: true, name: 'minLength' };
 
 		return {
 			valid: value.length >= min,
@@ -123,9 +109,9 @@ export const minLength =
 		};
 	};
 
-// Password complexity validator
 export const passwordComplexity = (): Validator => (value: string) => {
-	if (!value) return { valid: false, name: 'passwordComplexity', message: 'Password is required' };
+	// Don't return invalid for empty values - let required() handle that
+	if (!value) return { valid: true, name: 'passwordComplexity' };
 
 	const hasUppercase = /[A-Z]/.test(value);
 	const hasLowercase = /[a-z]/.test(value);
@@ -147,8 +133,25 @@ export const passwordComplexity = (): Validator => (value: string) => {
 export const passwordMatch =
 	(getPasswordValue: () => string): Validator =>
 	(value: string) => {
+		const passwordValue = getPasswordValue();
+
+		// If password is empty, confirm can be empty
+		if (!passwordValue || passwordValue.trim() === '') {
+			return { valid: true, name: 'passwordMatch' };
+		}
+
+		// If password has value but confirm is empty, that's invalid
+		if (!value || value.trim() === '') {
+			return {
+				valid: false,
+				name: 'Passwords do not match',
+				message: 'Passwords do not match'
+			};
+		}
+
+		// Both have values - check if they match
 		return {
-			valid: value === getPasswordValue(),
+			valid: value === passwordValue,
 			name: 'Passwords do not match',
 			message: 'Passwords do not match'
 		};
