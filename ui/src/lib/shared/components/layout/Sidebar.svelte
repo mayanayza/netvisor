@@ -164,12 +164,12 @@
 	const sectionHeaderClass =
 		'text-secondary hover:text-primary flex w-full items-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-gray-800/50';
 
-	function getNavItemClass(item: NavItem): string {
-		const isActive = activeTab === item.id;
+	$: getNavItemClass = (item: NavItem) => {
+		const isActive = activeTab === item.id || (item.id === 'account' && showAuthSettings);
 		return `flex w-full items-center rounded-lg font-medium transition-colors ${
 			isActive ? 'text-primary border border-blue-600 bg-blue-700' : inactiveButtonClass
 		}`;
-	}
+	};
 </script>
 
 <div
