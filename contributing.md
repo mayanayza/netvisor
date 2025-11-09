@@ -339,6 +339,12 @@ Here are the available pattern types:
 
 This is the preferred match type, as the existence of the name of the service in a response is a strong signal that it is in fact the service in question.
 
+That said, some services will contain the unique name of a service in circumstances like:
+1. Dashboards will contain multiple service names depending on the service being displayed
+2. Service names that are short or parts of common words can be contained in other words (ie "Plex" is part of the word "Complex", so if a service has the word "Complex" on the endpoint being checked it will cause a false positive)
+
+So, it's best to include another pattern alongside a Pattern::Endpoint just to be sure, or use a very specific string match (ie a phrase rather than a word).
+
 **Pattern::Endpoint**
 Check if an endpoint returns expected content:
 
