@@ -3,6 +3,7 @@
 	import { onDestroy } from 'svelte';
 
 	export let title: string = 'Modal';
+	export let centerTitle: boolean = false;
 	export let isOpen: boolean = false;
 	export let onClose: (() => void) | null = null;
 	export let size: 'sm' | 'md' | 'lg' | 'xl' | 'full' = 'lg';
@@ -68,14 +69,26 @@
 		>
 			<!-- Header -->
 			<div class="modal-header">
-				<div class="flex items-center gap-3">
+				{#if centerTitle}
 					{#if $$slots['header-icon']}
 						<slot name="header-icon" />
 					{/if}
-					<h2 id="modal-title" class="text-primary text-xl font-semibold">
+					<h2
+						id="modal-title"
+						class="text-primary absolute left-1/2 -translate-x-1/2 text-xl font-semibold"
+					>
 						{title}
 					</h2>
-				</div>
+				{:else}
+					<div class="flex items-center gap-3">
+						{#if $$slots['header-icon']}
+							<slot name="header-icon" />
+						{/if}
+						<h2 id="modal-title" class="text-primary text-xl font-semibold">
+							{title}
+						</h2>
+					</div>
+				{/if}
 
 				{#if showCloseButton}
 					<button type="button" on:click={handleClose} class="btn-icon" aria-label="Close modal">

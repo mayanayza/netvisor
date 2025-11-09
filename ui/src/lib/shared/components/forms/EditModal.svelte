@@ -5,6 +5,7 @@
 	import { pushWarning } from '$lib/shared/stores/feedback';
 
 	export let title: string = 'Edit';
+	export let centerTitle: boolean = false;
 	export let isOpen: boolean = false;
 	export let onSave: (() => void) | null = null;
 	export let onCancel: (() => void) | null = null;
@@ -71,6 +72,7 @@
 
 <GenericModal
 	{isOpen}
+	{centerTitle}
 	{title}
 	{size}
 	{preventCloseOnClickOutside}

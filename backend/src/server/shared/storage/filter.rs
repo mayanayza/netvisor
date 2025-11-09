@@ -1,3 +1,4 @@
+use email_address::EmailAddress;
 use uuid::Uuid;
 
 use crate::server::shared::storage::traits::SqlValue;
@@ -101,6 +102,13 @@ impl EntityFilter {
         self.values.push(SqlValue::String(subject));
         self.conditions
             .push("oidc_provider IS NOT NULL".to_string());
+        self
+    }
+
+    pub fn email(mut self, email: &EmailAddress) -> Self {
+        self.conditions
+            .push(format!("email = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::Email(email.clone()));
         self
     }
 

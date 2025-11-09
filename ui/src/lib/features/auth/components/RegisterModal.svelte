@@ -1,8 +1,6 @@
 <script lang="ts">
 	import type { RegisterRequest } from '../types/base';
-	import { UserPlus } from 'lucide-svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
-	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import RegisterForm from './RegisterForm.svelte';
 
 	export let isOpen = false;
@@ -49,6 +47,7 @@
 	{isOpen}
 	title="Create your account"
 	{loading}
+	centerTitle={true}
 	saveLabel="Create Account"
 	showCancel={false}
 	showCloseButton={false}
@@ -60,7 +59,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={UserPlus} color="#10b981" />
+		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
 	</svelte:fragment>
 
 	<!-- Content -->

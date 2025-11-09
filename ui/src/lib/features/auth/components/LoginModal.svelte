@@ -1,16 +1,22 @@
 <script lang="ts">
-	import { LogIn } from 'lucide-svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
-	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import type { LoginRequest } from '../types/base';
 	import LoginForm from './LoginForm.svelte';
+	import { config, getConfig } from '$lib/shared/stores/config';
+	import { loadData } from '$lib/shared/utils/dataLoader';
 
 	export let isOpen = false;
 	export let onLogin: (data: LoginRequest) => Promise<void> | void;
 	export let onClose: () => void;
 	export let onSwitchToRegister: (() => void) | null = null;
 
-	let loading = false;
+	const loading = loadData([getConfig]);
+	let signingIn = false;
+
+	$: disableRegistration = $loading ? false : $config.disable_registration;
+	$: enableOidc = $loading ? true : $config.oidc_enabled;
+
+	console.log(enableOidc);
 
 	let formData: LoginRequest = {
 		email: '',
@@ -36,11 +42,11 @@
 	}
 
 	async function handleSubmit() {
-		loading = true;
+		signingIn = true;
 		try {
 			await onLogin(formData);
 		} finally {
-			loading = false;
+			signingIn = false;
 		}
 	}
 </script>
@@ -48,7 +54,8 @@
 <EditModal
 	{isOpen}
 	title="Sign in to NetVisor"
-	{loading}
+	loading={$loading}
+	centerTitle={true}
 	saveLabel="Sign In"
 	cancelLabel="Cancel"
 	showCloseButton={false}
@@ -61,29 +68,39 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={LogIn} color="#3b82f6" />
+		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
 	</svelte:fragment>
 
-	<!-- Content -->
+	<!-- Content (remove padding to eliminate gap) -->
 	<LoginForm {formApi} bind:formData />
 
 	<!-- Custom footer with register link -->
 	<svelte:fragment slot="footer">
 		<div class="flex w-full flex-col gap-4">
 			<!-- Sign In Button -->
-			<button type="button" disabled={loading} on:click={handleSubmit} class="btn-primary w-full">
-				{loading ? 'Signing in...' : 'Sign In'}
+			<button type="button" disabled={signingIn} on:click={handleSubmit} class="btn-primary w-full">
+				{signingIn ? 'Signing in...' : 'Sign In with Email'}
 			</button>
 
-			<!-- OIDC Button -->
-			<div>
+			<!-- Separator before OIDC -->
+			{#if enableOidc}
+				<div class="relative">
+					<div class="absolute inset-0 flex items-center">
+						<div class="w-full border-t border-gray-600"></div>
+					</div>
+					<div class="relative flex justify-center text-sm">
+						<span class="bg-gray-900 px-2 text-gray-400">or</span>
+					</div>
+				</div>
+
+				<!-- OIDC Button -->
 				<button on:click={handleOidcLogin} class="btn-secondary w-full">
-					Sign in with OIDC Provider
+					Sign in with {$config.oidc_provider_name}
 				</button>
-			</div>
+			{/if}
 
 			<!-- Register Link -->
-			{#if onSwitchToRegister}
+			{#if onSwitchToRegister && !disableRegistration}
 				<div class="text-center">
 					<p class="text-sm text-gray-400">
 						Don't have an account?

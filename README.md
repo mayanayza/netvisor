@@ -620,40 +620,20 @@ When configuring your OIDC provider, use this callback URL:
 ```
 http://your-netvisor-domain:60072/api/auth/oidc/callback
 ```
-
 ### UI Configuration
 
-The UI supports the following configuration options for API connectivity:
+The UI automatically uses the hostname and port from your browser's address bar.
 
-| Parameter | Environment Variable | Default | Description |
-|-----------|---------------------|---------|-------------|
-| Server Hostname | `PUBLIC_SERVER_HOSTNAME` | `default` | Hostname for API requests. Use `default` to automatically use the browser's hostname (recommended for most setups, including reverse proxies). Set to a specific hostname only when the API is on a different domain. |
-| Server Port | `PUBLIC_SERVER_PORT` | `60072` | Port for API requests. Only used when `PUBLIC_SERVER_HOSTNAME` is set to a specific hostname (not `default`). Omit this variable when using a reverse proxy on standard ports. |
+**Advanced: API on different domain**
 
-**Configuration Examples**:
-
-1. **Direct access (development/internal)**: Use default settings
-```yaml
-environment:
-  PUBLIC_SERVER_HOSTNAME: default
-  PUBLIC_SERVER_PORT: 60072
+If your API server is on a different hostname than where the UI is served (rare), rebuild the Docker image with:
+```bash
+docker build \
+  --build-arg PUBLIC_SERVER_HOSTNAME=api.example.com \
+  --build-arg PUBLIC_SERVER_PORT=8080 \
+  -f backend/Dockerfile \
+  -t netvisor-server:custom .
 ```
-
-2. **Reverse proxy (production)**: Use default hostname, omit port
-```yaml
-environment:
-  PUBLIC_SERVER_HOSTNAME: default
-  # PUBLIC_SERVER_PORT not needed - uses browser's port
-```
-
-3. **API on different domain**: Specify both hostname and port
-```yaml
-environment:
-  PUBLIC_SERVER_HOSTNAME: api.example.com
-  PUBLIC_SERVER_PORT: 8080
-```
-
-**How it works**: When `PUBLIC_SERVER_HOSTNAME=default`, the UI uses relative URLs that automatically inherit the protocol, hostname, and port from your browser's address bar. This works seamlessly with reverse proxies and different deployment configurations.
 
 ---
 
