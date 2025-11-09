@@ -14,9 +14,13 @@ export const isCheckingAuth = writable<boolean>(true);
 export async function checkAuth(): Promise<boolean> {
 	isCheckingAuth.set(true);
 
-	const result = await api.request<User, User | null>('/auth/me', currentUser, (user) => user, {
-		method: 'POST'
-	});
+	const result = await api.request<User, User | null>(
+		'/auth/me',
+		currentUser,
+		(user) => user,
+		{ method: 'POST' },
+		true
+	);
 
 	if (result && result.success && result.data) {
 		isAuthenticated.set(true);

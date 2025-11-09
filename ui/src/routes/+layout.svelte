@@ -13,6 +13,7 @@
 	import { networks } from '$lib/features/networks/store';
 	import { subnets } from '$lib/features/subnets/store';
 	import { pushError } from '$lib/shared/stores/feedback';
+	import { getConfig } from '$lib/shared/stores/config';
 
 	$: if (!$isAuthenticated) {
 		resetTopologyOptions();
@@ -35,8 +36,8 @@
 			window.history.replaceState({}, '', cleanUrl.toString());
 		}
 
-		// Check authentication status
-		await checkAuth();
+		// Check authentication status and get public server config
+		await Promise.all([checkAuth(), getConfig()]);
 
 		// Redirect to auth page if not authenticated and not already there
 		if (!$isAuthenticated && $page.url.pathname !== '/auth') {

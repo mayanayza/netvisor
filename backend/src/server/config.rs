@@ -70,6 +70,14 @@ pub struct ServerConfig {
     pub oidc_provider_name: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublicConfigResponse {
+    pub server_port: u16,
+    pub disable_registration: bool,
+    pub oidc_enabled: bool,
+    pub oidc_provider_name: String,
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {

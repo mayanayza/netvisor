@@ -53,7 +53,8 @@ class ApiClient {
 		endpoint: string,
 		dataStore: Writable<TStoreData> | null,
 		storeAction: ((data: TResponseData, current: TStoreData) => TStoreData) | null,
-		options: RequestInit = {}
+		options: RequestInit = {},
+		silenceResponseLogs: boolean = false
 	): Promise<ApiResponse<TResponseData> | null> {
 		const method = options.method || 'GET';
 		const body = options.body as string;
@@ -102,7 +103,8 @@ class ApiClient {
 			dataStore,
 			storeAction,
 			options,
-			baseErrorMessage
+			baseErrorMessage,
+			silenceResponseLogs
 		);
 
 		// Cache the request
@@ -134,7 +136,8 @@ class ApiClient {
 		dataStore: Writable<TStoreData> | null,
 		storeAction: ((data: TResponseData, current: TStoreData) => TStoreData) | null,
 		options: RequestInit,
-		baseErrorMessage: string
+		baseErrorMessage: string,
+		silenceResponseLogs: boolean = false
 	): Promise<ApiResponse<TResponseData> | null> {
 		try {
 			const response = await fetch(url, {
@@ -151,7 +154,7 @@ class ApiClient {
 					error: `HTTP ${response.status}: ${response.statusText}`
 				}));
 				const errorMsg = errorData.error || `HTTP ${response.status}`;
-				pushError(errorMsg);
+				if (!silenceResponseLogs) pushError(errorMsg);
 				return null;
 			}
 
@@ -162,14 +165,14 @@ class ApiClient {
 				}
 				return jsonResponse;
 			} else if (jsonResponse?.error) {
-				pushError(`${baseErrorMessage}: ${jsonResponse.error}`);
+				if (!silenceResponseLogs) pushError(`${baseErrorMessage}: ${jsonResponse.error}`);
 				return null;
 			} else {
-				pushError(`${baseErrorMessage}: Unknown error`);
+				if (!silenceResponseLogs) pushError(`${baseErrorMessage}: Unknown error`);
 				return null;
 			}
 		} catch (err) {
-			pushError(`${baseErrorMessage}: ${err}`);
+			if (!silenceResponseLogs) pushError(`${baseErrorMessage}: ${err}`);
 			return null;
 		}
 	}

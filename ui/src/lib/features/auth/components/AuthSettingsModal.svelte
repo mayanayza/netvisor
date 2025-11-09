@@ -9,15 +9,22 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import { config, getConfig } from '$lib/shared/stores/config';
+	import { loadData } from '$lib/shared/utils/dataLoader';
 
 	export let isOpen = false;
 	export let onClose: () => void;
 
+	const loading = loadData([getConfig]);
+
 	$: user = $currentUser;
 
+	$: enableOidc = $loading ? true : $config.oidc_enabled;
 	let activeSection: 'main' | 'credentials' = 'main';
 	let isLinkingOidc = false;
-	let loading = false;
+	let savingCredentials = false;
+
+	console.log(enableOidc);
 
 	let formData: { email: string; password: string; confirmPassword: string } = {
 		email: '',
@@ -62,7 +69,7 @@
 	}
 
 	async function handleSaveCredentials() {
-		loading = true;
+		savingCredentials = true;
 		try {
 			// Build request with only changed/provided fields
 			const updateRequest: { email?: string; password?: string } = {};
@@ -96,7 +103,7 @@
 				pushError(result?.error || 'Failed to update credentials');
 			}
 		} finally {
-			loading = false;
+			savingCredentials = false;
 		}
 	}
 
@@ -125,7 +132,7 @@
 <EditModal
 	{isOpen}
 	title={modalTitle}
-	{loading}
+	loading={savingCredentials}
 	saveLabel="Save Changes"
 	{showSave}
 	showCancel={true}
@@ -184,32 +191,34 @@
 						</div>
 
 						<!-- OIDC -->
-						<div class="card card-static">
-							<div class="flex items-center justify-between">
-								<div class="mr-2 flex items-center gap-2">
-									<Link class="text-secondary h-4 w-4 flex-shrink-0" />
-									<div>
-										<p class="text-primary text-sm font-medium">OIDC Provider</p>
-										{#if hasOidc}
-											<p class="text-secondary text-xs">
-												{user.oidc_provider} - Linked on {new Date(
-													user.oidc_linked_at || ''
-												).toLocaleDateString()}
-											</p>
-										{:else}
-											<p class="text-secondary text-xs">Not linked</p>
-										{/if}
+						{#if enableOidc}
+							<div class="card card-static">
+								<div class="flex items-center justify-between">
+									<div class="mr-2 flex items-center gap-2">
+										<Link class="text-secondary h-4 w-4 flex-shrink-0" />
+										<div>
+											<p class="text-primary text-sm font-medium">{$config.oidc_provider_name}</p>
+											{#if hasOidc}
+												<p class="text-secondary text-xs">
+													{user.oidc_provider} - Linked on {new Date(
+														user.oidc_linked_at || ''
+													).toLocaleDateString()}
+												</p>
+											{:else}
+												<p class="text-secondary text-xs">Not linked</p>
+											{/if}
+										</div>
 									</div>
+									{#if hasOidc}
+										<button on:click={unlinkOidcAccount} class="btn-danger"> Unlink </button>
+									{:else}
+										<button on:click={linkOidcAccount} disabled={isLinkingOidc} class="btn-primary">
+											{isLinkingOidc ? 'Redirecting...' : 'Link'}
+										</button>
+									{/if}
 								</div>
-								{#if hasOidc}
-									<button on:click={unlinkOidcAccount} class="btn-danger"> Unlink </button>
-								{:else}
-									<button on:click={linkOidcAccount} disabled={isLinkingOidc} class="btn-primary">
-										{isLinkingOidc ? 'Redirecting...' : 'Link'}
-									</button>
-								{/if}
 							</div>
-						</div>
+						{/if}
 					</div>
 				</div>
 

@@ -13,6 +13,7 @@ use crate::server::{
     },
     users::r#impl::base::{User, UserBase},
 };
+use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use email_address::EmailAddress;
@@ -48,7 +49,18 @@ impl UserService {
     }
 
     /// Create a new user
-    pub async fn create_user(&self, user: User) -> Result<(User, Network)> {
+    pub async fn create_user(&self, user: User) -> Result<(User, Network), Error> {
+        let existing_user = self
+            .user_storage
+            .get_one(EntityFilter::unfiltered().email(&user.base.email))
+            .await?;
+        if existing_user.is_some() {
+            return Err(anyhow::anyhow!(
+                "User with email {} already exists",
+                user.base.email
+            ));
+        }
+
         let created_user = self.user_storage.create(&User::new(user.base)).await?;
 
         let mut network = Network::new(NetworkBase::new(created_user.id));
@@ -69,7 +81,7 @@ impl UserService {
         email: EmailAddress,
         oidc_subject: String,
         oidc_provider: Option<String>,
-    ) -> Result<User> {
+    ) -> Result<User, Error> {
         let user = User::new(UserBase::new_oidc(email, oidc_subject, oidc_provider));
 
         let (created_user, _) = self.create_user(user).await?;
@@ -81,7 +93,7 @@ impl UserService {
         &self,
         email: EmailAddress,
         password_hash: String,
-    ) -> Result<User> {
+    ) -> Result<User, Error> {
         let user = User::new(UserBase::new_password(email, password_hash));
 
         let (created_user, _) = self.create_user(user).await?;

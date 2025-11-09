@@ -47,9 +47,12 @@
 			? env.PUBLIC_SERVER_HOSTNAME
 			: parsedUrl.hostname;
 
-	const protocol = parsedUrl.protocol === 'https:' ? 'https' : 'http';
+	const serverPort =
+		env.PUBLIC_SERVER_HOSTNAME === 'default'
+			? parsedUrl.port || '60072'
+			: env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 
-	const serverPort = env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
+	const protocol = parsedUrl.protocol === 'https:' ? 'https' : 'http';
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
 	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key}` : ''}`;
