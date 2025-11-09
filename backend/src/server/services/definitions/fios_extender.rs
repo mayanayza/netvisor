@@ -21,7 +21,7 @@ impl ServiceDefinition for FiosExtender {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::Endpoint(PortBase::Http, "/#/login/", "fios"),
-            Pattern::Not(&Pattern::IsGateway),
+            Pattern::Not(Box::new(Pattern::IsGateway)),
         ])
     }
 

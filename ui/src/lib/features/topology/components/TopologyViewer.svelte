@@ -5,7 +5,8 @@
 		Controls,
 		Background,
 		BackgroundVariant,
-		type EdgeMarkerType
+		type EdgeMarkerType,
+		useNodesInitialized
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
@@ -33,21 +34,38 @@
 	// Stores
 	let nodes = writable<Node[]>([]);
 	let edges = writable<Edge[]>([]);
-	// let selectedNodeId: string | null = null;
+
+	// Hook to check when nodes are initialized
+	const nodesInitialized = useNodesInitialized();
+
+	// Store pending edges until nodes are ready
+	let pendingEdges: Edge[] = [];
 
 	onMount(async () => {
 		await loadTopologyData();
 	});
 
-	$: if ($topology?.edges || $topology?.nodes) {
-		void loadTopologyData();
-	}
+	$effect(() => {
+		if ($topology?.edges || $topology?.nodes) {
+			void loadTopologyData();
+		}
+	});
+
+	// Effect to add edges when nodes are ready
+	$effect(() => {
+		if (nodesInitialized.current && pendingEdges.length > 0) {
+			edges.set(pendingEdges);
+			pendingEdges = [];
+		}
+	});
 
 	async function loadTopologyData() {
 		try {
 			if ($topology?.nodes && $topology?.edges) {
+				console.log('Loading topology data');
+
 				// Create nodes FIRST
-				const flowNodes: Node[] = $topology.nodes.map((node): Node => {
+				const allNodes: Node[] = $topology.nodes.map((node): Node => {
 					return {
 						id: node.id,
 						type: node.node_type,
@@ -62,11 +80,20 @@
 					};
 				});
 
-				// Set nodes first and wait for next tick
-				nodes.set(flowNodes);
-				await new Promise((resolve) => setTimeout(resolve, 0));
+				// Clear edges FIRST
+				edges.set([]);
 
-				// Create edges AFTER nodes are set
+				// Sort so children come before parents (as per Svelte Flow docs)
+				const sortedNodes = allNodes.sort((a, b) => {
+					if (a.parentId && !b.parentId) return 1; // children first
+					if (!a.parentId && b.parentId) return -1; // parents second
+					return 0;
+				});
+
+				// Set nodes
+				nodes.set(sortedNodes);
+
+				// Create edges and store them for later
 				const flowEdges: Edge[] = $topology.edges
 					.filter(
 						([, , edge]: [number, number, TopologyEdge]) => edge.edge_type != 'HostVirtualization'
@@ -105,7 +132,8 @@
 						};
 					});
 
-				edges.set(flowEdges);
+				console.log('Created pending edges:', flowEdges.length);
+				pendingEdges = flowEdges;
 			}
 		} catch (err) {
 			pushError(`Failed to parse topology data ${err}`);
@@ -150,28 +178,3 @@
 		/>
 	</SvelteFlow>
 </div>
-
-<style>
-	:global(.hide-for-export .svelte-flow__controls),
-	:global(.hide-for-export .svelte-flow__resize-control),
-	:global(.hide-for-export .svelte-flow__attribution),
-	:global(.hide-for-export .svelte-flow__minimap),
-	:global(.hide-for-export .topology-options),
-	:global(.hide-for-export .svelte-flow__panel) {
-		display: none !important;
-	}
-
-	:global(.svelte-flow__attribution) {
-		background-color: #1f2937 !important; /* gray-800 */
-		border: 1px solid #374151 !important; /* gray-700 */
-		color: #9ca3af !important; /* gray-400 */
-		padding: 4px 8px !important;
-		border-radius: 4px !important;
-		font-size: 11px !important;
-	}
-
-	:global(.svelte-flow__attribution a) {
-		color: 'text-primary';
-		text-decoration: none !important;
-	}
-</style>
