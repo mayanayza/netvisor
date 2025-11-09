@@ -64,6 +64,64 @@ fi
 echo ""
 echo "✓ NetVisor daemon installed successfully!"
 echo ""
-echo "To run daemon: netvisor-daemon --server-target YOUR_SERVER_IP --server-port 60072"
+
+# Ask about systemd service installation (Linux only)
+if [ "$PLATFORM" = "linux" ] && command -v systemctl &> /dev/null; then
+    echo "Would you like to install NetVisor daemon as a systemd service?"
+    echo "This will allow the daemon to:"
+    echo "  - Start automatically on boot"
+    echo "  - Run in the background"
+    echo "  - Restart automatically if it crashes"
+    echo ""
+    read -p "Install as systemd service? [y/N]: " -n 1 -r
+    echo
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        echo "Installing systemd service..."
+        
+        # Download service file
+        SERVICE_URL="https://raw.githubusercontent.com/${REPO}/main/netvisor-daemon.service"
+        
+        if ! curl -fL "$SERVICE_URL" -o netvisor-daemon.service; then
+            echo "Warning: Failed to download service file from $SERVICE_URL"
+            echo "You can manually install the service later."
+        else
+            # Install service file
+            sudo mv netvisor-daemon.service /etc/systemd/system/ || {
+                echo "Error: Failed to install service file."
+                rm -f netvisor-daemon.service
+                exit 1
+            }
+            
+            echo ""
+            echo "✓ Systemd service file installed!"
+            echo ""
+            echo "⚠️  IMPORTANT: You must edit the service file with your daemon configuration:"
+            echo ""
+            echo "  sudo nano /etc/systemd/system/netvisor-daemon.service"
+            echo ""
+            echo "Add your daemon arguments to the ExecStart line:"
+            echo "  ExecStart=/usr/local/bin/netvisor-daemon --server-target http://YOUR_SERVER --server-port 60072 --network-id YOUR_NETWORK_ID --daemon-api-key YOUR_API_KEY"
+            echo ""
+            echo "Then enable and start the service:"
+            echo "  sudo systemctl daemon-reload"
+            echo "  sudo systemctl enable netvisor-daemon"
+            echo "  sudo systemctl start netvisor-daemon"
+            echo ""
+            echo "Check status:"
+            echo "  sudo systemctl status netvisor-daemon"
+            echo ""
+            echo "View logs:"
+            echo "  sudo journalctl -u netvisor-daemon -f"
+            echo ""
+        fi
+    fi
+fi
+
+# Show manual run instructions
+echo ""
+echo "To run daemon manually:"
+echo "  netvisor-daemon --server-target YOUR_SERVER_IP --server-port 60072"
 echo ""
 echo "Need help? Visit: https://github.com/${REPO}#readme"
