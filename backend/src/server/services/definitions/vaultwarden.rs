@@ -19,7 +19,7 @@ impl ServiceDefinition for Vaultwarden {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8000), "/", "Vaultwarden")
+        Pattern::Endpoint(PortBase::new_tcp(8000), "/manifest.json", "Vaultwarden Web")
     }
 
     fn logo_url(&self) -> &'static str {
