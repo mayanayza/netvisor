@@ -99,6 +99,7 @@ pub mod jellyfin;
 pub mod jellyseerr;
 pub mod jellystat;
 pub mod jump;
+pub mod karakeep;
 pub mod komga;
 pub mod kubernetes;
 pub mod lidarr;
