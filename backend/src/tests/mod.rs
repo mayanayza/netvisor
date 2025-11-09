@@ -1,29 +1,37 @@
 use crate::server::{
     config::{AppState, ServerConfig},
-    daemons::types::{
+    daemons::r#impl::{
         api::DaemonCapabilities,
         base::{Daemon, DaemonBase},
     },
-    groups::types::{Group, GroupBase, GroupType},
-    hosts::types::{
+    groups::r#impl::{
+        base::{Group, GroupBase},
+        types::GroupType,
+    },
+    hosts::r#impl::{
         base::{Host, HostBase},
         interfaces::{Interface, InterfaceBase},
         ports::{Port, PortBase},
         targets::HostTarget,
     },
-    networks::types::{Network, NetworkBase},
+    networks::r#impl::{Network, NetworkBase},
     services::{
         definitions::ServiceDefinitionRegistry,
-        types::base::{Service, ServiceBase},
+        r#impl::base::{Service, ServiceBase},
     },
     shared::{
-        services::ServiceFactory,
-        types::{entities::EntitySource, storage::StorageFactory},
+        services::factory::ServiceFactory,
+        storage::{factory::StorageFactory, traits::StorableEntity},
+        types::entities::EntitySource,
     },
-    subnets::types::base::{Subnet, SubnetBase, SubnetType},
-    users::types::base::{User, UserBase},
+    subnets::r#impl::{
+        base::{Subnet, SubnetBase},
+        types::SubnetType,
+    },
+    users::r#impl::base::{User, UserBase},
 };
 use axum::Router;
+use chrono::Utc;
 use cidr::IpCidr;
 use cidr::Ipv4Cidr;
 use mac_address::MacAddress;
@@ -141,20 +149,17 @@ pub fn group(network_id: &Uuid) -> Group {
 }
 
 pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
-    Daemon::new(
-        Uuid::new_v4(),
-        DaemonBase {
-            host_id: *host_id,
-            network_id: *network_id,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)),
-            port: 60073,
-            api_key: None,
-            capabilities: DaemonCapabilities {
-                has_docker_socket: false,
-                interfaced_subnet_ids: Vec::new(),
-            },
+    Daemon::new(DaemonBase {
+        host_id: *host_id,
+        network_id: *network_id,
+        ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)),
+        port: 60073,
+        last_seen: Utc::now(),
+        capabilities: DaemonCapabilities {
+            has_docker_socket: false,
+            interfaced_subnet_ids: Vec::new(),
         },
-    )
+    })
 }
 
 pub async fn test_services() -> (StorageFactory, ServiceFactory, ContainerAsync<GenericImage>) {
@@ -167,5 +172,5 @@ pub async fn setup_test_app() -> Router<Arc<AppState>> {
 
     let state = AppState::new(config).await.unwrap();
 
-    crate::server::shared::handlers::create_router().with_state(state)
+    crate::server::shared::handlers::factory::create_router().with_state(state)
 }

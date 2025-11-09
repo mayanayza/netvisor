@@ -13,9 +13,8 @@
 	let loading = false;
 
 	let formData: LoginRequest = {
-		name: '',
-		password: '',
-		remember_me: false
+		email: '',
+		password: ''
 	};
 
 	// Reset form when modal opens
@@ -23,11 +22,16 @@
 		resetForm();
 	}
 
+	async function handleOidcLogin() {
+		// Pass current URL as return_url parameter
+		const returnUrl = encodeURIComponent(window.location.origin);
+		window.location.href = `/api/auth/oidc/authorize?return_url=${returnUrl}`;
+	}
+
 	function resetForm() {
 		formData = {
-			name: '',
-			password: '',
-			remember_me: false
+			email: '',
+			password: ''
 		};
 	}
 
@@ -70,6 +74,13 @@
 			<button type="button" disabled={loading} on:click={handleSubmit} class="btn-primary w-full">
 				{loading ? 'Signing in...' : 'Sign In'}
 			</button>
+
+			<!-- OIDC Button -->
+			<div>
+				<button on:click={handleOidcLogin} class="btn-secondary w-full">
+					Sign in with OIDC Provider
+				</button>
+			</div>
 
 			<!-- Register Link -->
 			{#if onSwitchToRegister}

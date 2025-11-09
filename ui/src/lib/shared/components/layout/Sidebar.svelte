@@ -1,26 +1,30 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { logout } from '$lib/features/auth/store';
+	import { page } from '$app/stores';
+	import AuthSettingsModal from '$lib/features/auth/components/AuthSettingsModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import type { IconComponent } from '$lib/shared/utils/types';
-	import { LogOut, Menu, ChevronDown, History, Calendar } from 'lucide-svelte';
+	import { Menu, ChevronDown, History, Calendar, User } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
 	export let activeTab: string = 'hosts';
 	export let onTabChange: (tab: string) => void;
 	export let collapsed = false;
 
+	let showAuthSettings = false;
+
 	interface NavItem {
 		id: string;
 		label: string;
 		icon: IconComponent;
+		position?: 'main' | 'bottom'; // Allow items to be positioned at bottom
+		onClick?: () => void | Promise<void>; // Custom click handler
 	}
 
 	interface NavSection {
 		id: string;
 		label: string;
 		items: NavItem[];
+		position?: 'main' | 'bottom';
 	}
 
 	type NavConfig = (NavSection | NavItem)[];
@@ -48,13 +52,24 @@
 			id: 'manage',
 			label: 'Manage',
 			items: [
-				{ id: 'daemons', label: 'Daemons', icon: entities.getIconComponent('Daemon') },
 				{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
 				{ id: 'subnets', label: 'Subnets', icon: entities.getIconComponent('Subnet') },
 				{ id: 'groups', label: 'Groups', icon: entities.getIconComponent('Group') },
 				{ id: 'hosts', label: 'Hosts', icon: entities.getIconComponent('Host') },
-				{ id: 'services', label: 'Services', icon: entities.getIconComponent('Service') }
+				{ id: 'services', label: 'Services', icon: entities.getIconComponent('Service') },
+				{ id: 'daemons', label: 'Daemons', icon: entities.getIconComponent('Daemon') },
+				{ id: 'api-keys', label: 'API Keys', icon: entities.getIconComponent('ApiKey') }
 			]
+		},
+		// Bottom items
+		{
+			id: 'account',
+			label: 'Account',
+			icon: User as IconComponent,
+			position: 'bottom',
+			onClick: async () => {
+				showAuthSettings = true;
+			}
 		}
 	];
 
@@ -66,9 +81,25 @@
 		return 'items' in item;
 	}
 
+	// Filter nav items by position
+	function filterByPosition(items: NavConfig, position: 'main' | 'bottom'): NavConfig {
+		return items.filter((item) => {
+			const itemPosition = isSection(item) ? item.position : item.position;
+			return itemPosition === position || (position === 'main' && !itemPosition);
+		});
+	}
+
+	const mainNavItems = filterByPosition(navConfig, 'main');
+	const bottomNavItems = filterByPosition(navConfig, 'bottom');
+
 	onMount(() => {
 		// Load collapsed states from localStorage
+		// Show auth modal
 		if (typeof window !== 'undefined') {
+			if ($page.url.searchParams.get('auth_modal')) {
+				showAuthSettings = true;
+			}
+
 			try {
 				const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
 				if (stored !== null) {
@@ -92,11 +123,6 @@
 			}
 		}
 	});
-
-	async function onLogoutClick() {
-		logout();
-		await goto(resolve('/auth'));
-	}
 
 	function toggleCollapse() {
 		collapsed = !collapsed;
@@ -124,11 +150,21 @@
 		}
 	}
 
+	function handleItemClick(item: NavItem) {
+		if (item.onClick) {
+			item.onClick();
+		} else {
+			onTabChange(item.id);
+		}
+	}
+
 	const inactiveButtonClass =
 		'text-tertiary hover:text-secondary hover:bg-gray-800 border border-[#15131e]';
 
 	const sectionHeaderClass =
 		'text-secondary hover:text-primary flex w-full items-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors hover:bg-gray-800/50';
+
+	const baseClasses = 'flex w-full items-center rounded-lg font-medium transition-colors';
 </script>
 
 <div
@@ -155,10 +191,10 @@
 			</button>
 		</div>
 
-		<!-- Navigation -->
+		<!-- Main Navigation -->
 		<nav class="flex-1 overflow-y-auto px-2 py-4">
 			<ul class="space-y-4">
-				{#each navConfig as configItem (configItem.id)}
+				{#each mainNavItems as configItem (configItem.id)}
 					{#if isSection(configItem)}
 						<!-- Section with items -->
 						<li>
@@ -182,12 +218,11 @@
 									{#each configItem.items as item (item.id)}
 										<li>
 											<button
-												on:click={() => onTabChange(item.id)}
-												class={`flex w-full items-center rounded-lg font-medium transition-colors ${
-													activeTab === item.id
-														? 'text-primary border border-blue-600 bg-blue-700'
-														: inactiveButtonClass
-												}`}
+												on:click={() => handleItemClick(item)}
+												class="{baseClasses} {activeTab === item.id ||
+												(item.id === 'account' && showAuthSettings)
+													? 'text-primary border border-blue-600 bg-blue-700'
+													: inactiveButtonClass}"
 												style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 												title={collapsed ? item.label : ''}
 											>
@@ -205,12 +240,11 @@
 						<!-- Standalone item (no section, no indentation) -->
 						<li>
 							<button
-								on:click={() => onTabChange(configItem.id)}
-								class={`flex w-full items-center rounded-lg font-medium transition-colors ${
-									activeTab === configItem.id
-										? 'text-primary border border-blue-600 bg-blue-700'
-										: inactiveButtonClass
-								}`}
+								on:click={() => handleItemClick(configItem)}
+								class="{baseClasses} {activeTab === configItem.id ||
+								(configItem.id === 'account' && showAuthSettings)
+									? 'text-primary border border-blue-600 bg-blue-700'
+									: inactiveButtonClass}"
 								style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 								title={collapsed ? configItem.label : ''}
 							>
@@ -226,17 +260,31 @@
 		</nav>
 	</div>
 
-	<div class="flex-shrink-0 px-2 py-4">
-		<button
-			class={`flex w-full items-center rounded-lg font-medium transition-colors ${inactiveButtonClass}`}
-			style="min-height: 2.5rem; padding: 0.5rem 0.75rem;"
-			on:click={onLogoutClick}
-			title={collapsed ? 'Log Out' : ''}
-		>
-			<LogOut class="h-5 w-5 flex-shrink-0" />
-			{#if !collapsed}
-				<span class="ml-3 truncate">Log Out</span>
-			{/if}
-		</button>
+	<!-- Bottom Navigation -->
+	<div class="flex-shrink-0 border-t border-gray-700 px-2 py-4">
+		<ul class="space-y-1">
+			{#each bottomNavItems as item (item.id)}
+				{#if !isSection(item)}
+					<li>
+						<button
+							on:click={() => handleItemClick(item)}
+							class="{baseClasses} {activeTab === item.id ||
+							(item.id === 'account' && showAuthSettings)
+								? 'text-primary border border-blue-600 bg-blue-700'
+								: inactiveButtonClass}"
+							style="height: 2.5rem; padding: 0.5rem 0.75rem;"
+							title={collapsed ? item.label : ''}
+						>
+							<svelte:component this={item.icon} class="h-5 w-5 flex-shrink-0" />
+							{#if !collapsed}
+								<span class="ml-3 truncate">{item.label}</span>
+							{/if}
+						</button>
+					</li>
+				{/if}
+			{/each}
+		</ul>
 	</div>
 </div>
+
+<AuthSettingsModal isOpen={showAuthSettings} onClose={() => (showAuthSettings = false)} />

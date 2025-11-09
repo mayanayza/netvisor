@@ -22,6 +22,7 @@
 	import DiscoverySessionTab from '$lib/features/discovery/components/tabs/DiscoverySessionTab.svelte';
 	import DiscoveryHistoryTab from '$lib/features/discovery/components/tabs/DiscoveryHistoryTab.svelte';
 	import DiscoveryScheduledTab from '$lib/features/discovery/components/tabs/DiscoveryScheduledTab.svelte';
+	import ApiKeyTab from '$lib/features/api_keys/components/ApiKeyTab.svelte';
 
 	let activeTab = 'topology';
 	let appInitialized = false;
@@ -33,6 +34,7 @@
 		'discovery-sessions',
 		'discovery-scheduled',
 		'discovery-history',
+		'api-keys',
 		'daemons',
 		'networks',
 		'hosts',
@@ -158,6 +160,8 @@
 					<SubnetTab />
 				{:else if activeTab === 'groups'}
 					<GroupTab />
+				{:else if activeTab === 'api-keys'}
+					<ApiKeyTab />
 				{:else if activeTab === 'topology'}
 					<TopologyTab />
 				{/if}

@@ -2,9 +2,12 @@ use serial_test::serial;
 
 use crate::{
     server::{
-        groups::types::GroupType,
-        services::types::{bindings::Binding, patterns::MatchDetails},
-        shared::types::entities::EntitySource,
+        groups::r#impl::types::GroupType,
+        services::r#impl::{bindings::Binding, patterns::MatchDetails},
+        shared::{
+            services::traits::CrudService, storage::filter::EntityFilter,
+            types::entities::EntitySource,
+        },
     },
     tests::*,
 };
@@ -19,7 +22,7 @@ async fn test_service_deduplication_on_create() {
     let subnet_obj = subnet(&network.id);
     services
         .subnet_service
-        .create_subnet(subnet_obj.clone())
+        .create(subnet_obj.clone())
         .await
         .unwrap();
 
@@ -67,12 +70,9 @@ async fn test_service_deduplication_on_create() {
     // Should return same service (upserted)
     assert_eq!(created1[0].id, created2.id);
 
+    let filter = EntityFilter::unfiltered().host_id(&svc1.base.host_id);
     // Verify only one service in DB
-    let all_services = services
-        .service_service
-        .get_services_for_host(&created_host.id)
-        .await
-        .unwrap();
+    let all_services = services.service_service.get_all(filter).await.unwrap();
     assert_eq!(all_services.len(), 1);
 }
 
@@ -86,7 +86,7 @@ async fn test_service_deletion_cleans_up_relationships() {
     let subnet_obj = subnet(&network.id);
     let created_subnet = services
         .subnet_service
-        .create_subnet(subnet_obj.clone())
+        .create(subnet_obj.clone())
         .await
         .unwrap();
 
@@ -109,7 +109,7 @@ async fn test_service_deletion_cleans_up_relationships() {
 
     let created_svc = services
         .service_service
-        .get_service(&svc.id)
+        .get_by_id(&svc.id)
         .await
         .unwrap()
         .unwrap();
@@ -118,11 +118,7 @@ async fn test_service_deletion_cleans_up_relationships() {
     group_obj.base.group_type = GroupType::RequestPath {
         service_bindings: vec![created_svc.base.bindings[0].id()],
     };
-    let created_group = services
-        .group_service
-        .create_group(group_obj)
-        .await
-        .unwrap();
+    let created_group = services.group_service.create(group_obj).await.unwrap();
 
     // Delete service
     services
@@ -134,7 +130,7 @@ async fn test_service_deletion_cleans_up_relationships() {
     // Group should no longer have service binding
     let group_after = services
         .group_service
-        .get_group(&created_group.id)
+        .get_by_id(&created_group.id)
         .await
         .unwrap()
         .unwrap();

@@ -136,18 +136,19 @@
 			</div>
 		{:else}
 			<!-- Card view: vertical layout -->
+			<!-- Card view: vertical layout -->
 			{#each fields as field, i (field.label + i)}
 				{#if field.snippet}
 					<div>
 						{@render field.snippet()}
 					</div>
 				{:else}
-					<div class="flex text-sm">
-						<span class="text-secondary">{field.label}:</span>
+					<div class="text-sm">
 						{#if field.value}
 							{#if isArrayValue(field.value)}
-								{#if field.value.length > 0}
-									<div class="ml-2 inline-flex flex-wrap items-center gap-2">
+								<div class="flex flex-wrap items-center gap-2">
+									<span class="text-secondary">{field.label}:</span>
+									{#if field.value.length > 0}
 										{#each field.value as item (item.id)}
 											<Tag
 												icon={item.icon}
@@ -157,14 +158,17 @@
 												label={item.label}
 											/>
 										{/each}
-									</div>
-								{:else}
-									<span class="text-muted ml-2"
-										>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
-									>
-								{/if}
+									{:else}
+										<span class="text-muted"
+											>{field.emptyText || `No ${field.label.toLowerCase()}`}</span
+										>
+									{/if}
+								</div>
 							{:else}
-								<span class="text-tertiary ml-2 break-all">{field.value}</span>
+								<div>
+									<span class="text-secondary">{field.label}:</span>
+									<span class="text-tertiary ml-2 break-words">{field.value}</span>
+								</div>
 							{/if}
 						{/if}
 					</div>

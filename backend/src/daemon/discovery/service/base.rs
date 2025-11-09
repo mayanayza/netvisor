@@ -9,9 +9,9 @@ use crate::{
         manager::DaemonDiscoverySessionManager, types::base::DiscoveryCriticalError,
     },
     server::{
-        discovery::types::base::DiscoveryType,
-        groups::types::Group,
-        services::types::{
+        discovery::r#impl::types::{DiscoveryType, HostNamingFallback},
+        groups::r#impl::base::Group,
+        services::r#impl::{
             base::{
                 DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
                 ServiceMatchServiceParams,
@@ -37,8 +37,8 @@ use crate::{
         utils::base::{PlatformDaemonUtils, create_system_utils},
     },
     server::{
-        daemons::types::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
-        hosts::types::{
+        daemons::r#impl::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
+        hosts::r#impl::{
             api::HostWithServicesRequest,
             base::{Host, HostBase},
             ports::{Port, PortBase},
@@ -46,14 +46,14 @@ use crate::{
         },
         services::{
             definitions::{ServiceDefinitionRegistry, gateway::Gateway},
-            types::{
+            r#impl::{
                 base::Service,
                 bindings::Binding,
                 definitions::{ServiceDefinition, ServiceDefinitionExt},
             },
         },
         shared::types::{api::ApiResponse, metadata::HasId},
-        subnets::types::base::Subnet,
+        subnets::r#impl::base::Subnet,
     },
 };
 
@@ -322,6 +322,7 @@ pub trait DiscoversNetworkedEntities:
         &self,
         params: ServiceMatchBaselineParams<'a>,
         hostname: Option<String>,
+        host_naming_fallback: HostNamingFallback,
     ) -> Result<Option<(Host, Vec<Service>)>, Error> {
         let ServiceMatchBaselineParams::<'a> { interface, .. } = params;
 
@@ -337,16 +338,11 @@ pub trait DiscoversNetworkedEntities:
         let gateway_ips = session.gateway_ips.clone();
         let discovery_type = self.discovery_type();
 
-        let (name, target) = match hostname.clone() {
-            Some(hostname) => (hostname, HostTarget::Hostname),
-            None => ("Unknown Device".to_owned(), HostTarget::None),
-        };
-
         // Create host
         let mut host = Host::new(HostBase {
-            name,
-            hostname,
-            target,
+            name: "Unknown Device".to_string(),
+            hostname: hostname.clone(),
+            target: HostTarget::None,
             network_id,
             description: None,
             interfaces: vec![interface.clone()],
@@ -367,6 +363,29 @@ pub trait DiscoversNetworkedEntities:
             &network_id,
             &discovery_type,
         )?;
+
+        // Determine host's name
+        let best_service_name = services
+            .iter()
+            .find(|s| !ServiceDefinitionExt::is_generic(&s.base.service_definition))
+            .map(|s| s.base.service_definition.name().to_string());
+
+        if let Some(hostname) = hostname {
+            host.base.name = hostname;
+            if host.base.target == HostTarget::None {
+                host.base.target = HostTarget::Hostname
+            }
+        } else if host_naming_fallback == HostNamingFallback::BestService
+            && let Some(best_service_name) = best_service_name
+        {
+            host.base.name = best_service_name
+        } else if host_naming_fallback == HostNamingFallback::Ip {
+            host.base.name = interface.base.ip_address.to_string()
+        } else if let Some(best_service_name) = best_service_name {
+            host.base.name = best_service_name
+        } else {
+            host.base.name = interface.base.ip_address.to_string()
+        }
 
         tracing::info!("Processed host for ip {}", interface.base.ip_address);
         Ok(Some((host, services)))
@@ -469,13 +488,6 @@ pub trait DiscoversNetworkedEntities:
                 _ => MatchConfidence::NotApplicable as i32,
             })
         });
-
-        if let Some(service) = services
-            .iter()
-            .find(|s| !ServiceDefinitionExt::is_generic(&s.base.service_definition))
-        {
-            host.base.name = service.base.service_definition.name().to_string();
-        }
 
         services.iter().for_each(|s| host.add_service(s.id));
 

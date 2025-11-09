@@ -9,32 +9,6 @@ export async function getDaemons() {
 	return await api.request<Daemon[]>(`/daemons`, daemons, (daemons) => daemons, { method: 'GET' });
 }
 
-export async function updateApiKey(daemon_id: string) {
-	const response = await api.request<string, void>(
-		`/daemons/${daemon_id}/update_api_key`,
-		null,
-		(daemons) => daemons,
-		{ method: 'POST' }
-	);
-
-	if (response && response?.success && response.data) {
-		return response.data;
-	}
-}
-
-export async function createNewApiKey(network_id: string) {
-	const response = await api.request<string, void>(
-		`/daemons/create_new_api_key`,
-		null,
-		(daemons) => daemons,
-		{ method: 'POST', body: JSON.stringify(network_id) }
-	);
-
-	if (response && response?.success && response.data) {
-		return response.data;
-	}
-}
-
 export async function deleteDaemon(id: string) {
 	return await api.request<void, Daemon[]>(
 		`/daemons/${id}`,

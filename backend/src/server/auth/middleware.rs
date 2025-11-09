@@ -1,9 +1,13 @@
-use crate::server::{config::AppState, shared::types::api::ApiError};
+use crate::server::{
+    config::AppState,
+    shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
+};
 use axum::{
     extract::FromRequestParts,
     http::request::Parts,
     response::{IntoResponse, Response},
 };
+use chrono::Utc;
 use tower_sessions::Session;
 use uuid::Uuid;
 
@@ -65,14 +69,44 @@ where
             && let Ok(auth_str) = auth_header.to_str()
             && let Some(api_key) = auth_str.strip_prefix("Bearer ")
         {
-            // Look up daemon by API key
-            if let Ok(Some(daemon)) = app_state
+            let api_key_filter = EntityFilter::unfiltered().api_key(api_key.to_owned());
+            // Get API key record by key
+            if let Ok(Some(mut api_key)) = app_state
                 .services
-                .daemon_service
-                .get_daemon_by_api_key(api_key)
+                .api_key_service
+                .get_one(api_key_filter)
                 .await
             {
-                return Ok(AuthenticatedEntity::Daemon(daemon.base.network_id));
+                let network_id = api_key.base.network_id;
+                let service = app_state.services.api_key_service.clone();
+
+                // Check expiration
+                if let Some(expires_at) = api_key.base.expires_at
+                    && chrono::Utc::now() > expires_at
+                {
+                    // Update enabled asynchronously (don't block auth)
+                    api_key.base.is_enabled = false;
+                    tokio::spawn(async move {
+                        let _ = service.update(&mut api_key).await;
+                    });
+                    return Err(AuthError(ApiError::unauthorized(
+                        "API key has expired".to_string(),
+                    )));
+                }
+
+                if !api_key.base.is_enabled {
+                    return Err(AuthError(ApiError::unauthorized(
+                        "API key is not enabled".to_string(),
+                    )));
+                }
+
+                // Update last used asynchronously (don't block auth)
+                api_key.base.last_used = Some(Utc::now());
+                tokio::spawn(async move {
+                    let _ = service.update(&mut api_key).await;
+                });
+
+                return Ok(AuthenticatedEntity::Daemon(network_id));
             }
             // Invalid API key
             return Err(AuthError(ApiError::unauthorized(

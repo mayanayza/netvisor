@@ -5,10 +5,10 @@ use strum::IntoDiscriminant;
 use uuid::Uuid;
 
 use crate::server::{
-    groups::types::{Group, GroupType},
-    hosts::types::virtualization::HostVirtualization,
-    services::types::virtualization::ServiceVirtualization,
-    subnets::types::base::{SubnetType, SubnetTypeDiscriminants},
+    groups::r#impl::{base::Group, types::GroupType},
+    hosts::r#impl::virtualization::HostVirtualization,
+    services::r#impl::virtualization::ServiceVirtualization,
+    subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants},
     topology::{
         service::context::TopologyContext,
         types::{

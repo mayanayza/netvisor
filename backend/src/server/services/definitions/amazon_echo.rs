@@ -1,9 +1,9 @@
 // backend/src/server/services/definitions/amazon_echo.rs
-use crate::server::hosts::types::ports::PortBase;
+use crate::server::hosts::r#impl::ports::PortBase;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
-use crate::server::services::types::categories::ServiceCategory;
-use crate::server::services::types::definitions::ServiceDefinition;
-use crate::server::services::types::patterns::{Pattern, Vendor};
+use crate::server::services::r#impl::categories::ServiceCategory;
+use crate::server::services::r#impl::definitions::ServiceDefinition;
+use crate::server::services::r#impl::patterns::{Pattern, Vendor};
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
 pub struct AmazonEcho;

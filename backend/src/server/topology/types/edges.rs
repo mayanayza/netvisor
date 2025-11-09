@@ -1,10 +1,10 @@
 use crate::server::{
-    groups::types::GroupTypeDiscriminants,
+    groups::r#impl::types::GroupTypeDiscriminants,
     shared::{
-        constants::Entity,
+        entities::Entity,
         types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
     },
-    subnets::types::base::Subnet,
+    subnets::r#impl::base::Subnet,
     topology::types::base::Ixy,
 };
 use serde::{Deserialize, Serialize};
@@ -332,7 +332,7 @@ impl TypeMetadataProvider for EdgeType {
 mod tests {
     use strum::IntoEnumIterator;
 
-    use crate::server::groups::types::GroupTypeDiscriminants;
+    use crate::server::groups::r#impl::types::GroupTypeDiscriminants;
 
     #[test]
     fn edge_type_matches_group_type() {

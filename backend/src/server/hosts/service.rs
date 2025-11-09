@@ -1,10 +1,15 @@
 use crate::server::{
     daemons::service::DaemonService,
-    hosts::{storage::HostStorage, types::base::Host},
-    services::{service::ServiceService, types::base::Service},
-    shared::types::entities::{EntitySource, EntitySourceDiscriminants},
+    hosts::r#impl::base::Host,
+    services::{r#impl::base::Service, service::ServiceService},
+    shared::{
+        services::traits::CrudService,
+        storage::{filter::EntityFilter, generic::GenericPostgresStorage, traits::Storage},
+        types::entities::{EntitySource, EntitySourceDiscriminants},
+    },
 };
 use anyhow::{Error, Result, anyhow};
+use async_trait::async_trait;
 use futures::future::{join_all, try_join_all};
 use itertools::{Either, Itertools};
 use std::{collections::HashMap, sync::Arc};
@@ -13,15 +18,22 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 pub struct HostService {
-    storage: Arc<dyn HostStorage>,
+    storage: Arc<GenericPostgresStorage<Host>>,
     service_service: Arc<ServiceService>,
     daemon_service: Arc<DaemonService>,
     host_locks: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
 }
 
+#[async_trait]
+impl CrudService<Host> for HostService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Host>> {
+        &self.storage
+    }
+}
+
 impl HostService {
     pub fn new(
-        storage: Arc<dyn HostStorage>,
+        storage: Arc<GenericPostgresStorage<Host>>,
         service_service: Arc<ServiceService>,
         daemon_service: Arc<DaemonService>,
     ) -> Self {
@@ -39,14 +51,6 @@ impl HostService {
             .entry(*host_id)
             .or_insert_with(|| Arc::new(Mutex::new(())))
             .clone()
-    }
-
-    pub async fn get_host(&self, id: &Uuid) -> Result<Option<Host>> {
-        self.storage.get_by_id(id).await
-    }
-
-    pub async fn get_all_hosts(&self, network_ids: &[Uuid]) -> Result<Vec<Host>> {
-        self.storage.get_all(network_ids).await
     }
 
     pub async fn create_host_with_services(
@@ -99,7 +103,8 @@ impl HostService {
 
         tracing::debug!("Creating host {:?}", host);
 
-        let all_hosts = self.storage.get_all(&[host.base.network_id]).await?;
+        let filter = EntityFilter::unfiltered().network_ids(&[host.base.network_id]);
+        let all_hosts = self.storage.get_all(filter).await?;
 
         let host_from_storage = match all_hosts.into_iter().find(|h| host.eq(h)) {
             // If both are from discovery, or if they have the same ID, upsert data
@@ -137,15 +142,13 @@ impl HostService {
         tracing::debug!("Updating host {:?}", host);
 
         let current_host = self
-            .get_host(&host.id)
+            .get_by_id(&host.id)
             .await?
             .ok_or_else(|| anyhow!("Host '{}' not found", host.id))?;
 
         self.update_host_services(&current_host, &host).await?;
 
-        host.updated_at = chrono::Utc::now();
-
-        self.storage.update(&host).await?;
+        self.storage.update(&mut host).await?;
 
         tracing::info!("Updated host {:?}: {:?}", host.base.name, host.id);
         tracing::debug!("Result: {:?}", host);
@@ -231,10 +234,8 @@ impl HostService {
             (existing_source, _) => existing_source,
         };
 
-        existing_host.updated_at = chrono::Utc::now();
-
         // Update the existing host
-        self.storage.update(&existing_host).await?;
+        self.storage.update(&mut existing_host).await?;
         let mut data = Vec::new();
 
         if port_updates > 0 {
@@ -279,17 +280,6 @@ impl HostService {
             return Err(anyhow!("Can't consolidate a host with itself"));
         }
 
-        if self
-            .daemon_service
-            .get_host_daemon(&other_host.id)
-            .await?
-            .is_some()
-        {
-            return Err(anyhow!(
-                "Can't consolidate a host with an associated daemon. Delete the daemon first."
-            ));
-        }
-
         let lock = self.get_host_lock(&destination_host.id).await;
         let _guard1 = lock.lock().await;
 
@@ -299,21 +289,22 @@ impl HostService {
             destination_host
         );
 
+        let destination_host_filter = EntityFilter::unfiltered().host_id(&destination_host.id);
+        let other_host_filter = EntityFilter::unfiltered().host_id(&other_host.id);
+
         let destination_host_services = self
             .service_service
-            .get_services_for_host(&destination_host.id)
+            .get_all(destination_host_filter)
             .await?;
 
-        let other_host_services = self
-            .service_service
-            .get_services_for_host(&other_host.id)
-            .await?;
+        let other_host_services = self.service_service.get_all(other_host_filter).await?;
 
-        let other_host_daemon = self.daemon_service.get_host_daemon(&other_host.id).await?;
+        let host_filter = EntityFilter::unfiltered().host_id(&other_host.id);
+        let other_host_daemon = self.daemon_service.get_one(host_filter).await?;
 
         if let Some(mut other_host_daemon) = other_host_daemon {
             other_host_daemon.base.host_id = destination_host.id;
-            self.daemon_service.update_daemon(other_host_daemon).await?;
+            self.daemon_service.update(&mut other_host_daemon).await?;
         }
 
         // Add bindings, interfaces, sources from old host to new
@@ -369,10 +360,9 @@ impl HostService {
     }
 
     async fn update_host_services(&self, current_host: &Host, updates: &Host) -> Result<(), Error> {
-        let services = self
-            .service_service
-            .get_services_for_host(&current_host.id)
-            .await?;
+        let host_filter = EntityFilter::unfiltered().host_id(&current_host.id);
+
+        let services = self.service_service.get_all(host_filter).await?;
 
         tracing::debug!(
             "Updating host {:?} services {:?} due to host updates: {:?}",
@@ -417,14 +407,15 @@ impl HostService {
     }
 
     pub async fn delete_host(&self, id: &Uuid, delete_services: bool) -> Result<()> {
-        if self.daemon_service.get_host_daemon(id).await?.is_some() {
+        let host_filter = EntityFilter::unfiltered().host_id(id);
+        if self.daemon_service.get_one(host_filter).await?.is_some() {
             return Err(anyhow!(
                 "Can't delete a host with an associated daemon. Delete the daemon first."
             ));
         }
 
         let host = self
-            .get_host(id)
+            .get_by_id(id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Host {} not found", id))?;
 

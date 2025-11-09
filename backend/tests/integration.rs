@@ -1,17 +1,17 @@
-use netvisor::server::auth::types::api::{LoginRequest, RegisterRequest};
-use netvisor::server::daemons::types::api::DiscoveryUpdatePayload;
-use netvisor::server::daemons::types::base::Daemon;
-use netvisor::server::networks::types::Network;
+use email_address::EmailAddress;
+use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
+use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
+use netvisor::server::daemons::r#impl::base::Daemon;
+use netvisor::server::networks::r#impl::Network;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
-use netvisor::server::services::types::base::Service;
+use netvisor::server::services::r#impl::base::Service;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
-use netvisor::server::users::types::base::User;
+use netvisor::server::users::r#impl::base::User;
 use std::process::{Child, Command};
 use uuid::Uuid;
 
 const BASE_URL: &str = "http://localhost:60072";
-const TEST_USERNAME: &str = "testuser";
 const TEST_PASSWORD: &str = "TestPassword123!";
 
 struct ContainerManager {
@@ -93,9 +93,9 @@ impl TestClient {
     }
 
     /// Register a new user and automatically login
-    async fn register(&self, username: &str, password: &str) -> Result<User, String> {
+    async fn register(&self, email: &EmailAddress, password: &str) -> Result<User, String> {
         let register_request = RegisterRequest {
-            username: username.to_string(),
+            email: email.clone(),
             password: password.to_string(),
         };
 
@@ -111,9 +111,9 @@ impl TestClient {
     }
 
     /// Login with existing credentials
-    async fn login(&self, username: &str, password: &str) -> Result<User, String> {
+    async fn login(&self, email: &EmailAddress, password: &str) -> Result<User, String> {
         let login_request = LoginRequest {
-            name: username.to_string(),
+            email: email.clone(),
             password: password.to_string(),
         };
 
@@ -216,16 +216,18 @@ where
 async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
     println!("\n=== Authenticating Test User ===");
 
+    let test_email: EmailAddress = EmailAddress::new_unchecked("user@example.com");
+
     // Try to register (will fail if user exists, which is fine)
-    match client.register(TEST_USERNAME, TEST_PASSWORD).await {
+    match client.register(&test_email, TEST_PASSWORD).await {
         Ok(user) => {
-            println!("✅ Registered new user: {}", user.base.username);
+            println!("✅ Registered new user: {}", user.base.email);
             Ok(user)
         }
         Err(e) if e.contains("already taken") => {
             // User exists, just login
             println!("User already exists, logging in...");
-            client.login(TEST_USERNAME, TEST_PASSWORD).await
+            client.login(&test_email, TEST_PASSWORD).await
         }
         Err(e) => Err(e),
     }
@@ -342,7 +344,7 @@ async fn verify_home_assistant_discovered(
     .await
 }
 
-async fn generate_fixtures() -> Result<(), Box<dyn std::error::Error>> {
+async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
             "exec",
@@ -373,6 +375,60 @@ async fn generate_fixtures() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Error>> {
+    // First, find the config file location in the container
+    let find_output = std::process::Command::new("docker")
+        .args([
+            "exec",
+            "netvisor-daemon-1",
+            "find",
+            "/root/.config",
+            "-name",
+            "config.json",
+            "-type",
+            "f",
+        ])
+        .output()?;
+
+    if !find_output.status.success() {
+        return Err(format!(
+            "Failed to find daemon config: {}",
+            String::from_utf8_lossy(&find_output.stderr)
+        )
+        .into());
+    }
+
+    let config_path = String::from_utf8_lossy(&find_output.stdout)
+        .trim()
+        .to_string();
+
+    if config_path.is_empty() {
+        return Err("No config.json found in container".into());
+    }
+
+    println!("Found daemon config at: {}", config_path);
+
+    // Now read the config file
+    let output = std::process::Command::new("docker")
+        .args(["exec", "netvisor-daemon-1", "cat", &config_path])
+        .output()?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to read daemon config: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .into());
+    }
+
+    let fixture_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tests/daemon_config-next.json");
+    std::fs::write(&fixture_path, output.stdout)?;
+
+    println!("✅ Generated daemon_config-next.json from test daemon");
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_full_integration() {
     // Start containers
@@ -387,7 +443,7 @@ async fn test_full_integration() {
     let user = setup_authenticated_user(&client)
         .await
         .expect("Failed to authenticate user");
-    println!("✅ Authenticated as: {}", user.base.username);
+    println!("✅ Authenticated as: {}", user.base.email);
 
     // Wait for network
     println!("\n=== Waiting for Network ===");
@@ -412,9 +468,13 @@ async fn test_full_integration() {
         .expect("Failed to find Home Assistant");
 
     // Generate fixtures
-    generate_fixtures()
+    generate_db_fixture()
         .await
-        .expect("Failed to generate fixtures");
+        .expect("Failed to generate db fixture");
+
+    generate_daemon_config_fixture()
+        .await
+        .expect("Failed to generate db fixture");
 
     println!("\n✅ All integration tests passed!");
     println!("   ✓ User authenticated");

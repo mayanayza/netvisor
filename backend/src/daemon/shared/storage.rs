@@ -23,6 +23,7 @@ pub struct CliArgs {
     pub heartbeat_interval: Option<u64>,
     pub concurrent_scans: Option<usize>,
     pub daemon_api_key: Option<String>,
+    pub docker_proxy: Option<String>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
@@ -46,6 +47,7 @@ pub struct AppConfig {
     pub last_heartbeat: Option<chrono::DateTime<chrono::Utc>>,
     pub host_id: Option<Uuid>,
     pub daemon_api_key: Option<String>,
+    pub docker_proxy: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -64,6 +66,7 @@ impl Default for AppConfig {
             host_id: None,
             daemon_api_key: None,
             concurrent_scans: 15,
+            docker_proxy: None,
         }
     }
 }
@@ -120,6 +123,9 @@ impl AppConfig {
         }
         if let Some(daemon_api_key) = cli_args.daemon_api_key {
             figment = figment.merge(("daemon_api_key", daemon_api_key));
+        }
+        if let Some(docker_proxy) = cli_args.docker_proxy {
+            figment = figment.merge(("docker_proxy", docker_proxy));
         }
 
         let config: AppConfig = figment
@@ -269,6 +275,11 @@ impl ConfigStore {
     pub async fn get_concurrent_scans(&self) -> Result<usize> {
         let config = self.config.read().await;
         Ok(config.concurrent_scans)
+    }
+
+    pub async fn get_docker_proxy(&self) -> Result<Option<String>> {
+        let config = self.config.read().await;
+        Ok(config.docker_proxy.clone())
     }
 
     pub async fn get_heartbeat_interval(&self) -> Result<u64> {

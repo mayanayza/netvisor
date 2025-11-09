@@ -3,9 +3,9 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::{
-    hosts::types::{base::Host, interfaces::Interface},
-    services::types::base::Service,
-    subnets::types::base::SubnetType,
+    hosts::r#impl::{base::Host, interfaces::Interface},
+    services::r#impl::base::Service,
+    subnets::r#impl::types::SubnetType,
     topology::{
         service::{
             context::TopologyContext,

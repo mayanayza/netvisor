@@ -1,6 +1,6 @@
 # NetVisor
 
-**Automatically discover and visually document network topology.**
+**Automatically discover and visually document network infrastructure.**
 
 NetVisor scans your network, identifies hosts and services, and generates an interactive visualization showing how everything connects, letting you easily create and maintain network documentation.
 
@@ -8,9 +8,57 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 ![Daemon](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/daemon-ci.yml?label=daemon-ci) ![Server](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/server-ci.yml?label=server-ci) ![UI](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/ui-ci.yml?label=ui-ci)
 [![Discord](https://img.shields.io/discord/1432872786828726392?logo=discord&label=discord&labelColor=white&color=7289da)](https://discord.gg/b7ffQr8AcZ)
 
+> 💡 **Prefer not to self-host?** [Join the waitlist](https://netvisor.io) for NetVisor Cloud
+> 
 <p align="center">
-  <img src="./media/topology_full.png" width="1200" alt="Example Visualization">
+  <img src="./media/872shots_so.png" width="1200" alt="Example Visualization">
 </p>
+
+## Why NetVisor?
+
+**The Problem**: Maintaining accurate network documentation is tedious. Networks evolve constantly—new services get deployed, IPs change, containers spin up and down—and documentation falls out of date before it's even complete.
+
+**The Solution**: NetVisor automatically discovers your entire network infrastructure and generates living documentation that stays current with your network's reality.
+
+### Key Features
+
+**🔍 Automatic Discovery**
+- Scans networks to identify all hosts and services
+- Detects 50+ services including Plex, Home Assistant, Proxmox, Docker, Kubernetes, Pi-hole, and more
+- Maps Docker containers and Proxmox VMs with their relationships
+- Supports multiple VLANs through distributed scanning
+
+**🗺️ Interactive Visualization**
+- Auto-generates network topology diagrams showing how everything connects
+- Visualizes subnets, hosts, services, and their relationships
+- Customizable layouts with drag-and-drop editing
+- Export diagrams as PNG for documentation or presentations
+
+**📊 Network Organization**
+- Group services by application architecture or function
+- Track infrastructure dependencies and data flows
+- Consolidate duplicate host entries
+- Organize external resources (cloud services, remote hosts)
+
+**🔄 Living Documentation**
+- Schedule recurring discovery scans (daily/weekly/etc.)
+- Real-time updates as your network changes
+- Historical tracking of network evolution
+- Self-hosted with full data privacy
+
+### Perfect For
+
+- **Home Lab Enthusiasts**: Document your ever-growing infrastructure
+- **IT Professionals**: Maintain accurate network inventory without manual spreadsheets  
+- **System Administrators**: Visualize complex multi-VLAN environments
+- **DevOps Teams**: Map containerized services and their dependencies
+- **MSPs**: Manage multiple client networks with separate environments
+
+---
+
+**Want hosted NetVisor without the setup?** Join the waitlist for our upcoming cloud service at [netvisor.io](https://netvisor.io)
+
+---
 
 ## Table of Contents
 
@@ -107,9 +155,10 @@ You can deploy additional daemons at any time after setting up your first networ
 1. **Access the UI** at `http://<your-server-ip>:60072`
 
 2. **Create your account**: On first load, you'll see the registration page
-   - Enter a username
+   - Enter an email
    - Enter a password (minimum 12 characters with uppercase, lowercase, number, and special character)
    - Click **Register** to create your account
+   - Alternatively: NetVisor supports OIDC. Go to [OIDC Setup](#oidc-setup) for more details.
 
 <p align="center">
   <img src="./media/registration.png" width="400" alt="Registration Screen">
@@ -241,6 +290,23 @@ The Manage section groups all network organization and configuration tabs:
   <img src="./media/groups_tab.png" width="800" alt="Groups Tab">
 </p>
 
+**📡 Daemons**: Manage daemons and view their capabilities. You can view:
+- What subnets daemons have interfaces with
+- Whether the daemon has access to the docker socket
+- When a daemon registered and was last seen
+
+<p align="center">
+  <img src="./media/daemons_tab.png" width="800" alt="Daemons Tab">
+</p>
+
+**🔑 API Keys**: Manage API Keys. You can manage:
+- If an API key is enabled, disabled, and when it last expired
+
+<p align="center">
+  <img src="./media/api_keys_tab.png" width="800" alt="API Keys Tab">
+</p>
+
+
 #### 🗺️ Topology
 
 Generate and customize interactive network visualizations. The topology view:
@@ -270,7 +336,11 @@ If the host running the daemon is also running Docker, the daemon automatically 
 
 ### 🌐 Network Scanning
 
-The daemon scans all IPv4 addresses on subnets it is configured to scan. For each IP on the network, the daemon:
+The daemon scans all IPv4 addresses on subnets it is configured to scan. 
+
+**By Default:** The daemon will scan the subnets it has an interface with. You can also choose additional subnets it doesn't have an interface with if you think it can reach it with network requests.
+
+For each IP on the network, the daemon:
 
 - **Detects open ports**: Scans for active TCP ports
 - **Identifies services**: Uses rule-based pattern matching to recognize running services from:
@@ -488,6 +558,7 @@ Both the server and daemon support multiple configuration methods with the follo
 | Concurrent Scans | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | `15` | Maximum number of hosts to scan in parallel during discovery |
 | Network ID | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | `None` | Network ID to report discoveries to (auto-assigned for integrated daemon) |
 | API Key | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | `None` | API key for daemon authentication with server (generated via UI) |
+| Docker Proxy | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | `None` | Optional HTTP proxy to use to connect to docker |
 
 #### Configuration File Location
 
@@ -522,12 +593,31 @@ The server supports the following configuration options:
 | Database URL | `--database-url` | `NETVISOR_DATABASE_URL` | `postgresql://postgres:password@localhost:5432/netvisor` | PostgreSQL connection string |
 | Use Secure Cookies | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Enable secure session cookies for HTTPS deployments |
 | Integrated Daemon URL | `--integrated-daemon-url` | `NETVISOR_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL where the server can reach the integrated daemon |
+| Disable Registration | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | `http://172.17.0.1:60073` | Flag to disable new user registration |
+| OIDC Issuer URL | `--oidc-issuer-url` | `NETVISOR_OIDC_ISSUER_URL` | - | The OIDC provider's issuer URL (must end with `/`). Example: `https://authentik.company.com/application/o/netvisor/` |
+| OIDC Client ID | `--oidc-client-id` | `NETVISOR_OIDC_CLIENT_ID` | - | OAuth2 client ID from your OIDC provider |
+| OIDC Client Secret | `--oidc-client-secret` | `NETVISOR_OIDC_CLIENT_SECRET` | - | OAuth2 client secret from your OIDC provider |
+| OIDC Provider Name | `--oidc-provider-name` | `NETVISOR_OIDC_PROVIDER_NAME` | - | Display name shown in the UI (e.g., `Authentik`, `Keycloak`, `Auth0`) |
 
 #### Session Cookie Security
 
 **Important**: Set `NETVISOR_USE_SECURE_SESSION_COOKIES=true` when running NetVisor behind HTTPS (reverse proxy or direct TLS). This ensures session cookies are marked as secure and only transmitted over HTTPS.
 
 For internal networks without HTTPS, keep this setting as `false` (default).
+
+#### OIDC Setup
+
+To use OIDC, you'll need to set the following:
+
+NETVISOR_OIDC_ISSUER_URL=https://your-provider.com/application/o/netvisor/<br>
+NETVISOR_OIDC_CLIENT_ID=your-client-id<br>
+NETVISOR_OIDC_CLIENT_SECRET=your-client-secret<br>
+NETVISOR_OIDC_PROVIDER_NAME=oidc-display-name<br>
+
+When configuring your OIDC provider, use this callback URL:
+```
+http://your-netvisor-domain:60072/api/auth/oidc/callback
+```
 
 ### UI Configuration
 
@@ -680,6 +770,19 @@ rmdir /s %APPDATA%\netvisor\daemon
 ---
 
 ## ❓ FAQ
+
+### Is there a hosted/cloud version?
+
+We're working on **NetVisor Cloud**, a fully managed service that eliminates the need to run your own server. You'll get:
+- Instant setup with no infrastructure management
+- Automatic updates and maintenance
+- Secure cloud storage
+- Team collaboration features
+- Multi-network management
+
+**[Join the waitlist at netvisor.io](https://netvisor.io)** to be notified when it launches.
+
+For now, NetVisor is available as a self-hosted solution that you can run on your own infrastructure.
 
 ### Where does NetVisor store my data?
 

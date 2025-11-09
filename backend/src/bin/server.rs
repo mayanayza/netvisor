@@ -6,9 +6,14 @@ use clap::Parser;
 use netvisor::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
+        api_keys::r#impl::base::{ApiKey, ApiKeyBase},
         config::{AppState, CliArgs, ServerConfig},
-        shared::handlers::create_router,
-        users::types::base::{User, UserBase},
+        shared::{
+            handlers::factory::create_router,
+            services::traits::CrudService,
+            storage::{filter::EntityFilter, traits::StorableEntity},
+        },
+        users::r#impl::base::{User, UserBase},
     },
 };
 use tower::ServiceBuilder;
@@ -47,6 +52,30 @@ struct Cli {
     /// Use secure session cookies (if serving UI behind HTTPS)
     #[arg(long)]
     use_secure_session_cookies: Option<bool>,
+
+    /// Enable or disable registration flow
+    #[arg(long)]
+    disable_registration: bool,
+
+    /// OIDC client ID
+    #[arg(long)]
+    oidc_client_id: Option<String>,
+
+    /// OIDC client secret
+    #[arg(long)]
+    oidc_client_secret: Option<String>,
+
+    /// OIDC issuer url
+    #[arg(long)]
+    oidc_issuer_url: Option<String>,
+
+    /// OIDC issuer url
+    #[arg(long)]
+    oidc_provider_name: Option<String>,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    oidc_redirect_url: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -58,6 +87,12 @@ impl From<Cli> for CliArgs {
             database_url: cli.database_url,
             integrated_daemon_url: cli.integrated_daemon_url,
             use_secure_session_cookies: cli.use_secure_session_cookies,
+            disable_registration: cli.disable_registration,
+            oidc_client_id: cli.oidc_client_id,
+            oidc_client_secret: cli.oidc_client_secret,
+            oidc_issuer_url: cli.oidc_issuer_url,
+            oidc_provider_name: cli.oidc_provider_name,
+            oidc_redirect_url: cli.oidc_redirect_url,
         }
     }
 }
@@ -90,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
     // Create app state
     let state = AppState::new(config).await?;
     let user_service = state.services.user_service.clone();
-    let daemon_service = state.services.daemon_service.clone();
+    let api_key_service = state.services.api_key_service.clone();
     let discovery_service = state.services.discovery_service.clone();
 
     // Create discovery cleanup task
@@ -175,7 +210,7 @@ async fn main() -> anyhow::Result<()> {
     // Start cron for discovery scheduler
     discovery_service.start_scheduler().await?;
 
-    let all_users = user_service.get_all_users().await?;
+    let all_users = user_service.get_all(EntityFilter::unfiltered()).await?;
 
     // First load - populate seed data
     if all_users.is_empty() {
@@ -184,12 +219,18 @@ async fn main() -> anyhow::Result<()> {
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
-        let api_key = daemon_service.generate_api_key();
-        daemon_service
-            .create_pending_api_key(network.id, api_key.clone())
+        let api_key = api_key_service
+            .create(ApiKey::new(ApiKeyBase {
+                key: "".to_string(),
+                name: "Integrated Daemon API Key".to_string(),
+                last_used: None,
+                expires_at: None,
+                network_id: network.id,
+                is_enabled: true,
+            }))
             .await?;
 
-        initialize_local_daemon(integrated_daemon_url, network.id, api_key).await?;
+        initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
     } else {
         tracing::debug!("Server already has data, skipping seed data");
     }

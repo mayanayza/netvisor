@@ -1,14 +1,15 @@
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
-use crate::server::daemons::types::api::DaemonCapabilities;
+use crate::server::daemons::r#impl::api::DaemonCapabilities;
 use crate::{
     daemon::shared::storage::ConfigStore,
     server::{
-        daemons::types::api::{DaemonRegistrationRequest, DaemonRegistrationResponse},
+        daemons::r#impl::api::{DaemonRegistrationRequest, DaemonRegistrationResponse},
         shared::types::api::ApiResponse,
     },
 };
 use anyhow::Result;
+use std::net::IpAddr;
 use std::{sync::Arc, time::Duration};
 use uuid::Uuid;
 
@@ -109,7 +110,18 @@ impl DaemonRuntimeService {
         network_id: Uuid,
         has_docker_socket: bool,
     ) -> Result<()> {
-        let daemon_ip = self.utils.get_own_ip_address()?;
+        let bind_address = self.config_store.get_bind_address().await?;
+
+        let daemon_ip = if bind_address == "0.0.0.0" || bind_address == "::" {
+            // If binding to all interfaces, auto-detect the primary IP
+            self.utils.get_own_ip_address()?
+        } else {
+            // Use the configured bind address as the advertised IP
+            bind_address
+                .parse::<IpAddr>()
+                .map_err(|e| anyhow::anyhow!("Invalid bind address '{}': {}", bind_address, e))?
+        };
+
         let daemon_port = self.config_store.get_port().await?;
         if let Some(api_key) = self.config_store.get_api_key().await? {
             tracing::info!("Registering daemon with ID: {}", daemon_id,);
@@ -118,7 +130,6 @@ impl DaemonRuntimeService {
                 network_id,
                 daemon_ip,
                 daemon_port,
-                api_key,
                 capabilities: DaemonCapabilities {
                     has_docker_socket,
                     interfaced_subnet_ids: Vec::new(),
@@ -130,6 +141,7 @@ impl DaemonRuntimeService {
             let response = self
                 .client
                 .post(format!("{}/api/daemons/register", server_target))
+                .header("Authorization", format!("Bearer {}", api_key))
                 .json(&registration_request)
                 .send()
                 .await?;

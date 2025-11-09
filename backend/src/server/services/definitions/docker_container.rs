@@ -1,9 +1,11 @@
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
-use crate::server::services::types::base::DiscoverySessionServiceMatchParams;
-use crate::server::services::types::categories::ServiceCategory;
-use crate::server::services::types::definitions::ServiceDefinition;
-use crate::server::services::types::patterns::{MatchConfidence, Pattern};
-use crate::server::services::types::virtualization::{DockerVirtualization, ServiceVirtualization};
+use crate::server::services::r#impl::base::DiscoverySessionServiceMatchParams;
+use crate::server::services::r#impl::categories::ServiceCategory;
+use crate::server::services::r#impl::definitions::ServiceDefinition;
+use crate::server::services::r#impl::patterns::{MatchConfidence, Pattern};
+use crate::server::services::r#impl::virtualization::{
+    DockerVirtualization, ServiceVirtualization,
+};
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
 pub struct DockerContainer;

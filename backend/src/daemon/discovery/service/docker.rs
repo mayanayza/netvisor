@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use bollard::API_DEFAULT_VERSION;
 use bollard::{
     Docker,
     query_parameters::{InspectContainerOptions, ListContainersOptions, ListNetworksOptions},
@@ -18,27 +19,29 @@ use tokio_util::sync::CancellationToken;
 use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
-use crate::server::discovery::types::base::DiscoveryType;
-use crate::server::hosts::types::base::HostBase;
-use crate::server::hosts::types::interfaces::ALL_INTERFACES_IP;
-use crate::server::hosts::types::ports::Port;
-use crate::server::services::types::base::{Service, ServiceBase, ServiceMatchBaselineParams};
-use crate::server::services::types::bindings::{Binding, BindingDiscriminants};
-use crate::server::services::types::definitions::ServiceDefinition;
-use crate::server::services::types::endpoints::{Endpoint, EndpointResponse};
-use crate::server::services::types::patterns::MatchDetails;
-use crate::server::services::types::virtualization::{DockerVirtualization, ServiceVirtualization};
-use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
-use crate::server::subnets::types::base::{
-    Subnet, SubnetBase, SubnetType, SubnetTypeDiscriminants,
+use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
+use crate::server::hosts::r#impl::base::HostBase;
+use crate::server::hosts::r#impl::interfaces::ALL_INTERFACES_IP;
+use crate::server::hosts::r#impl::ports::Port;
+use crate::server::services::r#impl::base::{Service, ServiceBase, ServiceMatchBaselineParams};
+use crate::server::services::r#impl::bindings::{Binding, BindingDiscriminants};
+use crate::server::services::r#impl::definitions::ServiceDefinition;
+use crate::server::services::r#impl::endpoints::{Endpoint, EndpointResponse};
+use crate::server::services::r#impl::patterns::MatchDetails;
+use crate::server::services::r#impl::virtualization::{
+    DockerVirtualization, ServiceVirtualization,
 };
+use crate::server::shared::storage::traits::StorableEntity;
+use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
+use crate::server::subnets::r#impl::base::{Subnet, SubnetBase};
+use crate::server::subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants};
 use crate::{
     daemon::discovery::service::base::{
         CreatesDiscoveredEntities, DiscoversNetworkedEntities, DiscoveryRunner,
     },
     server::{
-        daemons::types::api::DaemonDiscoveryRequest,
-        hosts::types::{
+        daemons::r#impl::api::DaemonDiscoveryRequest,
+        hosts::r#impl::{
             base::Host,
             interfaces::{Interface, InterfaceBase},
             ports::PortBase,
@@ -54,6 +57,7 @@ type IpPortHashMap = HashMap<IpAddr, Vec<PortBase>>;
 pub struct DockerScanDiscovery {
     docker_client: OnceLock<Docker>,
     host_id: Uuid,
+    host_naming_fallback: HostNamingFallback,
 }
 
 pub struct ProcessContainerParams<'a> {
@@ -70,6 +74,7 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::Docker {
             host_id: self.domain.host_id,
+            host_naming_fallback: self.domain.host_naming_fallback,
         }
     }
 
@@ -143,10 +148,11 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
 }
 
 impl DockerScanDiscovery {
-    pub fn new(host_id: Uuid) -> Self {
+    pub fn new(host_id: Uuid, host_naming_fallback: HostNamingFallback) -> Self {
         Self {
             docker_client: OnceLock::new(),
             host_id,
+            host_naming_fallback,
         }
     }
 }
@@ -220,8 +226,14 @@ impl DiscoveryRunner<DockerScanDiscovery> {
     pub async fn new_local_docker_client(&self) -> Result<Docker, Error> {
         tracing::debug!("Connecting to Docker daemon");
 
-        let client = Docker::connect_with_local_defaults()
-            .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?;
+        let client =
+            if let Ok(Some(docker_proxy)) = self.as_ref().config_store.get_docker_proxy().await {
+                Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
+                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+            } else {
+                Docker::connect_with_local_defaults()
+                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+            };
 
         client.ping().await?;
 
@@ -438,7 +450,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     })),
                 };
 
-                if let Ok(Some((mut host, services))) = self.process_host(params, None).await {
+                if let Ok(Some((mut host, services))) = self
+                    .process_host(params, None, self.domain.host_naming_fallback)
+                    .await
+                {
                     host.id = self.domain.host_id;
 
                     if let Ok((created_host, created_services)) =
@@ -536,6 +551,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         )),
                     },
                     None,
+                    self.domain.host_naming_fallback,
                 )
                 .await
             {
