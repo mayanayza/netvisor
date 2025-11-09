@@ -21,7 +21,7 @@ impl ServiceDefinition for QBittorrent {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
             Pattern::Endpoint(PortBase::HttpAlt, "/", "qBittorrent logo"),
-            Pattern::Endpoint(PortBase::new_tcp(8090), "/", "qBittorrent logo")
+            Pattern::Endpoint(PortBase::new_tcp(8090), "/", "qBittorrent logo"),
         ])
     }
 

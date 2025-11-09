@@ -21,7 +21,7 @@ impl ServiceDefinition for Slskd {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::Endpoint(PortBase::new_tcp(5030), "/", "slskd"),
-            Pattern::Endpoint(PortBase::new_tcp(5030), "/api/v0/session/enabled", "true")
+            Pattern::Endpoint(PortBase::new_tcp(5030), "/api/v0/session/enabled", "true"),
         ])
     }
 
