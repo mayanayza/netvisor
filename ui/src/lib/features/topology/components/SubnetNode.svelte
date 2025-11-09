@@ -86,17 +86,6 @@
 			{/if}
 		</div>
 
-		<!-- Connection Handles -->
-		<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
-		<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
-		<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-		<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
-
-		<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
-		<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
-		<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-		<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
-
 		<NodeResizeControl
 			position="bottom-right"
 			style="z-index: 100; border: none; width: 20px; height: 20px;"
@@ -182,6 +171,16 @@
 		</NodeResizeControl>
 	</div>
 {/if}
+
+<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
+<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
+<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
+<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
+
+<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
+<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
+<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
+<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
 
 <style>
 	/* Ensure proper text wrapping and overflow handling */
