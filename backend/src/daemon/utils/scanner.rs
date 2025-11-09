@@ -110,12 +110,19 @@ pub async fn scan_ports_and_endpoints(
         return Err(anyhow!("Operation cancelled"));
     }
 
-    // OPTIMIZATION: Only scan endpoints on open TCP ports
+    // Only scan endpoints on open TCP ports + ports that are unique to endpoints which we didn't port scan
     // (We determined this internally from the scan results)
+    let endpoint_only_ports = Service::endpoint_only_ports();
+
+    let mut ports_to_check = tcp_ports;
+    ports_to_check.extend(endpoint_only_ports);
+    ports_to_check.sort_by_key(|p| (p.number(), p.protocol()));
+    ports_to_check.dedup();
+
     let endpoints = scan_endpoints(
         ip,
         cancel.clone(),
-        Some(tcp_ports), // ← Filter determined HERE, not passed in
+        Some(ports_to_check),
         port_scan_batch_size,
     )
     .await?;

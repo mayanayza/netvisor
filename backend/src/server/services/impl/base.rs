@@ -167,6 +167,26 @@ impl Service {
         endpoints
     }
 
+    /// Get ports that appear ONLY in endpoint patterns, not in port scan patterns
+    pub fn endpoint_only_ports() -> Vec<PortBase> {
+        let port_scan_ports = Self::all_discovery_ports();
+        let endpoint_ports: Vec<PortBase> = Self::all_discovery_endpoints()
+            .iter()
+            .map(|e| e.port_base)
+            .collect();
+
+        // Get ports that are in endpoints but NOT in port scans
+        let mut endpoint_only: Vec<PortBase> = endpoint_ports
+            .into_iter()
+            .filter(|ep| !port_scan_ports.contains(ep))
+            .collect();
+
+        endpoint_only.sort_by_key(|p| (p.number(), p.protocol()));
+        endpoint_only.dedup();
+
+        endpoint_only
+    }
+
     /// Matches scanned data and returns service, vec of matched ports
     pub fn from_discovery(
         params: DiscoverySessionServiceMatchParams,
