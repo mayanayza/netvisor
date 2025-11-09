@@ -53,7 +53,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # === Networking ===
-reqwest = { version = "0.11", default-features = false, features = ["json", "stream", "rustls-tls", "cookies"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream", "rustls-tls", "cookies"] }
 trust-dns-resolver = { version = "0.23", default-features = false, features = ["tokio-runtime", "dns-over-rustls"] }
 snmp2 = { version = "0.4.8", features = ["tokio"] }
 pnet = "0.35.0"
@@ -138,6 +138,11 @@ secrecy = "0.10.3"
 sha2 = "0.10.9"
 hex = "0.4.3"
 tokio-cron-scheduler = "0.15.1"
+axum-macros = "0.5.0"
+openidconnect = { version = "4.0.1", features = ["reqwest"] }
+oauth2 = "5.0.0"
+email_address = "0.2.9"
+urlencoding = "2.1.3"
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]

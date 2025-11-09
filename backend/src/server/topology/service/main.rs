@@ -7,7 +7,8 @@ use uuid::Uuid;
 use crate::server::{
     groups::service::GroupService,
     hosts::service::HostService,
-    services::{service::ServiceService, types::base::Service},
+    services::{r#impl::base::Service, service::ServiceService},
+    shared::{services::traits::CrudService, storage::filter::EntityFilter},
     subnets::service::SubnetService,
     topology::{
         service::{
@@ -45,22 +46,14 @@ impl TopologyService {
         &self,
         options: TopologyRequestOptions,
     ) -> Result<Graph<Node, Edge>, Error> {
+        let network_filter = EntityFilter::unfiltered().network_ids(&options.network_ids);
         // Fetch all data
-        let hosts = self
-            .host_service
-            .get_all_hosts(&options.network_ids)
-            .await?;
-        let subnets = self
-            .subnet_service
-            .get_all_subnets(&options.network_ids)
-            .await?;
-        let groups = self
-            .group_service
-            .get_all_groups(&options.network_ids)
-            .await?;
+        let hosts = self.host_service.get_all(network_filter.clone()).await?;
+        let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
+        let groups = self.group_service.get_all(network_filter.clone()).await?;
         let services: Vec<Service> = self
             .service_service
-            .get_all_services(&options.network_ids)
+            .get_all(network_filter.clone())
             .await?
             .into_iter()
             .filter(|s| {

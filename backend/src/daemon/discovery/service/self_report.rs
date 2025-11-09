@@ -6,34 +6,37 @@ use crate::{
         types::base::{DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate},
     },
     server::{
-        daemons::types::api::{DaemonCapabilities, DaemonDiscoveryRequest},
-        discovery::types::base::DiscoveryType,
-        hosts::types::{
+        daemons::r#impl::api::{DaemonCapabilities, DaemonDiscoveryRequest},
+        discovery::r#impl::types::DiscoveryType,
+        hosts::r#impl::{
             interfaces::{ALL_INTERFACES_IP, Interface},
             ports::{Port, PortBase},
         },
         services::{
             definitions::netvisor_daemon::NetvisorDaemon,
-            types::{
+            r#impl::{
                 base::ServiceBase, bindings::Binding, definitions::ServiceDefinition,
                 patterns::MatchDetails,
             },
         },
-        shared::types::{
-            api::ApiResponse,
-            entities::{DiscoveryMetadata, EntitySource},
+        shared::{
+            storage::traits::StorableEntity,
+            types::{
+                api::ApiResponse,
+                entities::{DiscoveryMetadata, EntitySource},
+            },
         },
-        subnets::types::base::{Subnet, SubnetTypeDiscriminants},
+        subnets::r#impl::{base::Subnet, types::SubnetTypeDiscriminants},
     },
 };
 use crate::{
     daemon::utils::base::DaemonUtils,
     server::{
-        hosts::types::{
+        hosts::r#impl::{
             base::{Host, HostBase},
             targets::HostTarget,
         },
-        services::types::base::Service,
+        services::r#impl::base::Service,
     },
 };
 use anyhow::{Error, Result};
@@ -163,9 +166,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         // Create host base
         let host_base = HostBase {
-            name: hostname
-                .clone()
-                .unwrap_or(format!("Netvisor-Daemon-{}", local_ip)),
+            name: hostname.clone().unwrap_or(format!("{}", local_ip)),
             hostname,
             network_id,
             description: Some("NetVisor daemon".to_string()),

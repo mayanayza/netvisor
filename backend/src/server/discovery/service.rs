@@ -1,24 +1,29 @@
-use crate::server::discovery::storage::DiscoveryStorage;
+use crate::server::discovery::r#impl::types::RunType;
+use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::filter::EntityFilter;
+use crate::server::shared::storage::generic::GenericPostgresStorage;
+use crate::server::shared::storage::traits::{StorableEntity, Storage};
 use anyhow::anyhow;
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use chrono::Utc;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{RwLock, broadcast};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use uuid::Uuid;
 
-use crate::server::discovery::types::base::{Discovery, RunType};
+use crate::server::discovery::r#impl::base::Discovery;
 use crate::{
     daemon::discovery::types::base::DiscoveryPhase,
     server::daemons::{
+        r#impl::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
         service::DaemonService,
-        types::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
     },
 };
 
 /// Server-side session management for discovery
 pub struct DiscoveryService {
-    discovery_storage: Arc<dyn DiscoveryStorage>,
+    discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
     daemon_service: Arc<DaemonService>,
     sessions: RwLock<HashMap<Uuid, DiscoveryUpdatePayload>>, // session_id -> session state mapping
     daemon_sessions: RwLock<HashMap<Uuid, Vec<Uuid>>>,       // daemon_id -> session_id mapping
@@ -26,9 +31,16 @@ pub struct DiscoveryService {
     scheduler: Option<Arc<RwLock<JobScheduler>>>,
 }
 
+#[async_trait]
+impl CrudService<Discovery> for DiscoveryService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Discovery>> {
+        &self.discovery_storage
+    }
+}
+
 impl DiscoveryService {
     pub async fn new(
-        discovery_storage: Arc<dyn DiscoveryStorage>,
+        discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
         daemon_service: Arc<DaemonService>,
     ) -> Result<Arc<Self>> {
         let (tx, _rx) = broadcast::channel(100); // Buffer 100 messages
@@ -42,16 +54,6 @@ impl DiscoveryService {
             update_tx: tx,
             scheduler: Some(Arc::new(RwLock::new(scheduler))),
         }))
-    }
-
-    /// Get group by ID
-    pub async fn get_discovery(&self, id: &Uuid) -> Result<Option<Discovery>, Error> {
-        self.discovery_storage.get_by_id(id).await
-    }
-
-    /// Get all groups
-    pub async fn get_all_discoveries(&self, network_ids: &[Uuid]) -> Result<Vec<Discovery>, Error> {
-        self.discovery_storage.get_all(network_ids).await
     }
 
     /// Create a new scheduled discovery
@@ -70,7 +72,10 @@ impl DiscoveryService {
         {
             // Disable and save to DB
             created_discovery.disable();
-            let disabled_discovery = self.discovery_storage.update(&created_discovery).await?;
+            let disabled_discovery = self
+                .discovery_storage
+                .update(&mut created_discovery)
+                .await?;
 
             tracing::error!(
                 "Failed to schedule discovery {}. Discovery created but disabled. Error: {}",
@@ -104,13 +109,13 @@ impl DiscoveryService {
             }
 
             // Update in DB first
-            let mut updated = self.discovery_storage.update(&discovery).await?;
+            let mut updated = self.discovery_storage.update(&mut discovery).await?;
 
             // Try to reschedule with new cron expression
             if let Err(e) = Self::schedule_discovery(self, &updated).await {
                 // Disable and save again
                 updated.disable();
-                let disabled_discovery = self.discovery_storage.update(&updated).await?;
+                let disabled_discovery = self.discovery_storage.update(&mut updated).await?;
 
                 tracing::error!(
                     "Failed to reschedule discovery {}. Discovery updated but disabled. Error: {}",
@@ -129,7 +134,7 @@ impl DiscoveryService {
             Ok(updated)
         } else {
             // For non-scheduled, just update
-            let updated = self.discovery_storage.update(&discovery).await?;
+            let updated = self.discovery_storage.update(&mut discovery).await?;
             tracing::info!("Updated discovery {}: {}", updated.base.name, updated.id);
             Ok(updated)
         }
@@ -138,7 +143,7 @@ impl DiscoveryService {
     /// Delete group
     pub async fn delete_discovery(self: &Arc<Self>, id: &Uuid) -> Result<(), Error> {
         let discovery = self
-            .get_discovery(id)
+            .get_by_id(id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Discovery not found"))?;
 
@@ -166,7 +171,9 @@ impl DiscoveryService {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Scheduler not initialized"))?;
 
-        let discoveries = self.discovery_storage.get_all_scheduled().await?;
+        let filter = EntityFilter::unfiltered().scheduled_discovery();
+
+        let discoveries = self.discovery_storage.get_all(filter).await?;
         let count = discoveries.len();
 
         let mut failed_count = 0;
@@ -180,7 +187,7 @@ impl DiscoveryService {
 
                 // Disable and save
                 discovery.disable();
-                let _ = self.discovery_storage.update(&discovery).await;
+                let _ = self.discovery_storage.update(&mut discovery).await;
                 failed_count += 1;
             }
         }
@@ -237,21 +244,26 @@ impl DiscoveryService {
         let service_clone = Arc::clone(service);
 
         let job = Job::new_async(cron_schedule.as_str(), move |_uuid, _lock| {
-            let discovery = discovery.clone();
+            let mut discovery = discovery.clone();
             let storage = storage.clone();
             let service = service_clone.clone();
 
             Box::pin(async move {
-                tracing::info!("Running scheduled discovery {}", discovery.id);
+                tracing::info!("Running scheduled discovery {}", &discovery.id);
 
-                // Just use the existing start_session method!
-                match service.start_session(discovery).await {
+                match service.start_session(discovery.clone()).await {
                     Ok(_) => {
                         // Update last_run
-                        let now = Utc::now();
-                        if let Err(e) = storage.update_schedule_times(&discovery_id, now).await {
-                            tracing::error!("Failed to update schedule times: {}", e);
-                        }
+                        if let RunType::Scheduled {
+                            last_run: mut _last_run,
+                            ..
+                        } = discovery.base.run_type
+                        {
+                            _last_run = Some(Utc::now());
+                            if let Err(e) = storage.update(&mut discovery).await {
+                                tracing::error!("Failed to update schedule times: {}", e);
+                            }
+                        };
                     }
                     Err(e) => {
                         tracing::error!("Scheduled discovery {} failed: {}", discovery_id, e);
@@ -261,12 +273,6 @@ impl DiscoveryService {
         })?;
 
         let job_id = scheduler.write().await.add(job).await?;
-
-        // Update initial last_run time (use write lock, not read)
-        let storage_for_update = service.discovery_storage.clone();
-        storage_for_update
-            .update_schedule_times(&discovery_id, Utc::now())
-            .await?;
 
         tracing::info!(
             "Scheduled discovery {} with cron: {}",
@@ -393,7 +399,7 @@ impl DiscoveryService {
                 id: Uuid::new_v4(),
                 created_at: session.started_at.unwrap_or(Utc::now()),
                 updated_at: Utc::now(),
-                base: crate::server::discovery::types::base::DiscoveryBase {
+                base: crate::server::discovery::r#impl::base::DiscoveryBase {
                     daemon_id: session.daemon_id,
                     network_id: session.network_id,
                     name: "Discovery Run".to_string(),
@@ -522,7 +528,7 @@ impl DiscoveryService {
 
             // Active phases: send cancellation to daemon
             DiscoveryPhase::Started | DiscoveryPhase::Scanning => {
-                if let Some(daemon) = self.daemon_service.get_daemon(&daemon_id).await? {
+                if let Some(daemon) = self.daemon_service.get_by_id(&daemon_id).await? {
                     self.daemon_service
                         .send_discovery_cancellation(&daemon, session_id)
                         .await

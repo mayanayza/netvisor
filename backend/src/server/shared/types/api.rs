@@ -43,6 +43,10 @@ impl ApiError {
         Self::new(StatusCode::CONFLICT, message.to_string())
     }
 
+    pub fn forbidden(message: &str) -> Self {
+        Self::new(StatusCode::FORBIDDEN, message.to_string())
+    }
+
     pub fn internal_error(message: &str) -> Self {
         Self::new(StatusCode::INTERNAL_SERVER_ERROR, message.to_string())
     }

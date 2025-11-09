@@ -33,15 +33,25 @@
 		{ value: 'SelfReport', label: 'Self Report', disabled: daemonHostId == null }
 	];
 
-	// Initialize subnet_ids on mount if needed
+	const hostNameFallbackField = field('host_name_fallback', 'BestService', [required()]);
+
+	const hostNameFallbackOptions = [
+		{ value: 'Ip', label: 'IP Address' },
+		{ value: 'BestService', label: 'Best Service' }
+	];
+
+	// Initialize discovery type fields on mount
 	onMount(() => {
-		if (
-			formData.discovery_type.type === 'Network' &&
-			(!formData.discovery_type.subnet_ids || formData.discovery_type.subnet_ids.length === 0)
-		) {
+		if (formData.discovery_type.type === 'Network') {
 			formData.discovery_type = {
 				...formData.discovery_type,
-				subnet_ids: daemon.capabilities.interfaced_subnet_ids
+				subnet_ids: daemon.capabilities.interfaced_subnet_ids,
+				host_naming_fallback: 'BestService'
+			};
+		} else if (formData.discovery_type.type == 'Docker') {
+			formData.discovery_type = {
+				...formData.discovery_type,
+				host_naming_fallback: 'BestService'
 			};
 		}
 	});
@@ -78,18 +88,33 @@
 		if (type === 'Network' && formData.discovery_type.type !== 'Network') {
 			formData.discovery_type = {
 				type: 'Network',
-				subnet_ids: daemon.capabilities.interfaced_subnet_ids
+				subnet_ids: daemon.capabilities.interfaced_subnet_ids,
+				host_naming_fallback: 'BestService'
 			} as Network;
+			hostNameFallbackField.set('BestService');
 		} else if (type === 'Docker' && formData.discovery_type.type !== 'Docker') {
 			formData.discovery_type = {
 				type: 'Docker',
-				host_id: daemonHostId
+				host_id: daemonHostId,
+				host_naming_fallback: 'BestService'
 			} as Docker;
+			hostNameFallbackField.set('BestService');
 		} else if (type === 'SelfReport' && formData.discovery_type.type !== 'SelfReport') {
 			formData.discovery_type = {
 				type: 'SelfReport',
 				host_id: daemonHostId
 			} as SelfReport;
+		}
+	}
+
+	// Handle host naming fallback changes
+	$: {
+		const fallbackValue = $hostNameFallbackField.value;
+		if (formData.discovery_type.type == 'Docker' || formData.discovery_type.type == 'Network') {
+			formData.discovery_type = {
+				...formData.discovery_type,
+				host_naming_fallback: fallbackValue as 'BestService' | 'Ip'
+			};
 		}
 	}
 
@@ -109,7 +134,9 @@
 			: [];
 
 	$: nonInterfacedSubnets =
-		formData.discovery_type.type == 'Network' && formData.discovery_type.subnet_ids.length > 0
+		formData.discovery_type.type == 'Network' &&
+		formData.discovery_type.subnet_ids &&
+		formData.discovery_type.subnet_ids.length > 0
 			? formData.discovery_type.subnet_ids
 					.filter((s) => !daemon.capabilities.interfaced_subnet_ids.includes(s))
 					.map((s) => $subnets.find((subnet) => subnet.id == s))
@@ -213,6 +240,18 @@
 			{/if}
 
 			<!-- Type-specific configuration -->
+
+			{#if formData.discovery_type.type == 'Docker' || formData.discovery_type.type == 'Network'}
+				<SelectInput
+					label="Host Name Fallback"
+					id="host_name_fallback"
+					{formApi}
+					helpText="In the event that hostname can't be resolved, what name should be set for discovered hosts? IP Address, or best service (the highest confidence service match)?"
+					field={hostNameFallbackField}
+					options={hostNameFallbackOptions}
+				/>
+			{/if}
+
 			{#if formData.discovery_type.type === 'Network'}
 				<div class="rounded-lg bg-gray-800/50 p-4">
 					<ListManager

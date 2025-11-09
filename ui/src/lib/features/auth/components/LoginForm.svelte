@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { field } from 'svelte-forms';
-	import { required } from 'svelte-forms/validators';
+	import { email as emailValidator, required } from 'svelte-forms/validators';
 	import { minLength } from '$lib/shared/components/forms/validators';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
@@ -10,23 +10,23 @@
 	export let formData: LoginRequest;
 
 	// Create form fields with validation
-	const name = field('name', formData.name, [required(), minLength(3)]);
+	const email = field('email', formData.email, [required(), emailValidator()]);
 	const password = field('password', formData.password, [required(), minLength(12)]);
 
 	// Update formData when field values change
-	$: formData.name = $name.value;
+	$: formData.email = $email.value;
 	$: formData.password = $password.value;
 </script>
 
 <div class="space-y-6">
 	<div class="space-y-4">
 		<TextInput
-			label="Username"
+			label="Email"
 			id="name"
 			{formApi}
-			placeholder="Enter your username"
+			placeholder="Enter your email"
 			required={true}
-			field={name}
+			field={email}
 		/>
 
 		<TextInput

@@ -96,6 +96,10 @@
 		@apply hover:ring-1 hover:ring-gray-600;
 		@apply rounded-2xl p-6 shadow-xl transition-all duration-300 ease-in-out;
 	}
+
+	.card-static {
+		@apply hover:ring-0;
+	}
 	/* Card dividers/borders */
 	.card-divider-h {
 		@apply border-t border-gray-700;
@@ -176,6 +180,11 @@
 
 	.select-option-selected {
 		@apply border-l-2 border-blue-500 bg-purple-900/30;
+	}
+
+	/* Datetime picker styling */
+	input[type='datetime-local'] {
+		color-scheme: dark;
 	}
 
 	/* List items (for ListSelectItem, cards, etc) */

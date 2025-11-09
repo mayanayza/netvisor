@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::server::services::types::categories::ServiceCategory;
+use crate::server::services::r#impl::categories::ServiceCategory;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct TopologyRequestOptions {

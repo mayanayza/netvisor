@@ -1,7 +1,7 @@
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
-use crate::server::services::types::categories::ServiceCategory;
-use crate::server::services::types::definitions::{ServiceDefinition, ServiceDefinitionExt};
-use crate::server::services::types::patterns::{MatchConfidence, Pattern};
+use crate::server::services::r#impl::categories::ServiceCategory;
+use crate::server::services::r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt};
+use crate::server::services::r#impl::patterns::{MatchConfidence, Pattern};
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
 pub struct Gateway;

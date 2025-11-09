@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { topologyOptions } from '../../../store';
 	import { networks } from '$lib/features/networks/store';
-	import OptionsCheckbox from './OptionsCheckbox.svelte';
-	import OptionsMultiSelect from './OptionsMultiSelect.svelte';
+	import OptionsCheckbox from '../../../../../shared/components/forms/input/Checkbox.svelte';
+	import OptionsMultiSelect from '../../../../../shared/components/forms/input/MultiSelect.svelte';
 	import OptionsSection from './OptionsSection.svelte';
 	import { onMount } from 'svelte';
 	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
@@ -79,7 +79,7 @@
 	<!-- Network Selection -->
 	<OptionsSection title="General">
 		<OptionsMultiSelect
-			bind:topologyOption={$topologyOptions.request_options.network_ids}
+			bind:field={$topologyOptions.request_options.network_ids}
 			getOptionLabel={(option) => option.name}
 			getOptionValue={(option) => option.id}
 			options={$networks}
@@ -91,12 +91,12 @@
 
 	<OptionsSection title="Docker">
 		<OptionsCheckbox
-			bind:topologyOption={$topologyOptions.request_options.group_docker_bridges_by_host}
+			bind:field={$topologyOptions.request_options.group_docker_bridges_by_host}
 			title="Group Docker Bridges"
 			description="Display Docker containers running on a single host in a single subnet grouping"
 		/>
 		<OptionsCheckbox
-			bind:topologyOption={$topologyOptions.request_options.hide_vm_title_on_docker_container}
+			bind:field={$topologyOptions.request_options.hide_vm_title_on_docker_container}
 			title="Hide VM provider on containers"
 			description="If a docker container is running on a host that is a VM, don't indicate this on the container node"
 		/>
@@ -116,7 +116,7 @@
 
 		<!-- Infrastructure Service Categories -->
 		<OptionsMultiSelect
-			bind:topologyOption={$topologyOptions.request_options.left_zone_service_categories}
+			bind:field={$topologyOptions.request_options.left_zone_service_categories}
 			options={serviceCategories}
 			onChange={handleLeftZoneCategoriesChange}
 			title="Categories"
@@ -124,7 +124,7 @@
 		/>
 
 		<OptionsCheckbox
-			bind:topologyOption={$topologyOptions.request_options.show_gateway_in_left_zone}
+			bind:field={$topologyOptions.request_options.show_gateway_in_left_zone}
 			title="Show gateways in left zone"
 			description="Display gateway services in the subnet's left zone"
 		/>
@@ -132,19 +132,19 @@
 
 	<OptionsSection title="Hide Stuff">
 		<OptionsCheckbox
-			bind:topologyOption={$topologyOptions.request_options.hide_ports}
+			bind:field={$topologyOptions.request_options.hide_ports}
 			title="Hide Ports"
 			description="Don't show open ports next to services"
 		/>
 		<OptionsMultiSelect
-			bind:topologyOption={$topologyOptions.request_options.hide_service_categories}
+			bind:field={$topologyOptions.request_options.hide_service_categories}
 			onChange={handleHideServiceCategoryChange}
 			options={serviceCategories}
 			title="Service Categories"
 			description="Select service categories that should be hidden"
 		/>
 		<OptionsMultiSelect
-			bind:topologyOption={$topologyOptions.hide_edge_types}
+			bind:field={$topologyOptions.hide_edge_types}
 			options={eTypes}
 			onChange={handleHideEdgeTypeChange}
 			title="Edge Types"

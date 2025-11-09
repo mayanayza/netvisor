@@ -5,24 +5,80 @@ on:
     types: [published]
 
 jobs:
+  test-and-update-fixtures:
+    name: Run Tests and Update Fixtures
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Need write permission to push
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0  # Fetch all history so we can push
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+      
+      - name: Run all tests
+        run: make test
+      
+      - name: Update fixtures
+        run: |
+          mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
+          mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
+          echo "✅ Updated test fixtures"
+      
+      - name: Commit and push fixture updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json
+          
+          if git diff --staged --quiet; then
+            echo "No fixture changes to commit"
+          else
+            git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
+            git push origin main
+            echo "✅ Pushed fixture updates to main"
+          fi
+          
   build-binaries:
     name: Build Daemon Binaries
     runs-on: ${{ matrix.os }}
+    needs: test-and-update-fixtures
     strategy:
       matrix:
         include:
+          # Linux - musl for maximum compatibility
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             binary: netvisor-daemon-linux-amd64
+            use_cross: true
           - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
+            target: aarch64-unknown-linux-musl
             binary: netvisor-daemon-linux-arm64
+            use_cross: true
+          
+          # macOS - native builds
           - os: macos-latest
             target: x86_64-apple-darwin
             binary: netvisor-daemon-darwin-amd64
+            use_cross: false
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: netvisor-daemon-darwin-arm64
+            use_cross: false
     
     steps:
       - uses: actions/checkout@v4
@@ -38,18 +94,15 @@ jobs:
           workspaces: backend
           key: ${{ matrix.target }}
       
-      - name: Install cross-compilation tools (Linux ARM64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install cross
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
       
       - name: Build daemon
         working-directory: backend
         run: |
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            cargo build --release --bin daemon --target ${{ matrix.target }}
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross build --release --bin daemon --target ${{ matrix.target }}
           else
             cargo build --release --bin daemon --target ${{ matrix.target }}
           fi
@@ -57,12 +110,8 @@ jobs:
       
       - name: Prepare binary
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp backend/target/${{ matrix.target }}/release/daemon.exe ${{ matrix.binary }}
-          else
-            cp backend/target/${{ matrix.target }}/release/daemon ${{ matrix.binary }}
-          fi
-          chmod +x ${{ matrix.binary }} || true
+          cp backend/target/${{ matrix.target }}/release/daemon ${{ matrix.binary }}
+          chmod +x ${{ matrix.binary }}
         shell: bash
       
       - name: Upload binary artifact

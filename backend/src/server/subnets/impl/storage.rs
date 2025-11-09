@@ -1,0 +1,123 @@
+use anyhow::Error;
+use chrono::{DateTime, Utc};
+use cidr::IpCidr;
+use sqlx::Row;
+use sqlx::postgres::PgRow;
+use uuid::Uuid;
+
+use crate::server::{
+    shared::{
+        storage::traits::{SqlValue, StorableEntity},
+        types::entities::EntitySource,
+    },
+    subnets::r#impl::{
+        base::{Subnet, SubnetBase},
+        types::SubnetType,
+    },
+};
+
+impl StorableEntity for Subnet {
+    type BaseData = SubnetBase;
+
+    fn table_name() -> &'static str {
+        "subnets"
+    }
+
+    fn get_base(&self) -> Self::BaseData {
+        self.base.clone()
+    }
+
+    fn new(base: Self::BaseData) -> Self {
+        let now = chrono::Utc::now();
+
+        Self {
+            id: Uuid::new_v4(),
+            created_at: now,
+            updated_at: now,
+            base,
+        }
+    }
+
+    fn id(&self) -> Uuid {
+        self.id
+    }
+
+    fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
+    }
+
+    fn updated_at(&self) -> DateTime<Utc> {
+        self.updated_at
+    }
+
+    fn set_updated_at(&mut self, time: DateTime<Utc>) {
+        self.updated_at = time;
+    }
+
+    fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error> {
+        let Self {
+            id,
+            created_at,
+            updated_at,
+            base:
+                Self::BaseData {
+                    name,
+                    network_id,
+                    source,
+                    cidr,
+                    subnet_type,
+                    description,
+                },
+        } = self.clone();
+
+        Ok((
+            vec![
+                "id",
+                "name",
+                "description",
+                "cidr",
+                "source",
+                "subnet_type",
+                "network_id",
+                "created_at",
+                "updated_at",
+            ],
+            vec![
+                SqlValue::Uuid(id),
+                SqlValue::String(name),
+                SqlValue::OptionalString(description),
+                SqlValue::IpCidr(cidr),
+                SqlValue::EntitySource(source),
+                SqlValue::SubnetType(subnet_type),
+                SqlValue::Uuid(network_id),
+                SqlValue::Timestamp(created_at),
+                SqlValue::Timestamp(updated_at),
+            ],
+        ))
+    }
+
+    fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
+        // Parse JSON fields safely
+        let cidr: IpCidr = serde_json::from_str(&row.get::<String, _>("cidr"))
+            .or(Err(Error::msg("Failed to deserialize cidr")))?;
+        let subnet_type: SubnetType = serde_json::from_str(&row.get::<String, _>("subnet_type"))
+            .or(Err(Error::msg("Failed to deserialize subnet_type")))?;
+        let source: EntitySource =
+            serde_json::from_value(row.get::<serde_json::Value, _>("source"))
+                .or(Err(Error::msg("Failed to deserialize source")))?;
+
+        Ok(Subnet {
+            id: row.get("id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            base: SubnetBase {
+                name: row.get("name"),
+                description: row.get("description"),
+                network_id: row.get("network_id"),
+                source,
+                cidr,
+                subnet_type,
+            },
+        })
+    }
+}

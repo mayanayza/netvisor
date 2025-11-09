@@ -4,9 +4,9 @@ use crate::daemon::discovery::service::docker::DockerScanDiscovery;
 use crate::daemon::discovery::service::network::NetworkScanDiscovery;
 use crate::daemon::discovery::service::self_report::SelfReportDiscovery;
 use crate::daemon::runtime::types::DaemonAppState;
-use crate::server::discovery::types::base::DiscoveryType;
+use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::{
-    daemons::types::api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
+    daemons::r#impl::api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{Router, extract::State, response::Json, routing::post};
@@ -45,21 +45,27 @@ async fn handle_discovery_request(
             cancel_token,
             manager.clone(),
         ),
-        DiscoveryType::Docker { host_id } => spawn_discovery(
+        DiscoveryType::Docker {
+            host_id,
+            host_naming_fallback,
+        } => spawn_discovery(
             DiscoveryRunner::new(
                 state.services.discovery_service.clone(),
                 state.services.discovery_manager.clone(),
-                DockerScanDiscovery::new(*host_id),
+                DockerScanDiscovery::new(*host_id, *host_naming_fallback),
             ),
             request.clone(),
             cancel_token,
             manager.clone(),
         ),
-        DiscoveryType::Network { subnet_ids } => spawn_discovery(
+        DiscoveryType::Network {
+            subnet_ids,
+            host_naming_fallback,
+        } => spawn_discovery(
             DiscoveryRunner::new(
                 state.services.discovery_service.clone(),
                 state.services.discovery_manager.clone(),
-                NetworkScanDiscovery::new(subnet_ids.clone()),
+                NetworkScanDiscovery::new(subnet_ids.clone(), *host_naming_fallback),
             ),
             request.clone(),
             cancel_token,

@@ -17,8 +17,6 @@
 	// Create form fields with validation
 	const name = field('name', formData.name, [required(), maxLength(100)]);
 
-	console.log(readOnly);
-
 	// Update formData when field values change
 	$: formData.name = $name.value;
 </script>

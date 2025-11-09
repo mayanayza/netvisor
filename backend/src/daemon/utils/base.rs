@@ -1,6 +1,6 @@
-use crate::server::discovery::types::base::DiscoveryType;
-use crate::server::hosts::types::interfaces::{Interface, InterfaceBase};
-use crate::server::subnets::types::base::Subnet;
+use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::hosts::r#impl::interfaces::{Interface, InterfaceBase};
+use crate::server::subnets::r#impl::base::Subnet;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;

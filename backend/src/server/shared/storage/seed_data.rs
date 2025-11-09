@@ -3,23 +3,26 @@ use std::net::{IpAddr, Ipv4Addr};
 use uuid::Uuid;
 
 use crate::server::{
-    hosts::types::{
+    hosts::r#impl::{
         base::{Host, HostBase},
         interfaces::{Interface, InterfaceBase},
         ports::{Port, PortBase},
         targets::HostTarget,
     },
-    networks::types::{Network, NetworkBase},
+    networks::r#impl::{Network, NetworkBase},
     services::{
         definitions::{client::Client, dns_server::DnsServer, web_service::WebService},
-        types::{
+        r#impl::{
             base::{Service, ServiceBase},
             bindings::Binding,
         },
     },
-    shared::types::entities::EntitySource,
-    subnets::types::base::{Subnet, SubnetBase, SubnetType},
-    users::types::base::{User, UserBase},
+    shared::{storage::traits::StorableEntity, types::entities::EntitySource},
+    subnets::r#impl::{
+        base::{Subnet, SubnetBase},
+        types::SubnetType,
+    },
+    users::r#impl::base::{User, UserBase},
 };
 
 pub fn create_user() -> User {

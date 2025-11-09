@@ -3,22 +3,20 @@ use crate::daemon::discovery::service::base::{
     SCAN_TIMEOUT,
 };
 use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySessionUpdate};
-use crate::server::discovery::types::base::DiscoveryType;
-use crate::server::hosts::types::ports::TransportProtocol;
-use crate::server::hosts::types::{
+use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
+use crate::server::hosts::r#impl::ports::TransportProtocol;
+use crate::server::hosts::r#impl::{
     interfaces::{Interface, InterfaceBase},
     ports::PortBase,
 };
-use crate::server::services::types::base::{Service, ServiceMatchBaselineParams};
+use crate::server::services::r#impl::base::{Service, ServiceMatchBaselineParams};
 use crate::server::shared::types::api::ApiResponse;
-use crate::server::subnets::types::base::SubnetTypeDiscriminants;
+use crate::server::subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants};
 use crate::{
     daemon::utils::base::DaemonUtils,
     server::{
-        daemons::types::api::DaemonDiscoveryRequest,
-        hosts::types::base::Host,
-        services::types::endpoints::EndpointResponse,
-        subnets::types::base::{Subnet, SubnetType},
+        daemons::r#impl::api::DaemonDiscoveryRequest, hosts::r#impl::base::Host,
+        services::r#impl::endpoints::EndpointResponse, subnets::r#impl::base::Subnet,
     },
 };
 use dhcproto::Encodable;
@@ -51,11 +49,15 @@ use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, Res
 #[derive(Default)]
 pub struct NetworkScanDiscovery {
     subnet_ids: Option<Vec<Uuid>>,
+    host_naming_fallback: HostNamingFallback,
 }
 
 impl NetworkScanDiscovery {
-    pub fn new(subnet_ids: Option<Vec<Uuid>>) -> Self {
-        Self { subnet_ids }
+    pub fn new(subnet_ids: Option<Vec<Uuid>>, host_naming_fallback: HostNamingFallback) -> Self {
+        Self {
+            subnet_ids,
+            host_naming_fallback,
+        }
     }
 }
 
@@ -64,7 +66,10 @@ impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
 #[async_trait]
 impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
-        DiscoveryType::Network { subnet_ids: None }
+        DiscoveryType::Network {
+            subnet_ids: None,
+            host_naming_fallback: HostNamingFallback::BestService,
+        }
     }
 
     async fn discover(
@@ -131,13 +136,24 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
                 .await?;
 
             // Filter out docker bridge subnets, those are handled in docker discovery
+            // Filter out subnets with
             let subnets: Vec<Subnet> = subnets
                 .into_iter()
                 .filter(|s| {
-                    s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge
+
+                    if s.base.cidr.network_length() < 10 {
+                        tracing::warn!("Skipping {} with CIDR {}, scanning would take too long", s.base.name, s.base.cidr);
+                        return false
+                    }
+
+                    if s.base.subnet_type.discriminant() == SubnetTypeDiscriminants::DockerBridge {
+                        tracing::warn!("Skipping {} with CIDR {}, docker bridge subnets are scanning in docker discovery", s.base.name, s.base.cidr);
+                        return false
+                    }
+
+                    true
                 })
                 .collect();
-
             let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
             try_join_all(subnet_futures).await?
         };
@@ -205,6 +221,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                     virtualization: &None,
                                 },
                                 hostname,
+                                self.domain.host_naming_fallback,
                             )
                             .await
                             && let Ok((created_host, _)) = self.create_host(host, services).await
