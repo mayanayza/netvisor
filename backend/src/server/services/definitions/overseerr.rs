@@ -19,7 +19,6 @@ impl ServiceDefinition for Overseerr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        let endpoint_pattern = ;
         Pattern::AllOf(vec![
             Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Overseerr"),
             Pattern::Not(Box::new(Pattern::Endpoint(
