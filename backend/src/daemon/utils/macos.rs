@@ -40,9 +40,21 @@ impl DaemonUtils for MacOsDaemonUtils {
         Self {}
     }
 
-    async fn get_optimal_port_batch_size(&self) -> Result<usize, Error> {
-        // Windows/other: use conservative default
-        Ok(100)
+    fn get_fd_limit() -> Result<usize, Error> {
+        use libc::{RLIMIT_NOFILE, getrlimit, rlimit};
+
+        let mut rlim = rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
+
+        let result = unsafe { getrlimit(RLIMIT_NOFILE, &mut rlim as *mut rlimit) };
+
+        if result == 0 {
+            Ok(rlim.rlim_cur as usize)
+        } else {
+            Err(anyhow!("Failed to get file descriptor limit"))
+        }
     }
 
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>, Error> {

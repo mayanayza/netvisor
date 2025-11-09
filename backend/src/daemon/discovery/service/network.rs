@@ -75,11 +75,10 @@ impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
         self.start_discovery(total_ips_across_subnets, request)
             .await?;
 
-        let discovery_futures = subnets
-            .iter()
-            .map(|subnet| self.scan_and_process_hosts(subnet, cancel.clone()));
-
-        let discovery_result = try_join_all(discovery_futures).await.map(|_| ());
+        let discovery_result = self
+            .scan_and_process_hosts(subnets, cancel.clone())
+            .await
+            .map(|_| ());
 
         self.finish_discovery(discovery_result, cancel.clone())
             .await?;
@@ -153,84 +152,124 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
     /// Scan subnet concurrently and process hosts immediately as they're discovered
     async fn scan_and_process_hosts(
         &self,
-        subnet: &Subnet,
+        subnets: Vec<Subnet>,
         cancel: CancellationToken,
     ) -> Result<Vec<Host>, Error> {
+        let configured_concurrent_scans = self.as_ref().config_store.get_concurrent_scans().await?;
+        let concurrent_scans = self
+            .as_ref()
+            .utils
+            .get_optimal_concurrent_scans(configured_concurrent_scans)
+            .await?;
+
         tracing::info!(
-            "Scanning subnet {} concurrently for hosts with open ports",
-            subnet.base.cidr
+            "🔍 Starting scan with concurrent_scans={}",
+            concurrent_scans
         );
 
-        let concurrent_scans = self.as_ref().config_store.get_concurrent_scans().await?;
-
-        tracing::info!("Using up to {} concurrent scans", concurrent_scans);
-
         let session = self.as_ref().get_session().await?;
-
         let scanned_count = session.processed_count.clone();
 
-        // Report initial progress
         self.report_discovery_update(DiscoverySessionUpdate::scanning(0))
             .await?;
 
-        // Process all IPs concurrently, combining discovery and processing
-        let results = stream::iter(self.determine_scan_order(&subnet.base.cidr))
-            .map(async |ip| {
+        let all_ips_with_subnets: Vec<(IpAddr, Subnet)> = subnets
+            .iter()
+            .flat_map(|subnet| {
+                self.determine_scan_order(&subnet.base.cidr)
+                    .map(move |ip| (ip, subnet.clone()))
+            })
+            .collect();
+
+        let total_ips = all_ips_with_subnets.len();
+        tracing::info!("📋 Total IPs to scan: {}", total_ips);
+
+        let results = stream::iter(all_ips_with_subnets)
+            .map(|(ip, subnet)| {
                 let cancel = cancel.clone();
                 let subnet = subnet.clone();
                 let scanned_count = scanned_count.clone();
 
-                match self.scan_host(ip, scanned_count, cancel).await {
-                    Ok(None) => Ok(None),
-                    Err(e) => Err(e),
-                    Ok(Some((all_ports, endpoint_responses))) => {
-                        let hostname = self.get_hostname_for_ip(ip).await?;
-
-                        let mac = match subnet.base.subnet_type {
-                            SubnetType::VpnTunnel => None, // ARP doesn't work through VPN tunnels
-                            _ => self.as_ref().utils.get_mac_address_for_ip(ip).await?,
-                        };
-
-                        let interface = Interface::new(InterfaceBase {
-                            name: None,
-                            subnet_id: subnet.id,
-                            ip_address: ip,
-                            mac_address: mac,
-                        });
-
-                        if let Ok(Some((host, services))) = self
-                            .process_host(
-                                ServiceMatchBaselineParams {
-                                    subnet: &subnet,
-                                    interface: &interface,
-                                    all_ports: &all_ports,
-                                    endpoint_responses: &endpoint_responses,
-                                    virtualization: &None,
-                                },
-                                hostname,
-                                self.domain.host_naming_fallback,
-                            )
-                            .await
-                            && let Ok((created_host, _)) = self.create_host(host, services).await
-                        {
-                            return Ok::<Option<Host>, Error>(Some(created_host));
+                async move {
+                    match self
+                        .scan_host(ip, scanned_count, cancel, subnet.base.cidr)
+                        .await
+                    {
+                        Ok(None) => {
+                            tracing::trace!("Host {} - no ports/endpoints found", ip);
+                            Ok(None)
                         }
-                        Ok(None)
+                        Err(e) => {
+                            tracing::debug!("Host {} - scan error: {}", ip, e);
+                            Err(e)
+                        }
+                        Ok(Some((all_ports, endpoint_responses))) => {
+                            tracing::debug!(
+                                "Host {} - found {} ports, {} endpoints",
+                                ip,
+                                all_ports.len(),
+                                endpoint_responses.len()
+                            );
+
+                            let hostname = self.get_hostname_for_ip(ip).await?;
+                            let mac = match subnet.base.subnet_type {
+                                SubnetType::VpnTunnel => None,
+                                _ => self.as_ref().utils.get_mac_address_for_ip(ip).await?,
+                            };
+
+                            let interface = Interface::new(InterfaceBase {
+                                name: None,
+                                subnet_id: subnet.id,
+                                ip_address: ip,
+                                mac_address: mac,
+                            });
+
+                            if let Ok(Some((host, services))) = self
+                                .process_host(
+                                    ServiceMatchBaselineParams {
+                                        subnet: &subnet,
+                                        interface: &interface,
+                                        all_ports: &all_ports,
+                                        endpoint_responses: &endpoint_responses,
+                                        virtualization: &None,
+                                    },
+                                    hostname,
+                                    self.domain.host_naming_fallback,
+                                )
+                                .await
+                            {
+                                tracing::info!(
+                                    "✓ Host {} - processed, {} services matched",
+                                    ip,
+                                    services.len()
+                                );
+
+                                if let Ok((created_host, _)) =
+                                    self.create_host(host, services).await
+                                {
+                                    tracing::info!("✓ Host {} - created successfully", ip);
+                                    return Ok::<Option<Host>, Error>(Some(created_host));
+                                } else {
+                                    tracing::warn!("✗ Host {} - failed to create in database", ip);
+                                }
+                            } else {
+                                tracing::debug!("Host {} - process_host returned None", ip);
+                            }
+                            Ok(None)
+                        }
                     }
                 }
             })
             .buffer_unordered(concurrent_scans);
 
-        // Consume the stream and report progress periodically
-        tracing::info!(
-            "Stream created for subnet {}, starting consumption",
-            subnet.base.cidr
-        );
         let mut stream_pin = Box::pin(results);
         let mut last_reported_processed_count: usize = 0;
         let mut successful_discoveries = Vec::new();
+        let mut scanned = 0;
 
         while let Some(result) = stream_pin.next().await {
+            scanned += 1;
+
             if cancel.is_cancelled() {
                 tracing::warn!("Discovery session was cancelled");
                 return Err(Error::msg("Discovery session was cancelled"));
@@ -240,22 +279,27 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                 Ok(Some(host)) => successful_discoveries.push(host),
                 Ok(None) => {}
                 Err(e) => {
-                    // Check if this is a critical error (resource exhaustion)
                     if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        return Err(e); // Propagate the error up
+                        return Err(e);
                     } else {
-                        // Non-critical errors just get logged
                         tracing::warn!("Error during scanning/processing: {}", e);
                     }
                 }
             }
 
             last_reported_processed_count = self
-                .periodic_scan_update(20, last_reported_processed_count)
+                .periodic_scan_update(last_reported_processed_count)
                 .await?;
         }
 
-        tracing::info!("Completed scanning subnet {}", subnet.base.cidr);
+        tracing::info!("📊 Scan complete:");
+        tracing::info!("  - Total IPs: {}", total_ips);
+        tracing::info!("  - Scanned: {}", scanned);
+        tracing::info!(
+            "  - Successfully created: {} hosts",
+            successful_discoveries.len()
+        );
+
         Ok(successful_discoveries)
     }
 
@@ -264,6 +308,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         ip: IpAddr,
         scanned_count: Arc<std::sync::atomic::AtomicUsize>,
         cancel: CancellationToken,
+        cidr: IpCidr,
     ) -> Result<Option<(Vec<PortBase>, Vec<EndpointResponse>)>, Error> {
         // Check cancellation at the start
         if cancel.is_cancelled() {
@@ -272,14 +317,17 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
 
         let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
 
+        let gateway_ips = self
+            .as_ref()
+            .utils
+            .get_own_routing_table_gateway_ips()
+            .await?;
+
         // Scan ports and endpoints
-        let scan_result = tokio::spawn(scan_ports_and_endpoints(
-            ip,
-            cancel.clone(),
-            port_scan_batch_size,
-        ))
-        .await
-        .map_err(|e| anyhow::anyhow!("Scan task panicked: {}", e))?;
+        let scan_result =
+            scan_ports_and_endpoints(ip, cancel.clone(), port_scan_batch_size, cidr, gateway_ips)
+                .await
+                .map_err(|e| anyhow::anyhow!("Scan task panicked: {}", e));
 
         // Check cancellation after network operation
         if cancel.is_cancelled() {

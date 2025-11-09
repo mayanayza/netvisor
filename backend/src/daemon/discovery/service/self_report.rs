@@ -114,19 +114,22 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             .await?;
 
         // Filter out docker bridge subnets, those are handled in docker discovery
-        let subnets: Vec<Subnet> = subnets
+        let subnets_to_create: Vec<Subnet> = subnets
             .into_iter()
             .filter(|s| s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge)
             .collect();
 
-        let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
+        let subnet_futures = subnets_to_create
+            .iter()
+            .map(|subnet| self.create_subnet(subnet));
         let created_subnets = try_join_all(subnet_futures).await?;
 
         // Get docker socket
         let has_docker_socket = self.as_ref().utils.get_own_docker_socket().await?;
 
         // Update capabilities
-        let interfaced_subnet_ids = created_subnets.iter().map(|s| s.id).collect();
+        let interfaced_subnet_ids: Vec<Uuid> = created_subnets.iter().map(|s| s.id).collect();
+
         self.update_capabilities(has_docker_socket, interfaced_subnet_ids)
             .await?;
 

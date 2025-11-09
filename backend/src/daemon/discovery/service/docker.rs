@@ -10,8 +10,6 @@ use bollard::{
 use futures::future::try_join_all;
 use futures::stream::{self, StreamExt};
 use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
 use std::{collections::HashMap, net::IpAddr, sync::OnceLock};
 use strum::IntoDiscriminant;
 use tokio_util::sync::CancellationToken;
@@ -66,7 +64,6 @@ pub struct ProcessContainerParams<'a> {
     pub container: &'a ContainerInspectResponse,
     pub container_summary: &'a ContainerSummary,
     pub docker_service_id: &'a Uuid,
-    pub processed_count: Arc<AtomicUsize>,
     pub cancel: CancellationToken,
 }
 
@@ -302,7 +299,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         // Process containers concurrently using streams
         let results = stream::iter(containers.into_iter())
             .map(|(container, container_summary)| {
-                let processed_count = processed_count.clone();
                 let cancel = cancel.clone();
 
                 async move {
@@ -311,7 +307,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         container: &container,
                         container_summary: &container_summary,
                         docker_service_id,
-                        processed_count,
                         cancel,
                     })
                     .await
@@ -329,6 +324,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 return Err(Error::msg("Docker discovery session was cancelled"));
             }
 
+            processed_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
             match result {
                 Ok(Some((host, services))) => all_container_data.push((host, services)),
                 Ok(None) => {}
@@ -336,7 +333,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             }
 
             last_reported_processed_count = self
-                .periodic_scan_update(5, last_reported_processed_count)
+                .periodic_scan_update(last_reported_processed_count)
                 .await?;
         }
 
@@ -350,12 +347,9 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         let ProcessContainerParams {
             container,
             container_summary,
-            processed_count,
             cancel,
             ..
         } = params;
-
-        processed_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         if let Some(container_id) = container.id.clone() {
             if cancel.is_cancelled() {
@@ -856,6 +850,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         // Only make one docker exec per unique (port, path) combination
         for ((container_port, path), endpoint) in unique_endpoints {
             if cancel.is_cancelled() {
+                tracing::debug!(
+                    "Container endpoint scanning cancelled for {}",
+                    container_name
+                );
                 break;
             }
 
@@ -866,23 +864,23 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
             // Execute curl with -i to include headers, or wget with -S
             let exec = docker
-                .create_exec(
-                    container_name,
-                    bollard::exec::CreateExecOptions {
-                        cmd: Some(vec![
-                            "sh",
-                            "-c",
-                            &format!(
-                                "curl -i -s -m 1 -L --max-redirs 2 {} 2>/dev/null || wget -S -q -O- -T 1 {} 2>&1 || echo ''",
-                                url, url
-                            ),
-                        ]),
-                        attach_stdout: Some(true),
-                        attach_stderr: Some(false),
-                        ..Default::default()
-                    },
-                )
-                .await;
+            .create_exec(
+                container_name,
+                bollard::exec::CreateExecOptions {
+                    cmd: Some(vec![
+                        "sh",
+                        "-c",
+                        &format!(
+                            "curl -i -s -m 1 -L --max-redirs 2 {} 2>/dev/null || wget -S -q -O- -T 1 {} 2>&1 || echo ''",
+                            url, url
+                        ),
+                    ]),
+                    attach_stdout: Some(true),
+                    attach_stderr: Some(true),
+                    ..Default::default()
+                },
+            )
+            .await;
 
             let Ok(exec_result) = exec else {
                 continue;
@@ -894,16 +892,29 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 use futures::StreamExt;
                 let mut full_response = String::new();
 
-                while let Some(Ok(msg)) = output.next().await {
-                    match msg {
-                        bollard::container::LogOutput::StdOut { message } => {
-                            full_response.push_str(&String::from_utf8_lossy(&message));
+                loop {
+                    tokio::select! {
+                        _ = cancel.cancelled() => {
+                            tracing::debug!("Endpoint scan cancelled for container {}", container_name);
+                            break;
                         }
-                        bollard::container::LogOutput::StdErr { message } => {
-                            // wget outputs headers to stderr with -S flag
-                            full_response.push_str(&String::from_utf8_lossy(&message));
+                        msg = output.next() => {
+                            match msg {
+                                Some(Ok(bollard::container::LogOutput::StdOut { message })) => {
+                                    full_response.push_str(&String::from_utf8_lossy(&message));
+                                }
+                                Some(Ok(bollard::container::LogOutput::StdErr { message })) => {
+                                    // wget outputs headers to stderr with -S flag
+                                    full_response.push_str(&String::from_utf8_lossy(&message));
+                                }
+                                Some(Ok(_)) => {}
+                                Some(Err(e)) => {
+                                    tracing::warn!("Error reading docker exec output: {}", e);
+                                    break;
+                                }
+                                None => break,
+                            }
                         }
-                        _ => {}
                     }
                 }
 

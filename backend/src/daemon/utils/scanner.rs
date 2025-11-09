@@ -3,6 +3,7 @@ use crate::server::services::r#impl::base::Service;
 use crate::server::services::r#impl::endpoints::{Endpoint, EndpointResponse};
 use anyhow::anyhow;
 use anyhow::{Error, Result};
+use cidr::IpCidr;
 use dhcproto::Encodable;
 use dhcproto::v4::{self, Decodable, Encoder, Message, MessageType};
 use futures::stream::FuturesUnordered;
@@ -72,20 +73,26 @@ where
             results.push(output);
         }
 
-        // Immediately add next item to maintain batch size
-        if let Some(item) = item_iter.next() {
-            futures.push(scan_fn(item));
+        // Immediately add next item(s) to maintain batch size
+        // Keep adding until we're back at batch_size or out of items
+        while futures.len() < batch_size && !cancel.is_cancelled() {
+            if let Some(item) = item_iter.next() {
+                futures.push(scan_fn(item));
+            } else {
+                break;
+            }
         }
     }
 
     results
 }
 
-/// Scan ports and endpoints, automatically filtering endpoints to open TCP ports
 pub async fn scan_ports_and_endpoints(
     ip: IpAddr,
     cancel: CancellationToken,
-    port_scan_batch_size: usize, // ← Removed filter parameter
+    port_scan_batch_size: usize,
+    cidr: IpCidr,
+    gateway_ips: Vec<IpAddr>,
 ) -> Result<(Vec<PortBase>, Vec<EndpointResponse>), Error> {
     if cancel.is_cancelled() {
         return Err(anyhow!("Operation cancelled"));
@@ -103,18 +110,19 @@ pub async fn scan_ports_and_endpoints(
     }
 
     // Scan UDP ports with batching
-    let udp_ports = scan_udp_ports(ip, cancel.clone(), port_scan_batch_size).await?;
+    let udp_ports =
+        scan_udp_ports(ip, cancel.clone(), port_scan_batch_size, cidr, gateway_ips).await?;
     open_ports.extend(udp_ports);
 
     if cancel.is_cancelled() {
         return Err(anyhow!("Operation cancelled"));
     }
 
-    // Only scan endpoints on open TCP ports + ports that are unique to endpoints which we didn't port scan
-    // (We determined this internally from the scan results)
-    let endpoint_only_ports = Service::endpoint_only_ports();
+    // Scan endpoints - check on ALL open TCP ports, not just filtered ones
+    let mut ports_to_check = tcp_ports.clone();
 
-    let mut ports_to_check = tcp_ports;
+    // Also add endpoint-only ports that we didn't scan during port scanning
+    let endpoint_only_ports = Service::endpoint_only_ports();
     ports_to_check.extend(endpoint_only_ports);
     ports_to_check.sort_by_key(|p| (p.number(), p.protocol()));
     ports_to_check.dedup();
@@ -127,6 +135,23 @@ pub async fn scan_ports_and_endpoints(
     )
     .await?;
     endpoint_responses.extend(endpoints);
+
+    // IMPORTANT: Add any ports that had endpoint responses but weren't in open_ports
+    // This handles cases where we got HTTP response but port scan didn't detect it
+    for endpoint_response in &endpoint_responses {
+        let port = endpoint_response.endpoint.port_base;
+        if !open_ports.contains(&port) {
+            tracing::debug!(
+                "Adding port {} to open ports based on successful endpoint response",
+                port
+            );
+            open_ports.push(port);
+        }
+    }
+
+    // Deduplicate ports (sort first for consistent deduplication)
+    open_ports.sort_by_key(|p| (p.number(), p.protocol()));
+    open_ports.dedup();
 
     tracing::debug!(
         "Scan results for {}: found {} open ports, {} endpoint responses",
@@ -159,23 +184,73 @@ pub async fn scan_tcp_ports(
         batch_size
     );
 
-    let open_ports = batch_scan(ports, batch_size, cancel, |port| async move {
+    let open_ports = batch_scan(ports, batch_size, cancel, move |port| async move {
         let socket = SocketAddr::new(ip, port);
-        match timeout(SCAN_TIMEOUT, TcpStream::connect(socket)).await {
-            Ok(Ok(_)) => {
-                tracing::debug!("Found open TCP port {}:{}", ip, port);
-                Some(PortBase::new_tcp(port))
-            }
-            Ok(Err(e)) => {
-                if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                    tracing::error!("Critical error scanning {}:{}: {}", socket.ip(), port, e);
+
+        // Try connection with timeout, retry once on timeout for slow hosts
+        let mut attempts = 0;
+        let max_attempts = 2;
+
+        loop {
+            attempts += 1;
+            let start = std::time::Instant::now();
+
+            match timeout(SCAN_TIMEOUT, TcpStream::connect(socket)).await {
+                Ok(Ok(stream)) => {
+                    let connect_time = start.elapsed();
+
+                    // Try to peek at the connection to detect immediate disconnects
+                    let mut buf = [0u8; 1];
+                    let _peek_result =
+                        timeout(Duration::from_millis(50), stream.peek(&mut buf)).await;
+
+                    tracing::debug!(
+                        "Found open TCP port {}:{} (took {:?})",
+                        ip,
+                        port,
+                        connect_time
+                    );
+
+                    drop(stream);
+                    return Some(PortBase::new_tcp(port));
                 }
-                None
+                Ok(Err(e)) => {
+                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                        tracing::error!("Critical error scanning {}:{}: {}", socket.ip(), port, e);
+                    }
+                    return None;
+                }
+                Err(_) => {
+                    let elapsed = start.elapsed();
+
+                    if attempts < max_attempts {
+                        tracing::trace!(
+                            "Port {}:{} timeout attempt {}/{} (took {:?}), retrying...",
+                            ip,
+                            port,
+                            attempts,
+                            max_attempts,
+                            elapsed
+                        );
+                        // Small delay before retry
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        continue;
+                    } else {
+                        tracing::trace!("Port {}:{} timeout after {} attempts", ip, port, attempts);
+                        return None;
+                    }
+                }
             }
-            Err(_) => None, // Timeout
         }
     })
     .await;
+
+    tracing::debug!(
+        "Completed TCP scan of {} on {} ports: {} open",
+        ip,
+        total_ports,
+        open_ports.len()
+    );
 
     Ok(open_ports)
 }
@@ -184,6 +259,8 @@ pub async fn scan_udp_ports(
     ip: IpAddr,
     cancel: CancellationToken,
     batch_size: usize,
+    cidr: IpCidr,
+    gateway_ips: Vec<IpAddr>,
 ) -> Result<Vec<PortBase>, Error> {
     let discovery_ports = Service::all_discovery_ports();
     let ports: Vec<u16> = discovery_ports
@@ -192,24 +269,23 @@ pub async fn scan_udp_ports(
         .map(|p| p.number())
         .collect();
 
-    let total_ports = ports.len();
-
     // UDP is slower and less reliable, cap at 10 concurrent
     let udp_batch_size = std::cmp::min(batch_size, 10);
 
-    tracing::debug!(
-        "Scanning {} UDP ports on {} with batch size {}",
-        total_ports,
-        ip,
-        udp_batch_size
-    );
+    let is_gateway = gateway_ips.contains(&ip);
 
     let open_ports = batch_scan(ports, udp_batch_size, cancel, |port| async move {
         let result = match port {
             53 => test_dns_service(ip).await,
             123 => test_ntp_service(ip).await,
             161 => test_snmp_service(ip).await,
-            67 => test_dhcp_service(ip).await,
+            67 => {
+                if is_gateway {
+                    test_dhcp_service(ip, &cidr).await
+                } else {
+                    Ok(None)
+                }
+            }
             _ => Ok(None),
         };
 
@@ -242,6 +318,7 @@ pub async fn scan_endpoints(
 
     let client = reqwest::Client::builder()
         .timeout(SCAN_TIMEOUT)
+        .danger_accept_invalid_certs(true)
         .build()
         .map_err(|e| anyhow!("Could not build client {}", e))?;
 
@@ -259,6 +336,13 @@ pub async fn scan_endpoints(
         })
         .collect();
 
+    tracing::debug!(
+        "Endpoint scan for {}: filtering to {} endpoints based on {} open ports",
+        ip,
+        all_endpoints.len(),
+        filter_ports.as_ref().map(|p| p.len()).unwrap_or(0)
+    );
+
     // Group endpoints by (port, path) to avoid duplicate requests
     let mut unique_endpoints: HashMap<(u16, String), Endpoint> = HashMap::new();
     for endpoint in all_endpoints {
@@ -269,7 +353,6 @@ pub async fn scan_endpoints(
     let endpoints: Vec<Endpoint> = unique_endpoints.into_values().collect();
     let total_endpoints = endpoints.len();
 
-    // Endpoints are slower (HTTP requests), use smaller batch
     let endpoint_batch_size = std::cmp::min(batch_size / 2, 50);
 
     tracing::debug!(
@@ -279,31 +362,99 @@ pub async fn scan_endpoints(
         endpoint_batch_size
     );
 
-    let responses = batch_scan(endpoints, endpoint_batch_size, cancel, |endpoint| {
+    let responses = batch_scan(endpoints, endpoint_batch_size, cancel, move |endpoint| {
         let client = client.clone();
         async move {
             let endpoint_with_ip = endpoint.use_ip(ip);
-            let url = endpoint_with_ip.to_string();
 
-            match client.get(&url).send().await {
-                Ok(response) if response.status().is_success() => match response.text().await {
-                    Ok(text) => Some(EndpointResponse {
-                        endpoint: endpoint_with_ip,
-                        response: text,
-                    }),
-                    Err(_) => None,
-                },
-                Ok(_) => None,
-                Err(e) => {
-                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        tracing::error!("Critical error scanning endpoint {}: {}", url, e);
+            // Common HTTPS ports
+            let https_ports = [443, 8443, 9443, 8006, 8123];
+            let try_https = https_ports.contains(&endpoint_with_ip.port_base.number());
+
+            let attempts = if try_https {
+                vec![
+                    (
+                        format!(
+                            "https://{}:{}{}",
+                            ip,
+                            endpoint_with_ip.port_base.number(),
+                            endpoint_with_ip.path
+                        ),
+                        "HTTPS",
+                    ),
+                    (
+                        format!(
+                            "http://{}:{}{}",
+                            ip,
+                            endpoint_with_ip.port_base.number(),
+                            endpoint_with_ip.path
+                        ),
+                        "HTTP",
+                    ),
+                ]
+            } else {
+                vec![(
+                    format!(
+                        "http://{}:{}{}",
+                        ip,
+                        endpoint_with_ip.port_base.number(),
+                        endpoint_with_ip.path
+                    ),
+                    "HTTP",
+                )]
+            };
+
+            for (url, _protocol) in attempts {
+                tracing::trace!("Trying endpoint: {}", url);
+
+                match client.get(&url).send().await {
+                    Ok(response) => {
+                        let status = response.status();
+                        if status.is_success() {
+                            match response.text().await {
+                                Ok(text) => {
+                                    tracing::debug!(
+                                        "Endpoint {} returned {} (length: {})",
+                                        url,
+                                        status,
+                                        text.len()
+                                    );
+                                    return Some(EndpointResponse {
+                                        endpoint: endpoint_with_ip,
+                                        response: text,
+                                    });
+                                }
+                                Err(e) => {
+                                    tracing::trace!("Failed to read response from {}: {}", url, e);
+                                    continue;
+                                }
+                            }
+                        } else {
+                            tracing::trace!("Endpoint {} returned {}", url, status);
+                            continue;
+                        }
                     }
-                    None
+                    Err(e) => {
+                        tracing::trace!("Endpoint {} failed: {}", url, e);
+                        if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                            tracing::error!("Critical error scanning endpoint {}: {}", url, e);
+                        }
+                        continue;
+                    }
                 }
             }
+
+            None
         }
     })
     .await;
+
+    tracing::info!(
+        "Completed endpoint scan of {}: {} responses from {} endpoints",
+        ip,
+        responses.len(),
+        total_endpoints
+    );
 
     Ok(responses)
 }
@@ -323,11 +474,11 @@ pub async fn test_dns_service(ip: IpAddr) -> Result<Option<u16>, Error> {
     .await
     {
         Ok(Ok(_)) => {
-            tracing::debug!("DNS server responding at {}:53", ip);
+            tracing::trace!("DNS server responding at {}:53", ip);
             Ok(Some(53))
         }
         _ => {
-            tracing::debug!("DNS server not responding at {}:53", ip);
+            tracing::trace!("DNS server not responding at {}:53", ip);
             Ok(None)
         }
     }
@@ -348,27 +499,27 @@ pub async fn test_ntp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
             if let Ok(datetime) = result.datetime().unix_timestamp() {
                 if datetime > Duration::from_secs(0) {
                     // Sanity check for valid timestamp
-                    tracing::debug!(
+                    tracing::trace!(
                         "NTP server responding at {}:123 with time {}",
                         ip,
                         datetime.as_millis()
                     );
                     Ok(Some(123))
                 } else {
-                    tracing::debug!("Invalid NTP response from {}:123", ip);
+                    tracing::trace!("Invalid NTP response from {}:123", ip);
                     Ok(None)
                 }
             } else {
-                tracing::debug!("Invalid NTP response from {}:123", ip);
+                tracing::trace!("Invalid NTP response from {}:123", ip);
                 Ok(None)
             }
         }
         Ok(Err(e)) => {
-            tracing::debug!("NTP error from {}:123 - {}", ip, e);
+            tracing::trace!("NTP error from {}:123 - {}", ip, e);
             Ok(None)
         }
         Err(_) => {
-            tracing::debug!("NTP timeout from {}:123", ip);
+            tracing::trace!("NTP timeout from {}:123", ip);
             Ok(None)
         }
     }
@@ -386,36 +537,64 @@ pub async fn test_snmp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
             match timeout(Duration::from_millis(2000), session.get(&sys_descr_oid)).await {
                 Ok(Ok(mut response)) => {
                     if let Some(_varbind) = response.varbinds.next() {
-                        tracing::debug!("SNMP server responding at {}:161", ip);
+                        tracing::trace!("SNMP server responding at {}:161", ip);
                         Ok(Some(161))
                     } else {
-                        tracing::debug!("Empty SNMP response from {}:161", ip);
+                        tracing::trace!("Empty SNMP response from {}:161", ip);
                         Ok(None)
                     }
                 }
                 Ok(Err(e)) => {
-                    tracing::debug!("SNMP error from {}:161 - {}", ip, e);
+                    tracing::trace!("SNMP error from {}:161 - {}", ip, e);
                     Ok(None)
                 }
                 Err(_) => {
-                    tracing::debug!("SNMP timeout from {}:161", ip);
+                    tracing::trace!("SNMP timeout from {}:161", ip);
                     Ok(None)
                 }
             }
         }
         Err(e) => {
-            tracing::debug!("SNMP session creation failed for {}:161 - {}", ip, e);
+            tracing::trace!("SNMP session creation failed for {}:161 - {}", ip, e);
             Ok(None)
         }
     }
 }
 
 /// Test if a host is running a DHCP server on port 67
-pub async fn test_dhcp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
-    let socket = UdpSocket::bind("0.0.0.0:0").await?;
-    let target = SocketAddr::new(ip, 67);
+pub async fn test_dhcp_service(ip: IpAddr, subnet_cidr: &IpCidr) -> Result<Option<u16>, Error> {
+    let socket = match UdpSocket::bind("0.0.0.0:68").await {
+        Ok(s) => s,
+        Err(_) => {
+            // If port 68 is busy (another DHCP client), try random port
+            match UdpSocket::bind("0.0.0.0:0").await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::debug!("Failed to bind UDP socket for DHCP test: {}", e);
+                    return Ok(None);
+                }
+            }
+        }
+    };
 
-    // Create a minimal DHCP DISCOVER message
+    if let Err(e) = socket.set_broadcast(true) {
+        tracing::debug!("Failed to enable broadcast for DHCP test: {}", e);
+        return Ok(None);
+    }
+
+    // Calculate broadcast address for this subnet
+    let broadcast_addr = match subnet_cidr {
+        IpCidr::V4(cidr) => {
+            let broadcast_ip = cidr.last_address();
+            SocketAddr::new(IpAddr::V4(broadcast_ip), 67)
+        }
+        IpCidr::V6(_) => {
+            tracing::trace!("Skipping DHCP test for IPv6 address");
+            return Ok(None);
+        }
+    };
+
+    // Create a more complete DHCP DISCOVER message
     let mut rng = rand::rngs::StdRng::from_os_rng();
     let mac_addr: [u8; 6] = rng.random();
     let transaction_id = rng.random::<u32>();
@@ -427,52 +606,193 @@ pub async fn test_dhcp_service(ip: IpAddr) -> Result<Option<u16>, Error> {
         .set_flags(v4::Flags::default().set_broadcast())
         .set_chaddr(&mac_addr);
 
+    // Add required and common DHCP options
     msg.opts_mut()
         .insert(v4::DhcpOption::MessageType(MessageType::Discover));
 
-    // Encode and send DHCP DISCOVER packet
+    // Add parameter request list (commonly requested by clients)
+    msg.opts_mut()
+        .insert(v4::DhcpOption::ParameterRequestList(vec![
+            v4::OptionCode::SubnetMask,
+            v4::OptionCode::Router,
+            v4::OptionCode::DomainNameServer,
+            v4::OptionCode::DomainName,
+        ]));
+
+    // Encode DHCP DISCOVER packet
     let mut buf = Vec::new();
     let mut encoder = Encoder::new(&mut buf);
     msg.encode(&mut encoder)?;
-    socket.send_to(&buf, target).await?;
 
-    // Wait for DHCP OFFER response
-    let mut response_buf = [0u8; 1500];
-    match timeout(
-        Duration::from_millis(2000),
-        socket.recv_from(&mut response_buf),
-    )
-    .await
-    {
-        Ok(Ok((len, _))) if len > 0 => {
-            // Try to parse as DHCP message and validate response type
-            match Message::decode(&mut dhcproto::Decoder::new(&response_buf[..len])) {
-                Ok(response_msg) => {
-                    let is_valid_response = response_msg.opts().iter().any(|(_, opt)| {
-                        matches!(
-                            opt,
-                            v4::DhcpOption::MessageType(MessageType::Offer)
-                                | v4::DhcpOption::MessageType(MessageType::Ack)
-                        )
-                    });
+    // Try broadcast first
+    tracing::trace!(
+        "Sending DHCP DISCOVER broadcast to {} for testing {} (xid: {:#x}, {} bytes)",
+        broadcast_addr,
+        ip,
+        transaction_id,
+        buf.len()
+    );
 
-                    if is_valid_response {
-                        tracing::debug!("DHCP server responding at {}:67", ip);
-                        Ok(Some(67))
-                    } else {
-                        tracing::debug!("Invalid DHCP response from {}:67", ip);
-                        Ok(None)
-                    }
-                }
-                Err(_) => {
-                    tracing::debug!("Failed to parse DHCP response from {}:67", ip);
-                    Ok(None)
-                }
+    match socket.send_to(&buf, broadcast_addr).await {
+        Ok(sent) => {
+            tracing::trace!("Sent {} bytes via broadcast", sent);
+            // Try to receive multiple responses - might get responses from multiple servers
+            if let Some(port) =
+                wait_for_dhcp_responses(&socket, ip, transaction_id, "broadcast", 3).await?
+            {
+                return Ok(Some(port));
             }
         }
-        _ => {
-            tracing::debug!("DHCP timeout from {}:67", ip);
-            Ok(None)
+        Err(e) => {
+            tracing::trace!("Broadcast DHCP DISCOVER failed: {}", e);
         }
     }
+
+    // Fall back to unicast
+    let unicast_addr = SocketAddr::new(ip, 67);
+    tracing::trace!(
+        "Trying unicast DHCP DISCOVER to {} (xid: {:#x})",
+        unicast_addr,
+        transaction_id
+    );
+
+    match socket.send_to(&buf, unicast_addr).await {
+        Ok(sent) => {
+            tracing::trace!("Sent {} bytes via unicast", sent);
+            if let Some(port) =
+                wait_for_dhcp_responses(&socket, ip, transaction_id, "unicast", 3).await?
+            {
+                return Ok(Some(port));
+            }
+        }
+        Err(e) => {
+            tracing::trace!("Unicast DHCP DISCOVER failed: {}", e);
+        }
+    }
+
+    tracing::trace!(
+        "No DHCP response from {} after broadcast and unicast attempts",
+        ip
+    );
+    Ok(None)
+}
+
+/// Helper function to wait for and validate DHCP responses (checks multiple times)
+async fn wait_for_dhcp_responses(
+    socket: &UdpSocket,
+    expected_ip: IpAddr,
+    expected_xid: u32,
+    method: &str,
+    max_attempts: usize,
+) -> Result<Option<u16>, Error> {
+    let mut response_buf = [0u8; 1500];
+
+    for attempt in 1..=max_attempts {
+        match timeout(
+            Duration::from_millis(2000), // Longer timeout per attempt
+            socket.recv_from(&mut response_buf),
+        )
+        .await
+        {
+            Ok(Ok((len, from))) => {
+                if len == 0 {
+                    continue;
+                }
+
+                let response_ip = from.ip();
+
+                tracing::trace!(
+                    "Received {} byte DHCP {} response (attempt {}/{}) from {}",
+                    len,
+                    method,
+                    attempt,
+                    max_attempts,
+                    response_ip
+                );
+
+                // Check if response came from the IP we're testing
+                if response_ip != expected_ip {
+                    tracing::trace!(
+                        "Response from {} (testing {}), checking next response...",
+                        response_ip,
+                        expected_ip
+                    );
+                    continue; // Keep trying - might get another response
+                }
+
+                // Parse and validate DHCP message
+                match Message::decode(&mut dhcproto::Decoder::new(&response_buf[..len])) {
+                    Ok(response_msg) => {
+                        tracing::trace!(
+                            "Parsed DHCP response - xid: {:#x} (expected {:#x}), op: {:?}",
+                            response_msg.xid(),
+                            expected_xid,
+                            response_msg.opcode()
+                        );
+
+                        // Verify transaction ID matches
+                        if response_msg.xid() != expected_xid {
+                            tracing::trace!("XID mismatch, checking next response...");
+                            continue;
+                        }
+
+                        // Check for valid DHCP response type
+                        let message_type = response_msg.opts().iter().find_map(|(_, opt)| {
+                            if let v4::DhcpOption::MessageType(msg_type) = opt {
+                                Some(msg_type)
+                            } else {
+                                None
+                            }
+                        });
+
+                        tracing::trace!("DHCP message type: {:?}", message_type);
+
+                        let is_valid = matches!(
+                            message_type,
+                            Some(&MessageType::Offer) | Some(&MessageType::Ack)
+                        );
+
+                        if is_valid {
+                            tracing::info!(
+                                "✓ DHCP server detected at {}:67 via {} method (response type: {:?})",
+                                expected_ip,
+                                method,
+                                message_type
+                            );
+                            return Ok(Some(67));
+                        } else {
+                            tracing::trace!(
+                                "Invalid DHCP response type, checking next response..."
+                            );
+                            continue;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::trace!("Failed to parse DHCP response: {}, checking next...", e);
+                        continue;
+                    }
+                }
+            }
+            Ok(Err(e)) => {
+                tracing::trace!(
+                    "Error receiving DHCP {} response (attempt {}): {}",
+                    method,
+                    attempt,
+                    e
+                );
+                break; // Socket error, no point continuing
+            }
+            Err(_) => {
+                tracing::trace!(
+                    "DHCP {} timeout on attempt {}/{}",
+                    method,
+                    attempt,
+                    max_attempts
+                );
+                // Timeout - continue to next attempt
+            }
+        }
+    }
+
+    Ok(None)
 }

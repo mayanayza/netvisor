@@ -20,9 +20,17 @@ impl DaemonUtils for WindowsDaemonUtils {
         Self {}
     }
 
-    async fn get_optimal_port_batch_size(&self) -> Result<usize> {
-        // Windows/other: use conservative default
-        Ok(100)
+    fn get_fd_limit() -> Result<usize, anyhow::Error> {
+        // Windows doesn't have a direct equivalent to Unix file descriptors
+        // The _getmaxstdio() function returns the maximum number of FILE streams (default 512)
+        // However, socket handles use a different mechanism
+
+        // For sockets specifically, Windows has a per-process limit of ~65000 handles
+        // But practically, we should use a conservative value similar to Unix defaults
+
+        // Return a reasonable default that works well on Windows
+        // This is roughly equivalent to what a typical Windows system can handle
+        Ok(2048)
     }
 
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>> {
