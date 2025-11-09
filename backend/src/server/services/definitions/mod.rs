@@ -124,6 +124,7 @@ pub mod pf_sense;
 pub mod philips_hue_bridge;
 pub mod pi_hole;
 pub mod plex;
+pub mod pocket_id;
 pub mod portainer;
 pub mod power_dns;
 pub mod print_server;
