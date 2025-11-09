@@ -62,8 +62,6 @@
 	async function loadTopologyData() {
 		try {
 			if ($topology?.nodes && $topology?.edges) {
-				console.log('Loading topology data');
-
 				// Create nodes FIRST
 				const allNodes: Node[] = $topology.nodes.map((node): Node => {
 					return {
@@ -132,7 +130,6 @@
 						};
 					});
 
-				console.log('Created pending edges:', flowEdges.length);
 				pendingEdges = flowEdges;
 			}
 		} catch (err) {

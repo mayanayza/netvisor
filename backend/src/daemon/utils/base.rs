@@ -25,7 +25,7 @@ pub trait DaemonUtils {
     /// Get MAC address for an IP from ARP table
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>, Error>;
 
-    async fn get_optimal_port_batch_size(&self) -> Result<usize, Error>;
+    fn get_fd_limit() -> Result<usize, Error>;
 
     fn get_own_ip_address(&self) -> Result<IpAddr, Error> {
         local_ip().map_err(|e| anyhow!("Failed to get local IP address: {}", e))
@@ -128,6 +128,124 @@ pub trait DaemonUtils {
                 _ => None,
             })
             .collect())
+    }
+
+    async fn get_optimal_port_batch_size(&self) -> Result<usize, Error> {
+        let fd_limit = Self::get_fd_limit()?;
+
+        // Reserve file descriptors for:
+        // - stdin, stdout, stderr (3)
+        // - HTTP client connections for endpoints (50)
+        // - Docker socket and other daemon operations (50)
+        // - Buffer for safety (100)
+        let reserved = 203;
+
+        let available = fd_limit.saturating_sub(reserved);
+
+        // Calculate optimal batch size
+        let optimal = if available < 50 {
+            // Very constrained system (like macOS default of 256)
+            tracing::warn!(
+                "Low file descriptor limit detected ({}). Using minimal batch size of 20. \
+                Consider increasing limit for better performance.",
+                fd_limit
+            );
+            20
+        } else if available < 500 {
+            // Moderate system
+            available / 2 // Use half of available to be conservative
+        } else {
+            // High-limit system (Linux default ~8000+)
+            // Cap at 1000 for reasonable performance without overwhelming target
+            std::cmp::min(available, 1000)
+        };
+
+        tracing::trace!(
+            "File descriptor limit: {}, reserved: {}, available: {}, port batch size: {}",
+            fd_limit,
+            reserved,
+            available,
+            optimal
+        );
+
+        Ok(optimal)
+    }
+
+    /// Get optimal number of concurrent host scans
+    /// Host-prioritized: maximize concurrent hosts, then optimize port batch
+    async fn get_optimal_concurrent_scans(
+        &self,
+        concurrency_config_value: usize,
+    ) -> Result<usize, Error> {
+        let fd_limit = Self::get_fd_limit()?;
+
+        // Reserve FDs for daemon operations
+        let reserved = 203;
+        let available = fd_limit.saturating_sub(reserved);
+
+        // Target concurrent host scans (prefer more hosts)
+        let target_concurrent_hosts = if available < 500 {
+            5 // Very constrained
+        } else if available < 2000 {
+            15 // Moderate
+        } else if available < 5000 {
+            30 // Good
+        } else {
+            50 // Excellent
+        };
+
+        // Calculate FD usage per host
+        let endpoint_fds_per_host = 25;
+        let overhead_per_host = 20;
+
+        // Calculate what port batch size we can afford with target concurrent hosts
+        let available_per_host = available / target_concurrent_hosts;
+        let port_batch_per_host =
+            available_per_host.saturating_sub(endpoint_fds_per_host + overhead_per_host);
+
+        // Ensure port batch is reasonable (min 10, max 200)
+        let port_batch_bounded = port_batch_per_host.clamp(10, 200);
+
+        // Recalculate actual concurrent hosts we can support with this port batch
+        let fds_per_host = port_batch_bounded + endpoint_fds_per_host + overhead_per_host;
+        let actual_concurrent = available / fds_per_host;
+
+        // Bound concurrent hosts (min 1, max 50)
+        let optimal_concurrent = actual_concurrent.clamp(1, 50);
+
+        let result = if concurrency_config_value != 15 {
+            // User override - respect it
+            tracing::info!(
+                "Using configured concurrent_scans={} (automatic would be {}, \
+                 with port_batch={})",
+                concurrency_config_value,
+                optimal_concurrent,
+                port_batch_bounded
+            );
+            concurrency_config_value
+        } else {
+            // Use automatic
+            tracing::info!(
+                "Using automatic concurrent_scans={} with port_batch={} per host \
+                 (FD limit: {}, available: {}, FDs per host: {})",
+                optimal_concurrent,
+                port_batch_bounded,
+                fd_limit,
+                available,
+                fds_per_host
+            );
+            optimal_concurrent
+        };
+
+        if result == 1 {
+            tracing::warn!(
+                "⚠️  Very low concurrency (1 host). File descriptor limit is {}. \
+                 Consider increasing for better performance.",
+                fd_limit
+            );
+        }
+
+        Ok(result)
     }
 }
 

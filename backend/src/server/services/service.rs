@@ -7,11 +7,7 @@ use crate::server::{
         r#impl::{base::Host, interfaces::Interface},
         service::HostService,
     },
-    services::r#impl::{
-        base::Service,
-        bindings::Binding,
-        patterns::{MatchConfidence, MatchDetails, MatchReason},
-    },
+    services::r#impl::{base::Service, bindings::Binding, patterns::MatchDetails},
     shared::{
         services::traits::CrudService,
         storage::{filter::EntityFilter, generic::GenericPostgresStorage, traits::Storage},
@@ -164,39 +160,11 @@ impl ServiceService {
                     .confidence
                     .max(new_service_details.confidence);
 
-                // If both matches are N/A, continue to use N/A reason string. If not, use whatever the non-N/A string is.
-                // If somehow confidence changed, use the higher confidence string
-                let reason_str = match (
-                    &existing_service_details.confidence,
-                    &new_service_details.confidence,
-                ) {
-                    (MatchConfidence::NotApplicable, MatchConfidence::NotApplicable) => {
-                        existing_service_details.reason_string()
-                    }
-                    (_, MatchConfidence::NotApplicable) => new_service_details.reason_string(),
-                    (MatchConfidence::NotApplicable, _) => existing_service_details.reason_string(),
-                    (_, _) => {
-                        if existing_service_details.confidence > new_service_details.confidence {
-                            existing_service_details.reason_string()
-                        } else {
-                            new_service_details.reason_string()
-                        }
-                    }
-                };
-
-                let reason = match existing_service_details.reason {
-                    // If data has already been upserted, just append to avoid a continuously nested structure
-                    MatchReason::Container(_, reasons) if existing_service_metadata.len() > 1 => {
-                        MatchReason::Container(
-                            reason_str,
-                            [vec![new_service_details.reason], reasons].concat(),
-                        )
-                    }
-                    // Otherwise create a container
-                    _ => MatchReason::Container(
-                        reason_str,
-                        vec![new_service_details.reason, existing_service_details.reason],
-                    ),
+                let reason = if new_service_details.confidence > existing_service_details.confidence
+                {
+                    new_service_details.reason // Use the better match reason
+                } else {
+                    existing_service_details.reason // Keep existing reason
                 };
 
                 EntitySource::DiscoveryWithMatch {

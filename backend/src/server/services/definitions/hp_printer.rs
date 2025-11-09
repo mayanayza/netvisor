@@ -24,6 +24,9 @@ impl ServiceDefinition for HpPrinter {
                 Pattern::Endpoint(PortBase::Http, "", "LaserJet"),
                 Pattern::Endpoint(PortBase::Http, "", "DeskJet"),
                 Pattern::Endpoint(PortBase::Http, "", "OfficeJet"),
+                Pattern::Endpoint(PortBase::HttpAlt, "", "LaserJet"),
+                Pattern::Endpoint(PortBase::HttpAlt, "", "DeskJet"),
+                Pattern::Endpoint(PortBase::HttpAlt, "", "OfficeJet"),
             ]),
             Pattern::AnyOf(vec![
                 Pattern::Port(PortBase::Ipp),

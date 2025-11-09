@@ -130,7 +130,9 @@
 		],
 		actions: [
 			{
-				label: 'Delete Host',
+				label: hasDaemon
+					? "Can't delete a host with an associated daemon. Delete the daemon first."
+					: 'Delete Host',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(host),

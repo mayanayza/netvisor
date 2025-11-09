@@ -494,25 +494,48 @@ pub trait DiscoversNetworkedEntities:
         Ok(services)
     }
 
+    /// Report discovery progress update periodically
+    /// Returns the current processed count for tracking
     async fn periodic_scan_update(
         &self,
-        frequency: usize,
-        last_reported_processed: usize,
+        last_reported_processed_count: usize,
     ) -> Result<usize, Error> {
         let session = self.as_ref().get_session().await?;
-
         let current_processed = session
             .processed_count
             .load(std::sync::atomic::Ordering::Relaxed);
 
-        if current_processed >= last_reported_processed + frequency {
+        let total_to_process = session.info.total_to_process;
+
+        // Calculate adaptive threshold based on total size
+        // Goal: Report approximately 10-20 updates total
+        let min_threshold = 1; // Always report at least every item for very small scans
+        let target_updates = 15; // Aim for ~15 progress updates
+        let calculated_threshold = (total_to_process / target_updates).max(1);
+
+        // Cap the threshold at reasonable bounds
+        let threshold = calculated_threshold.clamp(min_threshold, 50);
+
+        // Report if we've processed enough items since last report
+        if current_processed >= last_reported_processed_count + threshold
+            || current_processed == total_to_process
+        // Always report when complete
+        {
+            tracing::debug!(
+                "Progress update: {}/{} (threshold: {}, total: {})",
+                current_processed,
+                total_to_process,
+                threshold,
+                total_to_process
+            );
+
             self.report_discovery_update(DiscoverySessionUpdate::scanning(current_processed))
                 .await?;
 
             return Ok(current_processed);
         }
 
-        Ok(last_reported_processed)
+        Ok(last_reported_processed_count)
     }
 }
 
