@@ -147,6 +147,7 @@ pub mod unbound;
 pub mod unifi_access_point;
 pub mod unifi_controller;
 pub mod uptime_kuma;
+pub mod vaultwarden;
 pub mod web_service;
 pub mod wg_dashboard;
 pub mod workstation;
