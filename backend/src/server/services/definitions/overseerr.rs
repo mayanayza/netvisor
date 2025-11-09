@@ -19,7 +19,14 @@ impl ServiceDefinition for Overseerr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Overseerr")
+        Pattern::AllOf(vec![
+            Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Overseerr"),
+            Pattern::Not(Box::new(Pattern::Endpoint(
+                PortBase::new_tcp(5055),
+                "/",
+                "Jellyseerr",
+            ))),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {
