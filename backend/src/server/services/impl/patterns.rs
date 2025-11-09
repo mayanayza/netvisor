@@ -94,7 +94,7 @@ pub enum Pattern<'a> {
     AllOf(Vec<Pattern<'a>>),
 
     /// Inverse of pattern
-    Not(&'a Pattern<'a>),
+    Not(Box<Pattern<'a>>),
 
     /// Whether or not a specific port is open on the host
     Port(PortBase),

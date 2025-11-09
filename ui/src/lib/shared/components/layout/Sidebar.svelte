@@ -33,8 +33,11 @@
 
 	// Configuration for navigation - can include sections or standalone items
 	const navConfig: NavConfig = [
-		// Standalone item (no section)
-		{ id: 'topology', label: 'Topology', icon: entities.getIconComponent('Topology') },
+		{
+			id: 'visualize',
+			label: 'Visualize',
+			items: [{ id: 'topology', label: 'Topology', icon: entities.getIconComponent('Topology') }]
+		},
 		{
 			id: 'discover',
 			label: 'Discover',

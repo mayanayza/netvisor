@@ -1,7 +1,6 @@
 use std::{
     net::IpAddr,
     sync::{Arc, atomic::AtomicUsize},
-    time::Duration,
 };
 
 use crate::{
@@ -16,7 +15,6 @@ use crate::{
                 DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
                 ServiceMatchServiceParams,
             },
-            endpoints::{Endpoint, EndpointResponse},
             patterns::MatchConfidence,
         },
         shared::types::entities::{DiscoveryMetadata, EntitySource},
@@ -56,8 +54,6 @@ use crate::{
         subnets::r#impl::base::Subnet,
     },
 };
-
-pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
 
 #[derive(Clone)]
 pub struct DiscoverySession {
@@ -496,72 +492,6 @@ pub trait DiscoversNetworkedEntities:
             .extend(l4_unbound_ports.into_iter().map(Port::new));
 
         Ok(services)
-    }
-
-    async fn scan_endpoints(
-        ip: IpAddr,
-        cancel: CancellationToken,
-        filter_ports: Option<Vec<PortBase>>,
-    ) -> Result<Vec<EndpointResponse>, Error> {
-        use std::collections::HashMap;
-
-        let client = reqwest::Client::builder()
-            .timeout(SCAN_TIMEOUT)
-            .build()
-            .map_err(|e| anyhow!("Could not build client {}", e))?;
-
-        let all_endpoints: Vec<Endpoint> = Service::all_discovery_endpoints()
-            .into_iter()
-            .filter_map(|e| {
-                if let Some(filter_ports) = &filter_ports {
-                    if filter_ports.contains(&e.port_base) {
-                        return Some(e);
-                    }
-                    None
-                } else {
-                    Some(e)
-                }
-            })
-            .collect();
-
-        // Group endpoints by (port, path) to avoid duplicate requests
-        let mut unique_endpoints: HashMap<(u16, String), Endpoint> = HashMap::new();
-        for endpoint in all_endpoints {
-            let key = (endpoint.port_base.number(), endpoint.path.clone());
-            unique_endpoints.entry(key).or_insert(endpoint);
-        }
-
-        let mut responses = Vec::new();
-
-        // Only make one request per unique (port, path) combination
-        for ((_, _), endpoint) in unique_endpoints {
-            if cancel.is_cancelled() {
-                break;
-            }
-
-            let endpoint_with_ip = endpoint.use_ip(ip);
-            let url = endpoint_with_ip.to_string();
-
-            match client.get(&url).send().await {
-                Ok(response) if response.status().is_success() => {
-                    if let Ok(text) = response.text().await {
-                        // Return single response that can be checked by all patterns
-                        responses.push(EndpointResponse {
-                            endpoint: endpoint_with_ip,
-                            response: text,
-                        });
-                    }
-                }
-                Ok(_) => (),
-                Err(e) => {
-                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        return Err(e.into());
-                    }
-                }
-            }
-        }
-
-        Ok(responses)
     }
 
     async fn periodic_scan_update(
