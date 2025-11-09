@@ -85,6 +85,6 @@ impl DaemonUtils for LinuxDaemonUtils {
             optimal
         );
 
-        Ok(optimal)
+        Ok(optimal.try_into().unwrap())
     }
 }
