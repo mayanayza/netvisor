@@ -40,6 +40,11 @@ impl DaemonUtils for MacOsDaemonUtils {
         Self {}
     }
 
+    async fn get_optimal_port_batch_size(&self) -> Result<usize, Error> {
+        // Windows/other: use conservative default
+        Ok(100)
+    }
+
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>, Error> {
         use tokio::process::Command;
 

@@ -10,12 +10,21 @@
 	import { daemons, getDaemons } from '$lib/features/daemons/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
+	import { onMount } from 'svelte';
 
 	const loading = loadData([getDaemons, getActiveSessions]);
 
-	// Define field configuration for the DataTableControls
-	let discoveryFields: FieldConfig<DiscoveryUpdatePayload>[];
-	$: discoveryFields = [
+	let sessionsList = $state<DiscoveryUpdatePayload[]>([]);
+
+	onMount(() => {
+		const unsubscribe = sessions.subscribe((value) => {
+			sessionsList = value;
+		});
+
+		return unsubscribe;
+	});
+
+	let discoveryFields = $derived.by((): FieldConfig<DiscoveryUpdatePayload>[] => [
 		{
 			key: 'name',
 			label: 'Name',
@@ -71,7 +80,7 @@
 			sortable: true,
 			getValue: (item) => (item.finished_at ? formatTimestamp(item.finished_at) : 'Not Started')
 		}
-	];
+	]);
 </script>
 
 <div class="space-y-6">
@@ -79,12 +88,12 @@
 	<TabHeader title="Discovery Sessions" subtitle="Monitor active discovery sessions" />
 	{#if $loading}
 		<Loading />
-	{:else if $sessions.length === 0}
+	{:else if sessionsList.length === 0}
 		<!-- Empty state -->
 		<EmptyState title="No discovery sessions running" subtitle="" />
 	{:else}
 		<DataControls
-			items={$sessions}
+			items={sessionsList}
 			fields={discoveryFields}
 			storageKey="netvisor-discovery-session-table-state"
 		>
