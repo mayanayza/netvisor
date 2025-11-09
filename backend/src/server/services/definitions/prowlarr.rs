@@ -19,7 +19,11 @@ impl ServiceDefinition for Prowlarr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(3232), "/Content/Images/Icons/manifest.json", "Prowlarr")
+        Pattern::Endpoint(
+            PortBase::new_tcp(3232),
+            "/Content/Images/Icons/manifest.json",
+            "Prowlarr",
+        )
     }
 
     fn logo_url(&self) -> &'static str {
