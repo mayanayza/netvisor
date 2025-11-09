@@ -90,6 +90,7 @@ pub mod graylog;
 pub mod grocy;
 pub mod homarr;
 pub mod home_assistant;
+pub mod homepage;
 pub mod hp_printer;
 pub mod huntarr;
 pub mod immich;
