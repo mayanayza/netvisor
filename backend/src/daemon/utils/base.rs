@@ -2,7 +2,6 @@ use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::hosts::r#impl::interfaces::{Interface, InterfaceBase};
 use crate::server::subnets::r#impl::base::Subnet;
 use anyhow::Error;
-use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use bollard::Docker;
@@ -13,7 +12,10 @@ use net_route::Handle;
 use pnet::ipnetwork::IpNetwork;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::time::Duration;
 use uuid::Uuid;
+
+pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
 
 /// Cross-platform system utilities trait
 #[async_trait]
@@ -22,6 +24,8 @@ pub trait DaemonUtils {
 
     /// Get MAC address for an IP from ARP table
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>, Error>;
+
+    async fn get_optimal_port_batch_size(&self) -> Result<usize, Error>;
 
     fn get_own_ip_address(&self) -> Result<IpAddr, Error> {
         local_ip().map_err(|e| anyhow!("Failed to get local IP address: {}", e))
@@ -42,7 +46,7 @@ pub trait DaemonUtils {
         discovery_type: DiscoveryType,
         daemon_id: Uuid,
         network_id: Uuid,
-    ) -> Result<(Vec<Interface>, Vec<Subnet>)> {
+    ) -> Result<(Vec<Interface>, Vec<Subnet>), Error> {
         let interfaces = pnet::datalink::interfaces();
 
         // First pass: collect all interface data and potential subnets

@@ -93,17 +93,25 @@
 		>
 			{#if nodeData.showServices}
 				<!-- Show services list -->
-				<div class="flex w-full flex-1 flex-col items-center justify-evenly">
+				<div
+					class="flex w-full flex-1 flex-col items-center justify-evenly"
+					style="min-width: 0; max-width: 100%;"
+				>
 					{#each nodeData.services as service (service.id)}
 						{@const ServiceIcon = serviceDefinitions.getIconComponent(service.service_definition)}
-						<div class="flex flex-1 flex-col items-center justify-center">
+						<div
+							class="flex flex-1 flex-col items-center justify-center"
+							style="min-width: 0; max-width: 100%; width: 100%;"
+						>
 							<div
-								class="text-m text-secondary flex max-w-full items-center justify-center gap-1 truncate text-center"
-								style="line-height: 1.3;"
+								class="flex items-center justify-center gap-1"
+								style="line-height: 1.3; width: 100%; min-width: 0; max-width: 100%;"
 								title={service.name}
 							>
-								<ServiceIcon class="mr-1 h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
-								<span class="truncate">{service.name}</span>
+								<ServiceIcon class="h-5 w-5 flex-shrink-0 {hostColorHelper.icon}" />
+								<span class="text-m text-secondary truncate">
+									{service.name}
+								</span>
 							</div>
 							{#if !$topologyOptions.request_options.hide_ports && service.bindings.filter((b) => b.type == 'Port').length > 0}
 								<span class="text-tertiary mt-1 text-xs"
@@ -147,27 +155,15 @@
 				</div>
 			</div>
 		{/if}
-
-		<!-- Connection Handles -->
-		<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
-		<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
-		<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-		<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
-
-		<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
-		<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
-		<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-		<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
 	</div>
-{:else}
-	<!-- Still render handles even if nodeData is null -->
-	<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
-	<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
-	<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-	<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
-
-	<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
-	<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
-	<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-	<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
 {/if}
+
+<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
+<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
+<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
+<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
+
+<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
+<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
+<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
+<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />

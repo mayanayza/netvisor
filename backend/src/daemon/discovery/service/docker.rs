@@ -19,6 +19,7 @@ use tokio_util::sync::CancellationToken;
 use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
+use crate::daemon::utils::scanner::scan_endpoints;
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::hosts::r#impl::base::HostBase;
 use crate::server::hosts::r#impl::interfaces::ALL_INTERFACES_IP;
@@ -418,11 +419,14 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 .filter_map(|v| PortBase::from_str(v).ok())
                 .collect();
 
+            let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
+
             // Scan ports and any endpoints that match open ports
-            let endpoint_responses = tokio::spawn(Self::scan_endpoints(
+            let endpoint_responses = tokio::spawn(scan_endpoints(
                 host_ip,
                 cancel.clone(),
                 Some(open_ports.clone()),
+                port_scan_batch_size,
             ))
             .await
             .map_err(|e| anyhow!("Scan task panicked: {}", e))?
