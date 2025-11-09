@@ -123,7 +123,7 @@ Refer to [Configuration](#️-configuration) for more setup options.
 
 ### 1. 🚀 Start the Server
 
-**Note**: The default docker compose includes a daemon which assumes your default Docker bridge network is `172.17.0.1`. If this is not the case, update the address in the `NETVISOR_INTEGRATED_DAEMON_URL` environment variable. If you are running in an LXC environment, you may need to change the `NETVISOR_INTEGRATED_DAEMON_URL` to `172.31.0.1`.
+**Note**: The default docker compose includes a daemon which assumes your default Docker bridge network is `172.17.0.1`. If this is not the case, update the address in the `NETVISOR_INTEGRATED_DAEMON_URL` environment variable. 
 
 ```bash
 curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
@@ -577,7 +577,7 @@ The `CONCURRENT_SCANS` setting controls how many hosts the daemon scans in paral
 
 **Recommended ranges**:
 - **Low-resource systems** (Raspberry Pi): 5-10
-- **Developer laptops**: 15-20  
+- **Developer laptops**: 15-20
 - **Docker containers**: 10-30 (depends on container memory limits)
 - **Dedicated servers**: 25-50
 
@@ -675,6 +675,18 @@ docker build \
 ---
 
 ## 🔧 Troubleshooting
+
+### Proxmox Host and LXC Issues
+
+- If you are running containerized NetVisor directly on a Proxmox Host and encounter `could not create any Unix-domain sockets`, add the following line to the compose for both Postgres and Netvisor.
+```
+security_opt:
+  - apparmor:unconfined
+```
+
+Refer to https://github.com/mayanayza/netvisor/issues/87 for more details
+    
+- If you are running in an LXC environment, you may need to change the `NETVISOR_INTEGRATED_DAEMON_URL` to `172.31.0.1.
 
 ### Error: CONCURRENT_SCANS is too high for this system
 
