@@ -583,6 +583,43 @@ The `CONCURRENT_SCANS` setting controls how many hosts the daemon scans in paral
 
 If set too high, the daemon may exhaust system resources and fail with an error. Monitor daemon logs and adjust as needed for your hardware.
 
+#### Running as a System Service (Linux)
+
+After installing the binary, you can run the daemon as a systemd service:
+
+1. Create the service file:
+```bash
+sudo curl -o /etc/systemd/system/netvisor-daemon.service \
+  https://raw.githubusercontent.com/mayanayza/netvisor/main/netvisor-daemon.service
+```
+
+2. Edit the service file to add your configuration:
+```bash
+sudo nano /etc/systemd/system/netvisor-daemon.service
+```
+
+Add your daemon arguments to the `ExecStart` line:
+```ini
+ExecStart=/usr/local/bin/netvisor-daemon --server-target YOUR_SERVER_IP_OR_HOSTNAME --server-port YOUR_SERVER_PORT --network-id YOUR_NETWORK_ID --daemon-api-key YOUR_API_KEY
+```
+
+3. Enable and start the service:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable netvisor-daemon
+sudo systemctl start netvisor-daemon
+```
+
+4. Check status:
+```bash
+sudo systemctl status netvisor-daemon
+```
+
+5. View logs:
+```bash
+sudo journalctl -u netvisor-daemon -f
+```
+
 ### Server Configuration
 
 The server supports the following configuration options:
