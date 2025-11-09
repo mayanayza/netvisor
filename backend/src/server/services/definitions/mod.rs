@@ -118,6 +118,7 @@ pub mod nut;
 pub mod open_media_vault;
 pub mod opn_sense;
 pub mod overseerr;
+pub mod paperless_ngx;
 pub mod pf_blocker_ng;
 pub mod pf_sense;
 pub mod philips_hue_bridge;
