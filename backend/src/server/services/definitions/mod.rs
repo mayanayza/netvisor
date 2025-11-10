@@ -137,6 +137,7 @@ pub mod prometheus;
 pub mod prowlarr;
 pub mod proxmox;
 pub mod proxmox_backup_server;
+pub mod proxmox_datacenter_manager;
 pub mod pulse;
 pub mod qbittorrent;
 pub mod qnap;
