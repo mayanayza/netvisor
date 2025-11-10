@@ -27,4 +27,6 @@ impl ServiceDefinition for ProxmoxDatacenterManager {
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<ProxmoxDatacenterManager>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<ProxmoxDatacenterManager>
+));
