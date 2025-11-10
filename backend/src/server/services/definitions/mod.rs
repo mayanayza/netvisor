@@ -57,6 +57,7 @@ pub mod apc;
 pub mod audiobookshelf;
 pub mod authentik;
 pub mod autobrr;
+pub mod backrest;
 pub mod bazarr;
 pub mod bind9;
 pub mod camera;
