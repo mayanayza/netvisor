@@ -162,3 +162,4 @@ pub mod vaultwarden;
 pub mod web_service;
 pub mod wg_dashboard;
 pub mod workstation;
+pub mod zigbee2mqtt;
