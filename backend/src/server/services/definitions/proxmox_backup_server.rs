@@ -28,7 +28,8 @@ impl ServiceDefinition for ProxmoxBackupServer {
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg"
     }
-
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<ProxmoxBackupServer>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<ProxmoxBackupServer>
+));
