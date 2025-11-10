@@ -109,6 +109,7 @@ pub mod linkstack;
 pub mod lubelogger;
 pub mod mealie;
 pub mod memos;
+pub mod mqtt;
 pub mod nas_device;
 pub mod nest_protect;
 pub mod nest_thermostat;
