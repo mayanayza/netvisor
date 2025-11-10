@@ -557,7 +557,7 @@ Both the server and daemon support multiple configuration methods with the follo
 | Daemon Name | `--name` | `NETVISOR_NAME` | `name` | `netvisor-daemon` | Human-readable name for this daemon instance |
 | Log Level | `--log-level` | `NETVISOR_LOG_LEVEL` | `log_level` | `info` | Logging verbosity (`trace`, `debug`, `info`, `warn`, `error`) |
 | Heartbeat Interval | `--heartbeat-interval` | `NETVISOR_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates to the server |
-| Concurrent Scans | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | `15` | Maximum number of hosts to scan in parallel during discovery |
+| Concurrent Scans | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | - | Maximum number of hosts to scan in parallel during discovery  |
 | Network ID | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | `None` | Network ID to report discoveries to (auto-assigned for integrated daemon) |
 | API Key | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | `None` | API key for daemon authentication with server (generated via UI) |
 | Docker Proxy | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | `None` | Optional HTTP proxy to use to connect to docker |
@@ -572,14 +572,8 @@ The daemon automatically creates and maintains a configuration file at:
 The configuration file persists runtime state (daemon ID, host ID, last heartbeat) alongside your configured settings.
 
 #### Concurrent Scans
-
-The `CONCURRENT_SCANS` setting controls how many hosts the daemon scans in parallel during network discovery. Higher values complete scans faster but use more system resources.
-
-**Recommended ranges**:
-- **Low-resource systems** (Raspberry Pi): 5-10
-- **Developer laptops**: 15-20
-- **Docker containers**: 10-30 (depends on container memory limits)
-- **Dedicated servers**: 25-50
+ 
+By default, the daemon automaticaly determines how many hosts to scan in parallel based on available system resources. However, if you encounter an error saying that CONCURRENT_SCANS is too high for the system, you can set it manually.
 
 If set too high, the daemon may exhaust system resources and fail with an error. Monitor daemon logs and adjust as needed for your hardware.
 
