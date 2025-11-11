@@ -5,9 +5,11 @@ use chrono::{DateTime, Utc};
 use cidr::IpCidr;
 use email_address::EmailAddress;
 use sqlx::postgres::PgRow;
+use stripe_billing::SubscriptionStatus;
 use uuid::Uuid;
 
 use crate::server::{
+    billing::types::base::BillingPlan,
     daemons::r#impl::api::DaemonCapabilities,
     discovery::r#impl::types::{DiscoveryType, RunType},
     groups::r#impl::types::GroupType,
@@ -19,6 +21,7 @@ use crate::server::{
     },
     shared::{storage::filter::EntityFilter, types::entities::EntitySource},
     subnets::r#impl::types::SubnetType,
+    users::r#impl::base::UserOrgPermissions,
 };
 
 #[async_trait]
@@ -85,4 +88,7 @@ pub enum SqlValue {
     RunType(RunType),
     DiscoveryType(DiscoveryType),
     DaemonCapabilities(DaemonCapabilities),
+    UserOrgPermissions(UserOrgPermissions),
+    OptionBillingPlan(Option<BillingPlan>),
+    OptionBillingPlanStatus(Option<SubscriptionStatus>),
 }

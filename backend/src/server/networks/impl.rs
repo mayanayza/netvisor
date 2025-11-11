@@ -14,16 +14,16 @@ use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 pub struct NetworkBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
-    pub user_id: Uuid,
     pub is_default: bool,
+    pub organization_id: Uuid,
 }
 
 impl NetworkBase {
-    pub fn new(user_id: Uuid) -> Self {
+    pub fn new(organization_id: Uuid) -> Self {
         Self {
-            user_id,
             name: "My Network".to_string(),
             is_default: false,
+            organization_id,
         }
     }
 }
@@ -96,7 +96,7 @@ impl StorableEntity for Network {
             base:
                 Self::BaseData {
                     name,
-                    user_id,
+                    organization_id,
                     is_default,
                 },
         } = self.clone();
@@ -107,7 +107,7 @@ impl StorableEntity for Network {
                 "created_at",
                 "updated_at",
                 "name",
-                "user_id",
+                "organization_id",
                 "is_default",
             ],
             vec![
@@ -115,7 +115,7 @@ impl StorableEntity for Network {
                 SqlValue::Timestamp(created_at),
                 SqlValue::Timestamp(updated_at),
                 SqlValue::String(name),
-                SqlValue::Uuid(user_id),
+                SqlValue::Uuid(organization_id),
                 SqlValue::Bool(is_default),
             ],
         ))
@@ -128,7 +128,7 @@ impl StorableEntity for Network {
             updated_at: row.get("updated_at"),
             base: NetworkBase {
                 name: row.get("name"),
-                user_id: row.get("user_id"),
+                organization_id: row.get("organization_id"),
                 is_default: row.get("is_default"),
             },
         })

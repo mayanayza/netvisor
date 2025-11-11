@@ -1,3 +1,5 @@
+use crate::server::billing::types::base::BillingPlan;
+use crate::server::billing::types::features::Feature;
 use crate::server::config::PublicConfigResponse;
 use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::groups::r#impl::types::GroupType;
@@ -14,6 +16,8 @@ use crate::server::{
     services::handlers as service_handlers, shared::types::api::ApiResponse,
     subnets::handlers as subnet_handlers, topology::handlers as topology_handlers,
     users::handlers as user_handlers,
+    organizations::handlers as organization_handlers,
+    billing::handlers as billing_handlers
 };
 use axum::extract::State;
 use axum::{Json, Router, routing::get};
@@ -31,7 +35,9 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .nest("/api/services", service_handlers::create_router())
         .nest("/api/networks", network_handlers::create_router())
         .nest("/api/users", user_handlers::create_router())
+        .nest("/api/billing", billing_handlers::create_router())
         .nest("/api/auth", auth_handlers::create_router())
+        .nest("/api/organizations", organization_handlers::create_router())
         .route("/api/health", get(get_health))
         .route("/api/metadata", get(get_metadata_registry))
         .route("/api/config", get(get_public_config))
@@ -51,6 +57,8 @@ async fn get_metadata_registry() -> Json<ApiResponse<MetadataRegistry>> {
         entities: Entity::iter().map(|e| e.to_metadata()).collect(),
         ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
         discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
+        billing_plans: BillingPlan::iter().map(|p| p.to_metadata()).collect(),
+        features: Feature::iter().map(|f| f.to_metadata()).collect()
     };
 
     Json(ApiResponse::success(registry))
@@ -76,5 +84,6 @@ pub async fn get_public_config(
             .oidc_provider_name
             .clone()
             .unwrap_or("OIDC Provider".to_string()),
+        billing_enabled: state.config.stripe_secret.is_some(),
     }))
 }

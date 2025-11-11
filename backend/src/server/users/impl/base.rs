@@ -8,12 +8,15 @@ use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use strum::Display;
 use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UserBase {
     pub email: EmailAddress,
+    pub organization_id: Uuid,
+    pub permissions: UserOrgPermissions,
     /// Password hash - None for legacy users created before auth migration or users using OIDC
     #[serde(skip_serializing)] // Never send password hash to client
     pub password_hash: Option<String>,
@@ -29,6 +32,8 @@ impl Default for UserBase {
     fn default() -> Self {
         Self {
             email: EmailAddress::new_unchecked("user@example.com"),
+            permissions: UserOrgPermissions::Owner,
+            organization_id: Uuid::new_v4(),
             password_hash: None,
             oidc_linked_at: None,
             oidc_provider: None,
@@ -38,9 +43,11 @@ impl Default for UserBase {
 }
 
 impl UserBase {
-    pub fn new_seed() -> Self {
+    pub fn new_seed(organization_id: Uuid) -> Self {
         Self {
             email: EmailAddress::new_unchecked(format!("{}@netvisor.io", Uuid::new_v4())),
+            permissions: UserOrgPermissions::Owner,
+            organization_id,
             password_hash: None,
             oidc_linked_at: None,
             oidc_provider: None,
@@ -52,25 +59,42 @@ impl UserBase {
         email: EmailAddress,
         oidc_subject: String,
         oidc_provider: Option<String>,
+        organization_id: Uuid,
+        permissions: UserOrgPermissions,
     ) -> Self {
         Self {
             email,
             password_hash: None,
             oidc_linked_at: Some(Utc::now()),
+            permissions,
+            organization_id,
             oidc_provider,
             oidc_subject: Some(oidc_subject),
         }
     }
 
-    pub fn new_password(email: EmailAddress, password_hash: String) -> Self {
+    pub fn new_password(
+        email: EmailAddress,
+        password_hash: String,
+        organization_id: Uuid,
+        permissions: UserOrgPermissions,
+    ) -> Self {
         Self {
             email,
             password_hash: Some(password_hash),
+            organization_id,
+            permissions,
             oidc_linked_at: None,
             oidc_provider: None,
             oidc_subject: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Display)]
+pub enum UserOrgPermissions {
+    Owner,
+    Member,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,6 +167,8 @@ impl StorableEntity for User {
                     email,
                     password_hash,
                     oidc_linked_at,
+                    permissions,
+                    organization_id,
                     oidc_provider,
                     oidc_subject,
                 },
@@ -158,6 +184,8 @@ impl StorableEntity for User {
                 "oidc_linked_at",
                 "oidc_provider",
                 "oidc_subject",
+                "permissions",
+                "organization_id",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -168,6 +196,8 @@ impl StorableEntity for User {
                 SqlValue::OptionTimestamp(oidc_linked_at),
                 SqlValue::OptionalString(oidc_provider),
                 SqlValue::OptionalString(oidc_subject),
+                SqlValue::UserOrgPermissions(permissions),
+                SqlValue::Uuid(organization_id),
             ],
         ))
     }
@@ -176,6 +206,10 @@ impl StorableEntity for User {
         let email = EmailAddress::from_str(&row.get::<String, _>("email"))
             .map_err(|e| Error::msg(format!("Failed to parse email: {}", e)))?;
 
+        let permissions: UserOrgPermissions =
+            serde_json::from_str(&row.get::<String, _>("permissions"))
+                .or(Err(Error::msg("Failed to deserialize permissions")))?;
+
         Ok(User {
             id: row.get("id"),
             created_at: row.get("created_at"),
@@ -183,6 +217,8 @@ impl StorableEntity for User {
             base: UserBase {
                 email,
                 password_hash: row.get("password_hash"),
+                permissions,
+                organization_id: row.get("organization_id"),
                 oidc_linked_at: row.get("oidc_linked_at"),
                 oidc_provider: row.get("oidc_provider"),
                 oidc_subject: row.get("oidc_subject"),

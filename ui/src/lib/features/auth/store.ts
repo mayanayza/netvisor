@@ -37,26 +37,26 @@ export async function checkAuth(): Promise<boolean> {
 /**
  * Login user
  */
-export async function login(request: LoginRequest): Promise<boolean> {
+export async function login(request: LoginRequest): Promise<User | null> {
 	const result = await api.request<User, User | null>('/auth/login', currentUser, (user) => user, {
 		method: 'POST',
 		body: JSON.stringify(request)
 	});
 
-	if (result && result.success && result.data) {
+	if (result && result.success && result.data != undefined) {
 		isAuthenticated.set(true);
 		pushSuccess(`Welcome back, ${result.data.email}!`);
-		return true;
+		return result.data;
 	}
 
 	pushError('Login failed. Please check your credentials.');
-	return false;
+	return null;
 }
 
 /**
  * Register new user
  */
-export async function register(request: RegisterRequest): Promise<boolean> {
+export async function register(request: RegisterRequest): Promise<User | null> {
 	const result = await api.request<User, User | null>(
 		'/auth/register',
 		currentUser,
@@ -67,14 +67,14 @@ export async function register(request: RegisterRequest): Promise<boolean> {
 		}
 	);
 
-	if (result && result.success && result.data) {
+	if (result && result.success && result.data != undefined) {
 		isAuthenticated.set(true);
 		pushSuccess(`Welcome, ${result.data.email}!`);
-		return true;
+		return result.data;
 	}
 
 	pushError('Registration failed. Please try again.');
-	return false;
+	return null;
 }
 
 /**

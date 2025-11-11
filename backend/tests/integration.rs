@@ -3,6 +3,7 @@ use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::networks::r#impl::Network;
+use netvisor::server::organizations::r#impl::base::Organization;
 #[cfg(feature = "generate-fixtures")]
 use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
@@ -99,6 +100,8 @@ impl TestClient {
         let register_request = RegisterRequest {
             email: email.clone(),
             password: password.to_string(),
+            organization_id: None,
+            permissions: None,
         };
 
         let response = self
@@ -233,6 +236,18 @@ async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
         }
         Err(e) => Err(e),
     }
+}
+
+async fn wait_for_organization(client: &TestClient) -> Result<Organization, String> {
+    retry("wait for organization to be created", 15, 2, || async {
+        let organization: Vec<Organization> = client.get("/api/organizations").await?;
+
+        organization
+            .first()
+            .cloned()
+            .ok_or_else(|| "No networks found yet".to_string())
+    })
+    .await
 }
 
 async fn wait_for_network(client: &TestClient) -> Result<Network, String> {
@@ -469,6 +484,13 @@ async fn test_full_integration() {
         .await
         .expect("Failed to authenticate user");
     println!("✅ Authenticated as: {}", user.base.email);
+
+    // Wait for organization
+    println!("\n=== Waiting for Organization ===");
+    let organization = wait_for_organization(&client)
+        .await
+        .expect("Failed to find organization");
+    println!("✅ Organization: {}", organization.base.name);
 
     // Wait for network
     println!("\n=== Waiting for Network ===");

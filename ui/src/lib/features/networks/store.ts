@@ -12,7 +12,7 @@ export async function getNetworks() {
 
 	if (user) {
 		const result = await api.request<Network[]>(
-			`/networks?user_id=${user.id}`,
+			`/networks`,
 			networks,
 			(networks) => networks,
 			{ method: 'GET' }
@@ -65,6 +65,6 @@ export function createEmptyNetworkFormData(): Network {
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		is_default: false,
-		user_id: ''
+		organization_id: uuidv4Sentinel
 	};
 }

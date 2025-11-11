@@ -1,12 +1,11 @@
 use crate::server::{
-    auth::middleware::AuthenticatedUser,
-    config::AppState,
-    shared::{
+    auth::middleware::AuthenticatedUser, config::AppState, networks::service::NetworkService, shared::{
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
-    },
+    }
 };
+use async_trait::async_trait;
 use axum::{
     Router,
     extract::{Path, State},
@@ -18,6 +17,7 @@ use std::{fmt::Display, sync::Arc};
 use uuid::Uuid;
 
 /// Trait for creating standard CRUD handlers for an entity
+#[async_trait]
 pub trait CrudHandlers: StorableEntity + Serialize + for<'de> Deserialize<'de>
 where
     Self: Display,
@@ -34,6 +34,20 @@ where
     /// Optional: Validate entity before create/update
     fn validate(&self) -> Result<(), String> {
         Ok(())
+    }
+
+    async fn get_user_allowed_network_ids_filter(user: AuthenticatedUser, network_service: Arc<NetworkService>) -> Result<EntityFilter, ApiError> {
+        let org_filter = EntityFilter::unfiltered().organization_id(&user.organization_id);
+
+        let network_ids: Vec<Uuid> = network_service
+            .get_all(org_filter)
+            .await
+            .map_err(|e| ApiError::internal_error(&e.to_string()))?
+            .iter()
+            .map(|n| n.id())
+            .collect();
+
+        Ok(EntityFilter::unfiltered().network_ids(&network_ids))
     }
 }
 
@@ -82,19 +96,7 @@ pub async fn get_all_handler<T>(
 where
     T: CrudHandlers + 'static,
 {
-    let user_filter = EntityFilter::unfiltered().user_id(&user.0);
-
-    let network_ids: Vec<Uuid> = state
-        .services
-        .network_service
-        .get_all(user_filter)
-        .await
-        .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .iter()
-        .map(|n| n.id())
-        .collect();
-
-    let network_filter = EntityFilter::unfiltered().network_ids(&network_ids);
+    let network_filter = T::get_user_allowed_network_ids_filter(user, state.services.network_service.clone()).await?;
 
     let service = T::get_service(&state);
     let entities = service

@@ -16,8 +16,6 @@
 	$: disableRegistration = $loading ? false : $config.disable_registration;
 	$: enableOidc = $loading ? true : $config.oidc_enabled;
 
-	console.log(enableOidc);
-
 	let formData: LoginRequest = {
 		email: '',
 		password: ''

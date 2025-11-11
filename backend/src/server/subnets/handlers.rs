@@ -56,8 +56,10 @@ async fn get_all_subnets(
         AuthenticatedEntity::Daemon(network_id) => {
             vec![network_id]
         }
-        AuthenticatedEntity::User(user_id) => {
-            let filter = EntityFilter::unfiltered().user_id(&user_id);
+        AuthenticatedEntity::User {
+            organization_id, ..
+        } => {
+            let filter = EntityFilter::unfiltered().organization_id(&organization_id);
 
             state
                 .services

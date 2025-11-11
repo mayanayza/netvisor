@@ -15,6 +15,7 @@ use crate::server::{
         targets::HostTarget,
     },
     networks::r#impl::{Network, NetworkBase},
+    organizations::r#impl::base::{Organization, OrganizationBase},
     services::{
         definitions::ServiceDefinitionRegistry,
         r#impl::base::{Service, ServiceBase},
@@ -76,12 +77,16 @@ pub async fn test_storage() -> (StorageFactory, ContainerAsync<GenericImage>) {
     (factory, _container)
 }
 
-pub fn user() -> User {
-    User::new(UserBase::new_seed())
+pub fn organization() -> Organization {
+    Organization::new(OrganizationBase::default())
 }
 
-pub fn network(user_id: &Uuid) -> Network {
-    Network::new(NetworkBase::new(*user_id))
+pub fn user(organization_id: &Uuid) -> User {
+    User::new(UserBase::new_seed(*organization_id))
+}
+
+pub fn network(organization_id: &Uuid) -> Network {
+    Network::new(NetworkBase::new(*organization_id))
 }
 
 pub fn host(network_id: &Uuid) -> Host {
@@ -164,7 +169,7 @@ pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
 
 pub async fn test_services() -> (StorageFactory, ServiceFactory, ContainerAsync<GenericImage>) {
     let (storage, _container) = test_storage().await;
-    let services = ServiceFactory::new(&storage).await.unwrap();
+    let services = ServiceFactory::new(&storage, None).await.unwrap();
     (storage, services, _container)
 }
 pub async fn setup_test_app() -> Router<Arc<AppState>> {

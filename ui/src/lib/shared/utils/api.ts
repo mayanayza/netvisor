@@ -2,6 +2,41 @@ import type { Writable } from 'svelte/store';
 import { pushError } from '../stores/feedback';
 import { env } from '$env/dynamic/public';
 
+export function getServerTarget(): string {
+	const baseUrl = window.location.origin;
+	const parsedUrl = new URL(baseUrl);
+
+	return env.PUBLIC_SERVER_HOSTNAME && env.PUBLIC_SERVER_HOSTNAME !== 'default'
+			? env.PUBLIC_SERVER_HOSTNAME
+			: parsedUrl.hostname;
+}
+
+export function getServerPort(): string {
+	const baseUrl = window.location.origin;
+	const parsedUrl = new URL(baseUrl);
+
+	if (parsedUrl.hostname == 'localhost') return '60072'
+
+	return env.PUBLIC_SERVER_HOSTNAME === 'default'
+			? parsedUrl.port || '60072'
+			: env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
+}
+
+export function getServerProtocol(): string {
+	const baseUrl = window.location.origin;
+	const parsedUrl = new URL(baseUrl);
+
+	return parsedUrl.protocol === 'https:' ? 'https' : 'http';
+}
+
+export function getServerUrl() {
+	return `${getServerProtocol()}://${getServerTarget()}:${getServerPort()}`
+}
+
+export function getUiUrl() {
+	return window.location.href
+}
+
 interface ApiResponse<T> {
 	success: boolean;
 	data?: T;
@@ -83,13 +118,13 @@ class ApiClient {
 
 		const baseUrl = window.location.origin; // e.g., "http://localhost:60072" or "https://netvisor.example.com"
 
-		const url =
-			env.PUBLIC_SERVER_HOSTNAME === 'default'
-				? new URL(`/api${endpoint}`, baseUrl)
-				: new URL(
-						`/api${endpoint}`,
-						`${window.location.protocol}//${env.PUBLIC_SERVER_HOSTNAME}${env.PUBLIC_SERVER_PORT ? `:${env.PUBLIC_SERVER_PORT}` : ''}`
-					);
+		const url = new URL(getServerUrl()+`/api${endpoint}`)
+			// env.PUBLIC_SERVER_HOSTNAME === 'default'
+			// 	? new URL(`/api${endpoint}`, baseUrl)
+			// 	: new URL(
+			// 			`/api${endpoint}`,
+			// 			`${window.location.protocol}//${env.PUBLIC_SERVER_HOSTNAME}${env.PUBLIC_SERVER_PORT ? `:${env.PUBLIC_SERVER_PORT}` : ''}`
+			// 		);
 
 		const baseErrorMessage = `Failed to ${method} from ${endpoint}`;
 
@@ -145,6 +180,7 @@ class ApiClient {
 					'Content-Type': 'application/json',
 					...options.headers
 				},
+				credentials: 'include',
 				...options
 			});
 

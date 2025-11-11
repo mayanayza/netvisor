@@ -1,0 +1,33 @@
+<script lang="ts">
+	import Toast from '$lib/shared/components/feedback/Toast.svelte';
+	import BillingPlanForm from '$lib/features/billing/BillingPlanForm.svelte';
+	import { loadData } from '$lib/shared/utils/dataLoader';
+	import { getConfig } from '$lib/shared/stores/config';
+	import { getMetadata } from '$lib/shared/stores/metadata';
+	import Loading from '$lib/shared/components/feedback/Loading.svelte';
+	import { getCurrentBillingPlans } from '$lib/features/billing/store';
+	
+	const loading = loadData([getConfig, getMetadata, getCurrentBillingPlans])
+	
+</script>
+
+{#if $loading}
+	<Loading/>
+{:else}
+	<div class="relative flex min-h-screen items-center justify-center bg-gray-900">
+		<!-- Background image with overlay -->
+		<div class="absolute inset-0 z-0">
+			<div 
+				class="h-full w-full bg-cover bg-center bg-no-repeat"
+				style="background-image: url('/path/to/your/image.jpg')"
+			></div>
+		</div>
+
+		<!-- Content (sits above background) -->
+		<div class="relative z-10">
+			<BillingPlanForm />
+		</div>
+
+		<Toast />
+	</div>
+{/if}

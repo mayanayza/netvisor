@@ -1,4 +1,4 @@
-use crate::server::{auth::oidc::OidcClient, shared::services::factory::ServiceFactory};
+use crate::server::shared::services::factory::ServiceFactory;
 use anyhow::{Error, Result};
 use figment::{
     Figment,
@@ -24,6 +24,7 @@ pub struct CliArgs {
     pub oidc_client_secret: Option<String>,
     pub oidc_redirect_url: Option<String>,
     pub oidc_provider_name: Option<String>,
+    pub stripe_secret: Option<String>,
 }
 
 /// Flattened server configuration struct
@@ -68,6 +69,12 @@ pub struct ServerConfig {
 
     /// OIDC redirect url
     pub oidc_provider_name: Option<String>,
+
+    /// Stripe key
+    pub stripe_key: Option<String>,
+
+    /// Stripe Secret
+    pub stripe_secret: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -76,6 +83,7 @@ pub struct PublicConfigResponse {
     pub disable_registration: bool,
     pub oidc_enabled: bool,
     pub oidc_provider_name: String,
+    pub billing_enabled: bool,
 }
 
 impl Default for ServerConfig {
@@ -94,6 +102,8 @@ impl Default for ServerConfig {
             oidc_issuer_url: None,
             oidc_redirect_url: None,
             oidc_provider_name: None,
+            stripe_key: None,
+            stripe_secret: None,
         }
     }
 }
@@ -140,6 +150,9 @@ impl ServerConfig {
         if let Some(oidc_provider_name) = cli_args.oidc_provider_name {
             figment = figment.merge(("oidc_provider_name", oidc_provider_name));
         }
+        if let Some(stripe_secret) = cli_args.stripe_secret {
+            figment = figment.merge(("stripe_secret", stripe_secret));
+        }
 
         figment = figment.merge(("disable_registration", cli_args.disable_registration));
 
@@ -159,37 +172,18 @@ pub struct AppState {
     pub config: ServerConfig,
     pub storage: StorageFactory,
     pub services: ServiceFactory,
-    pub oidc_client: Option<Arc<OidcClient>>,
 }
 
 impl AppState {
     pub async fn new(config: ServerConfig) -> Result<Arc<Self>, Error> {
         let storage =
             StorageFactory::new(&config.database_url(), config.use_secure_session_cookies).await?;
-        let services = ServiceFactory::new(&storage).await?;
-
-        let oidc_client =
-            if let (Some(issuer_url), Some(redirect_url), Some(client_id), Some(client_secret)) = (
-                &config.oidc_issuer_url,
-                &config.oidc_redirect_url,
-                &config.oidc_client_id,
-                &config.oidc_client_secret,
-            ) {
-                Some(Arc::new(OidcClient::new(
-                    issuer_url.to_owned(),
-                    client_id.to_owned(),
-                    client_secret.to_owned(),
-                    redirect_url.to_owned(),
-                )))
-            } else {
-                None
-            };
+        let services = ServiceFactory::new(&storage, Some(config.clone())).await?;
 
         Ok(Arc::new(Self {
             config,
             storage,
             services,
-            oidc_client,
         }))
     }
 }

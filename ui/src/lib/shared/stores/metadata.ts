@@ -32,6 +32,12 @@ export interface MetadataRegistry {
 	entities: EntityMetadata[];
 	ports: TypeMetadata<PortTypeMetadata>[];
 	discovery_types: TypeMetadata<DiscoveryTypeMetadata>[];
+	billing_plans: TypeMetadata<BillingPlanMetadata>[];
+	features: TypeMetadata<FeatureMetadata>[];
+}
+
+export interface BillingPlanMetadata {
+	features: Record<string, any>
 }
 
 export interface ServicedDefinitionMetadata {
@@ -54,6 +60,11 @@ export interface EdgeTypeMetadata {
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface GroupTypeMetadata {}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface FeatureMetadata {
+	use_null_as_unlimited: boolean
+}
 
 export interface PortTypeMetadata {
 	is_management: boolean;
@@ -238,6 +249,8 @@ export const groupTypes = createTypeMetadataHelpers('group_types');
 export const entities = createEntityMetadataHelpers('entities');
 export const ports = createTypeMetadataHelpers('ports');
 export const discoveryTypes = createTypeMetadataHelpers('discovery_types');
+export const billingPlans = createTypeMetadataHelpers('billing_plans');
+export const features = createTypeMetadataHelpers('features');
 
 export async function getMetadata() {
 	await api.request<MetadataRegistry>('/metadata', metadata, (metadata) => metadata, {

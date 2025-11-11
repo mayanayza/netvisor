@@ -1,13 +1,16 @@
 use std::time::Duration;
 
 use anyhow::Error;
-use axum::{Router, http::Method};
+use axum::{Router, http::{HeaderValue, Method}};
 use clap::Parser;
 use netvisor::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
         api_keys::r#impl::base::{ApiKey, ApiKeyBase},
+        billing::types::base::{BillingPlan, BillingRate, Price},
         config::{AppState, CliArgs, ServerConfig},
+        networks::r#impl::{Network, NetworkBase},
+        organizations::r#impl::base::{Organization, OrganizationBase},
         shared::{
             handlers::factory::create_router,
             services::traits::CrudService,
@@ -16,9 +19,10 @@ use netvisor::{
         users::r#impl::base::{User, UserBase},
     },
 };
+use reqwest::header;
 use tower::ServiceBuilder;
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::{CorsLayer},
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
@@ -76,6 +80,10 @@ struct Cli {
     /// OIDC redirect url
     #[arg(long)]
     oidc_redirect_url: Option<String>,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    stripe_secret: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -93,6 +101,7 @@ impl From<Cli> for CliArgs {
             oidc_issuer_url: cli.oidc_issuer_url,
             oidc_provider_name: cli.oidc_provider_name,
             oidc_redirect_url: cli.oidc_redirect_url,
+            stripe_secret: cli.stripe_secret,
         }
     }
 }
@@ -108,10 +117,7 @@ async fn main() -> anyhow::Result<()> {
     let config = ServerConfig::load(cli_args)?;
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
     let web_external_path = config.web_external_path.clone();
-    let integrated_daemon_url = config
-        .integrated_daemon_url
-        .clone()
-        .unwrap_or("http://daemon:60073".to_string());
+    let integrated_daemon_url = config.integrated_daemon_url.clone();
 
     // Initialize tracing
     tracing_subscriber::registry()
@@ -127,6 +133,9 @@ async fn main() -> anyhow::Result<()> {
     let user_service = state.services.user_service.clone();
     let api_key_service = state.services.api_key_service.clone();
     let discovery_service = state.services.discovery_service.clone();
+    let organization_service = state.services.organization_service.clone();
+    let network_service = state.services.network_service.clone();
+    let billing_service = state.services.billing_service.clone();
 
     // Create discovery cleanup task
     let discovery_cleanup_state = state.clone();
@@ -181,16 +190,31 @@ async fn main() -> anyhow::Result<()> {
         create_router().layer(session_store).with_state(state)
     };
 
+    let cors = if cfg!(debug_assertions) {
+        // Development: Allow localhost with credentials
+        CorsLayer::new()
+            .allow_origin([
+                "http://localhost:5173".parse::<HeaderValue>().unwrap(),
+                "http://localhost:60072".parse::<HeaderValue>().unwrap(),
+                "http://localhost:60073".parse::<HeaderValue>().unwrap(),
+            ])
+            .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+            .allow_headers([
+                header::CONTENT_TYPE,
+                header::AUTHORIZATION,
+                header::ACCEPT,
+            ])
+            .allow_credentials(true)
+    } else {
+        // Production: Same-origin, no CORS needed but keep it permissive for future flexibility
+        CorsLayer::permissive()
+    };
+
     // Create main app
     let app = Router::new().merge(api_router).layer(
         ServiceBuilder::new()
             .layer(TraceLayer::new_for_http())
-            .layer(
-                CorsLayer::new()
-                    .allow_origin(Any)
-                    .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-                    .allow_headers(Any),
-            ),
+            .layer(cors),
     );
 
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
@@ -212,25 +236,71 @@ async fn main() -> anyhow::Result<()> {
 
     let all_users = user_service.get_all(EntityFilter::unfiltered()).await?;
 
+    if let Some(billing_service) = billing_service {
+        billing_service
+            .initialize_products(vec![
+                BillingPlan::Starter {
+                    price: Price {
+                        cents: 1499,
+                        rate: BillingRate::Month,
+                    },
+                    trial_days: 0,
+                },
+                BillingPlan::Pro {
+                    price: Price {
+                        cents: 2499,
+                        rate: BillingRate::Month,
+                    },
+                    trial_days: 7,
+                },
+                BillingPlan::Team {
+                    price: Price {
+                        cents: 9999,
+                        rate: BillingRate::Month,
+                    },
+                    trial_days: 7,
+                },
+            ])
+            .await?;
+    }
+
     // First load - populate seed data
     if all_users.is_empty() {
         tracing::info!("Populating seed data...");
-        let (_, network) = user_service
-            .create_user(User::new(UserBase::new_seed()))
-            .await?;
 
-        let api_key = api_key_service
-            .create(ApiKey::new(ApiKeyBase {
-                key: "".to_string(),
-                name: "Integrated Daemon API Key".to_string(),
-                last_used: None,
-                expires_at: None,
-                network_id: network.id,
-                is_enabled: true,
+        let organization = organization_service
+            .create(Organization::new(OrganizationBase {
+                stripe_customer_id: None,
+                plan: None,
+                plan_status: None,
+                name: "My Organization".to_string(),
             }))
             .await?;
 
-        initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
+        user_service
+            .create_user(User::new(UserBase::new_seed(organization.id)))
+            .await?;
+
+        let network = network_service
+            .create(Network::new(NetworkBase::new(organization.id)))
+            .await?;
+
+        network_service.seed_default_data(network.id).await?;
+
+        if let Some(integrated_daemon_url) = integrated_daemon_url {
+            let api_key = api_key_service
+                .create(ApiKey::new(ApiKeyBase {
+                    key: "".to_string(),
+                    name: "Integrated Daemon API Key".to_string(),
+                    last_used: None,
+                    expires_at: None,
+                    network_id: network.id,
+                    is_enabled: true,
+                }))
+                .await?;
+
+            initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
+        }
     } else {
         tracing::debug!("Server already has data, skipping seed data");
     }

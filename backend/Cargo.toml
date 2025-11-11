@@ -145,6 +145,13 @@ email_address = "0.2.9"
 urlencoding = "2.1.3"
 rlimit = "0.10.2"
 libc = "0.2.177"
+async-stripe = { version = "1.0.0-alpha.2", features = ["rustls-tls-native"] }
+async-stripe-core = { version = "1.0.0-alpha.2", features = ["customer"] }
+async-stripe-product = { version = "1.0.0-alpha.2", features = ["product", "price"] }
+async-stripe-billing = { version = "1.0.0-alpha.2", features = ["plan", "subscription", "deserialize", "serialize"] }
+async-stripe-checkout = { version = "1.0.0-alpha.2", features = ["checkout_session"] }
+async-stripe-types = { version = "1.0.0-alpha.2" }
+async-stripe-webhook = { version = "1.0.0-alpha.2" }
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]

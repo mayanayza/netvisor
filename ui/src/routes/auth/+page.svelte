@@ -6,20 +6,44 @@
 	import type { LoginRequest, RegisterRequest } from '$lib/features/auth/types/base';
 	import { resolve } from '$app/paths';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
+	import { config } from '$lib/shared/stores/config';
+	import { getOrganization } from '$lib/features/organizations/store';
+	import { isBillingPlanActive } from '$lib/features/organizations/types';
+	import { getCurrentBillingPlans } from '$lib/features/billing/store';
 
 	let showLogin = true;
 
+	$: billingEnabled = $config ? $config.billing_enabled : false;
+
 	async function handleLogin(data: LoginRequest) {
-		const success = await login(data);
-		if (success) {
-			await goto(resolve('/'));
+		const user = await login(data);
+		if (user) {
+			const organization = await getOrganization(user.organization_id);
+
+			if (billingEnabled && organization && !isBillingPlanActive(organization)) {
+				await getCurrentBillingPlans();
+				await goto(resolve('/billing'));
+			} else if (billingEnabled && organization && isBillingPlanActive(organization)) {
+				await goto(resolve('/'));
+			} else {
+				await goto(resolve('/'));
+			}
 		}
 	}
 
 	async function handleRegister(data: RegisterRequest) {
-		const success = await register(data);
-		if (success) {
-			await goto(resolve('/'));
+		const user = await register(data);
+		if (user) {
+			const organization = await getOrganization(user?.organization_id);
+
+			if (billingEnabled && organization && !isBillingPlanActive(organization)) {
+				await getCurrentBillingPlans();
+				await goto(resolve('/billing'));
+			} else if (billingEnabled && organization && isBillingPlanActive(organization)) {
+				await goto(resolve('/'));
+			} else {
+				await goto(resolve('/'));
+			}
 		}
 	}
 
@@ -35,22 +59,33 @@
 	function handleClose() {}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-900">
-	{#if showLogin}
-		<LoginModal
-			isOpen={true}
-			onLogin={handleLogin}
-			onClose={handleClose}
-			onSwitchToRegister={switchToRegister}
-		/>
-	{:else}
-		<RegisterModal
-			isOpen={true}
-			onRegister={handleRegister}
-			onClose={handleClose}
-			onSwitchToLogin={switchToLogin}
-		/>
-	{/if}
+<div class="relative flex min-h-screen items-center justify-center bg-gray-900">
+	<!-- Background image with overlay -->
+	<div class="absolute inset-0 z-0">
+		<div 
+			class="h-full w-full bg-cover bg-center bg-no-repeat"
+			style="background-image: url('/path/to/your/image.jpg')"
+		></div>
+	</div>
+
+	<!-- Content (sits above background) -->
+	<div class="relative z-10">
+		{#if showLogin}
+			<LoginModal
+				isOpen={true}
+				onLogin={handleLogin}
+				onClose={handleClose}
+				onSwitchToRegister={switchToRegister}
+			/>
+		{:else}
+			<RegisterModal
+				isOpen={true}
+				onRegister={handleRegister}
+				onClose={handleClose}
+				onSwitchToLogin={switchToLogin}
+			/>
+		{/if}
+	</div>
 
 	<Toast />
 </div>

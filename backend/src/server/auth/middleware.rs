@@ -1,6 +1,7 @@
 use crate::server::{
     config::AppState,
     shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
+    users::r#impl::base::UserOrgPermissions,
 };
 use axum::{
     extract::FromRequestParts,
@@ -22,7 +23,11 @@ impl IntoResponse for AuthError {
 /// Represents either an authenticated user or daemon
 #[derive(Debug, Clone)]
 pub enum AuthenticatedEntity {
-    User(Uuid),   // user_id
+    User {
+        user_id: Uuid,
+        organization_id: Uuid,
+        permissions: UserOrgPermissions,
+    },
     Daemon(Uuid), // network_id
 }
 
@@ -30,7 +35,7 @@ impl AuthenticatedEntity {
     /// Get the user_id if this is a User, otherwise None
     pub fn user_id(&self) -> Option<Uuid> {
         match self {
-            AuthenticatedEntity::User(id) => Some(*id),
+            AuthenticatedEntity::User { user_id, .. } => Some(*user_id),
             _ => None,
         }
     }
@@ -45,7 +50,7 @@ impl AuthenticatedEntity {
 
     /// Check if this is a user
     pub fn is_user(&self) -> bool {
-        matches!(self, AuthenticatedEntity::User(_))
+        matches!(self, AuthenticatedEntity::User { .. })
     }
 
     /// Check if this is a daemon
@@ -125,12 +130,28 @@ where
             .map_err(|_| AuthError(ApiError::unauthorized("Not authenticated".to_string())))?
             .ok_or_else(|| AuthError(ApiError::unauthorized("Not authenticated".to_string())))?;
 
-        Ok(AuthenticatedEntity::User(user_id))
+        let user = app_state
+            .services
+            .user_service
+            .get_by_id(&user_id)
+            .await
+            .map_err(|_| AuthError(ApiError::unauthorized("User not found".to_string())))?
+            .ok_or_else(|| AuthError(ApiError::unauthorized("User not found".to_string())))?;
+
+        Ok(AuthenticatedEntity::User {
+            user_id: user.id,
+            organization_id: user.base.organization_id,
+            permissions: user.base.permissions,
+        })
     }
 }
 
 /// Extractor that only accepts authenticated users (rejects daemons)
-pub struct AuthenticatedUser(pub Uuid);
+pub struct AuthenticatedUser {
+    pub user_id: Uuid,
+    pub organization_id: Uuid,
+    pub permissions: UserOrgPermissions,
+}
 
 impl<S> FromRequestParts<S> for AuthenticatedUser
 where
@@ -142,7 +163,15 @@ where
         let entity = AuthenticatedEntity::from_request_parts(parts, state).await?;
 
         match entity {
-            AuthenticatedEntity::User(user_id) => Ok(AuthenticatedUser(user_id)),
+            AuthenticatedEntity::User {
+                user_id,
+                organization_id,
+                permissions,
+            } => Ok(AuthenticatedUser {
+                user_id,
+                organization_id,
+                permissions,
+            }),
             AuthenticatedEntity::Daemon(_) => Err(AuthError(ApiError::unauthorized(
                 "User authentication required".to_string(),
             ))),
@@ -164,7 +193,7 @@ where
 
         match entity {
             AuthenticatedEntity::Daemon(network_id) => Ok(AuthenticatedDaemon(network_id)),
-            AuthenticatedEntity::User(_) => Err(AuthError(ApiError::unauthorized(
+            AuthenticatedEntity::User { .. } => Err(AuthError(ApiError::unauthorized(
                 "Daemon authentication required".to_string(),
             ))),
         }

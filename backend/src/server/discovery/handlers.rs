@@ -128,12 +128,12 @@ async fn get_active_sessions(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<DiscoveryUpdatePayload>>>> {
-    let user_filter = EntityFilter::unfiltered().user_id(&user.0);
+    let org_filter = EntityFilter::unfiltered().organization_id(&user.organization_id);
 
     let network_ids: Vec<Uuid> = state
         .services
         .network_service
-        .get_all(user_filter)
+        .get_all(org_filter)
         .await?
         .iter()
         .map(|n| n.id)

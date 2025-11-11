@@ -98,7 +98,7 @@
 
 		startDiscoverySSE();
 
-		await getMetadata().then(() => (appInitialized = true));
+		appInitialized = true
 	}
 
 	// Reactive effect: load data when authenticated

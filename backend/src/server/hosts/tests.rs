@@ -17,7 +17,16 @@ use crate::{
 async fn test_host_deduplication_on_create() {
     let (storage, services, _container) = test_services().await;
 
-    let (_, network) = services.user_service.create_user(user()).await.unwrap();
+    let organization = services
+        .organization_service
+        .create(organization())
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id))
+        .await
+        .unwrap();
 
     let filter = EntityFilter::unfiltered().network_ids(&[network.id]);
 
@@ -58,7 +67,16 @@ async fn test_host_deduplication_on_create() {
 async fn test_host_upsert_merges_new_data() {
     let (_, services, _container) = test_services().await;
 
-    let (_, network) = services.user_service.create_user(user()).await.unwrap();
+    let organization = services
+        .organization_service
+        .create(organization())
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id))
+        .await
+        .unwrap();
 
     // Create host with one interface
     let mut host1 = host(&network.id);
@@ -113,7 +131,16 @@ async fn test_host_upsert_merges_new_data() {
 async fn test_host_consolidation() {
     let (_, services, _container) = test_services().await;
 
-    let (_, network) = services.user_service.create_user(user()).await.unwrap();
+    let organization = services
+        .organization_service
+        .create(organization())
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id))
+        .await
+        .unwrap();
 
     let subnet_obj = subnet(&network.id);
     services

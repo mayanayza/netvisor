@@ -1,9 +1,18 @@
 use crate::server::{
-    api_keys::service::ApiKeyService, auth::service::AuthService, daemons::service::DaemonService,
-    discovery::service::DiscoveryService, groups::service::GroupService,
-    hosts::service::HostService, networks::service::NetworkService,
-    services::service::ServiceService, shared::storage::factory::StorageFactory,
-    subnets::service::SubnetService, topology::service::main::TopologyService,
+    api_keys::service::ApiKeyService,
+    auth::{oidc::OidcService, service::AuthService},
+    billing::service::BillingService,
+    config::ServerConfig,
+    daemons::service::DaemonService,
+    discovery::service::DiscoveryService,
+    groups::service::GroupService,
+    hosts::service::HostService,
+    networks::service::NetworkService,
+    organizations::service::OrganizationService,
+    services::service::ServiceService,
+    shared::storage::factory::StorageFactory,
+    subnets::service::SubnetService,
+    topology::service::main::TopologyService,
     users::service::UserService,
 };
 use anyhow::Result;
@@ -21,13 +30,18 @@ pub struct ServiceFactory {
     pub service_service: Arc<ServiceService>,
     pub discovery_service: Arc<DiscoveryService>,
     pub api_key_service: Arc<ApiKeyService>,
+    pub organization_service: Arc<OrganizationService>,
+    pub oidc_service: Option<Arc<OidcService>>,
+    pub billing_service: Option<Arc<BillingService>>,
 }
 
 impl ServiceFactory {
-    pub async fn new(storage: &StorageFactory) -> Result<Self> {
+    pub async fn new(storage: &StorageFactory, config: Option<ServerConfig>) -> Result<Self> {
         let api_key_service = Arc::new(ApiKeyService::new(storage.api_keys.clone()));
         let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
         let group_service = Arc::new(GroupService::new(storage.groups.clone()));
+        let organization_service =
+            Arc::new(OrganizationService::new(storage.organizations.clone()));
 
         // Already implements Arc internally due to scheduler + sessions
         let discovery_service =
@@ -63,11 +77,52 @@ impl ServiceFactory {
             host_service.clone(),
             subnet_service.clone(),
         ));
-        let user_service = Arc::new(UserService::new(
-            storage.users.clone(),
-            network_service.clone(),
+        let user_service = Arc::new(UserService::new(storage.users.clone()));
+        let auth_service = Arc::new(AuthService::new(
+            user_service.clone(),
+            organization_service.clone(),
         ));
-        let auth_service = Arc::new(AuthService::new(user_service.clone()));
+
+        let (oidc_service, billing_service) = if let Some(config) = config {
+            let oidc_service = if let (
+                Some(issuer_url),
+                Some(redirect_url),
+                Some(client_id),
+                Some(client_secret),
+                Some(provider_name),
+            ) = (
+                &config.oidc_issuer_url,
+                &config.oidc_redirect_url,
+                &config.oidc_client_id,
+                &config.oidc_client_secret,
+                &config.oidc_provider_name,
+            ) {
+                Some(Arc::new(OidcService::new(
+                    issuer_url.to_owned(),
+                    client_id.to_owned(),
+                    client_secret.to_owned(),
+                    redirect_url.to_owned(),
+                    provider_name.to_owned(),
+                    auth_service.clone(),
+                )))
+            } else {
+                None
+            };
+
+            let billing_service = if let Some(stripe_secret) = config.stripe_secret.clone() {
+                Some(Arc::new(BillingService::new(
+                    stripe_secret,
+                    organization_service.clone(),
+                    user_service.clone(),
+                )))
+            } else {
+                None
+            };
+
+            (oidc_service, billing_service)
+        } else {
+            (None, None)
+        };
 
         Ok(Self {
             user_service,
@@ -81,6 +136,9 @@ impl ServiceFactory {
             service_service,
             discovery_service,
             api_key_service,
+            organization_service,
+            oidc_service,
+            billing_service,
         })
     }
 }

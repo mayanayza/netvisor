@@ -1,11 +1,15 @@
 use crate::server::{
     auth::r#impl::api::{LoginRequest, RegisterRequest},
+    organizations::{
+        r#impl::base::{Organization, OrganizationBase},
+        service::OrganizationService,
+    },
     shared::{
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
     },
     users::{
-        r#impl::base::{User, UserBase},
+        r#impl::base::{User, UserOrgPermissions},
         service::UserService,
     },
 };
@@ -17,10 +21,12 @@ use argon2::{
 use email_address::EmailAddress;
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use tokio::sync::RwLock;
+use uuid::Uuid;
 use validator::Validate;
 
 pub struct AuthService {
-    user_service: Arc<UserService>,
+    pub user_service: Arc<UserService>,
+    organization_service: Arc<OrganizationService>,
     login_attempts: Arc<RwLock<HashMap<EmailAddress, (u32, Instant)>>>,
 }
 
@@ -28,33 +34,80 @@ impl AuthService {
     const MAX_LOGIN_ATTEMPTS: u32 = 5;
     const LOCKOUT_DURATION_SECS: u64 = 15 * 60; // 15 minutes
 
-    pub fn new(user_service: Arc<UserService>) -> Self {
+    pub fn new(
+        user_service: Arc<UserService>,
+        organization_service: Arc<OrganizationService>,
+    ) -> Self {
         Self {
             user_service,
+            organization_service,
             login_attempts: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    /// Register a new user
-    /// Returns User (session management handled by tower-sessions)
+    /// Register a new user with password
     pub async fn register(&self, request: RegisterRequest) -> Result<User> {
-        // Validate request
         request
             .validate()
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
 
-        // Get all users
+        // Check if email already taken
         let all_users = self
             .user_service
             .get_all(EntityFilter::unfiltered())
             .await?;
 
-        // Check if email already taken
-        let username_exists = all_users.iter().any(|u| u.base.email == request.email);
-
-        if username_exists {
+        if all_users.iter().any(|u| u.base.email == request.email) {
             return Err(anyhow!("Email address already taken"));
         }
+
+        // Provision user with password
+        self.provision_user(
+            request.email,
+            Some(hash_password(&request.password)?),
+            None,
+            None,
+            request.organization_id,
+            request.permissions,
+        )
+        .await
+    }
+
+    /// Register a new user with OIDC
+    pub async fn register_with_oidc(
+        &self,
+        email: EmailAddress,
+        oidc_subject: String,
+        oidc_provider: String,
+        organization_id: Option<Uuid>,
+        permissions: Option<UserOrgPermissions>,
+    ) -> Result<User> {
+        // Provision user with OIDC
+        self.provision_user(
+            email,
+            None,
+            Some(oidc_subject),
+            Some(oidc_provider),
+            organization_id,
+            permissions,
+        )
+        .await
+    }
+
+    /// Core user provisioning logic - handles both password and OIDC registration
+    async fn provision_user(
+        &self,
+        email: EmailAddress,
+        password_hash: Option<String>,
+        oidc_subject: Option<String>,
+        oidc_provider: Option<String>,
+        organization_id: Option<Uuid>,
+        permissions: Option<UserOrgPermissions>,
+    ) -> Result<User> {
+        let all_users = self
+            .user_service
+            .get_all(EntityFilter::unfiltered())
+            .await?;
 
         // Find seed user (only exists if NO users have been created yet)
         let seed_user: Option<User> = all_users
@@ -62,30 +115,57 @@ impl AuthService {
             .find(|u| u.base.password_hash.is_none() && u.base.oidc_subject.is_none())
             .cloned();
 
-        let user = if let Some(mut seed_user) = seed_user {
+        if let Some(mut seed_user) = seed_user {
             // First user ever - claim seed user
             tracing::info!("First user registration - claiming seed user");
-            seed_user.base.email = request.email.clone();
-            seed_user.set_password(hash_password(&request.password)?);
-            self.user_service.update(&mut seed_user).await?
-        } else {
-            // Not first user - create new user + network
-            let new_user = User::new(UserBase::new_password(
-                request.email,
-                hash_password(&request.password)?,
-            ));
-            let (user, _) = self.user_service.create_user(new_user).await?;
-            user
-        };
+            seed_user.base.email = email;
 
-        tracing::info!("User {} registered successfully", user.id);
-        Ok(user)
+            if let Some(hash) = password_hash {
+                seed_user.set_password(hash);
+            }
+
+            if let Some(subject) = oidc_subject {
+                seed_user.base.oidc_subject = Some(subject);
+                seed_user.base.oidc_provider = oidc_provider;
+                seed_user.base.oidc_linked_at = Some(chrono::Utc::now());
+            }
+
+            self.user_service.update(&mut seed_user).await
+        } else {
+            // Not first user - create new user with or without org
+            let org_id = if let Some(org_id) = organization_id {
+                org_id
+            } else {
+                // Create new organization for this user
+                let organization = self
+                    .organization_service
+                    .create(Organization::new(OrganizationBase {
+                        stripe_customer_id: None,
+                        name: "My Organization".to_string(),
+                        plan: None,
+                        plan_status: None,
+                    }))
+                    .await?;
+                organization.id
+            };
+
+            // Create user based on auth method
+            if let Some(hash) = password_hash {
+                self.user_service
+                    .create_user_with_password(email, hash, org_id, permissions)
+                    .await
+            } else if let Some(subject) = oidc_subject {
+                self.user_service
+                    .create_user_with_oidc(email, subject, oidc_provider, org_id, permissions)
+                    .await
+            } else {
+                Err(anyhow!("Must provide either password or OIDC credentials"))
+            }
+        }
     }
 
     /// Login with username and password
-    /// Returns User (session management handled by tower-sessions)
     pub async fn login(&self, request: LoginRequest) -> Result<User> {
-        // Validate request
         request
             .validate()
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
@@ -137,7 +217,7 @@ impl AuthService {
 
     /// Attempt login without rate limiting
     async fn try_login(&self, request: &LoginRequest) -> Result<User> {
-        // Get user by username (case-insensitive)
+        // Get user by email
         let all_users = self
             .user_service
             .get_all(EntityFilter::unfiltered())
@@ -158,15 +238,6 @@ impl AuthService {
         verify_password(&request.password, password_hash)?;
 
         Ok(user.clone())
-    }
-
-    /// Get user by email
-    pub async fn get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>> {
-        let all_users = self
-            .user_service
-            .get_all(EntityFilter::unfiltered())
-            .await?;
-        Ok(all_users.iter().find(|u| u.base.email == *email).cloned())
     }
 
     /// Cleanup old login attempts (called periodically from background task)
