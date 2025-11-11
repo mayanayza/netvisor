@@ -21,9 +21,19 @@ pub struct DaemonRuntimeService {
 
 impl DaemonRuntimeService {
     pub fn new(config_store: Arc<ConfigStore>) -> Self {
+        let mut client_builder = reqwest::Client::builder();
+
+        if config_store
+            .get_allow_self_signed_certs()
+            .unwrap_or(Some(false))
+            .unwrap_or(false)
+        {
+            client_builder = client_builder.danger_accept_invalid_certs(true);
+        }
+
         Self {
             config_store,
-            client: reqwest::Client::new(),
+            client: client_builder.build().unwrap(),
             utils: create_system_utils(),
         }
     }

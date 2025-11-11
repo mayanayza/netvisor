@@ -24,6 +24,7 @@ pub struct CliArgs {
     pub concurrent_scans: Option<usize>,
     pub daemon_api_key: Option<String>,
     pub docker_proxy: Option<String>,
+    pub allow_self_signed_certs: Option<bool>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
@@ -48,6 +49,7 @@ pub struct AppConfig {
     pub host_id: Option<Uuid>,
     pub daemon_api_key: Option<String>,
     pub docker_proxy: Option<String>,
+    pub allow_self_signed_certs: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -67,6 +69,7 @@ impl Default for AppConfig {
             daemon_api_key: None,
             concurrent_scans: 15,
             docker_proxy: None,
+            allow_self_signed_certs: None,
         }
     }
 }
@@ -126,6 +129,9 @@ impl AppConfig {
         }
         if let Some(docker_proxy) = cli_args.docker_proxy {
             figment = figment.merge(("docker_proxy", docker_proxy));
+        }
+        if let Some(allow_self_signed_certs) = cli_args.allow_self_signed_certs {
+            figment = figment.merge(("allow_self_signed_certs", allow_self_signed_certs));
         }
 
         let config: AppConfig = figment
@@ -280,6 +286,11 @@ impl ConfigStore {
     pub async fn get_docker_proxy(&self) -> Result<Option<String>> {
         let config = self.config.read().await;
         Ok(config.docker_proxy.clone())
+    }
+
+    pub fn get_allow_self_signed_certs(&self) -> Result<Option<bool>> {
+        let config = self.config.try_read()?;
+        Ok(config.allow_self_signed_certs)
     }
 
     pub async fn get_heartbeat_interval(&self) -> Result<u64> {
