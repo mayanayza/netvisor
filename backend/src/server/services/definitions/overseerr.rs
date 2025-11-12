@@ -20,7 +20,7 @@ impl ServiceDefinition for Overseerr {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
-            Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Overseerr"),
+            Pattern::Endpoint(PortBase::new_tcp(5055), "/manifest.json", "Overseerr"),
             Pattern::Not(Box::new(Pattern::Endpoint(
                 PortBase::new_tcp(5055),
                 "/",
