@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use stripe_product::price::CreatePriceRecurringInterval;
-use strum::{Display, EnumIter, IntoStaticStr};
+use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
 use crate::server::{shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider}};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Display, IntoStaticStr, EnumIter)]
+#[derive(Debug, Clone, Serialize, Deserialize, Display, IntoStaticStr, EnumIter, EnumDiscriminants)]
 #[serde(tag = "type")]
 pub enum BillingPlan {
     Starter { price: Price, trial_days: u32 },
@@ -26,18 +26,18 @@ pub struct Price {
     pub rate: BillingRate,
 }
 
+impl PartialEq for Price {
+    fn eq(&self, other: &Self) -> bool {
+        self.cents == other.cents && self.rate == other.rate
+    }
+}
+
 impl Price {
     pub fn stripe_recurring_interval(&self) -> CreatePriceRecurringInterval {
         match self.rate {
             BillingRate::Month => CreatePriceRecurringInterval::Month,
             BillingRate::Year => CreatePriceRecurringInterval::Year,
         }
-    }
-}
-
-impl PartialEq for Price {
-    fn eq(&self, other: &Self) -> bool {
-        self.cents == other.cents && self.rate == other.rate
     }
 }
 
@@ -157,7 +157,7 @@ impl EntityMetadataProvider for BillingPlan {
     fn color(&self) -> &'static str {
         match self {
             BillingPlan::Starter { .. } => "blue",
-            BillingPlan::Pro { .. } => "gray",
+            BillingPlan::Pro { .. } => "yellow",
             BillingPlan::Team { .. } => "orange",
         }
     }

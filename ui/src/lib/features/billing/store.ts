@@ -6,6 +6,7 @@ import { pushError } from "$lib/shared/stores/feedback";
 export const currentPlans = writable<BillingPlan[]>([]);
 
 export async function getCurrentBillingPlans(): Promise<BillingPlan[]> {
+
     const result = await api.request<BillingPlan[]>(
         `/billing/plans`,
         currentPlans,

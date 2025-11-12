@@ -20,6 +20,7 @@
 	export let loading: boolean = false;
 	export let deleting: boolean = false;
 	export let onDelete: (() => void) | null = null;
+	export let showBackdrop: boolean = true;
 
 	// Create a container for fields that child components will populate
 	let formFields: Record<string, TextFieldType | NumberFieldType> = {};
@@ -78,6 +79,7 @@
 	{preventCloseOnClickOutside}
 	onClose={handleCancel}
 	{showCloseButton}
+	{showBackdrop}
 >
 	<!-- Header icon slot -->
 	<svelte:fragment slot="header-icon">

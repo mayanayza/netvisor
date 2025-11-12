@@ -57,6 +57,7 @@
 	saveLabel="Sign In"
 	cancelLabel="Cancel"
 	showCloseButton={false}
+	showBackdrop={false}
 	showCancel={false}
 	onSave={handleSubmit}
 	onCancel={onClose}

@@ -9,6 +9,7 @@
 	export let size: 'sm' | 'md' | 'lg' | 'xl' | 'full' = 'lg';
 	export let preventCloseOnClickOutside: boolean = false;
 	export let showCloseButton: boolean = true;
+	export let showBackdrop: boolean = true;
 
 	$: if (typeof window !== 'undefined' && isOpen) {
 		document.body.style.overflow = 'hidden';
@@ -52,15 +53,15 @@
 
 {#if isOpen}
 	<!-- Modal backdrop -->
-	<div
-		class="modal-backdrop"
-		on:click={handleBackdropClick}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="modal-title"
-		on:keydown={(e) => e.key === 'Escape' && handleClose()}
-		tabindex="-1"
-	>
+		<div
+			class={showBackdrop ? 'modal-page modal-background' : 'modal-page'}
+			on:click={handleBackdropClick}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="modal-title"
+			on:keydown={(e) => e.key === 'Escape' && handleClose()}
+			tabindex="-1"
+		>
 		<!-- Modal content -->
 		<div
 			class="modal-container {sizeClasses[size]} {size === 'full'

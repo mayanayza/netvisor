@@ -56,6 +56,7 @@
 	centerTitle={true}
 	saveLabel="Create Account"
 	showCancel={false}
+	showBackdrop={false}
 	showCloseButton={false}
 	onSave={handleSubmit}
 	onCancel={onClose}

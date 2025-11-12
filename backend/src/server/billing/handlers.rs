@@ -23,7 +23,6 @@ async fn get_billing_plans(
     
     if let Some(billing_service) = state.services.billing_service.clone() {
         let plans = billing_service.get_plans();
-        tracing::info!("{:?}", plans);
         return Ok(Json(ApiResponse::success(plans)));
     } else {
         return Err(ApiError::bad_request("Billing is not enabled on this server"));

@@ -1,4 +1,5 @@
 use serde::Serialize;
+use strum::Display;
 use strum::EnumIter;
 use crate::server::shared::types::metadata::EntityMetadataProvider;
 use crate::server::shared::types::metadata::HasId;
@@ -6,11 +7,9 @@ use crate::server::shared::types::metadata::TypeMetadataProvider;
 use serde::Deserialize;
 use strum::IntoStaticStr;
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumIter, IntoStaticStr)]
-#[serde(tag = "type", content = "value")]
+#[derive(Debug, Clone, Serialize, Deserialize, EnumIter, IntoStaticStr, Display)]
 pub enum Feature {
     MaxNetworks,
-    // ApiAccess,
     TeamMembers,
     ShareViews,
     OnboardingCall,

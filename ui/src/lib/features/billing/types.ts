@@ -10,3 +10,13 @@ export interface BillingPlan {
 export function formatPrice(cents: number, rate: string): string {
     return `${cents/100} per ${rate}`
 }
+
+export interface CheckoutSessionRequest {
+    plan: BillingPlan,
+    host: string
+}
+
+export interface CheckoutSessionResponse {
+    checkout_url: string,
+    session_id: string
+}
