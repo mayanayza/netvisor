@@ -19,7 +19,7 @@ impl ServiceDefinition for Zigbee2MQTT {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8080), "/", "Zigbee2MQTT WindFront", None)
+        Pattern::Endpoint(PortBase::Http8080, "/", "Zigbee2MQTT WindFront", None)
     }
 
     fn logo_url(&self) -> &'static str {
