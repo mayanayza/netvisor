@@ -286,6 +286,8 @@ pub mod mealie;
 pub mod memos;
 pub mod netbootxyz;
 pub mod nut;
+pub mod ollama;
+pub mod open_media_vault;
 pub mod open_webui;
 pub mod paperless_ngx;
 pub mod peanut;
