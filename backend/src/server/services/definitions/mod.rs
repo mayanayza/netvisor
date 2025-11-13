@@ -184,6 +184,7 @@ pub mod confluence_server;
 pub mod discourse;
 pub mod jira_server;
 pub mod mattermost;
+pub mod radicale;
 pub mod rocket_chat;
 
 // Development
