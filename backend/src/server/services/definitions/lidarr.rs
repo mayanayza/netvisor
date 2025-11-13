@@ -19,7 +19,12 @@ impl ServiceDefinition for Lidarr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8686), "/Content/manifest.json", "Lidarr")
+        Pattern::Endpoint(
+            PortBase::new_tcp(8686),
+            "/Content/manifest.json",
+            "Lidarr",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {
