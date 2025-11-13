@@ -120,6 +120,7 @@ pub mod true_nas;
 // Backup
 pub mod bacula;
 pub mod duplicati;
+pub mod proxmox_backup_server;
 pub mod restic;
 pub mod veeam;
 
@@ -288,7 +289,6 @@ pub mod memos;
 pub mod netbootxyz;
 pub mod nut;
 pub mod ollama;
-pub mod open_media_vault;
 pub mod open_webui;
 pub mod paperless_ngx;
 pub mod peanut;
