@@ -69,6 +69,7 @@ pub mod tp_link_eap;
 pub mod unifi_access_point;
 
 // NetworkSecurity
+pub mod crowdsec;
 pub mod firewall;
 pub mod fortigate;
 pub mod opn_sense;
