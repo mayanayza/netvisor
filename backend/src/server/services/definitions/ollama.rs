@@ -19,7 +19,7 @@ impl ServiceDefinition for Ollama {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(11434), "/", "Ollama is running")
+        Pattern::Endpoint(PortBase::new_tcp(11434), "/", "Ollama is running", None)
     }
 
     fn logo_url(&self) -> &'static str {
