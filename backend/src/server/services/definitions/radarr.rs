@@ -19,7 +19,12 @@ impl ServiceDefinition for Radarr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Port(PortBase::new_tcp(7878))
+        Pattern::Endpoint(
+            PortBase::new_tcp(7878),
+            "/Content/manifest.json",
+            "Radarr",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {

@@ -7,7 +7,7 @@ repos:
            language: system
            pass_filenames: false
            always_run: true
-           stages: [commit, push]
+           stages: [pre-commit, pre-push]
            
          - id: lint
            name: Lint code
@@ -15,7 +15,7 @@ repos:
            language: system
            pass_filenames: false
            always_run: true
-           stages: [commit, push]
+           stages: [pre-commit, pre-push]
            
          - id: test
            name: Run tests
@@ -23,4 +23,4 @@ repos:
            language: system
            pass_filenames: false
            always_run: true
-           stages: [push]
+           stages: [pre-push]

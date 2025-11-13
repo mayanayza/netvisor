@@ -631,6 +631,7 @@ The server supports the following configuration options:
 | OIDC Client ID | `--oidc-client-id` | `NETVISOR_OIDC_CLIENT_ID` | - | OAuth2 client ID from your OIDC provider |
 | OIDC Client Secret | `--oidc-client-secret` | `NETVISOR_OIDC_CLIENT_SECRET` | - | OAuth2 client secret from your OIDC provider |
 | OIDC Provider Name | `--oidc-provider-name` | `NETVISOR_OIDC_PROVIDER_NAME` | - | Display name shown in the UI (e.g., `Authentik`, `Keycloak`, `Auth0`) |
+| OIDC Redirect URL | `--oidc-redirect-url` | `NETVISOR_OIDC_REDIRECT_URL` | - | URL from OIDC provider that NetVisor should send user to when using OIDC auth  |
 
 #### Session Cookie Security
 
@@ -643,9 +644,10 @@ For internal networks without HTTPS, keep this setting as `false` (default).
 To use OIDC, you'll need to set the following:
 
 NETVISOR_OIDC_ISSUER_URL=https://your-provider.com/application/o/netvisor/<br>
-NETVISOR_OIDC_CLIENT_ID=your-client-id<br>
-NETVISOR_OIDC_CLIENT_SECRET=your-client-secret<br>
-NETVISOR_OIDC_PROVIDER_NAME=oidc-display-name<br>
+NETVISOR_OIDC_CLIENT_ID=<your-client-id><br>
+NETVISOR_OIDC_CLIENT_SECRET=<your-client-secret><br>
+NETVISOR_OIDC_PROVIDER_NAME=<oidc-display-name><br>
+NETVISOR_OIDC_REDIRECT_URL=<oidc-redirect-url><br>
 
 When configuring your OIDC provider, use this callback URL:
 ```

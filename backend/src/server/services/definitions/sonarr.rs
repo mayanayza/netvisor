@@ -19,7 +19,12 @@ impl ServiceDefinition for Sonarr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Port(PortBase::new_tcp(8989))
+        Pattern::Endpoint(
+            PortBase::new_tcp(8989),
+            "/Content/manifest.json",
+            "Sonarr",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {
