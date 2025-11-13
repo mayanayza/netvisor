@@ -278,6 +278,7 @@ pub mod print_server;
 
 // Various Web/Dashboard/Development apps
 pub mod autobrr;
+pub mod backrest;
 pub mod cleanuparr;
 pub mod grocy;
 pub mod huntarr;
