@@ -142,6 +142,7 @@ pub mod esphome;
 pub mod home_assistant;
 pub mod openhab;
 pub mod philips_hue_bridge;
+pub mod zigbee2mqtt;
 pub mod zwave_js;
 
 // Virtualization
