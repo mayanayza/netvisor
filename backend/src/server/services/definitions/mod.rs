@@ -299,6 +299,7 @@ pub mod prowlarr;
 pub mod qbittorrent;
 pub mod radarr;
 pub mod sonarr;
+pub mod wizarr;
 
 // ============= SPECIAL =============
 
