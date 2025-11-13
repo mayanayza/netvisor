@@ -49,7 +49,18 @@ impl PartialEq for Port {
     }
 }
 
-#[derive(Copy, Debug, Clone, Eq, EnumDiscriminants, EnumIter, IntoStaticStr, Default)]
+#[derive(
+    Copy,
+    Debug,
+    Clone,
+    Eq,
+    EnumDiscriminants,
+    EnumIter,
+    IntoStaticStr,
+    Default,
+    Serialize,
+    Deserialize,
+)]
 #[strum_discriminants(derive(Display, Hash, EnumIter))]
 pub enum PortBase {
     Ssh,
@@ -90,12 +101,14 @@ pub enum PortBase {
     Kafka,
     Http3000,
     Http5000,
+    #[serde(alias = "HttpAlt")]
     Http8080,
     Http8081,
     Http8082,
     Http8888,
     Http9000,
     Https,
+    #[serde(alias = "HttpsAlt")]
     Https8443,
     Https9443,
     Https10443,

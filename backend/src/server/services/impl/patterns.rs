@@ -176,19 +176,25 @@ impl Display for Pattern<'_> {
                     write!(
                         f,
                         "Endpoint response status is between {} and {}, and response body from <ip>:{}{} contains {}",
-                        range.start, range.end, port_base, path, match_string
+                        range.start,
+                        range.end,
+                        port_base.number(),
+                        path,
+                        match_string
                     )
                 } else {
                     write!(
                         f,
                         "Endpoint response body from <ip>:{}{} contains {}",
-                        port_base, path, match_string
+                        port_base.number(),
+                        path,
+                        match_string
                     )
                 }
             }
             Pattern::Header(port_base, header, value, range) => {
                 let ip_str = if let Some(port_base) = port_base {
-                    format!("<ip>:{}", port_base)
+                    format!("<ip>:{}", port_base.number())
                 } else {
                     "<ip>".to_string()
                 };
@@ -333,7 +339,7 @@ impl Pattern<'_> {
                         if let Some(expected_status_code_range) = expected_status_code_range {
                             // Only add this as a reason if expected status code range is anything other than successful
                             match_reason.push(format!(
-                                "status code was {} in range {:?}",
+                                "status code {} was in range {:?}",
                                 actual.status, expected_status_code_range
                             ));
                         }
@@ -343,7 +349,7 @@ impl Pattern<'_> {
                                 actual,
                                 format!(
                                     "Response from {} {}",
-                                    port_base,
+                                    port_base.number(),
                                     match_reason.join(" and ")
                                 ),
                             )
@@ -365,7 +371,7 @@ impl Pattern<'_> {
                     }),
                     None => Err(anyhow!(
                         "Could not find an header response on port {}",
-                        port_base.unwrap_or_default()
+                        port_base.unwrap_or_default().number()
                     )),
                 }
             }
@@ -421,7 +427,7 @@ impl Pattern<'_> {
                             format!(
                                 "Response for {}:{}{} {}",
                                 interface.base.ip_address,
-                                port_base,
+                                port_base.number(),
                                 path,
                                 match_reason.join(" and ")
                             ),
