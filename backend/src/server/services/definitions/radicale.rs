@@ -18,7 +18,12 @@ impl ServiceDefinition for Radicale {
         ServiceCategory::Collaboration
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(5232), "/.web/", "Radicale Web Interface", None)
+        Pattern::Endpoint(
+            PortBase::new_tcp(5232),
+            "/.web/",
+            "Radicale Web Interface",
+            None,
+        )
     }
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/radicale.svg"
