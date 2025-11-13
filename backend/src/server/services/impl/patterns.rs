@@ -316,7 +316,7 @@ impl Pattern<'_> {
                             .unwrap_or(true);
 
                         let expected_range =
-                            expected_status_code_range.as_ref().unwrap_or(&(199..400));
+                            expected_status_code_range.as_ref().unwrap_or(&(199..300));
                         let status_code_in_range = expected_range.contains(&actual.status);
 
                         let headers_contain_value = actual.headers.iter().any(|(header, value)| {
@@ -396,7 +396,7 @@ impl Pattern<'_> {
                             && actual.endpoint.path == endpoint.path;
 
                         let expected_range =
-                            expected_status_code_range.as_ref().unwrap_or(&(199..400));
+                            expected_status_code_range.as_ref().unwrap_or(&(199..300));
                         let status_code_in_range = expected_range.contains(&actual.status);
 
                         let body_contains_match_string = actual
