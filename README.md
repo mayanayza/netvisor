@@ -109,10 +109,6 @@ Refer to [Configuration](#️-configuration) for more setup options.
 
 ### 0. ✅ Install Requirements
 
-#### Daemon
-- **Linux**: Docker with host networking support, OR binary installation
-- **Mac**: Binary installation only (Docker Desktop does not support host networking)
-
 #### Server (Docker - Recommended)
 - Docker
 - Docker Compose
@@ -120,6 +116,15 @@ Refer to [Configuration](#️-configuration) for more setup options.
 #### Server (Building from source)
 - Rust 1.90 or later
 - Node.js 20 or later
+
+#### Running on Proxmox
+
+You can use this [helper script](https://community-scripts.github.io/ProxmoxVE/scripts?id=netvisor) to create a NetVisor LXC on your Proxmox host.
+
+#### Additional Daemons (Optional)
+- **Linux**: Docker with host networking support, OR binary installation
+- **Mac**: Binary installation only (Docker Desktop does not support host networking)
+
 
 ### 1. 🚀 Start the Server
 
