@@ -163,3 +163,6 @@ walkdir = "2.5"
 tar = "0.4"
 testcontainers = "0.25.0"
 top-english-words = "1.1.1"
+
+[features]
+generate-fixtures = []

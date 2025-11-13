@@ -3,6 +3,7 @@ use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::networks::r#impl::Network;
+#[cfg(feature = "generate-fixtures")]
 use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
@@ -345,6 +346,7 @@ async fn verify_home_assistant_discovered(
     .await
 }
 
+#[cfg(feature = "generate-fixtures")]
 async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
@@ -376,6 +378,7 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(feature = "generate-fixtures")]
 async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Error>> {
     // First, find the config file location in the container
     let find_output = std::process::Command::new("docker")
@@ -430,6 +433,7 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+#[cfg(feature = "generate-fixtures")]
 async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions()
         .iter()
@@ -444,7 +448,7 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     let json_string = serde_json::to_string_pretty(&services)?;
-    let path = std::path::Path::new("../ui/static/services.json");
+    let path = std::path::Path::new("../ui/static/services-next.json");
     tokio::fs::write(path, json_string).await?;
 
     Ok(())
@@ -488,18 +492,22 @@ async fn test_full_integration() {
         .await
         .expect("Failed to find Home Assistant");
 
-    // Generate fixtures
-    generate_db_fixture()
-        .await
-        .expect("Failed to generate db fixture");
+    #[cfg(feature = "generate-fixtures")]
+    {
+        generate_db_fixture()
+            .await
+            .expect("Failed to generate db fixture");
 
-    generate_daemon_config_fixture()
-        .await
-        .expect("Failed to generate db fixture");
+        generate_daemon_config_fixture()
+            .await
+            .expect("Failed to generate daemon config fixture");
 
-    generate_services_json()
-        .await
-        .expect("Failed to generate services json");
+        generate_services_json()
+            .await
+            .expect("Failed to generate services json");
+
+        println!("✅ Generated test fixtures");
+    }
 
     println!("\n✅ All integration tests passed!");
     println!("   ✓ User authenticated");

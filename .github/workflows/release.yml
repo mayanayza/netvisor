@@ -31,19 +31,24 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
       
       - name: Run all tests
-        run: make test
+        run: |
+          make dev-down
+          rm -rf ./data/daemon_config/*
+          export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test"
+          cd backend && cargo test --features generate-fixtures -- --nocapture --test-threads=1
       
       - name: Update fixtures
         run: |
           mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
           mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
+          mv ui/static/services-next.json ui/static/services.json
           echo "✅ Updated test fixtures"
       
       - name: Commit and push fixture updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json
+          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
