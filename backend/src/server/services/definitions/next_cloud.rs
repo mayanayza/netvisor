@@ -19,7 +19,20 @@ impl ServiceDefinition for NextCloud {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/login", "nextcloud", None)
+        Pattern::AnyOf(vec![
+            Pattern::Endpoint(
+                PortBase::Http,
+                "/core/css/server.css",
+                "Nextcloud GmbH",
+                None,
+            ),
+            Pattern::Endpoint(
+                PortBase::Https,
+                "/core/css/server.css",
+                "Nextcloud GmbH",
+                None,
+            ),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {
