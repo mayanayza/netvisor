@@ -7,6 +7,5 @@
 
 # Ignore all .db files
 *.db
-
-# But allow test fixtures
-!src/tests/netvisor.db
+*.sql
+src/tests/words.json
