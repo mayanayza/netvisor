@@ -20,7 +20,10 @@ impl ServiceDefinition for OpnSense {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
-            Pattern::Endpoint(PortBase::Http, "/", "opnsense", None),
+            Pattern::AnyOf(vec![
+                Pattern::Endpoint(PortBase::Http, "/", "opnsense", None),
+                Pattern::Endpoint(PortBase::Https, "/", "opnsense", None),
+            ]),
             Pattern::AnyOf(vec![
                 Pattern::Port(PortBase::DnsTcp),
                 Pattern::Port(PortBase::DnsUdp),

@@ -21,7 +21,7 @@ impl ServiceDefinition for PaperlessNGX {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(
             PortBase::new_tcp(8000),
-            "/accounts/login/",
+            "/accounts/login/?",
             "Paperless-ngx project",
             None,
         )
