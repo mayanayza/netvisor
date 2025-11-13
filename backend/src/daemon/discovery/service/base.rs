@@ -10,12 +10,16 @@ use crate::{
     server::{
         discovery::r#impl::types::{DiscoveryType, HostNamingFallback},
         groups::r#impl::base::Group,
-        services::r#impl::{
-            base::{
-                DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
-                ServiceMatchServiceParams,
+        services::{
+            definitions::docker_container::DockerContainer,
+            r#impl::{
+                base::{
+                    DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
+                    ServiceMatchServiceParams,
+                },
+                patterns::MatchConfidence,
+                virtualization::{DockerVirtualization, ServiceVirtualization},
             },
-            patterns::MatchConfidence,
         },
         shared::types::entities::{DiscoveryMetadata, EntitySource},
     },
@@ -400,8 +404,10 @@ pub trait DiscoversNetworkedEntities:
 
         let mut services = Vec::new();
 
-        // Need to track which ports are bound vs open for services to bind to
-        let mut l4_unbound_ports = all_ports.to_vec();
+        // Track which ports are bound vs open for services to bind to
+        let mut unbound_ports = all_ports.to_vec();
+
+        let mut container_matched = false;
 
         let mut sorted_service_definitions: Vec<Box<dyn ServiceDefinition>> =
             ServiceDefinitionRegistry::all_service_definitions()
@@ -411,10 +417,15 @@ pub trait DiscoversNetworkedEntities:
         sorted_service_definitions.sort_by_key(|s| {
             if !ServiceDefinitionExt::is_generic(s) {
                 0 // Highest priority - non-generic services
-            } else if ServiceDefinitionExt::is_generic(s) && s.id() != Gateway.id() {
-                1 // Generic services that aren't Gateway
+            } else if ServiceDefinitionExt::is_generic(s)
+                && s.id() != DockerContainer.id()
+                && s.id() != Gateway.id()
+            {
+                1 // Generic services that aren't Docker Container or Gateway
             } else {
-                2 // Generic gateways need to go last, as other services may be classified as gateway first
+                // Docker Containers and Gateways need to go last
+                // Other generic services should be able to get matched first
+                2
             }
         });
 
@@ -423,7 +434,7 @@ pub trait DiscoversNetworkedEntities:
             let service_params = ServiceMatchServiceParams {
                 service_definition,
                 matched_services: &services,
-                unbound_ports: &l4_unbound_ports,
+                unbound_ports: &unbound_ports,
             };
 
             let params: DiscoverySessionServiceMatchParams<'_> =
@@ -437,7 +448,9 @@ pub trait DiscoversNetworkedEntities:
                     host_id: &host.id,
                 };
 
-            if let Some((service, mut result)) = Service::from_discovery(params) {
+            if let Some((service, mut result)) = Service::from_discovery(params)
+                && !container_matched
+            {
                 // If there's a endpoint match + host target is hostname or none, use a binding as the host target
                 if let (Some(binding), true) = (
                     service.base.bindings.iter().find(|b| {
@@ -460,13 +473,22 @@ pub trait DiscoversNetworkedEntities:
                     host.base.target = HostTarget::ServiceBinding(binding.id())
                 }
 
+                // If a container was matched w the provided virtualization, no others can be matched
+                if let Some(ServiceVirtualization::Docker(DockerVirtualization {
+                    container_id: Some(_),
+                    ..
+                })) = &service.base.virtualization
+                {
+                    container_matched = true
+                }
+
                 // Add any bound ports to host ports array, remove from open ports
                 let bound_port_bases: Vec<PortBase> = result.ports.iter().map(|p| p.base).collect();
 
                 host.base.ports.append(&mut result.ports);
 
                 // Add new service
-                l4_unbound_ports.retain(|p| !bound_port_bases.contains(p));
+                unbound_ports.retain(|p| !bound_port_bases.contains(p));
                 services.push(service);
             }
         }
@@ -489,7 +511,7 @@ pub trait DiscoversNetworkedEntities:
 
         host.base
             .ports
-            .extend(l4_unbound_ports.into_iter().map(Port::new));
+            .extend(unbound_ports.into_iter().map(Port::new));
 
         Ok(services)
     }

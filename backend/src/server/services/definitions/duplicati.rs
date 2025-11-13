@@ -19,7 +19,12 @@ impl ServiceDefinition for Duplicati {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8200), "/ngax/index.html", "Duplicati")
+        Pattern::Endpoint(
+            PortBase::new_tcp(8200),
+            "/ngax/index.html",
+            "Duplicati",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {

@@ -21,7 +21,7 @@ impl ServiceDefinition for OpenMediaVault {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::Port(PortBase::Samba),
-            Pattern::Endpoint(PortBase::Http, "/", "openmediavault"),
+            Pattern::Endpoint(PortBase::Http, "/", "openmediavault", None),
         ])
     }
 

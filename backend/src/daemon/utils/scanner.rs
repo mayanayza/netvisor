@@ -11,6 +11,7 @@ use futures::stream::StreamExt;
 use rand::{Rng, SeedableRng};
 use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
+use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 use tokio::net::UdpSocket;
@@ -103,6 +104,11 @@ pub async fn scan_ports_and_endpoints(
 
     // Scan TCP ports with batching
     let tcp_ports = scan_tcp_ports(ip, cancel.clone(), port_scan_batch_size).await?;
+
+    let use_https_ports: HashMap<u16, bool> =
+        tcp_ports.iter().map(|(p, h)| (p.number(), *h)).collect();
+    let tcp_ports: Vec<PortBase> = tcp_ports.iter().map(|(p, _)| *p).collect();
+
     open_ports.extend(tcp_ports.clone());
 
     if cancel.is_cancelled() {
@@ -131,6 +137,7 @@ pub async fn scan_ports_and_endpoints(
         ip,
         cancel.clone(),
         Some(ports_to_check),
+        Some(use_https_ports),
         port_scan_batch_size,
     )
     .await?;
@@ -167,12 +174,17 @@ pub async fn scan_tcp_ports(
     ip: IpAddr,
     cancel: CancellationToken,
     batch_size: usize,
-) -> Result<Vec<PortBase>, Error> {
+) -> Result<Vec<(PortBase, bool)>, Error> {
     let discovery_ports = Service::all_discovery_ports();
-    let ports: Vec<u16> = discovery_ports
+    let ports: Vec<PortBase> = discovery_ports
         .iter()
-        .filter(|p| p.protocol() == TransportProtocol::Tcp)
-        .map(|p| p.number())
+        .filter_map(|p| {
+            if p.protocol() == TransportProtocol::Tcp {
+                Some(*p)
+            } else {
+                None
+            }
+        })
         .collect();
 
     let total_ports = ports.len();
@@ -185,7 +197,7 @@ pub async fn scan_tcp_ports(
     );
 
     let open_ports = batch_scan(ports, batch_size, cancel, move |port| async move {
-        let socket = SocketAddr::new(ip, port);
+        let socket = SocketAddr::new(ip, port.number());
 
         // Try connection with timeout, retry once on timeout for slow hosts
         let mut attempts = 0;
@@ -201,8 +213,27 @@ pub async fn scan_tcp_ports(
 
                     // Try to peek at the connection to detect immediate disconnects
                     let mut buf = [0u8; 1];
-                    let _peek_result =
+                    let peek_result =
                         timeout(Duration::from_millis(50), stream.peek(&mut buf)).await;
+
+                    let use_https = match peek_result {
+                        Ok(Ok(0)) => {
+                            tracing::trace!("Port open - HTTPS (immediate close)");
+                            true
+                        }
+                        Ok(Ok(n)) => {
+                            tracing::trace!("Port open - got {} bytes", n);
+                            false
+                        }
+                        Ok(Err(_)) => {
+                            tracing::trace!("Port open - peek error");
+                            false
+                        }
+                        Err(_) => {
+                            tracing::trace!("Port open - no immediate response");
+                            false
+                        }
+                    };
 
                     tracing::debug!(
                         "Found open TCP port {}:{} (took {:?})",
@@ -212,7 +243,10 @@ pub async fn scan_tcp_ports(
                     );
 
                     drop(stream);
-                    return Some(PortBase::new_tcp(port));
+                    return Some((
+                        PortBase::new_tcp(port.number()),
+                        use_https || port.is_https(),
+                    ));
                 }
                 Ok(Err(e)) => {
                     if DiscoveryCriticalError::is_critical_error(e.to_string()) {
@@ -312,6 +346,7 @@ pub async fn scan_endpoints(
     ip: IpAddr,
     cancel: CancellationToken,
     filter_ports: Option<Vec<PortBase>>,
+    use_https_ports: Option<HashMap<u16, bool>>,
     batch_size: usize,
 ) -> Result<Vec<EndpointResponse>, Error> {
     use std::collections::HashMap;
@@ -362,76 +397,78 @@ pub async fn scan_endpoints(
         endpoint_batch_size
     );
 
+    let use_https_ports_is_none = use_https_ports.is_none();
+    let https_ports = use_https_ports.unwrap_or_default();
+
     let responses = batch_scan(endpoints, endpoint_batch_size, cancel, move |endpoint| {
         let client = client.clone();
+        let https_ports = https_ports.clone();
         async move {
             let endpoint_with_ip = endpoint.use_ip(ip);
 
             // Common HTTPS ports
-            let https_ports = [443, 8443, 9443, 8006, 8123];
-            let try_https = https_ports.contains(&endpoint_with_ip.port_base.number());
+            let use_https = https_ports
+                .get(&endpoint.port_base.number())
+                .unwrap_or(&false);
+            let url = format!(
+                "{}:{}{}",
+                ip,
+                endpoint_with_ip.port_base.number(),
+                endpoint_with_ip.path
+            );
+            let http_url = format!("http://{}", url);
+            let https_url = format!("https://{}", url);
 
-            let attempts = if try_https {
-                vec![
-                    (
-                        format!(
-                            "https://{}:{}{}",
-                            ip,
-                            endpoint_with_ip.port_base.number(),
-                            endpoint_with_ip.path
-                        ),
-                        "HTTPS",
-                    ),
-                    (
-                        format!(
-                            "http://{}:{}{}",
-                            ip,
-                            endpoint_with_ip.port_base.number(),
-                            endpoint_with_ip.path
-                        ),
-                        "HTTP",
-                    ),
-                ]
+            // Decide which of HTTP or HTTPS to try first
+            let urls = if use_https_ports_is_none {
+                // No info = try both
+                vec![http_url, https_url]
+            } else if *use_https {
+                vec![https_url, http_url]
             } else {
-                vec![(
-                    format!(
-                        "http://{}:{}{}",
-                        ip,
-                        endpoint_with_ip.port_base.number(),
-                        endpoint_with_ip.path
-                    ),
-                    "HTTP",
-                )]
+                vec![http_url, https_url]
             };
 
-            for (url, _protocol) in attempts {
+            for url in urls {
                 tracing::trace!("Trying endpoint: {}", url);
 
                 match client.get(&url).send().await {
                     Ok(response) => {
-                        let status = response.status();
-                        if status.is_success() {
-                            match response.text().await {
-                                Ok(text) => {
-                                    tracing::debug!(
-                                        "Endpoint {} returned {} (length: {})",
-                                        url,
-                                        status,
-                                        text.len()
-                                    );
-                                    return Some(EndpointResponse {
-                                        endpoint: endpoint_with_ip,
-                                        response: text,
-                                    });
-                                }
-                                Err(e) => {
-                                    tracing::trace!("Failed to read response from {}: {}", url, e);
-                                    continue;
-                                }
+                        let status = response.status().as_u16();
+
+                        let headers = response
+                            .headers()
+                            .iter()
+                            .filter_map(|(name, value)| {
+                                // Convert HeaderValue to string
+                                value.to_str().ok().map(|v| {
+                                    (
+                                        name.as_str().to_lowercase(), // Normalize to lowercase
+                                        v.to_string(),
+                                    )
+                                })
+                            })
+                            .collect();
+
+                        match response.text().await {
+                            Ok(body) => {
+                                tracing::debug!(
+                                    "Endpoint {} returned {} (length: {})",
+                                    url,
+                                    status,
+                                    body.len()
+                                );
+                                return Some(EndpointResponse {
+                                    endpoint: endpoint_with_ip,
+                                    headers,
+                                    body,
+                                    status,
+                                });
                             }
-                        } else {
-                            tracing::trace!("Endpoint {} returned {}", url, status);
-                            continue;
+                            Err(e) => {
+                                tracing::trace!("Failed to read response from {}: {}", url, e);
+                                continue;
+                            }
                         }
                     }
                     Err(e) => {

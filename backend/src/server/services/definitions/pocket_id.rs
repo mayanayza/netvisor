@@ -15,11 +15,16 @@ impl ServiceDefinition for PocketID {
         "A Simple OIDC provider that uses passkeys for authentication"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::IdentityAndAccess
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(1411), "/app.webmanifest", "Pocket ID")
+        Pattern::Endpoint(
+            PortBase::new_tcp(1411),
+            "/app.webmanifest",
+            "Pocket ID",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {

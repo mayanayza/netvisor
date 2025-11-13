@@ -21,12 +21,12 @@ impl ServiceDefinition for HpPrinter {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::AnyOf(vec![
-                Pattern::Endpoint(PortBase::Http, "", "LaserJet"),
-                Pattern::Endpoint(PortBase::Http, "", "DeskJet"),
-                Pattern::Endpoint(PortBase::Http, "", "OfficeJet"),
-                Pattern::Endpoint(PortBase::HttpAlt, "", "LaserJet"),
-                Pattern::Endpoint(PortBase::HttpAlt, "", "DeskJet"),
-                Pattern::Endpoint(PortBase::HttpAlt, "", "OfficeJet"),
+                Pattern::Endpoint(PortBase::Http, "", "LaserJet", None),
+                Pattern::Endpoint(PortBase::Http, "", "DeskJet", None),
+                Pattern::Endpoint(PortBase::Http, "", "OfficeJet", None),
+                Pattern::Endpoint(PortBase::Http8080, "", "LaserJet", None),
+                Pattern::Endpoint(PortBase::Http8080, "", "DeskJet", None),
+                Pattern::Endpoint(PortBase::Http8080, "", "OfficeJet", None),
             ]),
             Pattern::AnyOf(vec![
                 Pattern::Port(PortBase::Ipp),

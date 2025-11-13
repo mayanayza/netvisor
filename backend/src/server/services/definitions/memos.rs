@@ -19,7 +19,7 @@ impl ServiceDefinition for Memos {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(5230), "/explore", "Memos")
+        Pattern::Endpoint(PortBase::new_tcp(5230), "/explore", "Memos", None)
     }
 
     fn logo_url(&self) -> &'static str {

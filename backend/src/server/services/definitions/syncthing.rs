@@ -19,7 +19,10 @@ impl ServiceDefinition for Syncthing {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "Syncthing")
+        Pattern::AllOf(vec![
+            Pattern::Endpoint(PortBase::Http, "/", "Syncthing", None),
+            Pattern::Port(PortBase::new_tcp(22000)),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

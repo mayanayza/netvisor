@@ -19,7 +19,7 @@ impl ServiceDefinition for NginxProxyManager {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "", "nginx proxy manager")
+        Pattern::Endpoint(PortBase::Http, "", "nginx proxy manager", None)
     }
 
     fn logo_url(&self) -> &'static str {

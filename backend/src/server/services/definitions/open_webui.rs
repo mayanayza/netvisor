@@ -19,7 +19,7 @@ impl ServiceDefinition for OpenWebUI {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::HttpAlt, "/manifest.json", "Open WebUI")
+        Pattern::Endpoint(PortBase::Http8080, "/manifest.json", "Open WebUI", None)
     }
 
     fn logo_url(&self) -> &'static str {

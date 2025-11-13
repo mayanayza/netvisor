@@ -1,0 +1,28 @@
+use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::services::r#impl::categories::ServiceCategory;
+use crate::server::services::r#impl::definitions::ServiceDefinition;
+use crate::server::services::r#impl::patterns::Pattern;
+
+#[derive(Default, Clone, Eq, PartialEq, Hash)]
+pub struct InfluxDB;
+
+impl ServiceDefinition for InfluxDB {
+    fn name(&self) -> &'static str {
+        "InfluxDB"
+    }
+    fn description(&self) -> &'static str {
+        "Time series database"
+    }
+    fn category(&self) -> ServiceCategory {
+        ServiceCategory::Database
+    }
+    fn discovery_pattern(&self) -> Pattern<'_> {
+        Pattern::Endpoint(PortBase::new_tcp(8086), "/ping", "", None)
+    }
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/influxdb.svg"
+    }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
+}

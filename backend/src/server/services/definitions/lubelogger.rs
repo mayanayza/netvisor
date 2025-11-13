@@ -19,7 +19,7 @@ impl ServiceDefinition for Lubelogger {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::HttpAlt, "/", "LubeLogger")
+        Pattern::Endpoint(PortBase::Http8080, "/", "Garage - LubeLogger", None)
     }
 
     fn logo_url(&self) -> &'static str {

@@ -19,7 +19,10 @@ impl ServiceDefinition for Mealie {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(9000), "/", "Mealie")
+        Pattern::AllOf(vec![
+            Pattern::Endpoint(PortBase::Http9000, "/", "Mealie", None),
+            Pattern::Endpoint(PortBase::Http9000, "/", "recipe", None),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

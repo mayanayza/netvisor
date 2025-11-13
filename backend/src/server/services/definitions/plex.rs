@@ -19,7 +19,7 @@ impl ServiceDefinition for Plex {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex")
+        Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex", None)
     }
 
     fn logo_url(&self) -> &'static str {

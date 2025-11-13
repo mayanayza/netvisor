@@ -420,6 +420,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 host_ip,
                 cancel.clone(),
                 Some(open_ports.clone()),
+                None,
                 port_scan_batch_size,
             ))
             .await
@@ -699,7 +700,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     });
                 });
 
-                if let Ok((created_host, created_services)) = self.create_host(host, services).await
+                if let Ok((created_host, created_services)) =
+                    self.create_host(host, services.clone()).await
                 {
                     return Ok::<Option<(Host, Vec<Service>)>, Error>(Some((
                         created_host,
@@ -857,30 +859,73 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 break;
             }
 
-            let url = format!(
-                "{}://127.0.0.1:{}{}",
-                endpoint.protocol, container_port, path
-            );
+            // Build command with multiple fallback options
+            // Test both HTTP and HTTPS
+            let requests = [
+                // curl - HTTP
+                format!(
+                    "curl -i -s -m 1 -L --max-redirs 2 http://127.0.0.1:{}{}",
+                    container_port, path
+                ),
+                // curl - HTTPS (with -k for self-signed certs)
+                format!(
+                    "curl -k -i -s -m 1 -L --max-redirs 2 https://127.0.0.1:{}{}",
+                    container_port, path
+                ),
+                // wget - HTTP
+                format!(
+                    "wget -S -q -O- -T 1 http://127.0.0.1:{}{}",
+                    container_port, path
+                ),
+                // wget - HTTPS (with --no-check-certificate)
+                format!(
+                    "wget --no-check-certificate -S -q -O- -T 1 https://127.0.0.1:{}{}",
+                    container_port, path
+                ),
+                // Python - HTTP
+                format!(
+                    "python3 -c \"import urllib.request; req = urllib.request.Request('http://127.0.0.1:{}{}'); \
+                    exec(\\\"try:\\\\n resp = urllib.request.urlopen(req)\\\\n print('HTTP/1.1', resp.status, resp.msg)\\\\n \
+                    for h in resp.headers: print(h + ':', resp.headers[h])\\\\n print()\\\\n \
+                    print(resp.read().decode('utf-8'))\\\\nexcept urllib.error.HTTPError as e:\\\\n \
+                    print('HTTP/1.1', e.code, e.msg)\\\\n for h in e.headers: print(h + ':', e.headers[h])\\\\n \
+                    print()\\\\n print(e.read().decode('utf-8'))\\\")\"",
+                    container_port, path
+                ),
+                // Python - HTTPS (with unverified SSL context)
+                format!(
+                    "python3 -c \"import urllib.request, ssl; \
+                    ctx = ssl._create_unverified_context(); \
+                    req = urllib.request.Request('https://127.0.0.1:{}{}'); \
+                    exec(\\\"try:\\\\n resp = urllib.request.urlopen(req, context=ctx)\\\\n print('HTTP/1.1', resp.status, resp.msg)\\\\n \
+                    for h in resp.headers: print(h + ':', resp.headers[h])\\\\n print()\\\\n \
+                    print(resp.read().decode('utf-8'))\\\\nexcept urllib.error.HTTPError as e:\\\\n \
+                    print('HTTP/1.1', e.code, e.msg)\\\\n for h in e.headers: print(h + ':', e.headers[h])\\\\n \
+                    print()\\\\n print(e.read().decode('utf-8'))\\\")\"",
+                    container_port, path
+                ),
+                // bash /dev/tcp - only supports HTTP (no TLS)
+                format!(
+                    "bash -c \"exec 3<>/dev/tcp/127.0.0.1/{} && echo -e 'GET {} HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && cat <&3\"",
+                    container_port, path
+                ),
+            ];
 
-            // Execute curl with -i to include headers, or wget with -S
+            // Join with || to try each in order, fallback to empty string
+            let command = format!("{} || echo ''", requests.join(" 2>/dev/null || "));
+
+            // Execute curl with command that works for environment
             let exec = docker
-            .create_exec(
-                container_name,
-                bollard::exec::CreateExecOptions {
-                    cmd: Some(vec![
-                        "sh",
-                        "-c",
-                        &format!(
-                            "curl -i -s -m 1 -L --max-redirs 2 {} 2>/dev/null || wget -S -q -O- -T 1 {} 2>&1 || echo ''",
-                            url, url
-                        ),
-                    ]),
-                    attach_stdout: Some(true),
-                    attach_stderr: Some(true),
-                    ..Default::default()
-                },
-            )
-            .await;
+                .create_exec(
+                    container_name,
+                    bollard::exec::CreateExecOptions {
+                        cmd: Some(vec!["sh", "-c", &command]),
+                        attach_stdout: Some(true),
+                        attach_stderr: Some(true),
+                        ..Default::default()
+                    },
+                )
+                .await;
 
             let Ok(exec_result) = exec else {
                 continue;
@@ -921,37 +966,40 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 let full_response = full_response.trim();
 
                 // Parse response to check status code and extract body
-                if let Some((status_code, response_body)) = Self::parse_http_response(full_response)
-                {
-                    // Only accept 2xx-3xx status codes
-                    if (199..400).contains(&status_code) {
-                        tracing::debug!(
-                            "Endpoint {}:{}{} returned status {} for container {}",
-                            interface.base.ip_address,
-                            container_port,
-                            path,
-                            status_code,
-                            container_name
-                        );
+                if let Some((status, body, headers)) = Self::parse_http_response(full_response) {
+                    // Map back to the host-visible endpoint
+                    if let Some(host_mappings) = container_to_host_port_map.get(&container_port) {
+                        for (host_ip, host_port) in host_mappings {
+                            let host_endpoint = Endpoint {
+                                ip: Some(*host_ip),
+                                port_base: PortBase::new_tcp(*host_port),
+                                protocol: endpoint.protocol,
+                                path: path.clone(),
+                            };
 
-                        // Map back to the host-visible endpoint
-                        if let Some(host_mappings) = container_to_host_port_map.get(&container_port)
-                        {
-                            for (host_ip, host_port) in host_mappings {
-                                let host_endpoint = Endpoint {
-                                    ip: Some(*host_ip),
-                                    port_base: PortBase::new_tcp(*host_port),
-                                    protocol: endpoint.protocol,
-                                    path: path.clone(),
-                                };
-
-                                endpoint_responses.push(EndpointResponse {
-                                    endpoint: host_endpoint,
-                                    response: response_body.clone(),
-                                });
-                            }
+                            endpoint_responses.push(EndpointResponse {
+                                endpoint: host_endpoint,
+                                body: body.clone(),
+                                status,
+                                headers: headers.clone(),
+                            });
                         }
                     }
+
+                    // Also add the container-internal endpoint
+                    let container_endpoint = Endpoint {
+                        ip: Some(interface.base.ip_address), // Container's IP on the bridge network
+                        port_base: PortBase::new_tcp(container_port), // Container port, not host port
+                        protocol: endpoint.protocol,
+                        path: path.clone(),
+                    };
+
+                    endpoint_responses.push(EndpointResponse {
+                        endpoint: container_endpoint,
+                        body: body.clone(),
+                        status,
+                        headers: headers.clone(),
+                    });
                 }
             }
         }
@@ -961,7 +1009,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
     /// Parse HTTP response to extract status code and body
     /// Returns (status_code, body) if successful
-    fn parse_http_response(response: &str) -> Option<(u16, String)> {
+    fn parse_http_response(response: &str) -> Option<(u16, String, HashMap<String, String>)> {
         if response.is_empty() {
             return None;
         }
@@ -973,11 +1021,24 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
         match parsed_response.parse(response_bytes) {
             Ok(httparse::Status::Complete(headers_len)) => {
-                let status_code = parsed_response.code?;
+                let status = parsed_response.code?;
                 let body = &response_bytes[headers_len..];
-                let body_str = String::from_utf8_lossy(body).to_string();
+                let body = String::from_utf8_lossy(body).to_string();
+                let headers: HashMap<String, String> = parsed_response
+                    .headers
+                    .iter()
+                    .filter_map(|header| {
+                        // Convert header value bytes to string
+                        std::str::from_utf8(header.value).ok().map(|value| {
+                            (
+                                header.name.to_lowercase(), // Normalize to lowercase
+                                value.to_string(),
+                            )
+                        })
+                    })
+                    .collect();
 
-                Some((status_code, body_str))
+                Some((status, body, headers))
             }
             Ok(httparse::Status::Partial) => {
                 // Not enough data, might be incomplete response
@@ -1004,17 +1065,15 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
         if let Some(ports) = &container_summary.ports {
             ports.iter().for_each(|p| {
-                let ip = p.ip.clone().unwrap_or_default().parse::<IpAddr>().ok();
-
-                if let (Some(port_type @ (PortTypeEnum::TCP | PortTypeEnum::UDP)), Some(ip)) =
-                    (p.typ, ip)
-                {
+                // Handle ports regardless of whether ip is set
+                if let Some(port_type @ (PortTypeEnum::TCP | PortTypeEnum::UDP)) = p.typ {
                     let private_port = match port_type {
                         PortTypeEnum::TCP => PortBase::new_tcp(p.private_port),
                         PortTypeEnum::UDP => PortBase::new_udp(p.private_port),
                         _ => unreachable!("Already matched TCP/UDP in outer pattern"),
                     };
 
+                    // Always add the private port to all container IPs
                     container_ips.iter().for_each(|ip| {
                         container_ips_to_container_ports
                             .entry(*ip)
@@ -1022,7 +1081,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                             .push(private_port);
                     });
 
-                    if let Some(public) = p.public_port {
+                    // Only handle host port mapping if we have both ip and public_port
+                    if let (Some(ip_str), Some(public)) = (&p.ip, p.public_port)
+                        && let Ok(ip) = ip_str.parse::<IpAddr>()
+                    {
                         let public_port = match port_type {
                             PortTypeEnum::TCP => PortBase::new_tcp(public),
                             PortTypeEnum::UDP => PortBase::new_udp(public),
@@ -1038,13 +1100,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     }
                 }
             });
-
-            return (
-                host_ip_to_host_ports,
-                container_ips_to_container_ports,
-                host_to_container_port_map,
-            );
-        };
+        }
 
         (
             host_ip_to_host_ports,

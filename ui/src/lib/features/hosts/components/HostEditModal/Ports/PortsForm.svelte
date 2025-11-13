@@ -71,7 +71,6 @@
 			allowCreateNew={true}
 			createNewLabel="Custom Port"
 			allowDuplicates={false}
-			allowItemEdit={(port) => port.type == 'Custom'}
 			allowItemRemove={(port: Port) => !isPortUsed(port)}
 			{formApi}
 			options={selectablePorts}

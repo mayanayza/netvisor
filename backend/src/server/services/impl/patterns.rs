@@ -1,5 +1,3 @@
-use std::net::IpAddr;
-
 use crate::server::{
     services::{
         definitions::ServiceDefinitionRegistry,
@@ -15,8 +13,11 @@ use crate::server::{
     subnets::r#impl::types::SubnetType,
 };
 use anyhow::{Error, anyhow};
+use itertools::Itertools;
 use mac_oui::Oui;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
+use std::{net::IpAddr, ops::Range};
 use strum_macros::{Display, EnumDiscriminants, IntoStaticStr};
 
 use crate::server::{
@@ -102,8 +103,16 @@ pub enum Pattern<'a> {
     /// Whether or not an endpoint provided a specific response
     /// PortBase
     /// path: &str - ie "/", "/admin", etc
-    /// expected response: &str - String to match on in response
-    Endpoint(PortBase, &'a str, &'a str),
+    /// body response: &str - String to match on in response
+    /// status_code: optional, defaults to 199..400 (any ok or redirect)
+    Endpoint(PortBase, &'a str, &'a str, Option<Range<u16>>),
+
+    /// Whether or not reseponse headers from the host
+    /// PortBase: If provided, check headers on a response from the specific port. Otherwise, use any port.
+    /// header: &str - Header name
+    /// value: &str - string to match on in value
+    /// status_code: optional, defaults to 199..400 (any ok or redirect)
+    Header(Option<PortBase>, &'a str, &'a str, Option<Range<u16>>),
 
     /// Whether the subnet that the host was found on matches a subnet type
     SubnetIsType(SubnetType),
@@ -147,6 +156,67 @@ impl Vendor {
     pub const SONOS: &'static str = "Sonos, Inc.";
     pub const ECOBEE: &'static str = "ecobee inc";
     pub const ROKU: &'static str = "Roku, Inc";
+}
+
+impl Display for Pattern<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Pattern::AnyOf(patterns) => {
+                let pattern_strings = patterns.iter().map(|p| p.to_string()).join(", ");
+                write!(f, "Any of: ({})", pattern_strings)
+            }
+            Pattern::AllOf(patterns) => {
+                let pattern_strings = patterns.iter().map(|p| p.to_string()).join(", ");
+                write!(f, "All of: ({})", pattern_strings)
+            }
+            Pattern::Not(pattern) => write!(f, "Not ({})", pattern),
+            Pattern::Port(port_base) => write!(f, "{} is open", port_base),
+            Pattern::Endpoint(port_base, path, match_string, range) => {
+                if let Some(range) = range {
+                    write!(
+                        f,
+                        "Endpoint response status is between {} and {}, and response body from <ip>:{}{} contains {}",
+                        range.start, range.end, port_base, path, match_string
+                    )
+                } else {
+                    write!(
+                        f,
+                        "Endpoint response body from <ip>:{}{} contains {}",
+                        port_base, path, match_string
+                    )
+                }
+            }
+            Pattern::Header(port_base, header, value, range) => {
+                let ip_str = if let Some(port_base) = port_base {
+                    format!("<ip>:{}", port_base)
+                } else {
+                    "<ip>".to_string()
+                };
+                if let Some(range) = range {
+                    write!(
+                        f,
+                        "Endpoint response status is between {} and {}, and response from {} has header {} with value {}",
+                        range.start, range.end, ip_str, header, value
+                    )
+                } else {
+                    write!(
+                        f,
+                        "Endpoint response from {} has header {} with value {}",
+                        ip_str, header, value
+                    )
+                }
+            }
+            Pattern::SubnetIsType(subnet_type) => write!(f, "Subnet is type {:?}", subnet_type),
+            Pattern::IsGateway => write!(
+                f,
+                "Host IP is a gateway in daemon's routing tables, or ends in .1 or .254."
+            ),
+            Pattern::MacVendor(vendor) => write!(f, "MAC Address belongs to {}", vendor),
+            Pattern::Custom(_, _, _, _) => write!(f, "A custom match pattern evaluated at runtime"),
+            Pattern::DockerContainer => write!(f, "Service is running in a docker container"),
+            Pattern::None => write!(f, "No match pattern provided"),
+        }
+    }
 }
 
 impl Pattern<'_> {
@@ -226,37 +296,153 @@ impl Pattern<'_> {
                 }
             }
 
-            Pattern::Endpoint(port_base, path, expected_response) => {
-                let endpoint = Endpoint::for_pattern(*port_base, path);
+            Pattern::Header(
+                port_base,
+                expected_header,
+                expected_value,
+                expected_status_code_range,
+            ) => {
+                let match_result = endpoint_responses
+                    .iter()
+                    .filter(|actual| {
+                        let is_same_endpoint = port_base
+                            .map(|p| actual.endpoint.port_base == p)
+                            .unwrap_or(true);
 
-                if let Some(actual) = endpoint_responses.iter().find(|actual| {
-                    // Compare without IP since pattern endpoints don't have IPs
-                    actual.endpoint.protocol == endpoint.protocol
-                        && actual.endpoint.port_base.number() == endpoint.port_base.number()
-                        && actual.endpoint.path == endpoint.path
-                        && actual
-                            .response
-                            .to_lowercase()
-                            .contains(&expected_response.to_lowercase())
-                }) {
-                    Ok(MatchResult {
-                        ports: vec![Port::new(actual.endpoint.port_base)],
-                        endpoint: Some(actual.endpoint.clone()),
+                        let expected_range =
+                            expected_status_code_range.as_ref().unwrap_or(&(199..400));
+                        let status_code_in_range = expected_range.contains(&actual.status);
+
+                        let headers_contain_value = actual.headers.iter().any(|(header, value)| {
+                            header.to_lowercase() == expected_header.to_lowercase()
+                                && value
+                                    .to_lowercase()
+                                    .contains(&expected_value.to_lowercase())
+                        });
+
+                        is_same_endpoint && status_code_in_range && headers_contain_value
+                    })
+                    .map(|actual| {
+                        let mut match_reason = Vec::new();
+
+                        match_reason.push(format!(
+                            "header {} contained \"{}\"",
+                            expected_header, expected_value
+                        ));
+
+                        if let Some(expected_status_code_range) = expected_status_code_range {
+                            // Only add this as a reason if expected status code range is anything other than successful
+                            match_reason.push(format!(
+                                "status code was {} in range {:?}",
+                                actual.status, expected_status_code_range
+                            ));
+                        }
+
+                        if let Some(port_base) = port_base {
+                            (
+                                actual,
+                                format!(
+                                    "Response from {} {}",
+                                    port_base,
+                                    match_reason.join(" and ")
+                                ),
+                            )
+                        } else {
+                            (actual, format!("Response {}", match_reason.join(" and ")))
+                        }
+                    })
+                    .next();
+
+                match match_result {
+                    Some((response, reason)) => Ok(MatchResult {
+                        ports: vec![Port::new(response.endpoint.port_base)],
+                        endpoint: Some(response.endpoint.clone()),
                         mac_vendor: None,
                         details: MatchDetails {
-                            reason: MatchReason::Reason(format!(
-                                "Response from {} contained \"{}\"",
-                                actual.endpoint, expected_response
-                            )),
+                            reason: MatchReason::Reason(reason),
                             confidence: MatchConfidence::High,
                         },
+                    }),
+                    None => Err(anyhow!(
+                        "Could not find an header response on port {}",
+                        port_base.unwrap_or_default()
+                    )),
+                }
+            }
+
+            Pattern::Endpoint(
+                port_base,
+                path,
+                expected_body_match_string,
+                expected_status_code_range,
+            ) => {
+                let endpoint = Endpoint::for_pattern(*port_base, path);
+
+                let match_result = endpoint_responses
+                    .iter()
+                    .filter(|actual| {
+                        let is_same_endpoint = actual.endpoint.protocol == endpoint.protocol
+                        // Compare number + protocol instead of port_base and port_base 
+                        // because ports are dynamically recreated during discovery 
+                        // and named enums like Http9000 won't match new_tcp(9000)
+                            && actual.endpoint.port_base.number() == endpoint.port_base.number()
+                            && actual.endpoint.port_base.protocol() == endpoint.port_base.protocol()
+                            && actual.endpoint.path == endpoint.path;
+
+                        let expected_range =
+                            expected_status_code_range.as_ref().unwrap_or(&(199..400));
+                        let status_code_in_range = expected_range.contains(&actual.status);
+
+                        let body_contains_match_string = actual
+                            .body
+                            .to_lowercase()
+                            .contains(&expected_body_match_string.to_lowercase());
+
+                        is_same_endpoint && status_code_in_range && body_contains_match_string
                     })
-                } else {
-                    Err(anyhow!(
-                        "Response from {} did not contain \"{}\"",
-                        endpoint,
-                        expected_response
-                    ))
+                    .map(|actual| {
+                        let mut match_reason = Vec::new();
+
+                        match_reason.push(format!(
+                            "contained \"{}\" in body",
+                            expected_body_match_string
+                        ));
+
+                        if let Some(expected_status_code_range) = expected_status_code_range {
+                            // Only add this as a reson if expected status code range is anything other than successful
+                            match_reason.push(format!(
+                                "status code was {} was in range {:?}",
+                                actual.status, expected_status_code_range
+                            ));
+                        }
+
+                        (
+                            actual,
+                            format!(
+                                "Response for {}:{}{} {}",
+                                interface.base.ip_address,
+                                port_base,
+                                path,
+                                match_reason.join(" and ")
+                            ),
+                        )
+                    })
+                    .next();
+
+                match match_result {
+                    Some((response, reason)) => Ok(MatchResult {
+                        ports: vec![Port::new(response.endpoint.port_base)],
+                        endpoint: Some(response.endpoint.clone()),
+                        mac_vendor: None,
+                        details: MatchDetails {
+                            reason: MatchReason::Reason(reason),
+                            confidence: MatchConfidence::High,
+                        },
+                    }),
+                    None => Err(anyhow!(
+                        "Could not find an endpoint response containing {}",
+                        expected_body_match_string
+                    )),
                 }
             }
 
@@ -547,6 +733,8 @@ impl Pattern<'_> {
     }
 
     /// Get all ports which need to be scanned for a given service's match pattern
+    /// This skips ports from endpoints/headers because we don't want to scan a port if it's just being used in an endpoint (unnecessary network request)
+    /// There's logic to add any endpoint-specific ports into scanning in scan_ports_and_endpoints and the docker discovery equivalent
     pub fn ports(&self) -> Vec<PortBase> {
         match self {
             Pattern::Port(port) => vec![*port],
@@ -560,7 +748,22 @@ impl Pattern<'_> {
     /// Get all endpoints which need to be scanned for a given service's match pattern
     pub fn endpoints(&self) -> Vec<Endpoint> {
         match self {
-            Pattern::Endpoint(port_base, path, _) => vec![Endpoint::for_pattern(*port_base, path)],
+            Pattern::Endpoint(port_base, path, .., None) => {
+                vec![Endpoint::for_pattern(*port_base, path)]
+            }
+            Pattern::Header(port_base_opt, ..) => {
+                // If a specific port is specified, create an endpoint for it
+                // If no port is specified, we need at least one endpoint to exist
+                // The actual endpoint will be provided by other patterns (Endpoint patterns)
+                // or we'll use a default HTTP endpoint on port 80
+                if let Some(port_base) = port_base_opt {
+                    vec![Endpoint::for_pattern(*port_base, "/")]
+                } else {
+                    // Port-agnostic header check - needs at least one endpoint
+                    // Return a default HTTP endpoint to ensure something gets scanned
+                    vec![Endpoint::for_pattern(PortBase::Http, "/")]
+                }
+            }
             Pattern::AnyOf(patterns) | Pattern::AllOf(patterns) => patterns
                 .iter()
                 .flat_map(|p| p.endpoints().to_vec())
@@ -583,6 +786,7 @@ impl Pattern<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::net::IpAddr;
 
     use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
@@ -637,7 +841,9 @@ mod tests {
 
             let endpoint_responses = vec![EndpointResponse {
                 endpoint: Endpoint::http(Some(interface.base.ip_address), "/admin"),
-                response: "Pi-hole".to_string(),
+                body: "Pi-hole".to_string(),
+                headers: HashMap::new(),
+                status: 200,
             }];
 
             Self {

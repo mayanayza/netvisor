@@ -19,7 +19,7 @@ impl ServiceDefinition for Jump {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8123), "/", "Jump")
+        Pattern::Endpoint(PortBase::new_tcp(8123), "/", "Jump", None)
     }
 }
 

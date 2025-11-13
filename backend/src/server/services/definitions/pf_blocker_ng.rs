@@ -24,7 +24,7 @@ impl ServiceDefinition for PfBlockerNg {
                 Pattern::Port(PortBase::DnsTcp),
                 Pattern::Port(PortBase::DnsUdp),
             ]),
-            Pattern::Endpoint(PortBase::Http, "/pfblockerng", "pfblockerng"),
+            Pattern::Endpoint(PortBase::Http, "/pfblockerng", "pfblockerng", None),
         ])
     }
 

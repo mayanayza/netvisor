@@ -19,7 +19,7 @@ impl ServiceDefinition for Glances {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(61208), "/", "Glances")
+        Pattern::Endpoint(PortBase::new_tcp(61208), "/", "Glances", None)
     }
 
     fn logo_url(&self) -> &'static str {

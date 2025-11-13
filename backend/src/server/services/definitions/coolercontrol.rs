@@ -19,7 +19,7 @@ impl ServiceDefinition for CoolerControl {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(11987), "/", "CoolerControl")
+        Pattern::Endpoint(PortBase::new_tcp(11987), "/", "CoolerControl", None)
     }
 
     fn logo_url(&self) -> &'static str {

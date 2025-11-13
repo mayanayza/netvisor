@@ -19,7 +19,7 @@ impl ServiceDefinition for Traefik {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/dashboard", "traefik")
+        Pattern::Endpoint(PortBase::Http, "/dashboard", "traefik", None)
     }
 
     fn logo_url(&self) -> &'static str {

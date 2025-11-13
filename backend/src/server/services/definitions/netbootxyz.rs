@@ -19,7 +19,7 @@ impl ServiceDefinition for Netbootxyz {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(61208), "/", "Netbootxyz")
+        Pattern::Endpoint(PortBase::new_tcp(61208), "/", "Netbootxyz", None)
     }
 
     fn logo_url(&self) -> &'static str {

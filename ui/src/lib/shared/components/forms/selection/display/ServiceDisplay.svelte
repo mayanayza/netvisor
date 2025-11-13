@@ -9,6 +9,8 @@
 		getId: (service: Service) => service.id,
 		getLabel: (service: Service) => service.name,
 		getDescription: (service: Service, context) => {
+			console.log(service);
+			console.log(context.interfaceIds);
 			let descriptionItems = [];
 
 			let bindingsOnInterface = service.bindings.filter((b) =>

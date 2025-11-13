@@ -19,7 +19,10 @@ impl ServiceDefinition for Synology {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "synology")
+        Pattern::AllOf(vec![
+            Pattern::Endpoint(PortBase::Http, "/", "synology", None),
+            Pattern::Port(PortBase::Ftp),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

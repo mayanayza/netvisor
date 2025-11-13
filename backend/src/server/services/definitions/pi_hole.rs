@@ -24,7 +24,7 @@ impl ServiceDefinition for PiHole {
                 Pattern::Port(PortBase::DnsUdp),
                 Pattern::Port(PortBase::DnsTcp),
             ]),
-            Pattern::Endpoint(PortBase::Http, "/admin", "pi-hole"),
+            Pattern::Endpoint(PortBase::Http, "/admin", "pi-hole", None),
         ])
     }
 

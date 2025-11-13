@@ -19,7 +19,7 @@ impl ServiceDefinition for Cloudflared {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/metrics", "cloudflared")
+        Pattern::Endpoint(PortBase::Http, "/metrics", "cloudflared", None)
     }
 
     fn logo_url(&self) -> &'static str {

@@ -27,7 +27,7 @@ impl ServiceDefinition for GoogleHome {
                 Pattern::MacVendor(Vendor::GOOGLE),
             ]),
             Pattern::Not(Box::new(Pattern::IsGateway)),
-            Pattern::Endpoint(PortBase::Http, "/", "Nest Wifi"),
+            Pattern::Endpoint(PortBase::Http, "/", "Nest Wifi", None),
         ])
     }
 

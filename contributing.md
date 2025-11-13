@@ -391,7 +391,7 @@ Match if ANY pattern succeeds:
 fn discovery_pattern(&self) -> Pattern<'_> {
     Pattern::AnyOf(vec![
         Pattern::Port(PortBase::new_tcp(32400)),
-        Pattern::Endpoint(PortBase::Http, "/web", "Plex")
+        Pattern::Endpoint(PortBase::Http, "/web", "Plex", None)
     ])
 }
 ```
@@ -655,7 +655,7 @@ impl ServiceDefinition for HomeAssistant {
             // Or check default port with web response
             Pattern::AllOf(vec![
                 Pattern::Port(PortBase::new_tcp(8123)),
-                Pattern::Endpoint(PortBase::Http, "/", "homeassistant")
+                Pattern::Endpoint(PortBase::Http, "/", "homeassistant", None)
             ])
         ])
     }
@@ -762,6 +762,20 @@ mod tests {
 ## Submitting Your Contribution
 
 ### Before You Submit
+
+### Pre-commit Hooks
+
+NetVisor uses pre-commit hooks to ensure code quality. These hooks run automatically:
+- **On commit**: Format and lint checks
+- **On push**: Full test suite
+
+The hooks are installed automatically when you run `make install-dev-mac` or `make install-dev-linux`.
+
+To skip hooks when needed (not recommended):
+```bash
+git commit --no-verify  # Skip commit hooks
+git push --no-verify    # Skip push hooks
+```
 
 **Pre-submission checklist:**
 

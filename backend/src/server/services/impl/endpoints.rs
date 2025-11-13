@@ -1,5 +1,6 @@
 use crate::server::hosts::r#impl::ports::PortBase;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::{fmt::Display, net::IpAddr};
 use strum::IntoDiscriminant;
@@ -47,7 +48,9 @@ pub struct Endpoint {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct EndpointResponse {
     pub endpoint: Endpoint,
-    pub response: String,
+    pub body: String,
+    pub headers: HashMap<String, String>,
+    pub status: u16,
 }
 
 impl Endpoint {
@@ -68,15 +71,6 @@ impl Endpoint {
         Endpoint {
             protocol: ApplicationProtocol::Http,
             port_base: PortBase::Http,
-            ip,
-            path: path.to_string(),
-        }
-    }
-
-    pub fn http_alt(ip: Option<IpAddr>, path: &str) -> Self {
-        Endpoint {
-            protocol: ApplicationProtocol::Http,
-            port_base: PortBase::HttpAlt,
             ip,
             path: path.to_string(),
         }

@@ -20,8 +20,8 @@ impl ServiceDefinition for Grocy {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
-            Pattern::Endpoint(PortBase::Http, "/", "Grocy"),
-            Pattern::Endpoint(PortBase::Https, "/", "Grocy"),
+            Pattern::Endpoint(PortBase::Http, "/", "grocy.css", None),
+            Pattern::Endpoint(PortBase::Https, "/", "grocy.css", None),
         ])
     }
 

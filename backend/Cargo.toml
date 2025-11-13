@@ -119,7 +119,7 @@ validator = { version = "0.20", features = ["derive"] }
 regex = "1.11.3"
 tempfile = "3.23.0"
 net-route = "0.4.6"
-bollard = "0.19.1"
+bollard = "0.19.4"
 httparse = "1.10.1"
 async-stream = "0.3.6"
 serial_test = "3.2.0"
@@ -162,3 +162,4 @@ openssl = { version = "0.10.73", features = ["vendored"] }
 walkdir = "2.5"
 tar = "0.4"
 testcontainers = "0.25.0"
+top-english-words = "1.1.1"

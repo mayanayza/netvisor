@@ -3,6 +3,7 @@ use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::networks::r#impl::Network;
+use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
 use netvisor::server::shared::types::api::ApiResponse;
@@ -429,6 +430,26 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
+    let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions()
+        .iter()
+        .map(|s| {
+            serde_json::json!({
+                "logo_url": s.logo_url(),
+                "name": s.name(),
+                "description": s.description(),
+                "discovery_pattern": s.discovery_pattern().to_string()
+            })
+        })
+        .collect();
+
+    let json_string = serde_json::to_string_pretty(&services)?;
+    let path = std::path::Path::new("../ui/static/services.json");
+    tokio::fs::write(path, json_string).await?;
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_full_integration() {
     // Start containers
@@ -475,6 +496,10 @@ async fn test_full_integration() {
     generate_daemon_config_fixture()
         .await
         .expect("Failed to generate db fixture");
+
+    generate_services_json()
+        .await
+        .expect("Failed to generate services json");
 
     println!("\n✅ All integration tests passed!");
     println!("   ✓ User authenticated");

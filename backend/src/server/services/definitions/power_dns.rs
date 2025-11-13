@@ -22,7 +22,7 @@ impl ServiceDefinition for PowerDNS {
         Pattern::AllOf(vec![
             Pattern::Port(PortBase::DnsUdp),
             Pattern::Port(PortBase::DnsTcp),
-            Pattern::Port(PortBase::new_tcp(8081)),
+            Pattern::Port(PortBase::Http8081),
         ])
     }
 

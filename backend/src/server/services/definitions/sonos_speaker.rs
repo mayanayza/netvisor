@@ -26,7 +26,7 @@ impl ServiceDefinition for SonosSpeaker {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::SONOS),
             Pattern::AnyOf(vec![
-                Pattern::Port(PortBase::new_tcp(445)),
+                Pattern::Port(PortBase::Samba),
                 Pattern::Port(PortBase::new_tcp(3445)),
                 Pattern::Port(PortBase::new_tcp(1400)),
                 Pattern::Port(PortBase::new_tcp(1410)),

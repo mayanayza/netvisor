@@ -24,7 +24,7 @@ impl ServiceDefinition for AdguardHome {
                 Pattern::Port(PortBase::DnsUdp),
                 Pattern::Port(PortBase::DnsTcp),
             ]),
-            Pattern::Endpoint(PortBase::Http, "/", "AdGuard Home"),
+            Pattern::Endpoint(PortBase::Http, "/", "AdGuard Home", None),
         ])
     }
 

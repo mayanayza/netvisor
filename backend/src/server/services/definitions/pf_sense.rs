@@ -19,7 +19,10 @@ impl ServiceDefinition for PfSense {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "pfsense")
+        Pattern::AllOf(vec![
+            Pattern::Port(PortBase::Ssh),
+            Pattern::Endpoint(PortBase::Http, "/", "pfsense", None),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

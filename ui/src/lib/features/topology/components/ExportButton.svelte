@@ -2,7 +2,7 @@
 	import { toPng } from 'html-to-image';
 	import { useSvelteFlow, type Node } from '@xyflow/svelte';
 	import { Download } from 'lucide-svelte';
-	import { pushError } from '$lib/shared/stores/feedback';
+	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 
 	const { getNodes, getEdges, getViewport, setViewport } = useSvelteFlow();
 
@@ -11,6 +11,7 @@
 		link.download = `netvisor-topology-${new Date().toISOString().split('T')[0]}.png`;
 		link.href = dataUrl;
 		link.click();
+		pushSuccess('Export complete! Check your downloads folder.');
 	}
 
 	function getAbsolutePosition(node: Node, nodes: Node[]) {

@@ -19,7 +19,16 @@ impl ServiceDefinition for OpnSense {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "opnsense")
+        Pattern::AllOf(vec![
+            Pattern::Endpoint(PortBase::Http, "/", "opnsense", None),
+            Pattern::AnyOf(vec![
+                Pattern::Port(PortBase::DnsTcp),
+                Pattern::Port(PortBase::DnsUdp),
+                Pattern::Port(PortBase::Ssh),
+                Pattern::Port(PortBase::Ntp),
+                Pattern::Port(PortBase::Dhcp),
+            ]),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

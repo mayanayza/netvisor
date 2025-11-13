@@ -20,7 +20,7 @@ impl ServiceDefinition for Proxmox {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
-            Pattern::Endpoint(PortBase::new_tcp(8006), "/", "proxmox"),
+            Pattern::Endpoint(PortBase::new_tcp(8006), "/", "proxmox", None),
             Pattern::Port(PortBase::new_tcp(8006)),
         ])
     }

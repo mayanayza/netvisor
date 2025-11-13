@@ -9,10 +9,10 @@ pub struct FileServer;
 
 impl ServiceDefinition for FileServer {
     fn name(&self) -> &'static str {
-        "File Server"
+        "FTP Server"
     }
     fn description(&self) -> &'static str {
-        "Generic file sharing service"
+        "Generic FTP file sharing service"
     }
     fn category(&self) -> ServiceCategory {
         ServiceCategory::Storage

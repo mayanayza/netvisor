@@ -19,7 +19,10 @@ impl ServiceDefinition for Graylog {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(9000), "/", "Graylog")
+        Pattern::AllOf(vec![
+            Pattern::Header(None, "content-security-policy", "graylog", None),
+            Pattern::Endpoint(PortBase::Http9000, "/", "Graylog", None),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

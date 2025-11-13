@@ -226,11 +226,20 @@ impl ServiceDefinition for DefaultServiceDefinition {
 mod tests {
 
     use serial_test::serial;
+    use strum::{IntoDiscriminant, IntoEnumIterator};
 
-    use crate::server::services::{
-        definitions::ServiceDefinitionRegistry, r#impl::definitions::ServiceDefinition,
+    use crate::server::{
+        hosts::r#impl::ports::PortBase,
+        services::{
+            definitions::ServiceDefinitionRegistry,
+            r#impl::{definitions::ServiceDefinition, patterns::Pattern},
+        },
     };
-    use std::collections::HashSet;
+    use std::{
+        collections::{HashMap, HashSet},
+        fs::File,
+        io::BufReader,
+    };
 
     #[test]
     #[serial]
@@ -291,6 +300,223 @@ mod tests {
                 "Service '{}' description is too long; must be < 100 characters",
                 service.name()
             );
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_service_patterns_use_appropriate_port_types() {
+        let registry = ServiceDefinitionRegistry::all_service_definitions();
+
+        // Build map of port numbers to their PortBase names by iterating
+        let well_known_ports: std::collections::HashMap<PortBase, String> = PortBase::iter()
+            .filter_map(|port_base| {
+                // Skip Custom variants
+                if matches!(port_base, PortBase::Custom(_)) {
+                    None
+                } else {
+                    Some((port_base, format!("PortBase::{}", port_base.discriminant())))
+                }
+            })
+            .collect();
+
+        for service in registry {
+            let pattern = service.discovery_pattern();
+            let service_name = ServiceDefinition::name(&service);
+
+            check_port_usage(&pattern, &well_known_ports, service_name);
+        }
+    }
+
+    fn check_port_usage(
+        pattern: &Pattern,
+        well_known_ports: &std::collections::HashMap<PortBase, String>,
+        service_name: &str,
+    ) {
+        match pattern {
+            Pattern::Port(port_base) | Pattern::Endpoint(port_base, .., None) => {
+                if let PortBase::Custom(_) = port_base {
+                    if let Some(named_constant) = well_known_ports.get(&port_base) {
+                        panic!(
+                            "Service '{}' uses custom port {} but should use {} instead",
+                            service_name, port_base, named_constant
+                        );
+                    }
+                }
+            }
+            Pattern::AnyOf(patterns) | Pattern::AllOf(patterns) => {
+                for p in patterns {
+                    check_port_usage(p, well_known_ports, service_name);
+                }
+            }
+            Pattern::Not(p) => {
+                check_port_usage(p, well_known_ports, service_name);
+            }
+            _ => {}
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_service_patterns_are_specific_enough() {
+        let registry = ServiceDefinitionRegistry::all_service_definitions();
+        let words_path_str = format!(
+            "{}/src/tests/words.json",
+            std::env::current_dir().unwrap().to_str().unwrap()
+        );
+        let words_file = File::open(words_path_str).unwrap();
+        let reader = BufReader::new(words_file);
+        let words_map: HashMap<String, serde_json::Value> =
+            serde_json::from_reader(reader).unwrap();
+        let words: HashSet<String> = words_map.into_keys().collect();
+
+        // Get all non-custom PortBase variants by iterating
+        let common_ports: Vec<PortBase> = PortBase::iter()
+            .filter_map(|port_base| {
+                // Skip Custom variants
+                if matches!(port_base, PortBase::Custom(_)) {
+                    None
+                } else {
+                    Some(port_base)
+                }
+            })
+            .collect();
+
+        for service in registry {
+            // Generic services always pass
+            if service.is_generic() {
+                continue;
+            }
+
+            let pattern = service.discovery_pattern();
+            let service_name = ServiceDefinition::name(&service);
+
+            check_pattern_specificity(&pattern, &common_ports, service_name, words.clone());
+        }
+    }
+
+    fn check_pattern_specificity(
+        pattern: &Pattern,
+        common_ports: &[PortBase],
+        service_name: &str,
+        words: HashSet<String>,
+    ) {
+        match pattern {
+            // Port-only patterns on common ports without other criteria = fail
+            Pattern::Port(port_base) => {
+                if common_ports.contains(&port_base) {
+                    panic!(
+                        "Service '{}' uses port-only pattern on common port {} without additional criteria. \
+                        This could cause false positives. Consider using:\n\
+                        1. Pattern::Endpoint with a unique path/response\n\
+                        2. Pattern::AllOf combining port with other criteria\n\
+                        3. Mark service as is_generic = true if it's truly generic (ie it represents the implementation of a protocol, not something provided by a specific vendor)",
+                        service_name,
+                        port_base.discriminant()
+                    );
+                }
+            }
+
+            // AnyOf with only port patterns on common ports = fail
+            Pattern::AnyOf(patterns) => {
+                let all_are_common_port_patterns = patterns.iter().all(|p| {
+                    if let Pattern::Port(port_base) = p {
+                        common_ports.contains(&port_base)
+                    } else {
+                        false
+                    }
+                });
+
+                if all_are_common_port_patterns && !patterns.is_empty() {
+                    panic!(
+                        "Service '{}' uses AnyOf with only common port patterns. \
+                        This could cause false positives. Use more specific patterns",
+                        service_name
+                    );
+                }
+
+                // Check each sub-pattern recursively
+                for p in patterns {
+                    check_pattern_specificity(p, common_ports, service_name, words.clone());
+                }
+            }
+
+            // Endpoint patterns with common port/path and match strings that could lead to false positive = fail
+            Pattern::Endpoint(port_base, path, body_match_string, None) => {
+                let match_string_lower = body_match_string.to_lowercase();
+
+                // Means path is unique/specific enough, even if match string alone is likely to cause false positives
+                let path_contains_service_name = path.contains(service_name);
+
+                // Endpoint is probably not unique to service, and other services might respond to it
+                let is_common_endpoint = !path_contains_service_name
+                    && common_ports.contains(&port_base)
+                    && (*path == "/" || *path == "/api/" || *path == "/home/");
+
+                // Potential to false positive with dashboards that display service name
+                let match_string_is_service_name =
+                    match_string_lower == service_name.to_lowercase();
+
+                // Non-compound strings have potential to false positive with dashboards that display service name
+                let match_string_is_singular = !match_string_lower.contains(" ")
+                    && !match_string_lower.contains(".")
+                    && !match_string_lower.contains("_")
+                    && !match_string_lower.contains("-")
+                    && !match_string_lower.contains(",")
+                    && !match_string_lower.contains("/");
+
+                // Potential to false positive by being found in random strings displayed by other services
+                let is_substring_of_any_word = if match_string_lower.len() < 6 {
+                    words.iter().any(|w| w.contains(&match_string_lower))
+                        && !path_contains_service_name
+                } else {
+                    false
+                };
+
+                if is_common_endpoint && match_string_lower.len() < 4 {
+                    panic!(
+                        "Service '{}' uses a match string '{}' that is too short ({} characters). This could cause false positives. \
+                        Please provide a match string with at least 4 characters",
+                        service_name,
+                        match_string_lower.len(),
+                        body_match_string
+                    );
+                }
+
+                if is_common_endpoint && match_string_is_service_name {
+                    panic!(
+                        "Service '{}' uses a match string '{}' that is the same as the name of the service. This could cause false positives, \
+                        as dashboard services often will contain service names in their own endpoint responses, and as such could get detected as this service
+                        Please provide a match string that contains text that distinguishes it from the service name",
+                        service_name, body_match_string
+                    );
+                }
+
+                if is_common_endpoint && match_string_is_singular {
+                    panic!(
+                        "Service '{}' uses a match string '{}' that is a singular word. This could cause false positives, \
+                        as dashboard services often will contain service names in their own endpoint responses, and as such could get detected as this service
+                        Please provide a compound match string - multiple words separated by one of the following \
+                        delimiters: \".\", \"_\", \"/\", \",\", or \"-\"",
+                        service_name, body_match_string
+                    );
+                }
+
+                if is_common_endpoint && is_substring_of_any_word {
+                    panic!(
+                        "Service '{}' uses endpoint pattern at root path '/' on common port {} \
+                        with a match string '{}' that is a substring of at least one of a common english word. This could cause false positives. \
+                        Consider:\n\
+                        1. Use a more specific path (e.g., '/api/status' instead of '/')\n\
+                        2. Use a longer, more unique match string\n\
+                        3. Use Pattern::AllOf to combine multiple criteria",
+                        service_name, port_base, body_match_string
+                    );
+                }
+            }
+
+            // Other patterns are generally fine
+            _ => {}
         }
     }
 

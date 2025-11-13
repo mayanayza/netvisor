@@ -1,0 +1,26 @@
+repos:
+     - repo: local
+       hooks:
+         - id: format
+           name: Format code
+           entry: make format
+           language: system
+           pass_filenames: false
+           always_run: true
+           stages: [commit, push]
+           
+         - id: lint
+           name: Lint code
+           entry: make lint
+           language: system
+           pass_filenames: false
+           always_run: true
+           stages: [commit, push]
+           
+         - id: test
+           name: Run tests
+           entry: make test
+           language: system
+           pass_filenames: false
+           always_run: true
+           stages: [push]

@@ -21,7 +21,7 @@ impl ServiceDefinition for TrueNAS {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::Port(PortBase::Samba),
-            Pattern::Endpoint(PortBase::Http, "/", "TrueNAS"),
+            Pattern::Endpoint(PortBase::Http, "/", "TrueNAS", None),
         ])
     }
 

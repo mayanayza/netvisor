@@ -21,7 +21,7 @@ impl ServiceDefinition for Restic {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::Port(PortBase::new_tcp(8000)),
-            Pattern::Endpoint(PortBase::Http, "/", "restic"),
+            Pattern::Endpoint(PortBase::Http, "/", "restic", None),
         ])
     }
 

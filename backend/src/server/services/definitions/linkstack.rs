@@ -19,7 +19,10 @@ impl ServiceDefinition for LinkStack {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::HttpAlt, "/", "LinkStack")
+        Pattern::AllOf(vec![
+            Pattern::Header(None, "set-cookie", "linkstack_session", None),
+            Pattern::Endpoint(PortBase::Http8080, "/", "LinkStack", None),
+        ])
     }
 
     fn logo_url(&self) -> &'static str {

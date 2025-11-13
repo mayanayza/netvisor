@@ -84,7 +84,10 @@ impl HostService {
             }
         }
 
-        let host_with_final_services = self.update_host(created_host).await?;
+        // Now we need to update just the service IDs, without triggering
+        // the deletion logic in update_host_services
+        // Since bindings were already reassigned above, we just update the host record
+        let host_with_final_services = self.storage.update(&mut created_host).await?;
 
         Ok((host_with_final_services, created_services))
     }
@@ -101,7 +104,7 @@ impl HostService {
         let lock = self.get_host_lock(&host.id).await;
         let _guard = lock.lock().await;
 
-        tracing::debug!("Creating host {:?}", host);
+        tracing::trace!("Creating host {:?}", host);
 
         let filter = EntityFilter::unfiltered().network_ids(&[host.base.network_id]);
         let all_hosts = self.storage.get_all(filter).await?;
@@ -139,7 +142,7 @@ impl HostService {
         let lock = self.get_host_lock(&host.id).await;
         let _guard = lock.lock().await;
 
-        tracing::debug!("Updating host {:?}", host);
+        tracing::trace!("Updating host {:?}", host);
 
         let current_host = self
             .get_by_id(&host.id)
@@ -163,7 +166,7 @@ impl HostService {
         let mut hostname_update = false;
         let mut description_update = false;
 
-        tracing::debug!(
+        tracing::trace!(
             "Upserting new host data {:?} to host {:?}",
             new_host_data,
             existing_host
@@ -258,7 +261,7 @@ impl HostService {
                 existing_host.id,
                 data.join(", ")
             );
-            tracing::debug!("Result: {:?}", existing_host);
+            tracing::trace!("Result: {:?}", existing_host);
         } else {
             tracing::info!(
                 "No new information to upsert from host {} to host {}: {}",
@@ -283,7 +286,7 @@ impl HostService {
         let lock = self.get_host_lock(&destination_host.id).await;
         let _guard1 = lock.lock().await;
 
-        tracing::debug!(
+        tracing::trace!(
             "Consolidating host {:?} into host {:?}",
             other_host,
             destination_host
@@ -364,7 +367,7 @@ impl HostService {
 
         let services = self.service_service.get_all(host_filter).await?;
 
-        tracing::debug!(
+        tracing::trace!(
             "Updating host {:?} services {:?} due to host updates: {:?}",
             current_host,
             services,

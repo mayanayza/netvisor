@@ -19,7 +19,7 @@ impl ServiceDefinition for APC {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "Schneider Electric")
+        Pattern::Endpoint(PortBase::Http, "/", "Schneider Electric", None)
     }
 
     fn logo_url(&self) -> &'static str {

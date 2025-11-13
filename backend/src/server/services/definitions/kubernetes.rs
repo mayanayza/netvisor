@@ -20,7 +20,7 @@ impl ServiceDefinition for Kubernetes {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
-            Pattern::Port(PortBase::new_tcp(6443)),
+            Pattern::Port(PortBase::Kubernetes),
             Pattern::AnyOf(vec![
                 Pattern::Port(PortBase::new_tcp(10250)),
                 Pattern::Port(PortBase::new_tcp(10259)),

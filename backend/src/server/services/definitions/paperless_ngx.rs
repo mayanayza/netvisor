@@ -23,6 +23,7 @@ impl ServiceDefinition for PaperlessNGX {
             PortBase::new_tcp(8000),
             "/accounts/login/",
             "Paperless-ngx project",
+            None,
         )
     }
 

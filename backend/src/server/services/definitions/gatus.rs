@@ -19,7 +19,7 @@ impl ServiceDefinition for Gatus {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::HttpAlt, "/manifest.json", "Gatus")
+        Pattern::Endpoint(PortBase::Http8080, "/manifest.json", "Gatus", None)
     }
 
     fn logo_url(&self) -> &'static str {

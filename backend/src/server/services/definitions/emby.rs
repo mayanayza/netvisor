@@ -19,7 +19,12 @@ impl ServiceDefinition for Emby {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8096), "/emby/System/Info/Public", "Emby")
+        Pattern::Endpoint(
+            PortBase::new_tcp(8096),
+            "/emby/System/Info/Public",
+            "Emby",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {

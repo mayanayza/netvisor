@@ -19,7 +19,7 @@ impl ServiceDefinition for Fortinet {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "fortinet")
+        Pattern::Endpoint(PortBase::Http, "/login", "fortinet", None)
     }
 
     fn logo_url(&self) -> &'static str {

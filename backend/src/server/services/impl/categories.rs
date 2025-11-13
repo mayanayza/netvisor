@@ -32,6 +32,7 @@ pub enum ServiceCategory {
     Media,          // Plex, Jellyfin
     HomeAutomation, // Home Assistant
     Virtualization, // Proxmox, ESXi
+    FileSharing,
 
     // Network Services
     DNS,        // All DNS services
@@ -51,6 +52,10 @@ pub enum ServiceCategory {
     Database,    // DB servers
     Development, // Dev tools, CI/CD
     Dashboard,
+    MessageQueue,
+    Collaboration,
+    Communication,
+    IdentityAndAccess,
 
     // Special
     Unknown,
@@ -77,6 +82,7 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Media => "PlayCircle",
             ServiceCategory::HomeAutomation => "Home",
             ServiceCategory::Virtualization => Entity::Virtualization.icon(),
+            ServiceCategory::FileSharing => "Folder",
 
             // Network Services
             ServiceCategory::DNS => Entity::Dns.icon(),
@@ -96,7 +102,11 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Web => "Globe",
             ServiceCategory::Database => "Database",
             ServiceCategory::Development => "Code",
+            ServiceCategory::MessageQueue => "MessageSquareCode",
             ServiceCategory::Dashboard => "LayoutDashboard",
+            ServiceCategory::Collaboration => "Users",
+            ServiceCategory::IdentityAndAccess => "KeyRound",
+            ServiceCategory::Communication => "Speech",
 
             // Unknown
             ServiceCategory::Netvisor => "Zap",
@@ -118,6 +128,7 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::HomeAutomation => "blue",
             ServiceCategory::Virtualization => Entity::Virtualization.color(),
             ServiceCategory::Backup => "gray",
+            ServiceCategory::FileSharing => "blue",
 
             // Network Services
             ServiceCategory::DNS => Entity::Dns.color(),
@@ -137,6 +148,10 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Database => "gray",
             ServiceCategory::Development => "red",
             ServiceCategory::Dashboard => "purple",
+            ServiceCategory::MessageQueue => "green",
+            ServiceCategory::Collaboration => "blue",
+            ServiceCategory::IdentityAndAccess => "yellow",
+            ServiceCategory::Communication => "orange",
 
             // Unknown
             ServiceCategory::Netvisor => "purple",

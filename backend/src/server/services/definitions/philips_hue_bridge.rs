@@ -21,7 +21,7 @@ impl ServiceDefinition for PhilipsHueBridge {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::PHILIPS),
-            Pattern::Endpoint(PortBase::Http, "/", "hue"),
+            Pattern::Endpoint(PortBase::Http, "/", "hue", None),
         ])
     }
 

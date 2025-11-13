@@ -15,11 +15,16 @@ impl ServiceDefinition for Vaultwarden {
         "Self-hosted Bitwarden-compatible server, written in Rust"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::IdentityAndAccess
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8000), "/manifest.json", "Vaultwarden Web")
+        Pattern::Endpoint(
+            PortBase::new_tcp(8000),
+            "/manifest.json",
+            "Vaultwarden Web",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {

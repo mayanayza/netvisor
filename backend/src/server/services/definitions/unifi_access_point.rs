@@ -21,7 +21,7 @@ impl ServiceDefinition for UnifiAccessPoint {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::UBIQUITI),
-            Pattern::Endpoint(PortBase::Http, "/", "Unifi"),
+            Pattern::Endpoint(PortBase::Http, "/", "Unifi", None),
         ])
     }
 

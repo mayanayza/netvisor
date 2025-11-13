@@ -19,7 +19,7 @@ impl ServiceDefinition for Jellyfin {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/System/Info/Public", "Jellyfin")
+        Pattern::Endpoint(PortBase::Http, "/System/Info/Public", "Jellyfin", None)
     }
 
     fn logo_url(&self) -> &'static str {

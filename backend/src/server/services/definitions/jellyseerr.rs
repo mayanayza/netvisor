@@ -19,7 +19,7 @@ impl ServiceDefinition for Jellyseerr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Jellyseerr")
+        Pattern::Endpoint(PortBase::new_tcp(5055), "/", "Jellyseerr", None)
     }
 
     fn logo_url(&self) -> &'static str {

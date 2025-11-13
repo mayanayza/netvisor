@@ -19,7 +19,7 @@ impl ServiceDefinition for Homepage {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(3000), "/site.webmanifest", "Homepage")
+        Pattern::Endpoint(PortBase::Http3000, "/site.webmanifest", "Homepage", None)
     }
 
     fn logo_url(&self) -> &'static str {

@@ -19,7 +19,7 @@ impl ServiceDefinition for UptimeKuma {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/", "Uptime Kuma")
+        Pattern::Endpoint(PortBase::Http, "/", "Uptime Kuma", None)
     }
 
     fn logo_url(&self) -> &'static str {

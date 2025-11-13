@@ -109,6 +109,13 @@ install-dev-mac:
 	rustup component add rustfmt clippy
 	@echo "Installing Node.js dependencies..."
 	cd ui && npm install
+	@echo "Installing pre-commit hooks..."
+	@command -v pre-commit >/dev/null 2>&1 || { \
+		echo "Installing pre-commit via pip..."; \
+		pip3 install pre-commit --break-system-packages || pip3 install pre-commit; \
+	}
+	pre-commit install
+	pre-commit install --hook-type pre-push
 	@echo "Development dependencies installed!"
 	@echo "Note: Run 'source ~/.zshrc' to update your PATH, or restart your terminal"
 
@@ -118,5 +125,12 @@ install-dev-linux:
 	rustup component add rustfmt clippy
 	@echo "Installing Node.js dependencies..."
 	cd ui && npm install
+	@echo "Installing pre-commit hooks..."
+	@command -v pre-commit >/dev/null 2>&1 || { \
+		echo "Installing pre-commit via pip..."; \
+		pip3 install pre-commit --break-system-packages || pip3 install pre-commit; \
+	}
+	pre-commit install
+	pre-commit install --hook-type pre-push
 	@echo ""
 	@echo "Development dependencies installed!"

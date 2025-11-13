@@ -49,7 +49,7 @@ impl PartialEq for Port {
     }
 }
 
-#[derive(Copy, Debug, Clone, Eq, EnumDiscriminants, EnumIter, IntoStaticStr)]
+#[derive(Copy, Debug, Clone, Eq, EnumDiscriminants, EnumIter, IntoStaticStr, Default)]
 #[strum_discriminants(derive(Display, Hash, EnumIter))]
 pub enum PortBase {
     Ssh,
@@ -62,15 +62,49 @@ pub enum PortBase {
     Ipp,
     LdpTcp,
     LdpUdp,
+    Ldap,
+    Ldaps,
+    Kerberos,
     Snmp,
     Rdp,
     Ntp,
+    Sip,
+    SipTls,
     Rtsp,
     Dhcp,
+    #[default]
     Http,
-    HttpAlt,
+    MySql,
+    PostgreSQL,
+    MongoDB,
+    Redis,
+    MsSql,
+    Docker,
+    DockerTls,
+    Kubernetes,
+    RabbitMqMgmt,
+    Cassandra,
+    Elasticsearch,
+    InfluxDb,
+    CouchDb,
+    Kafka,
+    Http3000,
+    Http5000,
+    Http8080,
+    Http8081,
+    Http8082,
+    Http8888,
+    Http9000,
     Https,
-    HttpsAlt,
+    Https8443,
+    Https9443,
+    Https10443,
+    Mqtt,
+    MqttTls,
+    AMQP,
+    AMQPTls,
+    Wireguard,
+    OpenVPN,
     Custom(PortConfig),
 }
 
@@ -195,6 +229,13 @@ impl PortBase {
         matches!(self, PortBase::Custom(_))
     }
 
+    pub fn is_https(&self) -> bool {
+        matches!(
+            self,
+            PortBase::Https | PortBase::Https10443 | PortBase::Https8443 | PortBase::Https9443
+        )
+    }
+
     pub fn config(&self) -> PortConfig {
         match &self {
             PortBase::Ssh => PortConfig {
@@ -215,6 +256,26 @@ impl PortBase {
             },
             PortBase::Samba => PortConfig {
                 number: 445,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Sip => PortConfig {
+                number: 5060,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::SipTls => PortConfig {
+                number: 5061,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Ldap => PortConfig {
+                number: 389,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Ldaps => PortConfig {
+                number: 636,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Kerberos => PortConfig {
+                number: 88,
                 protocol: TransportProtocol::Tcp,
             },
             PortBase::Nfs => PortConfig {
@@ -261,7 +322,7 @@ impl PortBase {
                 number: 80,
                 protocol: TransportProtocol::Tcp,
             },
-            PortBase::HttpAlt => PortConfig {
+            PortBase::Http8080 => PortConfig {
                 number: 8080,
                 protocol: TransportProtocol::Tcp,
             },
@@ -269,11 +330,123 @@ impl PortBase {
                 number: 443,
                 protocol: TransportProtocol::Tcp,
             },
-            PortBase::HttpsAlt => PortConfig {
+            PortBase::Https8443 => PortConfig {
                 number: 8443,
                 protocol: TransportProtocol::Tcp,
             },
+            PortBase::MySql => PortConfig {
+                number: 3306,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::PostgreSQL => PortConfig {
+                number: 5432,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::MongoDB => PortConfig {
+                number: 27017,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Redis => PortConfig {
+                number: 6379,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::MsSql => PortConfig {
+                number: 1433,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Docker => PortConfig {
+                number: 2375,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::DockerTls => PortConfig {
+                number: 2376,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Kubernetes => PortConfig {
+                number: 6443,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::RabbitMqMgmt => PortConfig {
+                number: 15672,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Kafka => PortConfig {
+                number: 9092,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Http3000 => PortConfig {
+                number: 3000,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Http5000 => PortConfig {
+                number: 5000,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Http8081 => PortConfig {
+                number: 8081,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Http8082 => PortConfig {
+                number: 8082,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Http8888 => PortConfig {
+                number: 8888,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Http9000 => PortConfig {
+                number: 9000,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Https9443 => PortConfig {
+                number: 9443,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Https10443 => PortConfig {
+                number: 10443,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Cassandra => PortConfig {
+                number: 9042,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Elasticsearch => PortConfig {
+                number: 9200,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::InfluxDb => PortConfig {
+                number: 8086,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::CouchDb => PortConfig {
+                number: 5984,
+                protocol: TransportProtocol::Tcp,
+            },
             PortBase::Custom(config) => *config,
+            PortBase::Mqtt => PortConfig {
+                number: 1883,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::MqttTls => PortConfig {
+                number: 8883,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::AMQP => PortConfig {
+                number: 5672,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::AMQPTls => PortConfig {
+                number: 5671,
+                protocol: TransportProtocol::Tcp,
+            },
+            PortBase::Wireguard => PortConfig {
+                number: 51820,
+                protocol: TransportProtocol::Udp,
+            },
+            PortBase::OpenVPN => PortConfig {
+                number: 1194,
+                protocol: TransportProtocol::Udp,
+            },
         }
     }
 }
@@ -307,15 +480,48 @@ impl TypeMetadataProvider for PortBase {
             PortBase::LdpTcp => "LDP (TCP)",
             PortBase::LdpUdp => "LDP (UDP)",
             PortBase::Snmp => "SNMP",
+            PortBase::Ldap => "LDAP",
+            PortBase::Ldaps => "LDAP TLS",
+            PortBase::Kerberos => "Kerberos",
             PortBase::Rdp => "RDP",
             PortBase::Ntp => "NTP",
+            PortBase::Sip => "SIP",
+            PortBase::SipTls => "SIP TLS",
             PortBase::Rtsp => "RTSP",
             PortBase::Dhcp => "DHCP",
             PortBase::Http => "HTTP",
-            PortBase::HttpAlt => "HTTP Alt",
+            PortBase::Http8080 => "HTTP 8080",
             PortBase::Https => "HTTPS",
-            PortBase::HttpsAlt => "HTTPS Alt",
+            PortBase::Https8443 => "HTTPS 8443",
             PortBase::Custom(_) => "Custom",
+            PortBase::MySql => "MySql",
+            PortBase::PostgreSQL => "PostgreSql",
+            PortBase::MongoDB => "MongoDB",
+            PortBase::Redis => "Redis",
+            PortBase::MsSql => "MicrosoftSql",
+            PortBase::Docker => "Docker",
+            PortBase::DockerTls => "Docker TLS",
+            PortBase::Kubernetes => "Kubernetes",
+            PortBase::RabbitMqMgmt => "RabbitMq Management",
+            PortBase::Kafka => "Kafka",
+            PortBase::Http3000 => "HTTP 3000",
+            PortBase::Http5000 => "HTTP 5000",
+            PortBase::Http8081 => "HTTP 8081",
+            PortBase::Http8082 => "HTTP 8082",
+            PortBase::Http8888 => "HTTP 8888",
+            PortBase::Http9000 => "HTTP 9000",
+            PortBase::Https9443 => "HTTP 9443",
+            PortBase::Https10443 => "HTTP 10443",
+            PortBase::Cassandra => "Cassandra",
+            PortBase::Elasticsearch => "Elastic Search",
+            PortBase::InfluxDb => "InfluxDB",
+            PortBase::CouchDb => "CouchDB",
+            PortBase::Mqtt => "MQTT",
+            PortBase::MqttTls => "MQTT TLS",
+            PortBase::AMQP => "AMQP",
+            PortBase::AMQPTls => "AMQP TLS",
+            PortBase::Wireguard => "Wireguard",
+            PortBase::OpenVPN => "OpenVPN",
         }
     }
     fn description(&self) -> &'static str {
@@ -328,6 +534,11 @@ impl TypeMetadataProvider for PortBase {
             PortBase::Nfs => "Network File System",
             PortBase::Ftp => "File Transfer Protocol",
             PortBase::Ipp => "Internet Printing Protocol",
+            PortBase::Ldap => "Lightweight Directory Access Protocol",
+            PortBase::Ldaps => "Lightweight Directory Access Protocol using TLS",
+            PortBase::Sip => "Session Initiation Protocol",
+            PortBase::SipTls => "Session Initiation Protocol using TLS",
+            PortBase::Kerberos => "Kerberos Authentication Protocol",
             PortBase::LdpTcp => "Line Printer Daemon (TCP)",
             PortBase::LdpUdp => "Line Printer Daemon (UDP)",
             PortBase::Snmp => "Simple Network Management Protocol",
@@ -336,10 +547,38 @@ impl TypeMetadataProvider for PortBase {
             PortBase::Rtsp => "Real-Time Streaming Protocol",
             PortBase::Dhcp => "Dynamic Host Configuration Protocol",
             PortBase::Http => "Hypertext Transfer Protocol",
-            PortBase::HttpAlt => "Alternative HTTP Port",
+            PortBase::Http8080 => "HTTP 8080",
             PortBase::Https => "Hypertext Transfer Protocol Secure",
-            PortBase::HttpsAlt => "Alternative HTTPS Port",
+            PortBase::Https8443 => "Alternative HTTPS Port",
+            PortBase::MySql => "MySQL Database",
+            PortBase::PostgreSQL => "PostgreSQL Database",
+            PortBase::MongoDB => "MongoDB",
+            PortBase::Redis => "Redis Database",
+            PortBase::MsSql => "MicrosoftSQL Database",
+            PortBase::Docker => "Docker",
+            PortBase::DockerTls => "Docker using TLS",
+            PortBase::Kubernetes => "Kubernetes",
+            PortBase::RabbitMqMgmt => "RabbitMQ Management",
+            PortBase::Kafka => "Kafka",
+            PortBase::Http3000 => "HTTP 3000",
+            PortBase::Http5000 => "HTTP 5000",
+            PortBase::Http8081 => "HTTP 8081",
+            PortBase::Http8082 => "HTTP 8082",
+            PortBase::Http8888 => "HTTP 8888",
+            PortBase::Http9000 => "HTTP 9000",
+            PortBase::Https9443 => "HTTPS 9443",
+            PortBase::Https10443 => "HTTPS 10443",
             PortBase::Custom(_) => "Custom Port Configuration",
+            PortBase::Cassandra => "Cassandra",
+            PortBase::Elasticsearch => "Elastic Search",
+            PortBase::InfluxDb => "Influx Database",
+            PortBase::CouchDb => "Couch Database",
+            PortBase::Mqtt => "MQTT",
+            PortBase::MqttTls => "MQTT using TLS",
+            PortBase::AMQP => "Advanced Message Queuing Protocol",
+            PortBase::AMQPTls => "Advanced Message Queuing Protocol using TLS",
+            PortBase::Wireguard => "Wireguard VPN",
+            PortBase::OpenVPN => "OpenVPN",
         }
     }
     fn metadata(&self) -> serde_json::Value {
@@ -351,8 +590,8 @@ impl TypeMetadataProvider for PortBase {
                 | PortBase::Snmp
                 | PortBase::Http
                 | PortBase::Https
-                | PortBase::HttpAlt
-                | PortBase::HttpsAlt
+                | PortBase::Http8080
+                | PortBase::Https8443
         );
 
         let is_dns = matches!(self, PortBase::DnsUdp | PortBase::DnsTcp);

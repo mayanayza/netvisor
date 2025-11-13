@@ -19,9 +19,12 @@ impl ServiceDefinition for QNAP {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::AnyOf(vec![
-            Pattern::Endpoint(PortBase::Http, "/", "QNAP"),
-            Pattern::Endpoint(PortBase::HttpAlt, "/", "QNAP"),
+        Pattern::AllOf(vec![
+            Pattern::Port(PortBase::Ftp),
+            Pattern::AnyOf(vec![
+                Pattern::Endpoint(PortBase::Http, "/", "QNAP", None),
+                Pattern::Endpoint(PortBase::Http8080, "/", "QNAP", None),
+            ]),
         ])
     }
 

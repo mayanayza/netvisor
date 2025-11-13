@@ -19,7 +19,7 @@ impl ServiceDefinition for Tautulli {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8181), "/", "Tautulli")
+        Pattern::Endpoint(PortBase::new_tcp(8181), "/", "Tautulli", None)
     }
 
     fn logo_url(&self) -> &'static str {

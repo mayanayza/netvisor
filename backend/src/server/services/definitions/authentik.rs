@@ -15,13 +15,13 @@ impl ServiceDefinition for Authentik {
         "A self-hosted, open source identity provider"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Media
+        ServiceCategory::IdentityAndAccess
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
-            Pattern::Endpoint(PortBase::Http, "/", "authentik"),
-            Pattern::Endpoint(PortBase::Https, "/", "authentik"),
+            Pattern::Endpoint(PortBase::Http9000, "/", "window.authentik", None),
+            Pattern::Endpoint(PortBase::Https9443, "/", "window.authentik", None),
         ])
     }
 

@@ -19,7 +19,7 @@ impl ServiceDefinition for UnifiController {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8443), "/manage", "UniFi")
+        Pattern::Endpoint(PortBase::new_tcp(8443, None), "/manage", "UniFi")
     }
 
     fn logo_url(&self) -> &'static str {

@@ -19,7 +19,7 @@ impl ServiceDefinition for Immich {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(2283), "/photos", "Immich")
+        Pattern::Endpoint(PortBase::new_tcp(2283), "/photos", "Immich", None)
     }
 
     fn logo_url(&self) -> &'static str {

@@ -19,7 +19,7 @@ impl ServiceDefinition for Komga {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(25600), "/", "Komga")
+        Pattern::Endpoint(PortBase::new_tcp(25600), "/", "Komga", None)
     }
 
     fn logo_url(&self) -> &'static str {
