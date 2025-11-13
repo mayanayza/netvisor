@@ -233,6 +233,7 @@ pub mod jaeger;
 pub mod nagios;
 pub mod netdata;
 pub mod prometheus;
+pub mod pulse;
 pub mod sensu;
 pub mod sentry;
 pub mod splunk;
