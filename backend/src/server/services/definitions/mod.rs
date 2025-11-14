@@ -223,6 +223,7 @@ pub mod homarr;
 pub mod homepage;
 pub mod jump;
 pub mod linkstack;
+pub mod proxmox_datacenter_manager;
 
 // Monitoring
 pub mod coolercontrol;
