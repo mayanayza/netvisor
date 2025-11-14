@@ -69,6 +69,7 @@ pub mod tp_link_eap;
 pub mod unifi_access_point;
 
 // NetworkSecurity
+pub mod crowdsec;
 pub mod firewall;
 pub mod fortigate;
 pub mod opn_sense;
@@ -120,6 +121,7 @@ pub mod true_nas;
 // Backup
 pub mod bacula;
 pub mod duplicati;
+pub mod proxmox_backup_server;
 pub mod restic;
 pub mod veeam;
 
@@ -142,6 +144,7 @@ pub mod esphome;
 pub mod home_assistant;
 pub mod openhab;
 pub mod philips_hue_bridge;
+pub mod zigbee2mqtt;
 pub mod zwave_js;
 
 // Virtualization
@@ -173,6 +176,7 @@ pub mod redis_db;
 // Message Queues
 pub mod activemq;
 pub mod kafka;
+pub mod mqtt;
 pub mod rabbitmq;
 
 // Development
@@ -182,6 +186,7 @@ pub mod confluence_server;
 pub mod discourse;
 pub mod jira_server;
 pub mod mattermost;
+pub mod radicale;
 pub mod rocket_chat;
 
 // Development
@@ -231,6 +236,7 @@ pub mod jaeger;
 pub mod nagios;
 pub mod netdata;
 pub mod prometheus;
+pub mod pulse;
 pub mod sensu;
 pub mod sentry;
 pub mod splunk;
@@ -276,6 +282,7 @@ pub mod print_server;
 
 // Various Web/Dashboard/Development apps
 pub mod autobrr;
+pub mod backrest;
 pub mod cleanuparr;
 pub mod grocy;
 pub mod huntarr;
@@ -286,6 +293,7 @@ pub mod mealie;
 pub mod memos;
 pub mod netbootxyz;
 pub mod nut;
+pub mod ollama;
 pub mod open_webui;
 pub mod paperless_ngx;
 pub mod peanut;
@@ -294,6 +302,7 @@ pub mod prowlarr;
 pub mod qbittorrent;
 pub mod radarr;
 pub mod sonarr;
+pub mod wizarr;
 
 // ============= SPECIAL =============
 
