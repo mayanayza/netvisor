@@ -9,4 +9,3 @@
 *.db
 
 src/tests/words.json
-src/tests/*.sql

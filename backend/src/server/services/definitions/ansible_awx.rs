@@ -18,7 +18,7 @@ impl ServiceDefinition for AnsibleAWX {
         ServiceCategory::Development
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/api/v2/", "awx", None)
+        Pattern::Endpoint(PortBase::Http, "/api/v2/", "awx", Some(200..300))
     }
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/ansible.svg"

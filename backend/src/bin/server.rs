@@ -108,10 +108,7 @@ async fn main() -> anyhow::Result<()> {
     let config = ServerConfig::load(cli_args)?;
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
     let web_external_path = config.web_external_path.clone();
-    let integrated_daemon_url = config
-        .integrated_daemon_url
-        .clone()
-        .unwrap_or("http://daemon:60073".to_string());
+    let integrated_daemon_url = config.integrated_daemon_url.clone();
 
     // Initialize tracing
     tracing_subscriber::registry()
@@ -219,18 +216,20 @@ async fn main() -> anyhow::Result<()> {
             .create_user(User::new(UserBase::new_seed()))
             .await?;
 
-        let api_key = api_key_service
-            .create(ApiKey::new(ApiKeyBase {
-                key: "".to_string(),
-                name: "Integrated Daemon API Key".to_string(),
-                last_used: None,
-                expires_at: None,
-                network_id: network.id,
-                is_enabled: true,
-            }))
-            .await?;
+        if let Some(integrated_daemon_url) = integrated_daemon_url {
+            let api_key = api_key_service
+                .create(ApiKey::new(ApiKeyBase {
+                    key: "".to_string(),
+                    name: "Integrated Daemon API Key".to_string(),
+                    last_used: None,
+                    expires_at: None,
+                    network_id: network.id,
+                    is_enabled: true,
+                }))
+                .await?;
 
-        initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
+            initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
+        }
     } else {
         tracing::debug!("Server already has data, skipping seed data");
     }

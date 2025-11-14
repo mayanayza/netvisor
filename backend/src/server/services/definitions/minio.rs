@@ -18,7 +18,7 @@ impl ServiceDefinition for MinIO {
         ServiceCategory::Storage
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http9000, "/minio/health/live", "", None)
+        Pattern::Endpoint(PortBase::Http9000, "/minio/health/live", "", Some(200..300))
     }
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/minio.svg"
