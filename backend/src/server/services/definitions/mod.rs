@@ -286,6 +286,7 @@ pub mod print_server;
 pub mod autobrr;
 pub mod backrest;
 pub mod cleanuparr;
+pub mod freshrss;
 pub mod grocy;
 pub mod huntarr;
 pub mod karakeep;
