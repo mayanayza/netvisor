@@ -89,6 +89,19 @@
 		/>
 	</OptionsSection>
 
+	<OptionsSection title="Visual">
+		<OptionsCheckbox
+			bind:field={$topologyOptions.no_fade_edges}
+			title="Don't Fade Edges"
+			description="Show edges at full opacity at all times"
+		/>
+		<OptionsCheckbox
+			bind:field={$topologyOptions.hide_resize_handles}
+			title="Hide Resize Handles"
+			description="Hide subnet resize handles"
+		/>
+	</OptionsSection>
+
 	<OptionsSection title="Docker">
 		<OptionsCheckbox
 			bind:field={$topologyOptions.request_options.group_docker_bridges_by_host}

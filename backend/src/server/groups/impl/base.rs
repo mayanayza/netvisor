@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::server::shared::types::entities::EntitySource;
+use crate::server::topology::types::edges::EdgeStyle;
 use crate::server::{
     groups::r#impl::types::GroupType, shared::types::api::deserialize_empty_string_as_none,
 };
@@ -21,6 +22,8 @@ pub struct GroupBase {
     pub group_type: GroupType,
     pub source: EntitySource,
     pub color: String,
+    #[serde(default)]
+    pub edge_style: EdgeStyle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

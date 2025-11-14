@@ -95,6 +95,20 @@
 			}
 		},
 		{
+			key: 'containerized_by',
+			type: 'string',
+			label: 'Containerized',
+			searchable: true,
+			filterable: true,
+			sortable: true,
+			getValue(item) {
+				return (
+					$services.find((s) => s.id == item.virtualization?.details.service_id)?.name ||
+					'Not Containerized'
+				);
+			}
+		},
+		{
 			key: 'confidence',
 			label: 'Match Confidence',
 			type: 'string',

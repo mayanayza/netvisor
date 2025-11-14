@@ -43,13 +43,16 @@ export interface ServicedDefinitionMetadata {
 
 export interface SubnetTypeMetadata {
 	network_scan_discovery_eligible: boolean;
+	is_for_containers: boolean;
 }
 
 export interface EdgeTypeMetadata {
 	is_dashed: boolean;
 	has_start_marker: boolean;
 	has_end_marker: boolean;
-	edge_style: 'straight' | 'smoothstep' | 'bezier' | 'simplebezier' | 'step';
+	edge_style: 'Straight' | 'Smoothstep' | 'Bezier' | 'Simplebezier' | 'Step';
+	is_group_edge: boolean;
+	is_host_edge: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type

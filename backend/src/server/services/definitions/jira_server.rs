@@ -18,7 +18,12 @@ impl ServiceDefinition for JiraServer {
         ServiceCategory::Collaboration
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http8080, "/rest/api/2/serverInfo", "jira", None)
+        Pattern::Endpoint(
+            PortBase::Http8080,
+            "/rest/api/2/serverInfo",
+            "jira",
+            Some(200..300),
+        )
     }
 }
 

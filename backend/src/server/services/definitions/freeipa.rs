@@ -18,7 +18,7 @@ impl ServiceDefinition for FreeIPA {
         ServiceCategory::IdentityAndAccess
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http, "/ipa/ui", "", None)
+        Pattern::Endpoint(PortBase::Http, "/ipa/ui", "", Some(200..300))
     }
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freeipa.svg"

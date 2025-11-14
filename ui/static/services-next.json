@@ -1,0 +1,1076 @@
+[
+  {
+    "description": "NoSQL document database",
+    "discovery_pattern": "Endpoint response body from <ip>:5984/ contains couchdb",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/couchdb.svg",
+    "name": "CouchDB"
+  },
+  {
+    "description": "File sync and share",
+    "discovery_pattern": "Endpoint response body from <ip>:80/status.php contains owncloud",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/owncloud.svg",
+    "name": "ownCloud"
+  },
+  {
+    "description": "Eero device providing mesh network services",
+    "discovery_pattern": "All of: (MAC Address belongs to eero Inc, Not (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.))",
+    "logo_url": "https://www.vectorlogo.zone/logos/eero/eero-icon.svg",
+    "name": "Eero Repeater"
+  },
+  {
+    "description": "Security platform",
+    "discovery_pattern": "Endpoint response body from <ip>:55000/ contains wazuh",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wazuh.svg",
+    "name": "Wazuh"
+  },
+  {
+    "description": "PfSense package for DNS/IP blocking",
+    "discovery_pattern": "All of: (All of: (53/tcp is open, 53/udp is open), Endpoint response body from <ip>:80/pfblockerng contains pfblockerng)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pfsense.svg",
+    "name": "pfBlockerNG"
+  },
+  {
+    "description": "GitOps continuous delivery",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/api/version contains argocd",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/argo-cd.svg",
+    "name": "ArgoCD"
+  },
+  {
+    "description": "A Simple OIDC provider that uses passkeys for authentication",
+    "discovery_pattern": "Endpoint response body from <ip>:1411/app.webmanifest contains Pocket ID",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pocket-id-light.svg",
+    "name": "Pocket ID"
+  },
+  {
+    "description": "Z-Wave controller server",
+    "discovery_pattern": "Endpoint response body from <ip>:8091/health contains ",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/z-wave-js-ui.svg",
+    "name": "Z-Wave JS"
+  },
+  {
+    "description": "Open, extensible, user-friendly interface for AI",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/manifest.json contains Open WebUI",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/open-webui-light.svg",
+    "name": "Open WebUI"
+  },
+  {
+    "description": "Open-source relational database",
+    "discovery_pattern": "5432/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/postgresql.svg",
+    "name": "PostgreSQL"
+  },
+  {
+    "description": "Open-source firewall and routing platform",
+    "discovery_pattern": "All of: (Any of: (Endpoint response body from <ip>:80/ contains opnsense, Endpoint response body from <ip>:443/ contains opnsense), Any of: (53/tcp is open, 53/udp is open, 22/tcp is open, 123/udp is open, 67/udp is open))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/opnsense.svg",
+    "name": "OPNsense"
+  },
+  {
+    "description": "Cloud-native messaging system",
+    "discovery_pattern": "Endpoint response body from <ip>:8222/varz contains ",
+    "logo_url": "https://simpleicons.org/icons/natsdotio.svg",
+    "name": "NATS"
+  },
+  {
+    "description": "QNAP network attached storage system",
+    "discovery_pattern": "All of: (21/tcp is open, Any of: (Endpoint response body from <ip>:80/ contains QNAP, Endpoint response body from <ip>:8080/ contains QNAP))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qnap.svg",
+    "name": "QNAP NAS"
+  },
+  {
+    "description": "Berkeley Internet Name Domain DNS server",
+    "discovery_pattern": "All of: (53/udp is open, 8053/tcp is open)",
+    "logo_url": "",
+    "name": "Bind9"
+  },
+  {
+    "description": "Generic SMB file server",
+    "discovery_pattern": "445/tcp is open",
+    "logo_url": "",
+    "name": "Samba"
+  },
+  {
+    "description": "A generic network storage devices",
+    "discovery_pattern": "2049/tcp is open",
+    "logo_url": "",
+    "name": "Nas Device"
+  },
+  {
+    "description": "API gateway",
+    "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:8080/hello contains tyk",
+    "logo_url": "https://www.vectorlogo.zone/logos/tyk/tyk-icon.svg",
+    "name": "Tyk"
+  },
+  {
+    "description": "Authoritative DNS server with API",
+    "discovery_pattern": "All of: (53/udp is open, 53/tcp is open, 8081/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/powerdns.svg",
+    "name": "PowerDNS"
+  },
+  {
+    "description": "Content management system",
+    "discovery_pattern": "Endpoint response body from <ip>:80/ contains wp-content",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wordpress.svg",
+    "name": "WordPress"
+  },
+  {
+    "description": "Open-source firewall and router platform",
+    "discovery_pattern": "All of: (22/tcp is open, Endpoint response body from <ip>:80/ contains pfsense)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pfsense.svg",
+    "name": "pfSense"
+  },
+  {
+    "description": "Container orchestration platform",
+    "discovery_pattern": "All of: (6443/tcp is open, Any of: (10250/tcp is open, 10259/tcp is open, 10257/tcp is open, 10256/tcp is open))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/kubernetes.svg",
+    "name": "Kubernetes"
+  },
+  {
+    "description": "Philips Hue Bridge for lighting control",
+    "discovery_pattern": "All of: (MAC Address belongs to Philips Lighting BV, Endpoint response body from <ip>:80/ contains hue)",
+    "logo_url": "https://simpleicons.org/icons/philipshue.svg",
+    "name": "Philips Hue Bridge"
+  },
+  {
+    "description": "Load balancer and proxy",
+    "discovery_pattern": "Endpoint response body from <ip>:8404/stats contains haproxy",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/haproxy.svg",
+    "name": "HAProxy"
+  },
+  {
+    "description": "ESP device firmware",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tasmota.svg",
+    "name": "Tasmota"
+  },
+  {
+    "description": "Security Information and Event Management (SIEM) solution and log analytics platform",
+    "discovery_pattern": "All of: (Endpoint response from <ip> has header content-security-policy with value graylog, Endpoint response body from <ip>:9000/ contains Graylog)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/graylog.svg",
+    "name": "Graylog"
+  },
+  {
+    "description": "Enterprise relational database",
+    "discovery_pattern": "1521/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/oracle.svg",
+    "name": "Oracle Database"
+  },
+  {
+    "description": "API gateway",
+    "discovery_pattern": "Endpoint response body from <ip>:8001/ contains kong",
+    "logo_url": "https://simpleicons.org/icons/kong.svg",
+    "name": "Kong"
+  },
+  {
+    "description": "A generic wireless access point for WiFi connectivity",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "",
+    "name": "Access Point"
+  },
+  {
+    "description": "Team communication platform",
+    "discovery_pattern": "Endpoint response body from <ip>:3000/api/info contains rocket",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/rocket-chat.svg",
+    "name": "Rocket.Chat"
+  },
+  {
+    "description": "Camera with RTSP Streaming",
+    "discovery_pattern": "554/tcp is open",
+    "logo_url": "",
+    "name": "RTSP Camera"
+  },
+  {
+    "description": "Ubiquiti UniFi wireless access point",
+    "discovery_pattern": "All of: (MAC Address belongs to Ubiquiti Networks Inc, Endpoint response body from <ip>:80/ contains Unifi)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unifi.svg",
+    "name": "Unifi Access Point"
+  },
+  {
+    "description": "An open-source system cross-platform monitoring tool.",
+    "discovery_pattern": "Endpoint response body from <ip>:61208/ contains Glances",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/glances.svg",
+    "name": "Glances"
+  },
+  {
+    "description": "Web conferencing system",
+    "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:80/bigbluebutton/api contains ",
+    "logo_url": "https://simpleicons.org/icons/bigbluebutton.svg",
+    "name": "BigBlueButton"
+  },
+  {
+    "description": "Fortinet security appliance",
+    "discovery_pattern": "Endpoint response body from <ip>:80/login contains fortinet",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/fortinet.svg",
+    "name": "Fortinet"
+  },
+  {
+    "description": "A TV collection manager for Usenet and BitTorrent users.",
+    "discovery_pattern": "Endpoint response body from <ip>:8989/Content/manifest.json contains Sonarr",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sonarr.svg",
+    "name": "Sonarr"
+  },
+  {
+    "description": "Distributed NoSQL database",
+    "discovery_pattern": "9042/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/apache-cassandra.svg",
+    "name": "Cassandra"
+  },
+  {
+    "description": "A generic Dns server",
+    "discovery_pattern": "Any of: (53/tcp is open, 53/udp is open)",
+    "logo_url": "",
+    "name": "Dns Server"
+  },
+  {
+    "description": "Open-source network attached storage system",
+    "discovery_pattern": "All of: (445/tcp is open, Endpoint response body from <ip>:80/ contains TrueNAS)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/truenas.svg",
+    "name": "TrueNAS"
+  },
+  {
+    "description": "Self-hosted cloud storage and collaboration platform",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:80/core/css/server.css contains Nextcloud GmbH, Endpoint response body from <ip>:443/core/css/server.css contains Nextcloud GmbH)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nextcloud.svg",
+    "name": "NextCloud"
+  },
+  {
+    "description": "Backup and replication",
+    "discovery_pattern": "9392/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/veeam.svg",
+    "name": "Veeam"
+  },
+  {
+    "description": "Google Nest Wifi router",
+    "discovery_pattern": "All of: (Any of: (MAC Address belongs to Nest Labs Inc., MAC Address belongs to Google, Inc.), Host IP is a gateway in daemon's routing tables, or ends in .1 or .254., Endpoint response body from <ip>:80/ contains Nest Wifi)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/google-home.svg",
+    "name": "Google Nest router"
+  },
+  {
+    "description": "Microsoft directory service",
+    "discovery_pattern": "All of: (389/tcp is open, 445/tcp is open, 88/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/microsoft.svg",
+    "name": "Active Directory"
+  },
+  {
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
+  },
+  {
+    "description": "Cross-platform open-source BitTorrent client",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:8080/ contains qBittorrent logo, Endpoint response body from <ip>:8090/ contains qBittorrent logo)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/qbittorrent.svg",
+    "name": "qBittorrent"
+  },
+  {
+    "description": "Sonos wireless speaker system",
+    "discovery_pattern": "All of: (MAC Address belongs to Sonos, Inc., Any of: (445/tcp is open, 3445/tcp is open, 1400/tcp is open, 1410/tcp is open, 1843/tcp is open, 3400/tcp is open, 3401/tcp is open, 3500/tcp is open))",
+    "logo_url": "https://simpleicons.org/icons/sonos.svg",
+    "name": "Sonos Speaker"
+  },
+  {
+    "description": "Finds missing media and upgrades your existing content.",
+    "discovery_pattern": "9705/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/huntarr.png",
+    "name": "Huntarr"
+  },
+  {
+    "description": "MySQL-compatible relational database",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mariadb.svg",
+    "name": "MariaDB"
+  },
+  {
+    "description": "Docker native clustering and orchestration",
+    "discovery_pattern": "All of: (2377/tcp is open, 7946/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker Swarm"
+  },
+  {
+    "description": "Video conferencing",
+    "discovery_pattern": "Endpoint response body from <ip>:8443/ contains jitsilogo.png",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jitsi-meet.svg",
+    "name": "Jitsi Meet"
+  },
+  {
+    "description": "Event streaming platform",
+    "discovery_pattern": "9092/tcp is open",
+    "logo_url": "https://simpleicons.org/icons/apachekafka.svg",
+    "name": "Kafka"
+  },
+  {
+    "description": "Network backup solution",
+    "discovery_pattern": "9101/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/bacula.png",
+    "name": "Bacula"
+  },
+  {
+    "description": "File hosting platform",
+    "discovery_pattern": "Endpoint response body from <ip>:8000/api2/ping contains seafile",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/seafile.svg",
+    "name": "Seafile"
+  },
+  {
+    "description": "A sleek, modern dashboard",
+    "discovery_pattern": "7575/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/homarr.svg",
+    "name": "Homarr"
+  },
+  {
+    "description": "Torrent cleanup tool for Sonarr and Radarr",
+    "discovery_pattern": "11011/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cleanuperr.svg",
+    "name": "Cleanuparr"
+  },
+  {
+    "description": "Distributed tracing system",
+    "discovery_pattern": "Endpoint response body from <ip>:9411/api/v2/services contains ",
+    "logo_url": "",
+    "name": "Zipkin"
+  },
+  {
+    "description": "Identity and access management",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/ contains /keycloak/",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/keycloak.svg",
+    "name": "Keycloak"
+  },
+  {
+    "description": "Microsoft relational database",
+    "discovery_pattern": "1433/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/microsoft-sql-server-light.svg",
+    "name": "Microsoft SQL Server"
+  },
+  {
+    "description": "Home automation system",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/json.htm contains domoticz",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/domoticz.png",
+    "name": "Domoticz"
+  },
+  {
+    "description": "Real-time performance monitoring",
+    "discovery_pattern": "Endpoint response body from <ip>:19999/api/v1/info contains netdata",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/netdata.svg",
+    "name": "Netdata"
+  },
+  {
+    "description": "Web-based Nginx proxy management interface",
+    "discovery_pattern": "Endpoint response body from <ip>:80 contains nginx proxy manager",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nginx-proxy-manager.svg",
+    "name": "Nginx Proxy Manager"
+  },
+  {
+    "description": "Wireguard dashboard for visualizing and managing wireguard clients and server",
+    "discovery_pattern": "All of: (10086/tcp is open, Not (Subnet is type VpnTunnel))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wireguard.svg",
+    "name": "WGDashboard"
+  },
+  {
+    "description": "Publishing platform",
+    "discovery_pattern": "Endpoint response body from <ip>:2368/ contains ghost",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/ghost.png",
+    "name": "Ghost"
+  },
+  {
+    "description": "Fast and secure backup program",
+    "discovery_pattern": "All of: (8000/tcp is open, Endpoint response body from <ip>:80/ contains restic)",
+    "logo_url": "",
+    "name": "Restic"
+  },
+  {
+    "description": "Discussion platform",
+    "discovery_pattern": "Endpoint response body from <ip>:80/srv/status contains discourse",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/discourse.svg",
+    "name": "Discourse"
+  },
+  {
+    "description": "Synology DiskStation Manager NAS system",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/ contains synology, 21/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/synology.svg",
+    "name": "Synology DSM"
+  },
+  {
+    "description": "Analytics and monitoring visualization platform",
+    "discovery_pattern": "Endpoint response body from <ip>:80/ contains grafana.com",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg",
+    "name": "Grafana"
+  },
+  {
+    "description": "Distributed tracing system",
+    "discovery_pattern": "Endpoint response body from <ip>:16686/ contains jaeger",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jaeger.svg",
+    "name": "Jaeger"
+  },
+  {
+    "description": "Automation server for CI/CD",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/ contains jenkins.io",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jenkins.svg",
+    "name": "Jenkins"
+  },
+  {
+    "description": "Fios device providing mesh networking services",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/#/login/ contains fios, Not (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/fios.svg",
+    "name": "Fios Extender"
+  },
+  {
+    "description": "A self-hosted recipe manager and meal planner",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:9000/ contains Mealie, Endpoint response body from <ip>:9000/ contains recipe)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mealie.svg",
+    "name": "Mealie"
+  },
+  {
+    "description": "Infrastructure monitoring",
+    "discovery_pattern": "Endpoint response body from <ip>:5665/v1 contains icinga",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/icinga.svg",
+    "name": "Icinga"
+  },
+  {
+    "description": "Generic FTP file sharing service",
+    "discovery_pattern": "21/tcp is open",
+    "logo_url": "",
+    "name": "FTP Server"
+  },
+  {
+    "description": "Fios device providing routing and gateway services",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/#/login/ contains fios, Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/fios.svg",
+    "name": "Fios Gateway"
+  },
+  {
+    "description": "Project management platform",
+    "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:8080/rest/api/2/serverInfo contains jira",
+    "logo_url": "",
+    "name": "Jira"
+  },
+  {
+    "description": "A media server for your comics, mangas, BDs, magazines and eBooks.",
+    "discovery_pattern": "Endpoint response body from <ip>:25600/ contains Komga",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/komga.svg",
+    "name": "Komga"
+  },
+  {
+    "description": "FTP server",
+    "discovery_pattern": "All of: (21/tcp is open, 14147/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/filezilla.svg",
+    "name": "FileZilla Server"
+  },
+  {
+    "description": "Enterprise monitoring solution",
+    "discovery_pattern": "Endpoint response body from <ip>:80/zabbix contains zabbix",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/zabbix.svg",
+    "name": "Zabbix"
+  },
+  {
+    "description": "A self-hosted startpage and real-time status page",
+    "discovery_pattern": "Endpoint response body from <ip>:8123/ contains Jump",
+    "logo_url": "",
+    "name": "Jump"
+  },
+  {
+    "description": "A movie collection manager for Usenet and BitTorrent users.",
+    "discovery_pattern": "Endpoint response body from <ip>:7878/Content/manifest.json contains Radarr",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/radarr.svg",
+    "name": "Radarr"
+  },
+  {
+    "description": "A highly customizable link sharing platform",
+    "discovery_pattern": "All of: (Endpoint response from <ip> has header set-cookie with value linkstack_session, Endpoint response body from <ip>:8080/ contains LinkStack)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/linkstack.svg",
+    "name": "LinkStack"
+  },
+  {
+    "description": "PXE Boot Server",
+    "discovery_pattern": "Endpoint response body from <ip>:61208/ contains Netbootxyz",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/netbootxyz.svg",
+    "name": "Netbootxyz"
+  },
+  {
+    "description": "Continuous file synchronization service",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/ contains Syncthing, 22000/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/syncthing.svg",
+    "name": "Syncthing"
+  },
+  {
+    "description": "Generic LDAP directory service",
+    "discovery_pattern": "389/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg",
+    "name": "Open LDAP"
+  },
+  {
+    "description": "Open-source virtualization management platform",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:8006/ contains proxmox, 8006/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+    "name": "Proxmox VE"
+  },
+  {
+    "description": "Enterprise Kubernetes",
+    "discovery_pattern": "Endpoint response body from <ip>:6443/healthz contains openshift",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openshift.svg",
+    "name": "OpenShift"
+  },
+  {
+    "description": "A generic printing service",
+    "discovery_pattern": "Any of: (631/tcp is open, 515/tcp is open, 515/udp is open)",
+    "logo_url": "",
+    "name": "Print Server"
+  },
+  {
+    "description": "Java servlet container",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/ contains apache tomcat",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/apache-tomcat.svg",
+    "name": "Tomcat"
+  },
+  {
+    "description": "Time-series monitoring and alerting system",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:80/metrics contains Prometheus, Endpoint response body from <ip>:80/graph contains Prometheus)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prometheus.svg",
+    "name": "Prometheus"
+  },
+  {
+    "description": "Common Unix Printing System",
+    "discovery_pattern": "All of: (631/tcp is open, Endpoint response body from <ip>:80/ contains CUPS)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cups.svg",
+    "name": "CUPS"
+  },
+  {
+    "description": "Personal media server with streaming capabilities",
+    "discovery_pattern": "Endpoint response body from <ip>:8096/emby/System/Info/Public contains Emby",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/emby.svg",
+    "name": "Emby"
+  },
+  {
+    "description": "Multi-cloud CD platform",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://simpleicons.org/icons/spinnaker.svg",
+    "name": "Spinnaker"
+  },
+  {
+    "description": "Open source software application for managing requests for your media library.",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:5055/site.webmanifest contains Overseerr, Not (Endpoint response body from <ip>:5055/ contains Jellyseerr))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/overseerr.svg",
+    "name": "Overseerr"
+  },
+  {
+    "description": "DevOps platform",
+    "discovery_pattern": "All of: (Endpoint response from <ip> has header content-security-policy with value gitlab, Endpoint response body from <ip>:80/ contains gitlab)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/gitlab.svg",
+    "name": "GitLab"
+  },
+  {
+    "description": "Home automation platform",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/rest/ contains openhab",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openhab.svg",
+    "name": "openHAB"
+  },
+  {
+    "description": "Vehicle Maintenance Records and Fuel Mileage Tracker",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/ contains Garage - LubeLogger",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/lubelogger.png",
+    "name": "Lubelogger"
+  },
+  {
+    "description": "Self-hosted audiobook and podcast server.",
+    "discovery_pattern": "13378/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/audiobookshelf.svg",
+    "name": "AudioBookShelf"
+  },
+  {
+    "description": "Data analytics platform",
+    "discovery_pattern": "Endpoint response body from <ip>:8000/ contains splunk",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/splunk.svg",
+    "name": "Splunk"
+  },
+  {
+    "description": "A tiny dashboard for Network UPS Tools",
+    "discovery_pattern": "Endpoint response body from <ip>:3000/api/v1/info contains peanut",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/peanut.svg",
+    "name": "PeaNUT"
+  },
+  {
+    "description": "An HP Printer",
+    "discovery_pattern": "All of: (Any of: (Endpoint response body from <ip>:80 contains LaserJet, Endpoint response body from <ip>:80 contains DeskJet, Endpoint response body from <ip>:80 contains OfficeJet, Endpoint response body from <ip>:8080 contains LaserJet, Endpoint response body from <ip>:8080 contains DeskJet, Endpoint response body from <ip>:8080 contains OfficeJet), Any of: (631/tcp is open, 515/tcp is open, 515/udp is open))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/hp.svg",
+    "name": "Hp Printer"
+  },
+  {
+    "description": "PBX web interface",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/ contains freepbx, 5060/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freepbx.svg",
+    "name": "FreePBX"
+  },
+  {
+    "description": "Self-hosted GitHub",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/github.svg",
+    "name": "GitHub"
+  },
+  {
+    "description": "An open-source, self-hosted note-taking service.",
+    "discovery_pattern": "Endpoint response body from <ip>:5230/explore contains Memos",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/memos.png",
+    "name": "Memos"
+  },
+  {
+    "description": "Google Chromecast streaming device",
+    "discovery_pattern": "All of: (MAC Address belongs to Google, Inc., 8008/tcp is open, 8009/tcp is open)",
+    "logo_url": "https://simpleicons.org/icons/googlecast.svg",
+    "name": "Chromecast"
+  },
+  {
+    "description": "Community-supported document management system",
+    "discovery_pattern": "Endpoint response body from <ip>:8000/accounts/login/? contains Paperless-ngx project",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/paperless-ngx.svg",
+    "name": "Paperless-NGX"
+  },
+  {
+    "description": "PBX and VoIP server",
+    "discovery_pattern": "Endpoint response body from <ip>:8088/httpstatus contains asterisk",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/asterisk.png",
+    "name": "Asterisk"
+  },
+  {
+    "description": "Kubernetes management",
+    "discovery_pattern": "Endpoint response body from <ip>:80/v3 contains rancher",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/rancher.svg",
+    "name": "Rancher"
+  },
+  {
+    "description": "A generic IoT Service",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "",
+    "name": "IoT"
+  },
+  {
+    "description": "Infrastructure monitoring",
+    "discovery_pattern": "Endpoint response body from <ip>:80/nagios contains nagios",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nagios.svg",
+    "name": "Nagios"
+  },
+  {
+    "description": "Message broker",
+    "discovery_pattern": "Endpoint response body from <ip>:8161/admin contains activemq",
+    "logo_url": "https://www.vectorlogo.zone/logos/apache_activemq/apache_activemq-icon.svg",
+    "name": "ActiveMQ"
+  },
+  {
+    "description": "Open source software application for managing requests for your media library.",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:3000/ contains Jellystat, Endpoint response body from <ip>:3000/ contains Jellyfin stats for the masses)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellystat.svg",
+    "name": "Jellystat"
+  },
+  {
+    "description": "The modern autodl-irssi replacement.",
+    "discovery_pattern": "7474/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/autobrr.svg",
+    "name": "Autobrr"
+  },
+  {
+    "description": "Secrets management",
+    "discovery_pattern": "Endpoint response body from <ip>:8200/v1/sys/health contains vault",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/hashicorp-vault.svg",
+    "name": "Vault"
+  },
+  {
+    "description": "NoSQL document database",
+    "discovery_pattern": "27017/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mongodb.svg",
+    "name": "MongoDB"
+  },
+  {
+    "description": "Debian-based NAS solution",
+    "discovery_pattern": "All of: (445/tcp is open, Endpoint response body from <ip>:80/ contains openmediavault)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openmediavault.svg",
+    "name": "OpenMediaVault"
+  },
+  {
+    "description": "Object storage",
+    "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:9000/minio/health/live contains ",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/minio.svg",
+    "name": "MinIO"
+  },
+  {
+    "description": "A modern client-server application for the Soulseek file-sharing network",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:5030/ contains slskd, Endpoint response body from <ip>:5030/api/v0/session/enabled contains true)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/slskd.svg",
+    "name": "Slskd"
+  },
+  {
+    "description": "Desktop computer for productivity work",
+    "discovery_pattern": "All of: (3389/tcp is open, 445/tcp is open)",
+    "logo_url": "",
+    "name": "Workstation"
+  },
+  {
+    "description": "In-memory data store and cache",
+    "discovery_pattern": "6379/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/redis.svg",
+    "name": "Redis"
+  },
+  {
+    "description": "Free media server for personal streaming",
+    "discovery_pattern": "Endpoint response body from <ip>:80/System/Info/Public contains Jellyfin",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyfin.svg",
+    "name": "Jellyfin"
+  },
+  {
+    "description": "Workload orchestration",
+    "discovery_pattern": "Endpoint response body from <ip>:4646/v1/status/leader contains ",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nomad.svg",
+    "name": "Nomad"
+  },
+  {
+    "description": "Eero device providing routing and gateway services",
+    "discovery_pattern": "All of: (MAC Address belongs to eero Inc, Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.)",
+    "logo_url": "https://www.vectorlogo.zone/logos/eero/eero-icon.svg",
+    "name": "Eero Gateway"
+  },
+  {
+    "description": "Google Home smart speaker or display",
+    "discovery_pattern": "All of: (Any of: (MAC Address belongs to Nest Labs Inc., MAC Address belongs to Google, Inc.), All of: (8008/tcp is open, 8009/tcp is open))",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/google-home.svg",
+    "name": "Google Home"
+  },
+  {
+    "description": "A generic gateway",
+    "discovery_pattern": "All of: (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254., A custom match pattern evaluated at runtime)",
+    "logo_url": "",
+    "name": "Gateway"
+  },
+  {
+    "description": "A generic client device that initiates connections to services",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "",
+    "name": "Client"
+  },
+  {
+    "description": "Ansible automation platform",
+    "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:80/api/v2/ contains awx",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/ansible.svg",
+    "name": "AWX"
+  },
+  {
+    "description": "Ring video doorbell or security camera",
+    "discovery_pattern": "All of: (MAC Address belongs to Amazon Technologies Inc., Any of: (8557/tcp is open, 9998/tcp is open, 19302/tcp is open, 9999/tcp is open))",
+    "logo_url": "https://simpleicons.org/icons/ring.svg",
+    "name": "Ring Doorbell"
+  },
+  {
+    "description": "CI/CD server",
+    "discovery_pattern": "Endpoint response body from <ip>:8085/ contains bamboo",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/atlassian-bamboo.svg",
+    "name": "Bamboo"
+  },
+  {
+    "description": "Application performance monitoring",
+    "discovery_pattern": "Endpoint response body from <ip>:8200/ contains apm",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/elastic.svg",
+    "name": "Elastic APM"
+  },
+  {
+    "description": "ESP device management",
+    "discovery_pattern": "6052/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/esphome.svg",
+    "name": "ESPHome"
+  },
+  {
+    "description": "Self-hosted uptime monitoring tool",
+    "discovery_pattern": "Endpoint response body from <ip>:80/ contains Uptime Kuma",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/uptime-kuma.svg",
+    "name": "UptimeKuma"
+  },
+  {
+    "description": "Monitor temperatures, fan speeds, and power in real time.",
+    "discovery_pattern": "Endpoint response body from <ip>:11987/ contains CoolerControl",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cooler-control.svg",
+    "name": "CoolerControl"
+  },
+  {
+    "description": "Git repository management",
+    "discovery_pattern": "Endpoint response body from <ip>:7990/ contains bitbucket",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/bitbucket.svg",
+    "name": "Bitbucket Server"
+  },
+  {
+    "description": "Generic network switch for local area networking",
+    "discovery_pattern": "All of: (Not (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.), All of: (80/tcp is open, 23/tcp is open))",
+    "logo_url": "",
+    "name": "Switch"
+  },
+  {
+    "description": "Automated developer-oriented status page",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/manifest.json contains Gatus",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/gatus.svg",
+    "name": "Gatus"
+  },
+  {
+    "description": "Network UPS Tools",
+    "discovery_pattern": "3493/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nut.svg",
+    "name": "NUT"
+  },
+  {
+    "description": "Network-wide ad and tracker blocking",
+    "discovery_pattern": "All of: (All of: (53/udp is open, 53/tcp is open), Endpoint response body from <ip>:80/ contains AdGuard Home)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/adguard-home.svg",
+    "name": "Adguard Home"
+  },
+  {
+    "description": "Open-source relational database",
+    "discovery_pattern": "3306/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mysql.svg",
+    "name": "MySQL"
+  },
+  {
+    "description": "Distributed storage",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/ contains ceph dashboard",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/ceph.svg",
+    "name": "Ceph"
+  },
+  {
+    "description": "CI/CD server",
+    "discovery_pattern": "Endpoint response body from <ip>:8111/ contains teamcity",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/teamcity-light.svg",
+    "name": "TeamCity"
+  },
+  {
+    "description": "Media server for streaming personal content",
+    "discovery_pattern": "Endpoint response body from <ip>:32400/web/index.html contains Plex",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/plex.svg",
+    "name": "Plex Media Server"
+  },
+  {
+    "description": "Google Nest smoke and CO detector",
+    "discovery_pattern": "All of: (Any of: (MAC Address belongs to Nest Labs Inc., MAC Address belongs to Google, Inc.), 11095/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/google-home.svg",
+    "name": "Nest Protect"
+  },
+  {
+    "description": "Monitor, view analytics, and receive notifications about your Plex Media Server.",
+    "discovery_pattern": "Endpoint response body from <ip>:8181/ contains Tautulli",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tautulli.svg",
+    "name": "Tautulli"
+  },
+  {
+    "description": "Container-native CI platform",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/ contains drone, Endpoint response body from <ip>:80/api/user contains )",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/drone.png",
+    "name": "Drone"
+  },
+  {
+    "description": "Self-hosted photo and video management solution",
+    "discovery_pattern": "Endpoint response body from <ip>:2283/photos contains Immich",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/immich.svg",
+    "name": "Immich"
+  },
+  {
+    "description": "TP-Link EAP wireless access point",
+    "discovery_pattern": "All of: (MAC Address belongs to TP-LINK TECHNOLOGIES CO.,LTD, Endpoint response body from <ip>:80/ contains tp-link)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tp-link.svg",
+    "name": "TP-Link EAP"
+  },
+  {
+    "description": "A generic Dhcp server",
+    "discovery_pattern": "67/udp is open",
+    "logo_url": "",
+    "name": "Dhcp Server"
+  },
+  {
+    "description": "Roku streaming device or TV",
+    "discovery_pattern": "All of: (MAC Address belongs to Roku, Inc, 8060/tcp is open)",
+    "logo_url": "https://simpleicons.org/icons/roku.svg",
+    "name": "Roku Media Player"
+  },
+  {
+    "description": "Password manager",
+    "discovery_pattern": "Endpoint response body from <ip>:80/api/config contains bitwarden",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/bitwarden.svg",
+    "name": "Bitwarden"
+  },
+  {
+    "description": "Google Nest smart thermostat",
+    "discovery_pattern": "All of: (Any of: (MAC Address belongs to Nest Labs Inc., MAC Address belongs to Google, Inc.), 9543/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/google-home.svg",
+    "name": "Nest Thermostat"
+  },
+  {
+    "description": "Open-source home automation platform",
+    "discovery_pattern": "Endpoint response body from <ip>:8123/auth/authorize contains home assistant",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/home-assistant.svg",
+    "name": "Home Assistant"
+  },
+  {
+    "description": "Team collaboration wiki",
+    "discovery_pattern": "Endpoint response body from <ip>:8090/ contains confluence",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/confluence.svg",
+    "name": "Confluence"
+  },
+  {
+    "description": "A generic docker container",
+    "discovery_pattern": "All of: (Service is running in a docker container, A custom match pattern evaluated at runtime)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker Container"
+  },
+  {
+    "description": "Identity management system",
+    "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:80/ipa/ui contains ",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freeipa.svg",
+    "name": "FreeIPA"
+  },
+  {
+    "description": "Open source software application for managing requests for your media library.",
+    "discovery_pattern": "Endpoint response body from <ip>:5055/ contains Jellyseerr",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyseerr.svg",
+    "name": "Jellyseerr"
+  },
+  {
+    "description": "NetVisor Daemon API for network scanning",
+    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
+    "logo_url": "/logos/netvisor-logo.png",
+    "name": "NetVisor Daemon API"
+  },
+  {
+    "description": "Recursive DNS resolver with control interface",
+    "discovery_pattern": "All of: (53/udp is open, 8953/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unbound.svg",
+    "name": "Unbound DNS"
+  },
+  {
+    "description": "Google Nest Wifi repeater",
+    "discovery_pattern": "All of: (Any of: (MAC Address belongs to Nest Labs Inc., MAC Address belongs to Google, Inc.), Not (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.), Endpoint response body from <ip>:80/ contains Nest Wifi)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/google-home.svg",
+    "name": "Google Nest repeater"
+  },
+  {
+    "description": "A music collection manager for Usenet and BitTorrent users.",
+    "discovery_pattern": "Endpoint response body from <ip>:8686/Content/manifest.json contains Lidarr",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/lidarr.svg",
+    "name": "Lidarr"
+  },
+  {
+    "description": "Message broker",
+    "discovery_pattern": "Endpoint response body from <ip>:15672/ contains rabbitmq",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/rabbitmq.svg",
+    "name": "RabbitMQ"
+  },
+  {
+    "description": "Generic network security appliance",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "",
+    "name": "Firewall"
+  },
+  {
+    "description": "Session initiation protocol",
+    "discovery_pattern": "Any of: (5060/tcp is open, 5061/tcp is open)",
+    "logo_url": "",
+    "name": "SIP Server"
+  },
+  {
+    "description": "Generic network file system",
+    "discovery_pattern": "2049/tcp is open",
+    "logo_url": "",
+    "name": "NFS"
+  },
+  {
+    "description": "Cross-platform backup client with encryption",
+    "discovery_pattern": "Endpoint response body from <ip>:8200/ngax/index.html contains Duplicati",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/duplicati.svg",
+    "name": "Duplicati"
+  },
+  {
+    "description": "Amazon Echo smart speaker",
+    "discovery_pattern": "All of: (MAC Address belongs to Amazon Technologies Inc., 40317/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/alexa.svg",
+    "name": "Amazon Echo"
+  },
+  {
+    "description": "Team messaging platform",
+    "discovery_pattern": "Endpoint response body from <ip>:8065/api/v4/system/ping contains ",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mattermost.svg",
+    "name": "Mattermost"
+  },
+  {
+    "description": "The Ultimate Indexer Manager.",
+    "discovery_pattern": "Endpoint response body from <ip>:3232/Content/Images/Icons/manifest.json contains Prowlarr",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/prowlarr.svg",
+    "name": "Prowlarr"
+  },
+  {
+    "description": "Monitoring framework",
+    "discovery_pattern": "Endpoint response body from <ip>:4567/health contains sensu",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sensu.svg",
+    "name": "Sensu"
+  },
+  {
+    "description": "A self-hosted, open source identity provider",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:9000/ contains window.authentik, Endpoint response body from <ip>:9443/ contains window.authentik)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg",
+    "name": "Authentik"
+  },
+  {
+    "description": "Modern reverse proxy and load balancer",
+    "discovery_pattern": "Endpoint response body from <ip>:80/dashboard contains traefik",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/traefik.svg",
+    "name": "Traefik"
+  },
+  {
+    "description": "Container management web interface",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:9443/#!/auth contains portainer.io, Endpoint response body from <ip>:9000/ contains portainer.io)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/portainer.svg",
+    "name": "Portainer"
+  },
+  {
+    "description": "Web-based self-hosted groceries & household management solution",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:80/ contains grocy.css, Endpoint response body from <ip>:443/ contains grocy.css)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grocy.svg",
+    "name": "Grocy"
+  },
+  {
+    "description": "Self-hosted Bitwarden-compatible server, written in Rust",
+    "discovery_pattern": "Endpoint response body from <ip>:8000/manifest.json contains Vaultwarden Web",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/vaultwarden.svg",
+    "name": "Vaultwarden"
+  },
+  {
+    "description": "Cloudflare tunnel daemon",
+    "discovery_pattern": "Endpoint response body from <ip>:80/metrics contains cloudflared",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cloudflare.svg",
+    "name": "Cloudflared"
+  },
+  {
+    "description": "NetVisor Server API for network management",
+    "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains netvisor",
+    "logo_url": "/logos/netvisor-logo.png",
+    "name": "NetVisor Server API"
+  },
+  {
+    "description": "A generic web service",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "",
+    "name": "Web Service"
+  },
+  {
+    "description": "Error tracking platform",
+    "discovery_pattern": "Endpoint response body from <ip>:9000/api/0/ contains sentry",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sentry.svg",
+    "name": "Sentry"
+  },
+  {
+    "description": "A self-hosted dashboard for your homelab",
+    "discovery_pattern": "Endpoint response body from <ip>:3000/site.webmanifest contains Homepage",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/homepage.webp",
+    "name": "Homepage"
+  },
+  {
+    "description": "Network-wide ad blocking DNS service",
+    "discovery_pattern": "All of: (Any of: (53/udp is open, 53/tcp is open), Endpoint response body from <ip>:80/admin contains pi-hole)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pi-hole.svg",
+    "name": "Pi-Hole"
+  },
+  {
+    "description": "The Bookmark Everything App",
+    "discovery_pattern": "Endpoint response body from <ip>:3000/manifest.json contains Karakeep",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/karakeep.svg",
+    "name": "Karakeep"
+  }
+]

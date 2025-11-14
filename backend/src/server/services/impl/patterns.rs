@@ -111,7 +111,7 @@ pub enum Pattern<'a> {
     /// PortBase: If provided, check headers on a response from the specific port. Otherwise, use any port.
     /// header: &str - Header name
     /// value: &str - string to match on in value
-    /// status_code: optional, defaults to 199..400 (any ok or redirect)
+    /// status_code: optional, defaults to 200..300 (any ok or redirect)
     Header(Option<PortBase>, &'a str, &'a str, Option<Range<u16>>),
 
     /// Whether the subnet that the host was found on matches a subnet type
@@ -316,7 +316,7 @@ impl Pattern<'_> {
                             .unwrap_or(true);
 
                         let expected_range =
-                            expected_status_code_range.as_ref().unwrap_or(&(199..300));
+                            expected_status_code_range.as_ref().unwrap_or(&(200..400));
                         let status_code_in_range = expected_range.contains(&actual.status);
 
                         let headers_contain_value = actual.headers.iter().any(|(header, value)| {
@@ -396,7 +396,7 @@ impl Pattern<'_> {
                             && actual.endpoint.path == endpoint.path;
 
                         let expected_range =
-                            expected_status_code_range.as_ref().unwrap_or(&(199..300));
+                            expected_status_code_range.as_ref().unwrap_or(&(200..400));
                         let status_code_in_range = expected_range.contains(&actual.status);
 
                         let body_contains_match_string = actual
@@ -799,7 +799,6 @@ mod tests {
     use crate::server::services::r#impl::base::Service;
     use crate::server::services::r#impl::virtualization::ServiceVirtualization;
     use crate::tests::{network, user};
-    use serial_test::serial;
     use uuid::Uuid;
 
     use crate::{
@@ -904,9 +903,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    #[serial]
-    async fn test_pattern_port_matching() {
+    #[test]
+    fn test_pattern_port_matching() {
         let ctx = TestContext::new();
 
         let ports = vec![PortBase::DnsUdp, PortBase::DnsTcp];
@@ -931,7 +929,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_pattern_and_logic() {
         let ctx = TestContext::new();
 
@@ -974,7 +971,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_pattern_or_logic() {
         let ctx = TestContext::new();
 

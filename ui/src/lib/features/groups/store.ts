@@ -70,7 +70,8 @@ export function createEmptyGroupFormData(): Group {
 			type: 'Manual'
 		},
 		network_id: get(currentNetwork).id,
-		color: entities.getColorHelper('Group').string
+		color: entities.getColorHelper('Group').string,
+		edge_style: 'Straight'
 	};
 }
 

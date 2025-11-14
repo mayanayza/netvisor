@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { writable } from 'svelte/store';
+	import { writable, get } from 'svelte/store';
 	import {
 		SvelteFlow,
 		Controls,
@@ -20,6 +20,7 @@
 	import CustomEdge from './CustomEdge.svelte';
 	import { type TopologyEdge } from '../types/base';
 	import { onMount } from 'svelte';
+	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../interactions';
 
 	// Define node types
 	const nodeTypes = {
@@ -48,6 +49,30 @@
 	$effect(() => {
 		if ($topology?.edges || $topology?.nodes) {
 			void loadTopologyData();
+		}
+	});
+
+	// Update edges when selection changes
+	$effect(() => {
+		void $selectedNode;
+		void $selectedEdge;
+
+		if ($topology?.edges) {
+			const currentEdges = get(edges);
+			updateConnectedNodes($selectedNode, $selectedEdge, currentEdges);
+
+			// Update edge animated state based on selection
+			const updatedEdges = currentEdges.map((edge) => {
+				const { shouldAnimate } = getEdgeDisplayState(edge, $selectedNode, $selectedEdge);
+
+				return {
+					...edge,
+					id: edge.id, // Force new reference
+					animated: shouldAnimate
+				};
+			});
+
+			edges.set(updatedEdges);
 		}
 	});
 
@@ -91,17 +116,16 @@
 				// Set nodes
 				nodes.set(sortedNodes);
 
-				// Create edges and store them for later
+				// Create edges with markers
 				const flowEdges: Edge[] = $topology.edges
 					.filter(
 						([, , edge]: [number, number, TopologyEdge]) => edge.edge_type != 'HostVirtualization'
 					)
 					.map(([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
 						const edgeType = edge.edge_type as string;
-						let edgeMetadata = edgeTypes.getMetadata(edgeType);
-						let edgeColorHelper = edgeTypes.getColorHelper(edgeType);
+						const edgeMetadata = edgeTypes.getMetadata(edgeType);
+						const edgeColorHelper = edgeTypes.getColorHelper(edgeType);
 
-						const dashArray = edgeMetadata.is_dashed ? 'stroke-dasharray: 5,5;' : '';
 						const markerStart = !edgeMetadata.has_start_marker
 							? undefined
 							: ({
@@ -125,8 +149,9 @@
 							targetHandle: edge.target_handle.toString(),
 							type: 'custom',
 							label: edge.label,
-							style: `stroke: ${edgeColorHelper.rgb}; stroke-width: 2px; ${dashArray}`,
-							data: edge
+							data: { ...edge, edgeIndex: index },
+							animated: false,
+							interactionWidth: 50
 						};
 					});
 
@@ -148,6 +173,29 @@
 		selectedNode.set(null);
 		optionsPanelExpanded.set(true);
 	}
+
+	function onPaneClick() {
+		selectedNode.set(null);
+		selectedEdge.set(null);
+	}
+
+	function hoveredEdge({ edge }: { edge: Edge }) {
+		const currentEdges = get(edges);
+		toggleEdgeHover(edge, currentEdges);
+
+		// Update animated state for all edges after hover toggle
+		const updatedEdges = currentEdges.map((e) => {
+			const { shouldAnimate } = getEdgeDisplayState(e, $selectedNode, $selectedEdge);
+
+			return {
+				...e,
+				id: e.id,
+				animated: shouldAnimate
+			};
+		});
+
+		edges.set(updatedEdges);
+	}
 </script>
 
 <div class="h-[calc(100vh-150px)] w-full overflow-hidden rounded-2xl border border-gray-700">
@@ -156,9 +204,13 @@
 		edges={$edges}
 		{nodeTypes}
 		edgeTypes={customEdgeTypes}
+		onpaneclick={onPaneClick}
 		onedgeclick={onEdgeClick}
 		onnodeclick={onNodeClick}
+		onedgepointerenter={hoveredEdge}
+		onedgepointerleave={hoveredEdge}
 		fitView
+		minZoom={0.1}
 		noPanClass="nopan"
 		snapGrid={[25, 25]}
 		nodesDraggable={true}

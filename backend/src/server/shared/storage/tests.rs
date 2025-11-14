@@ -1,14 +1,14 @@
-use crate::tests::setup_test_db;
-use std::path::Path;
-use std::process::Command;
-
-use crate::tests::SERVER_DB_FIXTURE;
-
 #[tokio::test]
-async fn test_database_schema_backward_compatibility() {
+pub async fn test_database_schema_backward_compatibility() {
+    use crate::tests::SERVER_DB_FIXTURE;
+    use crate::tests::setup_test_db;
+    use std::path::Path;
+
     let db_path = Path::new(SERVER_DB_FIXTURE);
 
     if db_path.exists() {
+        use std::process::Command;
+
         println!("Testing backward compatibility with database from latest release");
 
         let (pool, database_url, _container) = setup_test_db().await;

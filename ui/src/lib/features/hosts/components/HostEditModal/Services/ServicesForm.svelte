@@ -91,7 +91,7 @@
 				allowItemRemove={() => true}
 				optionDisplayComponent={ServiceTypeDisplay}
 				itemDisplayComponent={ServiceDisplay}
-				getItemContext={() => ({ interfaceIds: [] })}
+				getItemContext={() => ({})}
 				onAdd={handleAddService}
 				onRemove={handleRemoveService}
 				{onMoveDown}

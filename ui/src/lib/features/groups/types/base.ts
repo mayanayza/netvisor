@@ -13,6 +13,7 @@ interface BaseGroup {
 	source: EntitySource;
 	network_id: string;
 	color: string;
+	edge_style: 'Straight' | 'SmoothStep' | 'Step' | 'Bezier' | 'SimpleBezier';
 }
 
 export interface RequestPathGroup extends BaseGroup {

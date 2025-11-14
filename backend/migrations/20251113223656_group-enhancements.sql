@@ -1,0 +1,2 @@
+ALTER TABLE groups 
+ADD COLUMN IF NOT EXISTS edge_style TEXT DEFAULT '"SmoothStep"';

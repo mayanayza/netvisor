@@ -7,5 +7,5 @@
 
 # Ignore all .db files
 *.db
-*.sql
+
 src/tests/words.json

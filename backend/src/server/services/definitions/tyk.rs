@@ -18,7 +18,7 @@ impl ServiceDefinition for Tyk {
         ServiceCategory::ReverseProxy
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http8080, "/hello", "tyk", None)
+        Pattern::Endpoint(PortBase::Http8080, "/hello", "tyk", Some(200..300))
     }
     fn logo_url(&self) -> &'static str {
         "https://www.vectorlogo.zone/logos/tyk/tyk-icon.svg"

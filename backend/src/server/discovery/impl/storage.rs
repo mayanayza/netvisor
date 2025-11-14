@@ -1,4 +1,3 @@
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -92,10 +91,10 @@ impl StorableEntity for Discovery {
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         let discovery_type: DiscoveryType =
             serde_json::from_value(row.get::<serde_json::Value, _>("discovery_type"))
-                .or(Err(Error::msg("Failed to deserialize discovery_type")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize discovery_type: {}", e))?;
 
         let run_type: RunType = serde_json::from_value(row.get::<serde_json::Value, _>("run_type"))
-            .or(Err(Error::msg("Failed to deserialize run_type")))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize run_type: {}", e))?;
 
         Ok(Discovery {
             id: row.get("id"),

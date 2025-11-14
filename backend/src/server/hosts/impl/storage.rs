@@ -1,4 +1,3 @@
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -117,20 +116,20 @@ impl StorableEntity for Host {
         // Parse JSON fields safely
         let services: Vec<Uuid> =
             serde_json::from_value(row.get::<serde_json::Value, _>("services"))
-                .or(Err(Error::msg("Failed to deserialize services")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize services: {}", e))?;
         let interfaces: Vec<Interface> =
             serde_json::from_value(row.get::<serde_json::Value, _>("interfaces"))
-                .or(Err(Error::msg("Failed to deserialize interfaces")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize interfaces: {}", e))?;
         let target: HostTarget = serde_json::from_value(row.get::<serde_json::Value, _>("target"))
-            .or(Err(Error::msg("Failed to deserialize target")))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize target: {}", e))?;
         let ports: Vec<Port> = serde_json::from_value(row.get::<serde_json::Value, _>("ports"))
-            .or(Err(Error::msg("Failed to deserialize ports")))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize ports: {}", e))?;
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
-                .or(Err(Error::msg("Failed to deserialize source")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;
         let virtualization: Option<HostVirtualization> =
             serde_json::from_value(row.get::<serde_json::Value, _>("virtualization"))
-                .or(Err(Error::msg("Failed to deserialize virtualization")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize virtualization: {}", e))?;
 
         Ok(Host {
             id: row.get("id"),
