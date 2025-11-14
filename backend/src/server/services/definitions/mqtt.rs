@@ -21,7 +21,7 @@ impl ServiceDefinition for MQTT {
         Pattern::Port(PortBase::Mqtt)
     }
     fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mosquitto.svg"
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mqtt.svg"
     }
     fn is_generic(&self) -> bool {
         true
