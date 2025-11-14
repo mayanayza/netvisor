@@ -77,6 +77,7 @@ export interface InterfaceEdge {
 export interface ServiceVirtualizationEdge {
 	edge_type: 'ServiceVirtualization';
 	containerizing_service_id: string;
+	host_id: string;
 }
 
 export interface HostVirtualizationEdge {
@@ -110,6 +111,8 @@ export interface TopologyRequestOptions {
 
 export interface TopologyOptions {
 	left_zone_title: string;
+	no_fade_edges: boolean;
+	hide_resize_handles: boolean;
 	hide_edge_types: string[];
 	request_options: TopologyRequestOptions;
 }

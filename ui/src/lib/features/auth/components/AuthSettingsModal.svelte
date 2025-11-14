@@ -24,8 +24,6 @@
 	let isLinkingOidc = false;
 	let savingCredentials = false;
 
-	console.log(enableOidc);
-
 	let formData: { email: string; password: string; confirmPassword: string } = {
 		email: '',
 		password: '',

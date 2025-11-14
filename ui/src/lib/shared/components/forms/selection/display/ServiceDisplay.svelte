@@ -1,35 +1,47 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	interface InterfaceIds {
-		interfaceIds: string[];
+	interface InterfaceId {
+		interfaceId: string | null;
 	}
 
-	export const ServiceDisplay: EntityDisplayComponent<Service, InterfaceIds> = {
+	export const ServiceDisplay: EntityDisplayComponent<Service, InterfaceId> = {
 		getId: (service: Service) => service.id,
 		getLabel: (service: Service) => service.name,
 		getDescription: (service: Service, context) => {
-			console.log(service);
-			console.log(context.interfaceIds);
 			let descriptionItems = [];
 
+			// Filter bindings relevant to the interface(s)
 			let bindingsOnInterface = service.bindings.filter((b) =>
-				b.interface_id
-					? context.interfaceIds.includes(b.interface_id) || context.interfaceIds.length == 0
-					: true
-			).length;
+				b.interface_id ? context.interfaceId == b.interface_id || context.interfaceId == null : true
+			);
 
-			descriptionItems.push(`${bindingsOnInterface} binding${bindingsOnInterface > 1 ? 's' : ''} 
-			on ${
-				context.interfaceIds.length == 0
-					? 'all interfaces'
-					: context.interfaceIds
-							.map((i) => {
-								const iface = get(getInterfaceFromId(i));
-								return iface ? formatInterface(iface) : 'Unknown Interface';
-							})
-							.join(', ')
-			}`);
+			// If specific interface(s) provided, show port details
+			if (context.interfaceId && context.interfaceId.length > 0) {
+				const portBindings = bindingsOnInterface.filter((b) => b.type === 'Port');
+
+				let bindingDescriptions: string[] = [];
+
+				// Add port bindings
+				if (portBindings.length > 0) {
+					for (const binding of portBindings) {
+						const port = binding.port_id ? get(getPortFromId(binding.port_id)) : null;
+
+						if (port) {
+							bindingDescriptions.push(formatPort(port));
+						}
+					}
+				}
+
+				if (bindingDescriptions.length > 0) {
+					descriptionItems.push('Listening on ports: ' + bindingDescriptions.join(', '));
+				}
+			} else {
+				// No specific interface - show binding count across all interfaces
+				descriptionItems.push(
+					`${bindingsOnInterface.length} binding${bindingsOnInterface.length > 1 ? 's' : ''} on all interfaces`
+				);
+			}
 
 			if (service.source.type == 'DiscoveryWithMatch') {
 				let confidence = service.source.details.confidence;
@@ -70,11 +82,12 @@
 	import type { Service } from '$lib/features/services/types/base';
 	import type { TagProps } from '$lib/shared/components/data/types';
 	import { matchConfidenceLabel } from '$lib/shared/types';
-	import { formatInterface, getInterfaceFromId } from '$lib/features/hosts/store';
+	import { getPortFromId } from '$lib/features/hosts/store';
+	import { formatPort } from '$lib/shared/utils/formatting';
 	import { get } from 'svelte/store';
 
 	export let item: Service;
-	export let context: InterfaceIds;
+	export let context: InterfaceId;
 </script>
 
 <ListSelectItem {item} {context} displayComponent={ServiceDisplay} />

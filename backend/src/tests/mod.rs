@@ -28,6 +28,7 @@ use crate::server::{
         base::{Subnet, SubnetBase},
         types::SubnetType,
     },
+    topology::types::edges::EdgeStyle,
     users::r#impl::base::{User, UserBase},
 };
 use axum::Router;
@@ -145,6 +146,7 @@ pub fn group(network_id: &Uuid) -> Group {
             service_bindings: vec![],
         },
         source: EntitySource::System,
+        edge_style: EdgeStyle::Bezier,
     })
 }
 

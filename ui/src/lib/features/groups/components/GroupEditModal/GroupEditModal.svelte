@@ -9,6 +9,7 @@
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import GroupDetailsForm from './GroupDetailsForm.svelte';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
+	import EdgeStyleForm from './EdgeStyleForm.svelte';
 
 	export let group: Group | null = null;
 	export let isOpen = false;
@@ -148,6 +149,16 @@
 								onMoveUp={(index) => handleServiceBindingsReorder(index, index - 1)}
 								onMoveDown={(index) => handleServiceBindingsReorder(index, index + 1)}
 							/>
+						</div>
+					</div>
+				</div>
+
+				<!-- Edge Style Section -->
+				<div class="space-y-4">
+					<div class="border-t border-gray-700 pt-6">
+						<h3 class="text-primary mb-4 text-lg font-medium">Edge Appearance</h3>
+						<div class="rounded-lg bg-gray-800/50 p-4">
+							<EdgeStyleForm bind:formData />
 						</div>
 					</div>
 				</div>

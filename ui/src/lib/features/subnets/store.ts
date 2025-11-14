@@ -3,6 +3,8 @@ import { api } from '../../shared/utils/api';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import type { Subnet } from './types/base';
 import { currentNetwork } from '../networks/store';
+import type { Interface } from '../hosts/types/base';
+import { hosts } from '../hosts/store';
 
 export const subnets = writable<Subnet[]>([]);
 
@@ -78,5 +80,11 @@ export function isContainerSubnet(id: string): Readable<boolean> {
 			return subnet.cidr == '0.0.0.0/0' && subnet.source.type == 'System';
 		}
 		return false;
+	});
+}
+
+export function getInterfacesOnSubnet(subnet_id: string): Readable<Interface[]> {
+	return derived([hosts], ([$hosts]) => {
+		return $hosts.flatMap((h) => h.interfaces).filter((i) => i.subnet_id == subnet_id);
 	});
 }

@@ -1,4 +1,3 @@
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -13,6 +12,7 @@ use crate::server::{
         storage::traits::{SqlValue, StorableEntity},
         types::entities::EntitySource,
     },
+    topology::types::edges::EdgeStyle,
 };
 
 impl StorableEntity for Group {
@@ -66,6 +66,7 @@ impl StorableEntity for Group {
                     group_type,
                     source,
                     color,
+                    edge_style,
                 },
         } = self.clone();
 
@@ -80,6 +81,7 @@ impl StorableEntity for Group {
                 "source",
                 "group_type",
                 "color",
+                "edge_style",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -91,6 +93,7 @@ impl StorableEntity for Group {
                 SqlValue::EntitySource(source),
                 SqlValue::GroupType(group_type),
                 SqlValue::String(color),
+                SqlValue::String(serde_json::to_string(&edge_style)?),
             ],
         ))
     }
@@ -98,11 +101,14 @@ impl StorableEntity for Group {
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         let group_type: GroupType =
             serde_json::from_value(row.get::<serde_json::Value, _>("group_type"))
-                .or(Err(Error::msg("Failed to deserialize group_type")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize group_type: {}", e))?;
 
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
-                .or(Err(Error::msg("Failed to deserialize group_type")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;
+
+        let edge_style: EdgeStyle = serde_json::from_str(&row.get::<String, _>("edge_style"))
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize edge_style: {}", e))?;
 
         Ok(Group {
             id: row.get("id"),
@@ -113,6 +119,7 @@ impl StorableEntity for Group {
                 description: row.get("description"),
                 network_id: row.get("network_id"),
                 source,
+                edge_style,
                 group_type,
                 color: row.get("color"),
             },

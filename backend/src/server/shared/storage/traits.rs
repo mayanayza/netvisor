@@ -19,6 +19,7 @@ use crate::server::{
     },
     shared::{storage::filter::EntityFilter, types::entities::EntitySource},
     subnets::r#impl::types::SubnetType,
+    topology::types::edges::EdgeStyle,
 };
 
 #[async_trait]
@@ -85,4 +86,5 @@ pub enum SqlValue {
     RunType(RunType),
     DiscoveryType(DiscoveryType),
     DaemonCapabilities(DaemonCapabilities),
+    EdgeStyle(EdgeStyle),
 }

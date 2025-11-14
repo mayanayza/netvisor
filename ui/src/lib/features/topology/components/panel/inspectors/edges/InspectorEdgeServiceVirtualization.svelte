@@ -80,7 +80,7 @@
 		<span class="text-secondary mb-2 block text-sm font-medium">Docker Service</span>
 		<div class="card">
 			<EntityDisplayWrapper
-				context={{ interfaceIds: [] }}
+				context={{ interfaceId: null }}
 				item={$containerizingService}
 				displayComponent={ServiceDisplay}
 			/>
@@ -93,7 +93,7 @@
 	{#each containerizedServices as service (service.id)}
 		<div class="card">
 			<EntityDisplayWrapper
-				context={{ interfaceIds: [] }}
+				context={{ interfaceId: null }}
 				item={service}
 				displayComponent={ServiceDisplay}
 			/>

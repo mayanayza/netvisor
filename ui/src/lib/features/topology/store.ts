@@ -16,6 +16,8 @@ const EXPANDED_STORAGE_KEY = 'netvisor_topology_options_expanded_state';
 const defaultOptions: TopologyOptions = {
 	left_zone_title: 'Infrastructure',
 	hide_edge_types: [],
+	no_fade_edges: false,
+	hide_resize_handles: false,
 	request_options: {
 		group_docker_bridges_by_host: true,
 		hide_ports: false,

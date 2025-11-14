@@ -35,11 +35,11 @@ pub enum EdgeHandle {
 }
 
 #[derive(
-    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr,
+    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr, Display,
 )]
 pub enum EdgeStyle {
-    #[default]
     Straight,
+    #[default]
     SmoothStep,
     Step,
     Bezier,
@@ -239,6 +239,7 @@ pub enum EdgeType {
         vm_service_id: Uuid,
     },
     ServiceVirtualization {
+        host_id: Uuid,
         containerizing_service_id: Uuid,
     },
     RequestPath {
@@ -319,11 +320,22 @@ impl TypeMetadataProvider for EdgeType {
             EdgeType::ServiceVirtualization { .. } => false,
         };
 
+        let is_host_edge = matches!(
+            self,
+            EdgeType::Interface { .. } | EdgeType::ServiceVirtualization { .. }
+        );
+        let is_group_edge = matches!(
+            self,
+            EdgeType::RequestPath { .. } | EdgeType::HubAndSpoke { .. }
+        );
+
         serde_json::json!({
             "is_dashed": is_dashed,
             "has_start_marker": has_start_marker,
             "has_end_marker": has_end_marker,
-            "edge_style": edge_style.to_lowercase()
+            "edge_style": edge_style,
+            "is_host_edge": is_host_edge,
+            "is_group_edge": is_group_edge
         })
     }
 }

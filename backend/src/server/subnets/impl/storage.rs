@@ -1,4 +1,3 @@
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use cidr::IpCidr;
 use sqlx::Row;
@@ -99,12 +98,12 @@ impl StorableEntity for Subnet {
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         // Parse JSON fields safely
         let cidr: IpCidr = serde_json::from_str(&row.get::<String, _>("cidr"))
-            .or(Err(Error::msg("Failed to deserialize cidr")))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize cidr: {}", e))?;
         let subnet_type: SubnetType = serde_json::from_str(&row.get::<String, _>("subnet_type"))
-            .or(Err(Error::msg("Failed to deserialize subnet_type")))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize subnet_type: {}", e))?;
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
-                .or(Err(Error::msg("Failed to deserialize source")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;
 
         Ok(Subnet {
             id: row.get("id"),

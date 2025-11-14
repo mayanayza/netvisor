@@ -1,4 +1,3 @@
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -103,16 +102,16 @@ impl StorableEntity for Service {
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         let service_definition: Box<dyn ServiceDefinition> =
             serde_json::from_str(&row.get::<String, _>("service_definition"))
-                .or(Err(Error::msg("Failed to deserialize service_definition")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize service_definition: {}", e))?;
         let bindings: Vec<Binding> =
             serde_json::from_value(row.get::<serde_json::Value, _>("bindings"))
-                .or(Err(Error::msg("Failed to deserialize bindings")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize bindings: {}", e))?;
         let virtualization: Option<ServiceVirtualization> =
             serde_json::from_value(row.get::<serde_json::Value, _>("virtualization"))
-                .or(Err(Error::msg("Failed to deserialize virtualization")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize virtualization: {}", e))?;
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
-                .or(Err(Error::msg("Failed to deserialize source")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;
 
         Ok(Service {
             id: row.get("id"),
