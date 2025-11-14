@@ -177,6 +177,7 @@ pub mod redis_db;
 pub mod activemq;
 pub mod kafka;
 pub mod mqtt;
+pub mod ntfy;
 pub mod rabbitmq;
 
 // Development
