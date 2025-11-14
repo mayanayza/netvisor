@@ -18,7 +18,10 @@ impl ServiceDefinition for MQTT {
         ServiceCategory::MessageQueue
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Port(PortBase::Mqtt)
+        Pattern::AnyOf(vec![
+            Pattern::Port(PortBase::Mqtt),
+            Pattern::Port(PortBase::MqttTls),
+        ])
     }
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mqtt.svg"
