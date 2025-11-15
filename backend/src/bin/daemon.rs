@@ -68,6 +68,10 @@ struct Cli {
     /// Docker socket proxy
     #[arg(long)]
     docker_proxy: Option<String>,
+
+    /// Allow self-signed certificates
+    #[arg(long)]
+    allow_self_signed_certs: Option<bool>,
 }
 
 impl From<Cli> for CliArgs {
@@ -84,6 +88,7 @@ impl From<Cli> for CliArgs {
             concurrent_scans: cli.concurrent_scans,
             daemon_api_key: cli.daemon_api_key,
             docker_proxy: cli.docker_proxy,
+            allow_self_signed_certs: cli.allow_self_signed_certs,
         }
     }
 }
