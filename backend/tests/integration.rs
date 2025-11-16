@@ -3,10 +3,12 @@ use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::networks::r#impl::Network;
-// #[cfg(feature = "generate-fixtures")]
+use netvisor::server::organizations::r#impl::base::Organization;
+#[cfg(feature = "generate-fixtures")]
 use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
+use netvisor::server::shared::handlers::factory::OnboardingRequest;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
 use netvisor::server::users::r#impl::base::User;
@@ -143,6 +145,23 @@ impl TestClient {
             .await
     }
 
+    /// Onboarding request
+    async fn onboard_request(&self) -> Result<Organization, String> {
+        let response = self
+            .client
+            .post(format!("{}/api/onboarding", BASE_URL))
+            .json(&OnboardingRequest {
+                organization_name: "My Organization".to_string(),
+                network_name: "My Network".to_string(),
+                populate_seed_data: true,
+            })
+            .send()
+            .await
+            .map_err(|e| format!("POST /onboarding failed: {}", e))?;
+
+        self.parse_response(response, "POST /onboarding").await
+    }
+
     /// Parse API response
     async fn parse_response<T: serde::de::DeserializeOwned>(
         &self,
@@ -220,7 +239,7 @@ async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
 
     let test_email: EmailAddress = EmailAddress::new_unchecked("user@example.com");
 
-    // Try to register (will fail if user exists, which is fine)
+    // Try to register
     match client.register(&test_email, TEST_PASSWORD).await {
         Ok(user) => {
             println!("✅ Registered new user: {}", user.base.email);
@@ -233,6 +252,24 @@ async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
         }
         Err(e) => Err(e),
     }
+}
+
+async fn wait_for_organization(client: &TestClient) -> Result<Organization, String> {
+    retry("wait for organization to be created", 15, 2, || async {
+        let organization: Option<Organization> = client.get("/api/organizations").await?;
+
+        organization.ok_or_else(|| "No networks found yet".to_string())
+    })
+    .await
+}
+
+async fn onboard(client: &TestClient) -> Result<(), String> {
+    retry("wait for organization to be created", 15, 2, || async {
+        let _org = client.onboard_request().await?;
+
+        Ok(())
+    })
+    .await
 }
 
 async fn wait_for_network(client: &TestClient) -> Result<Network, String> {
@@ -469,6 +506,18 @@ async fn test_full_integration() {
         .await
         .expect("Failed to authenticate user");
     println!("✅ Authenticated as: {}", user.base.email);
+
+    // Wait for organization
+    println!("\n=== Waiting for Organization ===");
+    let organization = wait_for_organization(&client)
+        .await
+        .expect("Failed to find organization");
+    println!("✅ Organization: {}", organization.base.name);
+
+    // Onboard
+    println!("\n=== Onboarding ===");
+    onboard(&client).await.expect("Failed to onboard");
+    println!("✅ Onboarded");
 
     // Wait for network
     println!("\n=== Waiting for Network ===");

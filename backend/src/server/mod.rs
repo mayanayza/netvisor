@@ -1,11 +1,14 @@
 pub mod api_keys;
 pub mod auth;
+pub mod billing;
 pub mod config;
 pub mod daemons;
 pub mod discovery;
+pub mod github;
 pub mod groups;
 pub mod hosts;
 pub mod networks;
+pub mod organizations;
 pub mod services;
 pub mod shared;
 pub mod subnets;

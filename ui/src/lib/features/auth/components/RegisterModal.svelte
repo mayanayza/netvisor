@@ -3,6 +3,8 @@
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import RegisterForm from './RegisterForm.svelte';
 
+	export let orgName: string | null = null;
+	export let invitedBy: string | null = null;
 	export let isOpen = false;
 	export let onRegister: (data: RegisterRequest) => Promise<void> | void;
 	export let onClose: () => void;
@@ -61,6 +63,16 @@
 	<svelte:fragment slot="header-icon">
 		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
 	</svelte:fragment>
+
+	{#if orgName && invitedBy}
+		<div class="mb-4 rounded-lg border border-blue-500/50 bg-blue-900/20 p-4 text-center">
+			<p class="text-sm text-blue-200">
+				You have been invited to join<br />
+				<span class="font-semibold">{orgName}</span> by
+				<span class="font-semibold">{invitedBy}</span>
+			</p>
+		</div>
+	{/if}
 
 	<!-- Content -->
 	<RegisterForm {formApi} bind:formData />

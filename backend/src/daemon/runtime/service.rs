@@ -1,6 +1,6 @@
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
-use crate::server::daemons::r#impl::api::DaemonCapabilities;
+use crate::server::daemons::r#impl::api::{DaemonCapabilities, DiscoveryUpdatePayload};
 use crate::{
     daemon::shared::storage::ConfigStore,
     server::{
@@ -25,6 +25,50 @@ impl DaemonRuntimeService {
             config_store,
             client: reqwest::Client::new(),
             utils: create_system_utils(),
+        }
+    }
+
+    pub async fn request_work(&self) -> Result<()> {
+        let api_key = self
+            .config_store
+            .get_api_key()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+        let interval = Duration::from_secs(self.config_store.get_heartbeat_interval().await?);
+
+        let mut interval_timer = tokio::time::interval(interval);
+        interval_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+        let server_target = self.config_store.get_server_endpoint().await?;
+
+        loop {
+            interval_timer.tick().await;
+
+            if self.config_store.get_network_id().await?.is_some() {
+                let response = self
+                    .client
+                    .post(format!("{}/api/discovery/request-work", server_target))
+                    .header("Authorization", format!("Bearer {}", api_key))
+                    .send()
+                    .await?;
+
+                tracing::info!("Checking for work...");
+
+                if !response.status().is_success() {
+                    let api_response: ApiResponse<Option<DiscoveryUpdatePayload>> =
+                        response.json().await?;
+
+                    if !api_response.success {
+                        let error_msg = api_response
+                            .error
+                            .unwrap_or_else(|| "Unknown error".to_string());
+                        tracing::warn!("Failed to check for work: {}", error_msg);
+                    } else if let Some(Some(_payload)) = api_response.data {
+                    }
+                }
+            } else {
+                tracing::warn!("network_id not set, skipping work request");
+            }
         }
     }
 

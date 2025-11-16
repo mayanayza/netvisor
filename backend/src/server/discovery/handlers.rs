@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::{AuthenticatedDaemon, AuthenticatedUser},
+    auth::middleware::{AuthenticatedDaemon, AuthenticatedUser, RequireMember},
     config::AppState,
     daemons::r#impl::api::DiscoveryUpdatePayload,
     discovery::r#impl::{base::Discovery, types::RunType},
@@ -8,7 +8,6 @@ use crate::server::{
             create_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
         },
         services::traits::CrudService,
-        storage::filter::EntityFilter,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
 };
@@ -34,11 +33,30 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler::<Discovery>))
         .route("/{id}", delete(delete_handler::<Discovery>))
         .route("/{id}", get(get_by_id_handler::<Discovery>))
+        .route("/request-work", get(receive_work_request))
         .route("/start-session", post(start_session))
         .route("/active-sessions", get(get_active_sessions))
         .route("/{session_id}/cancel", post(cancel_discovery))
         .route("/{session_id}/update", post(receive_discovery_update))
         .route("/stream", get(discovery_stream))
+}
+
+/// Receive work request from daemon and respond with any pending sessions to run
+async fn receive_work_request(
+    State(state): State<Arc<AppState>>,
+    AuthenticatedDaemon(daemon_network_id): AuthenticatedDaemon,
+) -> ApiResult<Json<ApiResponse<Option<DiscoveryUpdatePayload>>>> {
+    let sessions = state
+        .services
+        .discovery_service
+        .get_all_sessions(&[daemon_network_id])
+        .await;
+
+    if let Some(next_session) = sessions.first() {
+        Ok(Json(ApiResponse::success(Some(next_session.clone()))))
+    } else {
+        Ok(Json(ApiResponse::success(None)))
+    }
 }
 
 /// Receive discovery progress update from daemon
@@ -60,7 +78,7 @@ async fn receive_discovery_update(
 /// Endpoint to start a discovery session
 async fn start_session(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Json(discovery_id): Json<Uuid>,
 ) -> ApiResult<Json<ApiResponse<DiscoveryUpdatePayload>>> {
     let mut discovery = state
@@ -126,23 +144,12 @@ async fn discovery_stream(
 /// Get the latest payload from active discovery sessions
 async fn get_active_sessions(
     State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
+    RequireMember(user): RequireMember,
 ) -> ApiResult<Json<ApiResponse<Vec<DiscoveryUpdatePayload>>>> {
-    let user_filter = EntityFilter::unfiltered().user_id(&user.0);
-
-    let network_ids: Vec<Uuid> = state
-        .services
-        .network_service
-        .get_all(user_filter)
-        .await?
-        .iter()
-        .map(|n| n.id)
-        .collect();
-
     let sessions = state
         .services
         .discovery_service
-        .get_all_sessions(&network_ids)
+        .get_all_sessions(&user.network_ids)
         .await;
 
     Ok(Json(ApiResponse::success(sessions)))
@@ -151,7 +158,7 @@ async fn get_active_sessions(
 /// Cancel an active discovery session
 async fn cancel_discovery(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(session_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     state

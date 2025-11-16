@@ -1,29 +1,29 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
-use anyhow::Error;
-use axum::{Router, http::Method};
-use clap::Parser;
-use netvisor::{
-    daemon::runtime::types::InitializeDaemonRequest,
-    server::{
-        api_keys::r#impl::base::{ApiKey, ApiKeyBase},
-        config::{AppState, CliArgs, ServerConfig},
-        shared::{
-            handlers::factory::create_router,
-            services::traits::CrudService,
-            storage::{filter::EntityFilter, traits::StorableEntity},
-        },
-        users::r#impl::base::{User, UserBase},
-    },
+use axum::{
+    Extension, Router,
+    http::{HeaderValue, Method},
 };
+use clap::Parser;
+use netvisor::server::{
+    billing::types::base::{BillingPlan, BillingRate, Price},
+    config::{AppState, CliArgs, ServerConfig},
+    organizations::r#impl::base::{Organization, OrganizationBase},
+    shared::{
+        handlers::{cache::AppCache, factory::create_router},
+        services::traits::CrudService,
+        storage::{filter::EntityFilter, traits::StorableEntity},
+    },
+    users::r#impl::base::{User, UserBase},
+};
+use reqwest::header;
 use tower::ServiceBuilder;
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::CorsLayer,
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use uuid::Uuid;
 
 #[derive(Parser)]
 #[command(name = "netvisor-server")]
@@ -76,6 +76,14 @@ struct Cli {
     /// OIDC redirect url
     #[arg(long)]
     oidc_redirect_url: Option<String>,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    stripe_secret: Option<String>,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    stripe_webhook_secret: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -93,6 +101,8 @@ impl From<Cli> for CliArgs {
             oidc_issuer_url: cli.oidc_issuer_url,
             oidc_provider_name: cli.oidc_provider_name,
             oidc_redirect_url: cli.oidc_redirect_url,
+            stripe_secret: cli.stripe_secret,
+            stripe_webhook_secret: cli.stripe_webhook_secret,
         }
     }
 }
@@ -108,7 +118,6 @@ async fn main() -> anyhow::Result<()> {
     let config = ServerConfig::load(cli_args)?;
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
     let web_external_path = config.web_external_path.clone();
-    let integrated_daemon_url = config.integrated_daemon_url.clone();
 
     // Initialize tracing
     tracing_subscriber::registry()
@@ -122,8 +131,9 @@ async fn main() -> anyhow::Result<()> {
     // Create app state
     let state = AppState::new(config).await?;
     let user_service = state.services.user_service.clone();
-    let api_key_service = state.services.api_key_service.clone();
     let discovery_service = state.services.discovery_service.clone();
+    let organization_service = state.services.organization_service.clone();
+    let billing_service = state.services.billing_service.clone();
 
     // Create discovery cleanup task
     let discovery_cleanup_state = state.clone();
@@ -158,6 +168,16 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // Create invite link cleanup task
+    let organization_service_invite_cleanup = organization_service.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(15 * 60)); // 15 minutes
+        loop {
+            interval.tick().await;
+            organization_service_invite_cleanup.cleanup_expired().await;
+        }
+    });
+
     let session_store = state.storage.sessions.clone();
 
     let api_router = if let Some(static_path) = &web_external_path {
@@ -178,16 +198,36 @@ async fn main() -> anyhow::Result<()> {
         create_router().layer(session_store).with_state(state)
     };
 
+    let cors = if cfg!(debug_assertions) {
+        // Development: Allow localhost with credentials
+        CorsLayer::new()
+            .allow_origin([
+                "http://localhost:5173".parse::<HeaderValue>().unwrap(),
+                "http://localhost:60072".parse::<HeaderValue>().unwrap(),
+                "http://localhost:60073".parse::<HeaderValue>().unwrap(),
+            ])
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT])
+            .allow_credentials(true)
+    } else {
+        // Production: Same-origin, no CORS needed but keep it permissive for future flexibility
+        CorsLayer::permissive()
+    };
+
+    let app_cache = Arc::new(AppCache::new());
+
     // Create main app
     let app = Router::new().merge(api_router).layer(
         ServiceBuilder::new()
             .layer(TraceLayer::new_for_http())
-            .layer(
-                CorsLayer::new()
-                    .allow_origin(Any)
-                    .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-                    .allow_headers(Any),
-            ),
+            .layer(cors)
+            .layer(Extension(app_cache)),
     );
 
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
@@ -209,69 +249,54 @@ async fn main() -> anyhow::Result<()> {
 
     let all_users = user_service.get_all(EntityFilter::unfiltered()).await?;
 
-    // First load - populate seed data
+    if let Some(billing_service) = billing_service {
+        billing_service
+            .initialize_products(vec![
+                BillingPlan::Starter {
+                    price: Price {
+                        cents: 1499,
+                        rate: BillingRate::Month,
+                    },
+                    trial_days: 0,
+                },
+                BillingPlan::Pro {
+                    price: Price {
+                        cents: 2499,
+                        rate: BillingRate::Month,
+                    },
+                    trial_days: 7,
+                },
+                BillingPlan::Team {
+                    price: Price {
+                        cents: 9999,
+                        rate: BillingRate::Month,
+                    },
+                    trial_days: 7,
+                },
+            ])
+            .await?;
+    }
+
+    // First load - populate user and org
     if all_users.is_empty() {
-        tracing::info!("Populating seed data...");
-        let (_, network) = user_service
-            .create_user(User::new(UserBase::new_seed()))
+        let organization = organization_service
+            .create(Organization::new(OrganizationBase {
+                stripe_customer_id: None,
+                plan: None,
+                plan_status: None,
+                name: "My Organization".to_string(),
+                is_onboarded: false,
+            }))
             .await?;
 
-        if let Some(integrated_daemon_url) = integrated_daemon_url {
-            let api_key = api_key_service
-                .create(ApiKey::new(ApiKeyBase {
-                    key: "".to_string(),
-                    name: "Integrated Daemon API Key".to_string(),
-                    last_used: None,
-                    expires_at: None,
-                    network_id: network.id,
-                    is_enabled: true,
-                }))
-                .await?;
-
-            initialize_local_daemon(integrated_daemon_url, network.id, api_key.base.key).await?;
-        }
+        user_service
+            .create_user(User::new(UserBase::new_seed(organization.id)))
+            .await?;
     } else {
         tracing::debug!("Server already has data, skipping seed data");
     }
 
     tokio::signal::ctrl_c().await?;
-
-    Ok(())
-}
-
-pub async fn initialize_local_daemon(
-    daemon_url: String,
-    network_id: Uuid,
-    api_key: String,
-) -> Result<(), Error> {
-    let client = reqwest::Client::new();
-
-    match client
-        .post(format!("{}/api/initialize", daemon_url))
-        .json(&InitializeDaemonRequest {
-            network_id,
-            api_key,
-        })
-        .send()
-        .await
-    {
-        Ok(resp) => {
-            let status = resp.status();
-
-            if status.is_success() {
-                tracing::info!("Successfully initialized daemon");
-            } else {
-                let body = resp
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Could not read body".to_string());
-                tracing::warn!("Daemon returned error. Status: {}, Body: {}", status, body);
-            }
-        }
-        Err(e) => {
-            tracing::warn!("Failed to reach daemon: {:?}", e);
-        }
-    }
 
     Ok(())
 }

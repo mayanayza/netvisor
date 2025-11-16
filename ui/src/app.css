@@ -97,6 +97,10 @@
 		@apply rounded-2xl p-6 shadow-xl transition-all duration-300 ease-in-out;
 	}
 
+	.card-focused {
+		@apply transition-colors hover:border-blue-500;
+	}
+
 	.card-static {
 		@apply hover:ring-0;
 	}
@@ -124,8 +128,11 @@
 	}
 
 	/* Modal components */
-	.modal-backdrop {
-		@apply fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/70 p-4 backdrop-blur-sm;
+	.modal-background {
+		@apply bg-black/70 p-4 backdrop-blur-sm;
+	}
+	.modal-page {
+		@apply fixed inset-0 z-50 flex items-center justify-center overscroll-contain;
 	}
 
 	.modal-container {

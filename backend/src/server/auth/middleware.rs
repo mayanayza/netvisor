@@ -1,6 +1,9 @@
 use crate::server::{
+    billing::types::base::BillingPlan,
     config::AppState,
+    organizations::r#impl::base::Organization,
     shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
+    users::r#impl::permissions::UserOrgPermissions,
 };
 use axum::{
     extract::FromRequestParts,
@@ -22,7 +25,12 @@ impl IntoResponse for AuthError {
 /// Represents either an authenticated user or daemon
 #[derive(Debug, Clone)]
 pub enum AuthenticatedEntity {
-    User(Uuid),   // user_id
+    User {
+        user_id: Uuid,
+        organization_id: Uuid,
+        permissions: UserOrgPermissions,
+        network_ids: Vec<Uuid>,
+    },
     Daemon(Uuid), // network_id
 }
 
@@ -30,22 +38,22 @@ impl AuthenticatedEntity {
     /// Get the user_id if this is a User, otherwise None
     pub fn user_id(&self) -> Option<Uuid> {
         match self {
-            AuthenticatedEntity::User(id) => Some(*id),
+            AuthenticatedEntity::User { user_id, .. } => Some(*user_id),
             _ => None,
         }
     }
 
-    /// Get the network_id if this is a Daemon, otherwise None
-    pub fn network_id(&self) -> Option<Uuid> {
+    /// Get network_ids that daemon / user have access to
+    pub fn network_ids(&self) -> Vec<Uuid> {
         match self {
-            AuthenticatedEntity::Daemon(id) => Some(*id),
-            _ => None,
+            AuthenticatedEntity::Daemon(id) => vec![*id],
+            AuthenticatedEntity::User { network_ids, .. } => network_ids.clone(),
         }
     }
 
     /// Check if this is a user
     pub fn is_user(&self) -> bool {
-        matches!(self, AuthenticatedEntity::User(_))
+        matches!(self, AuthenticatedEntity::User { .. })
     }
 
     /// Check if this is a daemon
@@ -125,12 +133,52 @@ where
             .map_err(|_| AuthError(ApiError::unauthorized("Not authenticated".to_string())))?
             .ok_or_else(|| AuthError(ApiError::unauthorized("Not authenticated".to_string())))?;
 
-        Ok(AuthenticatedEntity::User(user_id))
+        let user = app_state
+            .services
+            .user_service
+            .get_by_id(&user_id)
+            .await
+            .map_err(|_| AuthError(ApiError::unauthorized("User not found".to_string())))?
+            .ok_or_else(|| AuthError(ApiError::unauthorized("User not found".to_string())))?;
+
+        let org_filter = EntityFilter::unfiltered().organization_id(&user.base.organization_id);
+        let network_ids: Vec<Uuid> = app_state
+            .services
+            .network_service
+            .get_all(org_filter)
+            .await
+            .map_err(|_| AuthError(ApiError::internal_error("Failed to load networks")))?
+            .iter()
+            .map(|n| n.id)
+            .collect();
+
+        Ok(AuthenticatedEntity::User {
+            user_id: user.id,
+            organization_id: user.base.organization_id,
+            permissions: user.base.permissions,
+            network_ids,
+        })
     }
 }
 
 /// Extractor that only accepts authenticated users (rejects daemons)
-pub struct AuthenticatedUser(pub Uuid);
+pub struct AuthenticatedUser {
+    pub user_id: Uuid,
+    pub organization_id: Uuid,
+    pub permissions: UserOrgPermissions,
+    pub network_ids: Vec<Uuid>,
+}
+
+impl From<AuthenticatedUser> for AuthenticatedEntity {
+    fn from(value: AuthenticatedUser) -> Self {
+        AuthenticatedEntity::User {
+            user_id: value.user_id,
+            organization_id: value.organization_id,
+            permissions: value.permissions,
+            network_ids: value.network_ids,
+        }
+    }
+}
 
 impl<S> FromRequestParts<S> for AuthenticatedUser
 where
@@ -142,7 +190,17 @@ where
         let entity = AuthenticatedEntity::from_request_parts(parts, state).await?;
 
         match entity {
-            AuthenticatedEntity::User(user_id) => Ok(AuthenticatedUser(user_id)),
+            AuthenticatedEntity::User {
+                user_id,
+                organization_id,
+                permissions,
+                network_ids,
+            } => Ok(AuthenticatedUser {
+                user_id,
+                organization_id,
+                permissions,
+                network_ids,
+            }),
             AuthenticatedEntity::Daemon(_) => Err(AuthError(ApiError::unauthorized(
                 "User authentication required".to_string(),
             ))),
@@ -152,6 +210,12 @@ where
 
 /// Extractor that only accepts authenticated daemons (rejects users)
 pub struct AuthenticatedDaemon(pub Uuid);
+
+impl From<AuthenticatedDaemon> for AuthenticatedEntity {
+    fn from(value: AuthenticatedDaemon) -> Self {
+        AuthenticatedEntity::Daemon(value.0)
+    }
+}
 
 impl<S> FromRequestParts<S> for AuthenticatedDaemon
 where
@@ -164,9 +228,215 @@ where
 
         match entity {
             AuthenticatedEntity::Daemon(network_id) => Ok(AuthenticatedDaemon(network_id)),
-            AuthenticatedEntity::User(_) => Err(AuthError(ApiError::unauthorized(
+            AuthenticatedEntity::User { .. } => Err(AuthError(ApiError::unauthorized(
                 "Daemon authentication required".to_string(),
             ))),
         }
+    }
+}
+
+/// Extractor that accepts either a Member+ user OR a daemon
+/// Returns the network IDs the authenticated entity has access to
+pub struct MemberOrDaemon {
+    pub network_ids: Vec<Uuid>,
+    pub entity: AuthenticatedEntity,
+}
+
+impl<S> FromRequestParts<S> for MemberOrDaemon
+where
+    S: Send + Sync + AsRef<AppState>,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // Get the authenticated entity (works for both users and daemons)
+        let entity = AuthenticatedEntity::from_request_parts(parts, state).await?;
+
+        match entity {
+            AuthenticatedEntity::User { .. } => {
+                // For users, check they're at least Member level
+                let member = RequireMember::from_request_parts(parts, state).await?;
+                let user: AuthenticatedUser = member.into();
+
+                Ok(MemberOrDaemon {
+                    network_ids: user.network_ids.clone(),
+                    entity: user.into(),
+                })
+            }
+            AuthenticatedEntity::Daemon(network_id) => {
+                // Daemons only have access to their single network
+                Ok(MemberOrDaemon {
+                    network_ids: vec![network_id],
+                    entity,
+                })
+            }
+        }
+    }
+}
+
+/// Extractor that requires the user to be at least an Owner
+pub struct RequireOwner(pub AuthenticatedUser);
+
+impl From<RequireOwner> for AuthenticatedUser {
+    fn from(value: RequireOwner) -> Self {
+        value.0
+    }
+}
+
+impl<S> FromRequestParts<S> for RequireOwner
+where
+    S: Send + Sync + AsRef<AppState>,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let user = AuthenticatedUser::from_request_parts(parts, state).await?;
+
+        if user.permissions < UserOrgPermissions::Owner {
+            return Err(AuthError(ApiError::forbidden("Owner permission required")));
+        }
+
+        Ok(RequireOwner(user))
+    }
+}
+
+/// Extractor that requires the user to be at least an Admin
+pub struct RequireAdmin(pub AuthenticatedUser);
+
+impl From<RequireAdmin> for AuthenticatedUser {
+    fn from(value: RequireAdmin) -> Self {
+        value.0
+    }
+}
+
+impl From<RequireOwner> for RequireAdmin {
+    fn from(value: RequireOwner) -> Self {
+        RequireAdmin(value.0)
+    }
+}
+
+impl<S> FromRequestParts<S> for RequireAdmin
+where
+    S: Send + Sync + AsRef<AppState>,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let user = AuthenticatedUser::from_request_parts(parts, state).await?;
+
+        if user.permissions < UserOrgPermissions::Admin {
+            return Err(AuthError(ApiError::forbidden("Admin permission required")));
+        }
+
+        Ok(RequireAdmin(user))
+    }
+}
+
+/// Extractor that requires the user to be at least a Member
+pub struct RequireMember(pub AuthenticatedUser);
+
+impl From<RequireMember> for AuthenticatedUser {
+    fn from(value: RequireMember) -> Self {
+        value.0
+    }
+}
+
+impl From<RequireOwner> for RequireMember {
+    fn from(value: RequireOwner) -> Self {
+        RequireMember(value.0)
+    }
+}
+
+impl From<RequireAdmin> for RequireMember {
+    fn from(value: RequireAdmin) -> Self {
+        RequireMember(value.0)
+    }
+}
+
+impl<S> FromRequestParts<S> for RequireMember
+where
+    S: Send + Sync + AsRef<AppState>,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let user = AuthenticatedUser::from_request_parts(parts, state).await?;
+
+        if user.permissions < UserOrgPermissions::Member {
+            return Err(AuthError(ApiError::forbidden("Member permission required")));
+        }
+
+        Ok(RequireMember(user))
+    }
+}
+
+/// Trait for defining feature requirements
+pub trait FeatureCheck: Send + Sync {
+    fn check(&self, plan: BillingPlan) -> bool;
+    fn error_message(&self) -> &'static str;
+}
+
+/// Extractor that checks organization plan features using a trait
+pub struct RequireFeature<T: FeatureCheck> {
+    pub permissions: UserOrgPermissions,
+    pub plan: BillingPlan,
+    pub organization: Organization,
+    pub _phantom: std::marker::PhantomData<T>,
+}
+
+impl<S, T> FromRequestParts<S> for RequireFeature<T>
+where
+    S: Send + Sync + AsRef<AppState>,
+    T: FeatureCheck + Default,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let AuthenticatedUser {
+            permissions,
+            organization_id,
+            ..
+        } = AuthenticatedUser::from_request_parts(parts, state).await?;
+
+        let app_state = state.as_ref();
+
+        let organization = app_state
+            .services
+            .organization_service
+            .get_by_id(&organization_id)
+            .await
+            .map_err(|_| AuthError(ApiError::internal_error("Failed to load organization")))?
+            .ok_or_else(|| AuthError(ApiError::forbidden("Organization not found")))?;
+
+        let plan =
+            organization.base.plan.as_ref().ok_or_else(|| {
+                AuthError(ApiError::forbidden("Organization has no billing plan"))
+            })?;
+
+        let checker = T::default();
+        if !checker.check(*plan) {
+            return Err(AuthError(ApiError::forbidden(checker.error_message())));
+        }
+
+        Ok(RequireFeature {
+            permissions,
+            plan: *plan,
+            organization,
+            _phantom: std::marker::PhantomData,
+        })
+    }
+}
+
+// Concrete feature checkers
+#[derive(Default)]
+pub struct InviteUsersFeature;
+
+impl FeatureCheck for InviteUsersFeature {
+    fn check(&self, plan: BillingPlan) -> bool {
+        plan.features().team_members || plan.features().share_views
+    }
+
+    fn error_message(&self) -> &'static str {
+        "Your organization plan does not include Team Member or Share Views features"
     }
 }

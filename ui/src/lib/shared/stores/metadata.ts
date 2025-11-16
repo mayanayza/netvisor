@@ -32,6 +32,20 @@ export interface MetadataRegistry {
 	entities: EntityMetadata[];
 	ports: TypeMetadata<PortTypeMetadata>[];
 	discovery_types: TypeMetadata<DiscoveryTypeMetadata>[];
+	billing_plans: TypeMetadata<BillingPlanMetadata>[];
+	features: TypeMetadata<FeatureMetadata>[];
+	permissions: TypeMetadata<PermissionsMetadata>[];
+}
+
+export interface BillingPlanMetadata {
+	features: {
+		max_networks: number | null;
+		// api_access: bool,
+		team_members: boolean;
+		share_views: boolean;
+		onboarding_call: boolean;
+		dedicated_support_channel: boolean;
+	};
 }
 
 export interface ServicedDefinitionMetadata {
@@ -39,6 +53,10 @@ export interface ServicedDefinitionMetadata {
 	manages_virtualization: 'vms' | 'containers';
 	has_logo: boolean;
 	logo_url: string;
+}
+
+export interface PermissionsMetadata {
+	can_manage: string[];
 }
 
 export interface SubnetTypeMetadata {
@@ -57,6 +75,10 @@ export interface EdgeTypeMetadata {
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface GroupTypeMetadata {}
+
+export interface FeatureMetadata {
+	use_null_as_unlimited: boolean;
+}
 
 export interface PortTypeMetadata {
 	is_management: boolean;
@@ -241,6 +263,9 @@ export const groupTypes = createTypeMetadataHelpers('group_types');
 export const entities = createEntityMetadataHelpers('entities');
 export const ports = createTypeMetadataHelpers('ports');
 export const discoveryTypes = createTypeMetadataHelpers('discovery_types');
+export const billingPlans = createTypeMetadataHelpers('billing_plans');
+export const features = createTypeMetadataHelpers('features');
+export const permissions = createTypeMetadataHelpers('permissions');
 
 export async function getMetadata() {
 	await api.request<MetadataRegistry>('/metadata', metadata, (metadata) => metadata, {

@@ -6,8 +6,8 @@
 	import type { Network } from '../types';
 	import { createEmptyNetworkFormData } from '../store';
 	import NetworkDetailsForm from './NetworkDetailsForm.svelte';
-	import { currentUser } from '$lib/features/auth/store';
 	import { pushError } from '$lib/shared/stores/feedback';
+	import { organization } from '$lib/features/organizations/store';
 
 	export let network: Network | null = null;
 	export let isOpen = false;
@@ -36,11 +36,11 @@
 	async function handleSubmit() {
 		// Clean up the data before sending
 
-		if ($currentUser) {
+		if ($organization) {
 			const networkData: Network = {
 				...formData,
 				name: formData.name.trim(),
-				user_id: $currentUser.id
+				organization_id: $organization.id
 			};
 
 			loading = true;

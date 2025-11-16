@@ -1,26 +1,39 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { login, register } from '$lib/features/auth/store';
+	import { checkAuth, login, register } from '$lib/features/auth/store';
 	import LoginModal from '$lib/features/auth/components/LoginModal.svelte';
 	import RegisterModal from '$lib/features/auth/components/RegisterModal.svelte';
 	import type { LoginRequest, RegisterRequest } from '$lib/features/auth/types/base';
-	import { resolve } from '$app/paths';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
+	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
+	import { page } from '$app/stores';
+	import { getOrganization } from '$lib/features/organizations/store';
+	import { navigate } from '$lib/shared/utils/navigation';
 
-	let showLogin = true;
+	let showLogin = $state(true);
+
+	let orgName = $derived($page.url.searchParams.get('org_name'));
+	let invitedBy = $derived($page.url.searchParams.get('invited_by'));
 
 	async function handleLogin(data: LoginRequest) {
-		const success = await login(data);
-		if (success) {
-			await goto(resolve('/'));
-		}
+		const user = await login(data);
+		if (!user) return;
+
+		// Refresh auth state and organization
+		await Promise.all([checkAuth(), getOrganization()]);
+
+		// Navigate to correct destination
+		await navigate();
 	}
 
 	async function handleRegister(data: RegisterRequest) {
-		const success = await register(data);
-		if (success) {
-			await goto(resolve('/'));
-		}
+		const user = await register(data);
+		if (!user) return;
+
+		// Refresh auth state and organization
+		await Promise.all([checkAuth(), getOrganization()]);
+
+		// Navigate to correct destination
+		await navigate();
 	}
 
 	function switchToRegister() {
@@ -35,22 +48,50 @@
 	function handleClose() {}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-900">
-	{#if showLogin}
-		<LoginModal
-			isOpen={true}
-			onLogin={handleLogin}
-			onClose={handleClose}
-			onSwitchToRegister={switchToRegister}
-		/>
-	{:else}
-		<RegisterModal
-			isOpen={true}
-			onRegister={handleRegister}
-			onClose={handleClose}
-			onSwitchToLogin={switchToLogin}
-		/>
-	{/if}
+<div class="relative flex min-h-screen flex-col items-center bg-gray-900 p-4">
+	<!-- Background image with overlay -->
+	<div class="absolute inset-0 z-0">
+		<div
+			class="h-full w-full bg-cover bg-center bg-no-repeat"
+			style="background-image: url('/images/diagram.png')"
+		></div>
+	</div>
+
+	<!-- GitHub Stars Island - positioned absolutely at top -->
+	<div class="absolute bottom-10 left-10 z-[100]">
+		<div
+			class="inline-flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800/90 px-4 py-3 shadow-xl backdrop-blur-sm"
+		>
+			<span class="text-secondary text-sm">Open source on GitHub</span>
+			<GithubStars />
+		</div>
+	</div>
+
+	<!-- Spacer to push modal down -->
+	<div class="flex flex-1 items-center justify-center">
+		<!-- Modal Content -->
+		<div class="relative z-10">
+			{#if showLogin}
+				<LoginModal
+					isOpen={true}
+					onLogin={handleLogin}
+					onClose={handleClose}
+					onSwitchToRegister={switchToRegister}
+					{orgName}
+					{invitedBy}
+				/>
+			{:else}
+				<RegisterModal
+					isOpen={true}
+					onRegister={handleRegister}
+					onClose={handleClose}
+					onSwitchToLogin={switchToLogin}
+					{orgName}
+					{invitedBy}
+				/>
+			{/if}
+		</div>
+	</div>
 
 	<Toast />
 </div>

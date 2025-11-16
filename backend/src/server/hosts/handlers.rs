@@ -1,4 +1,4 @@
-use crate::server::auth::middleware::{AuthenticatedEntity, AuthenticatedUser};
+use crate::server::auth::middleware::{MemberOrDaemon, RequireMember};
 use crate::server::shared::handlers::traits::{CrudHandlers, get_all_handler, get_by_id_handler};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
@@ -37,7 +37,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn create_host(
     State(state): State<Arc<AppState>>,
-    _authenticated: AuthenticatedEntity,
+    MemberOrDaemon { .. }: MemberOrDaemon,
     Json(request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<HostWithServicesRequest>>> {
     let host_service = &state.services.host_service;
@@ -62,7 +62,7 @@ async fn create_host(
 
 async fn update_host(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Json(mut request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<Host>>> {
     let host_service = &state.services.host_service;
@@ -97,7 +97,7 @@ async fn update_host(
 
 async fn consolidate_hosts(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path((destination_host_id, other_host_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<Json<ApiResponse<Host>>> {
     let host_service = &state.services.host_service;
@@ -130,7 +130,7 @@ async fn consolidate_hosts(
 
 pub async fn delete_handler(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Host::get_service(&state);

@@ -798,7 +798,7 @@ mod tests {
     use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
     use crate::server::services::r#impl::base::Service;
     use crate::server::services::r#impl::virtualization::ServiceVirtualization;
-    use crate::tests::{network, user};
+    use crate::tests::{network, organization};
     use uuid::Uuid;
 
     use crate::{
@@ -837,8 +837,8 @@ mod tests {
 
     impl TestContext {
         fn new() -> Self {
-            let user = user();
-            let network = network(&user.id);
+            let organization = organization();
+            let network = network(&organization.id);
             let subnet = subnet(&network.id);
             let interface = interface(&subnet.id);
             let pi = ServiceDefinitionRegistry::find_by_id("Pi-Hole")

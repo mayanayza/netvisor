@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
 	import { networks } from '$lib/features/networks/store';
 	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
@@ -13,6 +12,7 @@
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import { RotateCcwKey } from 'lucide-svelte';
 	import { createEmptyApiKeyFormData, createNewApiKey } from '$lib/features/api_keys/store';
+	import { getServerPort, getServerProtocol, getServerTarget } from '$lib/shared/utils/api';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -39,42 +39,15 @@
 		}
 	}
 
-	const baseUrl = window.location.origin;
-	const parsedUrl = new URL(baseUrl);
-
-	const serverTarget =
-		env.PUBLIC_SERVER_HOSTNAME && env.PUBLIC_SERVER_HOSTNAME !== 'default'
-			? env.PUBLIC_SERVER_HOSTNAME
-			: parsedUrl.hostname;
-
-	const serverPort =
-		env.PUBLIC_SERVER_HOSTNAME === 'default'
-			? parsedUrl.port || '60072'
-			: env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
-
-	const protocol = parsedUrl.protocol === 'https:' ? 'https' : 'http';
-
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-target ${protocol}://${serverTarget} --server-port ${serverPort} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-target ${getServerProtocol()}://${getServerTarget()} --server-port ${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (key) {
-		dockerCompose = populateDockerCompose(
-			dockerTemplate,
-			serverTarget,
-			serverPort,
-			selectedNetworkId,
-			key
-		);
+		dockerCompose = populateDockerCompose(dockerTemplate, selectedNetworkId, key);
 	}
 
-	function populateDockerCompose(
-		template: string,
-		serverTarget: string,
-		serverPort: string,
-		networkId: string,
-		key: string
-	): string {
+	function populateDockerCompose(template: string, networkId: string, key: string): string {
 		// Replace lines that contain env vars
 		let splitString = '# Daemon configuration';
 		let [beforeKey, afterKey] = template.split(splitString);
@@ -84,10 +57,10 @@
 			.split('\n')
 			.map((line) => {
 				if (line.includes('NETVISOR_SERVER_TARGET=')) {
-					return `      - NETVISOR_SERVER_TARGET=${protocol}://${serverTarget}`;
+					return `      - NETVISOR_SERVER_TARGET=${getServerProtocol()}://${getServerTarget()}`;
 				}
 				if (line.includes('NETVISOR_SERVER_PORT=')) {
-					return `      - NETVISOR_SERVER_PORT=${serverPort}`;
+					return `      - NETVISOR_SERVER_PORT=${getServerPort()}`;
 				}
 				if (line.includes('NETVISOR_NETWORK_ID=')) {
 					return `      - NETVISOR_NETWORK_ID=${networkId}`;

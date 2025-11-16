@@ -1,4 +1,5 @@
-use anyhow::Result;
+use anyhow::{Error, Result, anyhow};
+use email_address::EmailAddress;
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
@@ -6,14 +7,13 @@ use openidconnect::{
     reqwest::Client as ReqwestClient,
 };
 use serde::{Deserialize, Serialize};
+use std::{str::FromStr, sync::Arc};
+use uuid::Uuid;
 
-#[derive(Clone)]
-pub struct OidcClient {
-    issuer_url: String,
-    client_id: String,
-    client_secret: String,
-    redirect_url: String,
-}
+use crate::server::{
+    auth::service::AuthService,
+    users::r#impl::{base::User, permissions::UserOrgPermissions},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OidcUserInfo {
@@ -30,18 +30,32 @@ pub struct OidcPendingAuth {
     pub csrf_token: String,
 }
 
-impl OidcClient {
+#[derive(Clone)]
+pub struct OidcService {
+    issuer_url: String,
+    client_id: String,
+    client_secret: String,
+    redirect_url: String,
+    provider_name: String,
+    auth_service: Arc<AuthService>,
+}
+
+impl OidcService {
     pub fn new(
         issuer_url: String,
         client_id: String,
         client_secret: String,
         redirect_url: String,
+        provider_name: String,
+        auth_service: Arc<AuthService>,
     ) -> Self {
         Self {
             issuer_url,
             client_id,
             client_secret,
             redirect_url,
+            provider_name,
+            auth_service,
         }
     }
 
@@ -89,7 +103,7 @@ impl OidcClient {
     }
 
     /// Exchange authorization code for user info
-    pub async fn exchange_code(
+    async fn exchange_code(
         &self,
         code: &str,
         pending_auth: OidcPendingAuth,
@@ -133,5 +147,85 @@ impl OidcClient {
                 .name()
                 .and_then(|n| n.get(None).map(|s| s.to_string())),
         })
+    }
+
+    /// Link OIDC account to existing user
+    pub async fn link_to_user(
+        &self,
+        user_id: &Uuid,
+        code: &str,
+        pending_auth: OidcPendingAuth,
+    ) -> Result<User> {
+        let user_info = self.exchange_code(code, pending_auth).await?;
+
+        // Check if this OIDC account is already linked to another user
+        if let Some(existing_user) = self
+            .auth_service
+            .user_service
+            .get_user_by_oidc(&user_info.subject)
+            .await?
+        {
+            if existing_user.id != *user_id {
+                return Err(anyhow!(
+                    "This OIDC account is already linked to another user"
+                ));
+            }
+            // Already linked to this user
+            return Ok(existing_user);
+        }
+
+        // Link OIDC to current user
+        self.auth_service
+            .user_service
+            .link_oidc(user_id, user_info.subject, self.provider_name.clone())
+            .await
+    }
+
+    /// Login or register user via OIDC
+    pub async fn login_or_register(
+        &self,
+        code: &str,
+        pending_auth: OidcPendingAuth,
+        org_id: Option<Uuid>,
+        permissions: Option<UserOrgPermissions>,
+    ) -> Result<User> {
+        let user_info = self.exchange_code(code, pending_auth).await?;
+
+        // Check if user exists with this OIDC account
+        if let Some(user) = self
+            .auth_service
+            .user_service
+            .get_user_by_oidc(&user_info.subject)
+            .await?
+        {
+            return Ok(user);
+        }
+
+        // Parse or create fallback email
+        let fallback_email_str = format!("user{}@example.com", &user_info.subject[..8]);
+        let email_str = user_info
+            .email
+            .clone()
+            .unwrap_or_else(|| fallback_email_str.clone());
+
+        let email = EmailAddress::from_str(&email_str).or_else(|_| {
+            Ok::<EmailAddress, Error>(EmailAddress::new_unchecked(fallback_email_str))
+        })?;
+
+        // Register new user via OIDC
+        self.auth_service
+            .register_with_oidc(
+                email,
+                user_info.subject,
+                self.provider_name.clone(),
+                org_id,
+                permissions,
+            )
+            .await
+    }
+
+    /// Unlink OIDC from user
+    pub async fn unlink_from_user(&self, user_id: &Uuid) -> Result<User> {
+        self.auth_service.user_service.unlink_oidc(user_id).await
     }
 }

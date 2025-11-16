@@ -8,6 +8,8 @@ export interface PublicServerConfig {
 	disable_registration: boolean;
 	oidc_enabled: boolean;
 	oidc_provider_name: string;
+	billing_enabled: boolean;
+	has_integrated_daemon: boolean;
 }
 
 export async function getConfig() {

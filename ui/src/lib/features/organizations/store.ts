@@ -1,0 +1,99 @@
+import { writable } from 'svelte/store';
+import { api, getServerUrl } from '../../shared/utils/api';
+import type { CreateInviteRequest, OrganizationInvite, Organization } from './types';
+import type { OnboardingRequest } from '../auth/types/base';
+import type { UserOrgPermissions } from '../users/types';
+
+export const organization = writable<Organization | null>();
+export const invites = writable<OrganizationInvite[]>([]);
+
+export async function onboard(request: OnboardingRequest): Promise<void> {
+	await api.request<Organization, Organization | null>('/onboarding', organization, (org) => org, {
+		method: 'POST',
+		body: JSON.stringify(request)
+	});
+}
+
+export async function getOrganization(): Promise<Organization | null> {
+	const result = await api.request<Organization | null>(
+		`/organizations`,
+		organization,
+		(organization) => organization,
+		{
+			method: 'GET'
+		}
+	);
+
+	if (result && result.success && result.data) {
+		return result.data;
+	}
+	return null;
+}
+
+export async function updateOrganization(org: Organization) {
+	return await api.request<Organization, Organization | null>(
+		`/organizations/${org.id}`,
+		organization,
+		(updated) => updated,
+		{
+			method: 'PUT',
+			body: JSON.stringify(org)
+		}
+	);
+}
+
+export async function createInvite(
+	permissions: UserOrgPermissions
+): Promise<OrganizationInvite | null> {
+	const request: CreateInviteRequest = {
+		url: getServerUrl(),
+		expiration_hours: null,
+		permissions
+	};
+
+	const result = await api.request<OrganizationInvite, OrganizationInvite[]>(
+		`/organizations/invites`,
+		invites,
+		(created, current) => [...current, created],
+		{
+			method: 'POST',
+			body: JSON.stringify(request)
+		}
+	);
+
+	if (result && result.success && result.data) {
+		return result.data;
+	}
+	return null;
+}
+
+export async function getInvites(): Promise<OrganizationInvite[]> {
+	const result = await api.request<OrganizationInvite[]>(
+		`/organizations/invites`,
+		invites,
+		(invites) => invites,
+		{
+			method: 'GET'
+		}
+	);
+
+	if (result && result.success && result.data) {
+		return result.data;
+	}
+	return [];
+}
+
+export async function revokeInvite(token: string): Promise<void> {
+	await api.request<void, OrganizationInvite[]>(
+		`/organizations/invites/${token}/revoke`,
+		invites,
+		(_, current) => current.filter((i) => i.token != token),
+		{
+			method: 'DELETE'
+		}
+	);
+}
+
+export function formatInviteUrl(invite: OrganizationInvite): string {
+	return `${invite.url}/api/organizations/invites/${invite.token}/accept`;
+}

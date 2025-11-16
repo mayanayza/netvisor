@@ -74,7 +74,7 @@
 						{subtitle}
 					</p>
 				{/if}
-				{#if status}
+				{#if status && viewMode == 'list'}
 					<div class="mr-4 flex-shrink-0">
 						<Tag {...status} />
 					</div>
@@ -136,7 +136,6 @@
 			</div>
 		{:else}
 			<!-- Card view: vertical layout -->
-			<!-- Card view: vertical layout -->
 			{#each fields as field, i (field.label + i)}
 				{#if field.snippet}
 					<div>
@@ -165,9 +164,11 @@
 									{/if}
 								</div>
 							{:else}
-								<div>
-									<span class="text-secondary">{field.label}:</span>
-									<span class="text-tertiary ml-2 break-words">{field.value}</span>
+								<div class="text-sm">
+									<span class="text-secondary">{field.label}: </span><span
+										class="text-tertiary ml-2"
+										style="word-wrap: break-word; word-break: break-word;">{field.value}</span
+									>
 								</div>
 							{/if}
 						{/if}

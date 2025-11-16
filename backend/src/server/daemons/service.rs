@@ -1,13 +1,16 @@
-use crate::server::{
-    daemons::r#impl::{
-        api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
-        base::Daemon,
-    },
-    hosts::r#impl::ports::PortBase,
-    services::r#impl::endpoints::{ApplicationProtocol, Endpoint},
-    shared::{
-        services::traits::CrudService, storage::generic::GenericPostgresStorage,
-        types::api::ApiResponse,
+use crate::{
+    daemon::runtime::types::InitializeDaemonRequest,
+    server::{
+        daemons::r#impl::{
+            api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
+            base::Daemon,
+        },
+        hosts::r#impl::ports::PortBase,
+        services::r#impl::endpoints::{ApplicationProtocol, Endpoint},
+        shared::{
+            services::traits::CrudService, storage::generic::GenericPostgresStorage,
+            types::api::ApiResponse,
+        },
     },
 };
 use anyhow::{Error, Result};
@@ -110,6 +113,43 @@ impl DaemonService {
                 daemon.id,
                 response.status()
             );
+        }
+
+        Ok(())
+    }
+
+    pub async fn initialize_local_daemon(
+        &self,
+        daemon_url: String,
+        network_id: Uuid,
+        api_key: String,
+    ) -> Result<(), Error> {
+        match self
+            .client
+            .post(format!("{}/api/initialize", daemon_url))
+            .json(&InitializeDaemonRequest {
+                network_id,
+                api_key,
+            })
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                let status = resp.status();
+
+                if status.is_success() {
+                    tracing::info!("Successfully initialized daemon");
+                } else {
+                    let body = resp
+                        .text()
+                        .await
+                        .unwrap_or_else(|_| "Could not read body".to_string());
+                    tracing::warn!("Daemon returned error. Status: {}, Body: {}", status, body);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to reach daemon: {:?}", e);
+            }
         }
 
         Ok(())

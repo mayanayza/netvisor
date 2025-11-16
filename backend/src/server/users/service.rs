@@ -1,8 +1,4 @@
 use crate::server::{
-    networks::{
-        r#impl::{Network, NetworkBase},
-        service::NetworkService,
-    },
     shared::{
         services::traits::CrudService,
         storage::{
@@ -11,7 +7,10 @@ use crate::server::{
             traits::{StorableEntity, Storage},
         },
     },
-    users::r#impl::base::{User, UserBase},
+    users::r#impl::{
+        base::{User, UserBase},
+        permissions::UserOrgPermissions,
+    },
 };
 use anyhow::Error;
 use anyhow::Result;
@@ -22,7 +21,6 @@ use uuid::Uuid;
 
 pub struct UserService {
     user_storage: Arc<GenericPostgresStorage<User>>,
-    network_service: Arc<NetworkService>,
 }
 
 #[async_trait]
@@ -33,14 +31,8 @@ impl CrudService<User> for UserService {
 }
 
 impl UserService {
-    pub fn new(
-        user_storage: Arc<GenericPostgresStorage<User>>,
-        network_service: Arc<NetworkService>,
-    ) -> Self {
-        Self {
-            user_storage,
-            network_service,
-        }
+    pub fn new(user_storage: Arc<GenericPostgresStorage<User>>) -> Self {
+        Self { user_storage }
     }
 
     pub async fn get_user_by_oidc(&self, oidc_subject: &str) -> Result<Option<User>> {
@@ -48,8 +40,16 @@ impl UserService {
         self.user_storage.get_one(oidc_filter).await
     }
 
+    pub async fn get_organization_owners(&self, organization_id: &Uuid) -> Result<Vec<User>> {
+        let filter: EntityFilter = EntityFilter::unfiltered()
+            .organization_id(organization_id)
+            .user_permissions(&UserOrgPermissions::Owner);
+
+        self.user_storage.get_all(filter).await
+    }
+
     /// Create a new user
-    pub async fn create_user(&self, user: User) -> Result<(User, Network), Error> {
+    pub async fn create_user(&self, user: User) -> Result<User, Error> {
         let existing_user = self
             .user_storage
             .get_one(EntityFilter::unfiltered().email(&user.base.email))
@@ -61,18 +61,7 @@ impl UserService {
             ));
         }
 
-        let created_user = self.user_storage.create(&User::new(user.base)).await?;
-
-        let mut network = Network::new(NetworkBase::new(created_user.id));
-        network.base.is_default = true;
-
-        let created_network = self.network_service.create(network).await?;
-
-        self.network_service
-            .seed_default_data(created_network.id)
-            .await?;
-
-        Ok((created_user, created_network))
+        self.user_storage.create(&User::new(user.base)).await
     }
 
     /// Create new user with OIDC (no password)
@@ -81,11 +70,18 @@ impl UserService {
         email: EmailAddress,
         oidc_subject: String,
         oidc_provider: Option<String>,
+        organization_id: Uuid,
+        permissions: UserOrgPermissions,
     ) -> Result<User, Error> {
-        let user = User::new(UserBase::new_oidc(email, oidc_subject, oidc_provider));
+        let user = User::new(UserBase::new_oidc(
+            email,
+            oidc_subject,
+            oidc_provider,
+            organization_id,
+            permissions,
+        ));
 
-        let (created_user, _) = self.create_user(user).await?;
-        Ok(created_user)
+        self.create_user(user).await
     }
 
     /// Create new user with password (no OIDC)
@@ -93,11 +89,17 @@ impl UserService {
         &self,
         email: EmailAddress,
         password_hash: String,
+        organization_id: Uuid,
+        permissions: UserOrgPermissions,
     ) -> Result<User, Error> {
-        let user = User::new(UserBase::new_password(email, password_hash));
+        let user = User::new(UserBase::new_password(
+            email,
+            password_hash,
+            organization_id,
+            permissions,
+        ));
 
-        let (created_user, _) = self.create_user(user).await?;
-        Ok(created_user)
+        self.create_user(user).await
     }
 
     /// Link OIDC to existing user
@@ -105,14 +107,14 @@ impl UserService {
         &self,
         user_id: &Uuid,
         oidc_subject: String,
-        oidc_provider: Option<String>,
+        oidc_provider: String,
     ) -> Result<User> {
         let mut user = self
             .get_by_id(user_id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("User not found"))?;
 
-        user.base.oidc_provider = oidc_provider;
+        user.base.oidc_provider = Some(oidc_provider);
         user.base.oidc_subject = Some(oidc_subject);
         user.base.oidc_linked_at = Some(chrono::Utc::now());
 

@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedUser,
+    auth::middleware::{AuthenticatedUser, RequireMember},
     config::AppState,
     shared::{
         services::traits::CrudService,
@@ -7,6 +7,7 @@ use crate::server::{
         types::api::{ApiError, ApiResponse, ApiResult},
     },
 };
+use async_trait::async_trait;
 use axum::{
     Router,
     extract::{Path, State},
@@ -18,6 +19,7 @@ use std::{fmt::Display, sync::Arc};
 use uuid::Uuid;
 
 /// Trait for creating standard CRUD handlers for an entity
+#[async_trait]
 pub trait CrudHandlers: StorableEntity + Serialize + for<'de> Deserialize<'de>
 where
     Self: Display,
@@ -52,7 +54,7 @@ where
 
 pub async fn create_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Json(request): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
@@ -82,19 +84,7 @@ pub async fn get_all_handler<T>(
 where
     T: CrudHandlers + 'static,
 {
-    let user_filter = EntityFilter::unfiltered().user_id(&user.0);
-
-    let network_ids: Vec<Uuid> = state
-        .services
-        .network_service
-        .get_all(user_filter)
-        .await
-        .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .iter()
-        .map(|n| n.id())
-        .collect();
-
-    let network_filter = EntityFilter::unfiltered().network_ids(&network_ids);
+    let network_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
 
     let service = T::get_service(&state);
     let entities = service
@@ -107,7 +97,7 @@ where
 
 pub async fn get_by_id_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
@@ -125,7 +115,7 @@ where
 
 pub async fn update_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
     Json(mut request): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
@@ -151,7 +141,7 @@ where
 
 pub async fn delete_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>>
 where

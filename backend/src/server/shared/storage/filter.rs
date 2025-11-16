@@ -1,7 +1,9 @@
 use email_address::EmailAddress;
 use uuid::Uuid;
 
-use crate::server::shared::storage::traits::SqlValue;
+use crate::server::{
+    shared::storage::traits::SqlValue, users::r#impl::permissions::UserOrgPermissions,
+};
 
 /// Builder pattern for common WHERE clauses
 #[derive(Clone)]
@@ -109,6 +111,20 @@ impl EntityFilter {
         self.conditions
             .push(format!("email = ${}", self.values.len() + 1));
         self.values.push(SqlValue::Email(email.clone()));
+        self
+    }
+
+    pub fn organization_id(mut self, organization_id: &Uuid) -> Self {
+        self.conditions
+            .push(format!("organization_id = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(*organization_id));
+        self
+    }
+
+    pub fn user_permissions(mut self, permissions: &UserOrgPermissions) -> Self {
+        self.conditions
+            .push(format!("permissions = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::UserOrgPermissions(*permissions));
         self
     }
 
