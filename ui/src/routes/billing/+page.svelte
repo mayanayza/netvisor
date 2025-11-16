@@ -7,7 +7,7 @@
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import { getCurrentBillingPlans } from '$lib/features/billing/store';
 
-	const loading = loadData([getCurrentBillingPlans, getConfig, getMetadata]);
+	const loading = loadData([getCurrentBillingPlans, getConfig, getMetadata], { loadingDelay: 0 });
 </script>
 
 {#if $loading}
