@@ -8,7 +8,7 @@
 
 	async function handleSubmit(formData: OnboardingRequest) {
 		await onboard(formData);
-		window.location.reload();
+		window.location.href = '/';
 	}
 
 	function handleClose() {

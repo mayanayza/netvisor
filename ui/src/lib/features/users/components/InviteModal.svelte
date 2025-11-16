@@ -39,6 +39,11 @@
 		permissionsField.set('Viewer');
 	}
 
+	function handleClose() {
+		invite = null;
+		onClose();
+	}
+
 	async function handleGenerateInvite() {
 		generatingInvite = true;
 		try {
@@ -89,7 +94,7 @@
 	showSave={false}
 	showCancel={true}
 	cancelLabel="Close"
-	onCancel={onClose}
+	onCancel={handleClose}
 	size="md"
 	let:formApi
 >

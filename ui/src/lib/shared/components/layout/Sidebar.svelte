@@ -8,7 +8,16 @@
 	import SupportModal from '$lib/features/support/SupportModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import type { IconComponent } from '$lib/shared/utils/types';
-	import { Menu, ChevronDown, History, Calendar, User, LifeBuoy, CreditCard } from 'lucide-svelte';
+	import {
+		Menu,
+		ChevronDown,
+		History,
+		Calendar,
+		User,
+		LifeBuoy,
+		CreditCard,
+		Building
+	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import type { Component } from 'svelte';
 	import type { UserOrgPermissions } from '$lib/features/users/types';
@@ -26,6 +35,7 @@
 	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
 	import ApiKeyTab from '$lib/features/api_keys/components/ApiKeyTab.svelte';
 	import UserTab from '$lib/features/users/components/UserTab.svelte';
+	import OrganizationSettingsModal from '$lib/features/organizations/OrganizationSettingsModal.svelte';
 
 	let {
 		activeTab = $bindable('topology'),
@@ -44,6 +54,7 @@
 	let showAuthSettings = $state(false);
 	let showSupport = $state(false);
 	let showBilling = $state(false);
+	let showOrgSettings = $state(false);
 
 	interface NavItem {
 		id: string;
@@ -180,6 +191,15 @@
 					icon: User as IconComponent,
 					onClick: async () => {
 						showAuthSettings = true;
+					}
+				},
+				{
+					id: 'organization',
+					label: 'Organization',
+					icon: Building,
+					requiredPermissions: ['Owner'],
+					onClick: async () => {
+						showOrgSettings = true;
 					}
 				},
 				{
@@ -495,3 +515,4 @@
 <AuthSettingsModal isOpen={showAuthSettings} onClose={() => (showAuthSettings = false)} />
 <SupportModal isOpen={showSupport} onClose={() => (showSupport = false)} />
 <BillingSettingsModal isOpen={showBilling} onClose={() => (showBilling = false)} />
+<OrganizationSettingsModal isOpen={showOrgSettings} onClose={() => (showOrgSettings = false)} />

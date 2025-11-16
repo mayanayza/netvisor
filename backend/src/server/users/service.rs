@@ -40,12 +40,12 @@ impl UserService {
         self.user_storage.get_one(oidc_filter).await
     }
 
-    pub async fn get_organization_owner(&self, organization_id: &Uuid) -> Result<Option<User>> {
+    pub async fn get_organization_owners(&self, organization_id: &Uuid) -> Result<Vec<User>> {
         let filter: EntityFilter = EntityFilter::unfiltered()
             .organization_id(organization_id)
             .user_permissions(&UserOrgPermissions::Owner);
 
-        self.user_storage.get_one(filter).await
+        self.user_storage.get_all(filter).await
     }
 
     /// Create a new user

@@ -204,16 +204,19 @@ impl BillingService {
             return Ok(CustomerId::from(customer_id));
         }
 
-        let organization_owner = self
+        let organization_owners = self
             .user_service
-            .get_organization_owner(&organization_id)
-            .await?
+            .get_organization_owners(&organization_id)
+            .await?;
+
+        let first_owner = organization_owners
+            .first()
             .ok_or_else(|| anyhow!("Organization {} doesn't have an owner.", organization_id))?;
 
         // Create new customer
         let create_customer = CreateCustomer::new()
             .metadata([("organization_id".to_string(), organization_id.to_string())])
-            .email(organization_owner.base.email);
+            .email(first_owner.base.email.clone());
 
         let customer = create_customer.send(&self.stripe).await?;
 

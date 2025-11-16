@@ -63,17 +63,18 @@ impl TypeMetadataProvider for UserOrgPermissions {
     fn description(&self) -> &'static str {
         match self {
             UserOrgPermissions::Owner => {
-                "Can delete + invite Admins, manage billing in addition to Admin permissions"
+                "Full organization control: manage billing, invite any role, and access all administrative features"
             }
             UserOrgPermissions::Admin => {
-                "Can delete Members + invite Members in addition to Member privileges"
+                "Team administrator: manage users and invites, create and modify all infrastructure, but cannot access billing"
             }
             UserOrgPermissions::Member => {
-                "Can delete Viewers + invite Viewers, read and write all entities (hosts, subnets, etc)"
+                "Team member: create and modify networks, hosts, services, run discovery scans, and invite Viewers"
             }
-            UserOrgPermissions::Viewer => "Can view topology",
+            UserOrgPermissions::Viewer => "Read-only access: view network topology",
         }
     }
+
     fn name(&self) -> &'static str {
         match self {
             UserOrgPermissions::Owner => "Owner",

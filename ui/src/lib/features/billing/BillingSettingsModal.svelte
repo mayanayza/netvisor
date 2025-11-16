@@ -4,14 +4,13 @@
 	import { CreditCard, CheckCircle, AlertCircle } from 'lucide-svelte';
 	import { organization, getOrganization } from '$lib/features/organizations/store';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
-	import { currentUser } from '../auth/store';
+	import { currentUser } from '$lib/features/auth/store';
 	import { billingPlans } from '$lib/shared/stores/metadata';
 	import { openCustomerPortal } from './store';
+	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 
 	export let isOpen = false;
 	export let onClose: () => void;
-
-	let loading = true;
 
 	$: if (isOpen && $currentUser) {
 		loadOrganization();
@@ -19,9 +18,7 @@
 
 	async function loadOrganization() {
 		if (!$currentUser) return;
-		loading = true;
 		await getOrganization();
-		loading = false;
 	}
 
 	$: org = $organization;
@@ -69,80 +66,67 @@
 		<ModalHeaderIcon Icon={CreditCard} color="#3b82f6" />
 	</svelte:fragment>
 
-	{#if loading}
-		<div class="text-secondary py-8 text-center">Loading billing information...</div>
-	{:else if org}
+	{#if org}
 		<div class="space-y-6">
-			<!-- Organization Info -->
-			<div class="card card-static">
-				<h3 class="text-primary mb-3 text-sm font-semibold">Organization</h3>
-				<div class="space-y-2">
-					<div class="flex justify-between">
-						<span class="text-secondary text-sm">Name:</span>
-						<span class="text-primary text-sm">{org.name}</span>
-					</div>
-					<div class="flex justify-between">
-						<span class="text-secondary text-sm">ID:</span>
-						<span class="text-primary font-mono text-xs">{org.id}</span>
-					</div>
-				</div>
-			</div>
-
 			<!-- Current Plan -->
-			<div class="card card-static">
-				<div class="mb-3 flex items-center justify-between">
-					<h3 class="text-primary text-sm font-semibold">Current Plan</h3>
-					<div class="flex items-center gap-2">
-						{#if planActive}
-							<CheckCircle class="h-4 w-4 text-green-400" />
-						{:else}
-							<AlertCircle class="h-4 w-4 text-yellow-400" />
-						{/if}
-						<span class={`text-sm font-medium ${getPlanStatusColor(org.plan_status)}`}>
-							{formatPlanStatus(org.plan_status)}
-						</span>
-					</div>
-				</div>
-
-				<div class="space-y-3">
-					<div class="flex items-baseline justify-between">
-						<div>
-							<p class="text-primary text-lg font-semibold">
-								{billingPlans.getName(org.plan.type)}
-							</p>
-							{#if org.plan.trial_days > 0 && org.plan_status === 'trialing'}
-								<p class="text-secondary mt-1 text-xs">
-									Includes {org.plan.trial_days}-day free trial
-								</p>
+			<InfoCard>
+				<svelte:fragment slot="default">
+					<div class="mb-3 flex items-center justify-between">
+						<h3 class="text-primary text-sm font-semibold">Current Plan</h3>
+						<div class="flex items-center gap-2">
+							{#if planActive}
+								<CheckCircle class="h-4 w-4 text-green-400" />
+							{:else}
+								<AlertCircle class="h-4 w-4 text-yellow-400" />
 							{/if}
-						</div>
-						<div class="text-right">
-							<p class="text-primary text-2xl font-bold">
-								${org.plan.price.cents / 100}
-							</p>
-							<p class="text-secondary text-xs">per {org.plan.price.rate}</p>
+							<span class={`text-sm font-medium ${getPlanStatusColor(org.plan_status)}`}>
+								{formatPlanStatus(org.plan_status)}
+							</span>
 						</div>
 					</div>
 
-					{#if org.plan_status === 'trialing'}
-						<div class="rounded-md border border-blue-800 bg-blue-900/30 p-3 text-sm text-blue-300">
-							Your trial is active. You won't be charged until your trial ends.
+					<div class="space-y-3">
+						<div class="flex items-baseline justify-between">
+							<div>
+								<p class="text-primary text-lg font-semibold">
+									{billingPlans.getName(org.plan.type)}
+								</p>
+								{#if org.plan.trial_days > 0 && org.plan_status === 'trialing'}
+									<p class="text-secondary mt-1 text-xs">
+										Includes {org.plan.trial_days}-day free trial
+									</p>
+								{/if}
+							</div>
+							<div class="text-right">
+								<p class="text-primary text-2xl font-bold">
+									${org.plan.price.cents / 100}
+								</p>
+								<p class="text-secondary text-xs">per {org.plan.price.rate}</p>
+							</div>
 						</div>
-					{:else if org.plan_status === 'past_due'}
-						<div class="rounded-md border border-red-800 bg-red-900/30 p-3 text-sm text-red-300">
-							Your payment is past due. Please update your payment method to continue using
-							NetVisor.
-						</div>
-					{:else if org.plan_status === 'canceled'}
-						<div
-							class="rounded-md border border-yellow-800 bg-yellow-900/30 p-3 text-sm text-yellow-300"
-						>
-							Your subscription has been canceled. Access will end at the end of your billing
-							period.
-						</div>
-					{/if}
-				</div>
-			</div>
+
+						{#if org.plan_status === 'trialing'}
+							<div
+								class="rounded-md border border-blue-800 bg-blue-900/30 p-3 text-sm text-blue-300"
+							>
+								Your trial is active. You won't be charged until your trial ends.
+							</div>
+						{:else if org.plan_status === 'past_due'}
+							<div class="rounded-md border border-red-800 bg-red-900/30 p-3 text-sm text-red-300">
+								Your payment is past due. Please update your payment method to continue using
+								NetVisor.
+							</div>
+						{:else if org.plan_status === 'canceled'}
+							<div
+								class="rounded-md border border-yellow-800 bg-yellow-900/30 p-3 text-sm text-yellow-300"
+							>
+								Your subscription has been canceled. Access will end at the end of your billing
+								period.
+							</div>
+						{/if}
+					</div>
+				</svelte:fragment>
+			</InfoCard>
 
 			<!-- Actions -->
 			<div class="space-y-3">
@@ -152,14 +136,13 @@
 			</div>
 
 			<!-- Additional Info -->
-			<div class="card card-static">
-				<h3 class="text-primary mb-2 text-sm font-semibold">Need Help?</h3>
+			<InfoCard title="Need Help?">
 				<p class="text-secondary text-sm">
 					Contact us at <a href="mailto:billing@netvisor.io" class="text-blue-400 hover:underline"
 						>billing@netvisor.io</a
 					> for billing questions or assistance.
 				</p>
-			</div>
+			</InfoCard>
 		</div>
 	{:else}
 		<div class="text-secondary py-8 text-center">

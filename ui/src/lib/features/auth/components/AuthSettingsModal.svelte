@@ -7,11 +7,13 @@
 	import { email as emailValidator, required } from 'svelte-forms/validators';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
+	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { config, getConfig } from '$lib/shared/stores/config';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { organization } from '$lib/features/organizations/store';
+	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -149,34 +151,19 @@
 		{#if user}
 			<div class="space-y-6">
 				<!-- User Info -->
-				<div class="card card-static">
-					<h3 class="text-primary mb-3 text-sm font-semibold">User Information</h3>
-					<div class="space-y-2">
-						<div class="flex justify-between">
-							<span class="text-secondary text-sm">Organization:</span>
-							<span class="text-primary font-mono text-xs">{$organization?.name}</span>
-						</div>
-						<div class="flex justify-between">
-							<span class="text-secondary text-sm">Email:</span>
-							<span class="text-primary text-sm">{user.email}</span>
-						</div>
-						<div class="flex justify-between">
-							<span class="text-secondary text-sm">Permissions:</span>
-							<span class="text-primary font-mono text-xs">{user.permissions}</span>
-						</div>
-						<div class="flex justify-between">
-							<span class="text-secondary text-sm">User ID:</span>
-							<span class="text-primary font-mono text-xs">{user.id}</span>
-						</div>
-					</div>
-				</div>
+				<InfoCard title="User Information">
+					<InfoRow label="Organization">{$organization?.name}</InfoRow>
+					<InfoRow label="Email">{user.email}</InfoRow>
+					<InfoRow label="Permissions" mono={true}>{user.permissions}</InfoRow>
+					<InfoRow label="User ID" mono={true}>{user.id}</InfoRow>
+				</InfoCard>
 
 				<!-- Authentication Methods -->
 				<div>
 					<h3 class="text-primary mb-3 text-sm font-semibold">Authentication Methods</h3>
 					<div class="space-y-3">
 						<!-- Email & Password -->
-						<div class="card card-static">
+						<InfoCard variant="compact">
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
 									<Key class="text-secondary h-4 w-4 flex-shrink-0" />
@@ -195,11 +182,11 @@
 									Update
 								</button>
 							</div>
-						</div>
+						</InfoCard>
 
 						<!-- OIDC -->
 						{#if enableOidc}
-							<div class="card card-static">
+							<InfoCard variant="compact">
 								<div class="flex items-center justify-between">
 									<div class="mr-2 flex items-center gap-2">
 										<Link class="text-secondary h-4 w-4 flex-shrink-0" />
@@ -224,13 +211,13 @@
 										</button>
 									{/if}
 								</div>
-							</div>
+							</InfoCard>
 						{/if}
 					</div>
 				</div>
 
 				<!-- Logout -->
-				<div class="card card-static">
+				<InfoCard variant="compact">
 					<div class="flex items-center justify-between">
 						<div class="flex items-center gap-2">
 							<LogOut class="text-secondary h-4 w-4" />
@@ -238,7 +225,7 @@
 						</div>
 						<button on:click={handleLogout} class="btn-secondary"> Logout </button>
 					</div>
-				</div>
+				</InfoCard>
 			</div>
 		{:else}
 			<div class="text-secondary py-8 text-center">Loading user information...</div>

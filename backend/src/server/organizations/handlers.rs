@@ -127,8 +127,14 @@ async fn revoke_invite(
         .await
         .map_err(|e| ApiError::bad_request(&e.to_string()))?;
 
+    if invite.organization_id != user.organization_id {
+        return Err(ApiError::forbidden(
+            "Cannot revoke invites from other organizations",
+        ));
+    }
+
     // Verify user
-    if user.user_id != invite.created_by || invite.permissions > user.permissions {
+    if !(user.user_id == invite.created_by && invite.permissions < user.permissions) {
         return Err(ApiError::forbidden(
             "You can only revoke invites that you created or that users with lower permissions than you created",
         ));

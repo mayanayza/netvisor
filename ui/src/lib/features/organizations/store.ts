@@ -39,6 +39,18 @@ export async function getOrganization(): Promise<Organization | null> {
 	return null;
 }
 
+export async function updateOrganization(org: Organization) {
+	return await api.request<Organization, Organization | null>(
+		`/organizations/${org.id}`,
+		organization,
+		(updated) => updated,
+		{
+			method: 'PUT',
+			body: JSON.stringify(org)
+		}
+	);
+}
+
 export async function createInvite(
 	permissions: UserOrgPermissions
 ): Promise<OrganizationInvite | null> {

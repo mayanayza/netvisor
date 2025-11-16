@@ -3,6 +3,7 @@ use crate::server::shared::handlers::traits::{CrudHandlers, delete_handler, get_
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::ApiError;
 use crate::server::users::r#impl::base::User;
+use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::{
     config::AppState,
     shared::{
@@ -10,6 +11,7 @@ use crate::server::{
         types::api::{ApiResponse, ApiResult},
     },
 };
+use anyhow::anyhow;
 use axum::extract::Path;
 use axum::routing::{delete, get, put};
 use axum::{Router, extract::State, response::Json};
@@ -46,9 +48,35 @@ pub async fn get_all_users(
 pub async fn delete_user(
     state: State<Arc<AppState>>,
     require_admin: RequireAdmin,
-    path: Path<Uuid>,
+    id: Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
-    delete_handler::<User>(state, require_admin.into(), path).await
+    let user_to_be_deleted = state
+        .services
+        .user_service
+        .get_by_id(&id.0)
+        .await?
+        .ok_or_else(|| anyhow!("User {} does not exist", id.0))?;
+
+    if require_admin.0.permissions < user_to_be_deleted.base.permissions {
+        return Err(ApiError::unauthorized(
+            "You can only delete users with lower permissions than you".to_string(),
+        ));
+    }
+
+    let count_owners = state
+        .services
+        .user_service
+        .get_organization_owners(&require_admin.0.organization_id)
+        .await?
+        .len();
+
+    if require_admin.0.permissions == UserOrgPermissions::Owner && count_owners == 1 {
+        return Err(ApiError::conflict(
+            "Can't delete the only owner in an organization.",
+        ));
+    }
+
+    delete_handler::<User>(state, require_admin.into(), id).await
 }
 
 pub async fn update_user(
@@ -62,15 +90,24 @@ pub async fn update_user(
             "You can only update your own user record".to_string(),
         ));
     }
-
     let service = User::get_service(&state);
 
     // Verify entity exists
-    service
+    let existing = service
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
         .ok_or_else(|| ApiError::not_found(format!("User '{}' not found", id)))?;
+
+    if request.base.organization_id != existing.base.organization_id {
+        return Err(ApiError::forbidden("You cannot change your organization"));
+    }
+
+    if request.base.permissions != existing.base.permissions {
+        return Err(ApiError::forbidden(
+            "You cannot change your own permissions",
+        ));
+    }
 
     let updated = service
         .update(&mut request)
