@@ -46,7 +46,7 @@ dump-db:
 
 dev-server:
 	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor" && \
-	cd backend && cargo run --bin server -- --log-level debug --integrated-daemon-url http://localhost:60073
+	cd backend && cargo run --bin server -- --log-level debug
 
 dev-daemon:
 	cd backend && cargo run --bin daemon -- --server-target http://127.0.0.1 --server-port 60072 --log-level debug

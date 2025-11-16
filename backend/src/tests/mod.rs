@@ -29,6 +29,7 @@ use crate::server::{
         base::{Subnet, SubnetBase},
         types::SubnetType,
     },
+    topology::types::edges::EdgeStyle,
     users::r#impl::base::{User, UserBase},
 };
 use axum::Router;
@@ -42,9 +43,6 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
 use uuid::Uuid;
-
-#[cfg(test)]
-pub mod database;
 
 pub const DAEMON_CONFIG_FIXTURE: &str = "src/tests/daemon_config.json";
 pub const SERVER_DB_FIXTURE: &str = "src/tests/netvisor.sql";
@@ -150,6 +148,7 @@ pub fn group(network_id: &Uuid) -> Group {
             service_bindings: vec![],
         },
         source: EntitySource::System,
+        edge_style: EdgeStyle::Bezier,
     })
 }
 

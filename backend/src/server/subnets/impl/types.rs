@@ -227,8 +227,11 @@ impl TypeMetadataProvider for SubnetType {
             SubnetType::Remote | SubnetType::Internet | SubnetType::DockerBridge
         );
 
+        let is_for_containers = matches!(self, SubnetType::DockerBridge);
+
         serde_json::json!({
             "network_scan_discovery_eligible": network_scan_discovery_eligible,
+            "is_for_containers": is_for_containers
         })
     }
 }

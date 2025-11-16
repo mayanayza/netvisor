@@ -144,6 +144,7 @@ impl EdgeBuilder {
                                     target: *first_subnet_id,
                                     edge_type: EdgeType::ServiceVirtualization {
                                         containerizing_service_id: s.id,
+                                        host_id: host.id,
                                     },
                                     label: Some(format!("{} @ {}", s.base.name, host.base.name)),
                                     source_handle,
@@ -189,6 +190,7 @@ impl EdgeBuilder {
                                     target: container_binding_interface_id,
                                     edge_type: EdgeType::ServiceVirtualization {
                                         containerizing_service_id: s.id,
+                                        host_id: host.id,
                                     },
                                     label: Some(format!("{} on {}", s.base.name, host.base.name)),
                                     source_handle,

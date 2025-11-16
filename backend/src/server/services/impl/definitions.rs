@@ -9,7 +9,6 @@ use dyn_clone::DynClone;
 use dyn_eq::DynEq;
 use dyn_hash::DynHash;
 use serde::{Deserialize, Serialize};
-use serial_test::serial;
 use std::hash::Hash;
 
 // Main trait used in service definition implementation
@@ -224,8 +223,6 @@ impl ServiceDefinition for DefaultServiceDefinition {
 
 #[cfg(test)]
 mod tests {
-
-    use serial_test::serial;
     use strum::{IntoDiscriminant, IntoEnumIterator};
 
     use crate::server::{
@@ -239,10 +236,10 @@ mod tests {
         collections::{HashMap, HashSet},
         fs::File,
         io::BufReader,
+        path::PathBuf,
     };
 
     #[test]
-    #[serial]
     fn test_all_service_definitions_register() {
         // Get all registered services using inventory
         let registry = ServiceDefinitionRegistry::all_service_definitions();
@@ -269,7 +266,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_service_definition_has_required_fields() {
         let registry = ServiceDefinitionRegistry::all_service_definitions();
 
@@ -304,7 +300,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_service_patterns_use_appropriate_port_types() {
         let registry = ServiceDefinitionRegistry::all_service_definitions();
 
@@ -356,15 +351,35 @@ mod tests {
         }
     }
 
-    #[test]
-    #[serial]
-    fn test_service_patterns_are_specific_enough() {
+    #[tokio::test]
+    async fn test_service_patterns_are_specific_enough() {
         let registry = ServiceDefinitionRegistry::all_service_definitions();
-        let words_path_str = format!(
-            "{}/src/tests/words.json",
-            std::env::current_dir().unwrap().to_str().unwrap()
-        );
-        let words_file = File::open(words_path_str).unwrap();
+        let words_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("tests")
+            .join("words.json");
+
+        // Ensure the words file exists, download if necessary
+        if !words_path.exists() {
+            eprintln!("Words dictionary not found, downloading...");
+            let url =
+                "https://raw.githubusercontent.com/dwyl/english-words/master/words_dictionary.json";
+
+            // Create the directory if it doesn't exist
+            if let Some(parent) = words_path.parent() {
+                std::fs::create_dir_all(parent).unwrap();
+            }
+
+            // Download and save the file - use async client instead
+            let response = reqwest::get(url)
+                .await
+                .expect("Failed to download words dictionary");
+            let content = response.text().await.expect("Failed to read response body");
+            std::fs::write(&words_path, content).expect("Failed to write words.json");
+            eprintln!("Downloaded words dictionary to {:?}", words_path);
+        }
+
+        let words_file = File::open(&words_path).unwrap();
         let reader = BufReader::new(words_file);
         let words_map: HashMap<String, serde_json::Value> =
             serde_json::from_reader(reader).unwrap();
@@ -442,15 +457,19 @@ mod tests {
             }
 
             // Endpoint patterns with common port/path and match strings that could lead to false positive = fail
-            Pattern::Endpoint(port_base, path, body_match_string, None) => {
+            Pattern::Endpoint(port_base, path, body_match_string, status_range) => {
                 let match_string_lower = body_match_string.to_lowercase();
+                let is_short_match_string = match_string_lower.len() < 5;
 
-                // Means path is unique/specific enough, even if match string alone is likely to cause false positives
+                // Another service is likely to be listening on this port on other hosts, so need to be more stringent
+                let port_is_common = common_ports.contains(&port_base);
+
+                // Path is unique/specific enough, even if match string alone is likely to cause false positives
                 let path_contains_service_name = path.contains(service_name);
 
                 // Endpoint is probably not unique to service, and other services might respond to it
                 let is_common_endpoint = !path_contains_service_name
-                    && common_ports.contains(&port_base)
+                    && port_is_common
                     && (*path == "/" || *path == "/api/" || *path == "/home/");
 
                 // Potential to false positive with dashboards that display service name
@@ -466,22 +485,27 @@ mod tests {
                     && !match_string_lower.contains("/");
 
                 // Potential to false positive by being found in random strings displayed by other services
-                let is_substring_of_any_word = if match_string_lower.len() < 6 {
+                let is_substring_of_any_word = if is_short_match_string {
                     words.iter().any(|w| w.contains(&match_string_lower))
                         && !path_contains_service_name
                 } else {
                     false
                 };
 
-                if is_common_endpoint && match_string_lower.len() < 4 {
+                let expected_range = status_range.as_ref().unwrap_or(&(200..400));
+                let range_includes_redirects =
+                    expected_range.start < 400 && expected_range.end > 300;
+
+                if is_short_match_string && range_includes_redirects && port_is_common {
                     panic!(
-                        "Service '{}' uses a match string '{}' that is too short ({} characters). This could cause false positives. \
-                        Please provide a match string with at least 4 characters",
+                        "Service '{}' uses a match string '{}' that is too short ({} characters) and also accepts redirects.
+                        This could cause false positives. Please disallow redirects by passing Some(200..300) as the allowed status range
+                        or update the match string to be longer.",
                         service_name,
+                        body_match_string,
                         match_string_lower.len(),
-                        body_match_string
                     );
-                }
+                };
 
                 if is_common_endpoint && match_string_is_service_name {
                     panic!(
@@ -521,7 +545,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_service_definition_serialization() {
         let registry = ServiceDefinitionRegistry::all_service_definitions();
 
@@ -549,124 +572,122 @@ mod tests {
             );
         }
     }
-}
+    #[tokio::test]
+    async fn test_service_definition_logo_urls_resolve() {
+        let registry = ServiceDefinitionRegistry::all_service_definitions();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .expect("Failed to create HTTP client");
 
-#[tokio::test]
-#[serial]
-async fn test_service_definition_logo_urls_resolve() {
-    let registry = ServiceDefinitionRegistry::all_service_definitions();
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .expect("Failed to create HTTP client");
+        const ALLOWED_DOMAINS: &[&str] =
+            &["cdn.jsdelivr.net", "simpleicons.org", "vectorlogo.zone"];
 
-    const ALLOWED_DOMAINS: &[&str] = &["cdn.jsdelivr.net", "simpleicons.org", "vectorlogo.zone"];
+        for service in registry {
+            let logo_url = service.logo_url();
 
-    for service in registry {
-        let logo_url = service.logo_url();
-
-        // Skip services without logo URLs
-        if logo_url.is_empty() {
-            continue;
-        }
-
-        // Check if it's a local file path or external URL
-        if logo_url.starts_with('/') {
-            // Local file path like /logos/netvisor-logo.png
-            assert!(
-                logo_url.starts_with("/logos/"),
-                "Service '{}' has local logo URL '{}' that doesn't start with /logos/",
-                ServiceDefinition::name(&service),
-                logo_url
-            );
-            // We can't verify local files exist in tests, so just validate the path format
-            continue;
-        }
-
-        // Must be a URL - parse it
-        let url = match reqwest::Url::parse(logo_url) {
-            Ok(url) => url,
-            Err(e) => {
-                panic!(
-                    "Service '{}' has invalid logo URL '{}': {}",
-                    ServiceDefinition::name(&service),
-                    logo_url,
-                    e
-                );
+            // Skip services without logo URLs
+            if logo_url.is_empty() {
+                continue;
             }
-        };
 
-        // Check domain is in allowed list
-        let domain = url.domain().unwrap_or("");
-        let is_allowed = ALLOWED_DOMAINS
-            .iter()
-            .any(|allowed| domain.ends_with(allowed));
-
-        assert!(
-            is_allowed,
-            "Service '{}' has logo URL '{}' from unauthorized domain '{}'. \
-             Allowed domains: {}",
-            ServiceDefinition::name(&service),
-            logo_url,
-            domain,
-            ALLOWED_DOMAINS.join(", ")
-        );
-
-        // Attempt to fetch the logo URL
-        match client.head(logo_url).send().await {
-            Ok(response) => {
+            // Check if it's a local file path or external URL
+            if logo_url.starts_with('/') {
+                // Local file path like /logos/netvisor-logo.png
                 assert!(
-                    response.status().is_success(),
-                    "Service '{}' has logo URL '{}' that returned status {}",
+                    logo_url.starts_with("/logos/"),
+                    "Service '{}' has local logo URL '{}' that doesn't start with /logos/",
                     ServiceDefinition::name(&service),
-                    logo_url,
-                    response.status()
+                    logo_url
                 );
+                // We can't verify local files exist in tests, so just validate the path format
+                continue;
+            }
 
-                // Verify Content-Type is an image
-                if let Some(content_type) = response.headers().get("content-type") {
-                    let content_type_str = content_type.to_str().unwrap_or("");
-                    assert!(
-                        content_type_str.starts_with("image/")
-                            || content_type_str.starts_with("text/plain"),
-                        "Service '{}' has logo URL '{}' with non-image Content-Type: {}",
+            // Must be a URL - parse it
+            let url = match reqwest::Url::parse(logo_url) {
+                Ok(url) => url,
+                Err(e) => {
+                    panic!(
+                        "Service '{}' has invalid logo URL '{}': {}",
                         ServiceDefinition::name(&service),
                         logo_url,
-                        content_type_str
+                        e
+                    );
+                }
+            };
+
+            // Check domain is in allowed list
+            let domain = url.domain().unwrap_or("");
+            let is_allowed = ALLOWED_DOMAINS
+                .iter()
+                .any(|allowed| domain.ends_with(allowed));
+
+            assert!(
+                is_allowed,
+                "Service '{}' has logo URL '{}' from unauthorized domain '{}'. \
+             Allowed domains: {}",
+                ServiceDefinition::name(&service),
+                logo_url,
+                domain,
+                ALLOWED_DOMAINS.join(", ")
+            );
+
+            // Attempt to fetch the logo URL
+            match client.head(logo_url).send().await {
+                Ok(response) => {
+                    assert!(
+                        response.status().is_success(),
+                        "Service '{}' has logo URL '{}' that returned status {}",
+                        ServiceDefinition::name(&service),
+                        logo_url,
+                        response.status()
+                    );
+
+                    // Verify Content-Type is an image
+                    if let Some(content_type) = response.headers().get("content-type") {
+                        let content_type_str = content_type.to_str().unwrap_or("");
+                        assert!(
+                            content_type_str.starts_with("image/")
+                                || content_type_str.starts_with("text/plain"),
+                            "Service '{}' has logo URL '{}' with non-image Content-Type: {}",
+                            ServiceDefinition::name(&service),
+                            logo_url,
+                            content_type_str
+                        );
+                    }
+                }
+                Err(e) => {
+                    panic!(
+                        "Service '{}' has logo URL '{}' that failed to resolve: {}",
+                        ServiceDefinition::name(&service),
+                        logo_url,
+                        e
                     );
                 }
             }
-            Err(e) => {
-                panic!(
-                    "Service '{}' has logo URL '{}' that failed to resolve: {}",
-                    ServiceDefinition::name(&service),
-                    logo_url,
-                    e
-                );
-            }
         }
     }
-}
 
-#[test]
-#[serial]
-fn test_service_definition_description_starts_with_capital() {
-    let registry = ServiceDefinitionRegistry::all_service_definitions();
+    #[test]
+    fn test_service_definition_description_starts_with_capital() {
+        let registry = ServiceDefinitionRegistry::all_service_definitions();
 
-    for service in registry {
-        let description = ServiceDefinition::description(&service);
+        for service in registry {
+            let description = ServiceDefinition::description(&service);
 
-        // Skip empty descriptions (already caught by another test)
-        if description.is_empty() {
-            continue;
+            // Skip empty descriptions (already caught by another test)
+            if description.is_empty() {
+                continue;
+            }
+
+            let first_char = description.chars().next().unwrap();
+            assert!(
+                first_char.is_uppercase(),
+                "Service '{}' has description '{}' that doesn't start with a capital letter",
+                ServiceDefinition::name(&service),
+                description
+            );
         }
-
-        let first_char = description.chars().next().unwrap();
-        assert!(
-            first_char.is_uppercase(),
-            "Service '{}' has description '{}' that doesn't start with a capital letter",
-            ServiceDefinition::name(&service),
-            description
-        );
     }
 }

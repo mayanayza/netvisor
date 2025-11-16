@@ -119,6 +119,12 @@ export function getHostFromId(id: string): Readable<Host | null> {
 	});
 }
 
+export function getHostFromInterfaceId(interface_id: string): Readable<Host | null> {
+	return derived([hosts], ([$hosts]) => {
+		return $hosts.find((h) => h.interfaces.some((i) => i.id == interface_id)) || null;
+	});
+}
+
 export function getInterfaceFromId(id: string): Readable<Interface | null> {
 	return derived([hosts], ([$hosts]) => {
 		for (const host of $hosts) {

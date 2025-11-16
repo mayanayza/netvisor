@@ -69,7 +69,7 @@
 		showSearch={true}
 		options={selectableContainers}
 		items={managedContainers}
-		getItemContext={() => ({ interfaceIds: [] })}
+		getItemContext={() => ({})}
 		optionDisplayComponent={ServiceDisplay}
 		itemDisplayComponent={ServiceDisplay}
 		onAdd={handleAddContainer}

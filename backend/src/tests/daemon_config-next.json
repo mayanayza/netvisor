@@ -1,6 +1,6 @@
 {
   "server_target": "http://server",
-  "network_id": "421c6c81-180d-44dc-8ccd-eef1c991c4a3",
+  "network_id": "b01fe8ac-afa9-4492-9c0c-76ac2ab63a4d",
   "server_port": 60072,
   "daemon_port": 60073,
   "name": "netvisor-daemon",
@@ -8,9 +8,9 @@
   "heartbeat_interval": 30,
   "bind_address": "0.0.0.0",
   "concurrent_scans": 15,
-  "id": "8137a37d-d15b-43fc-a253-5884b81bc944",
+  "id": "1af42567-82b6-4caf-a2bc-07c97b53f649",
   "last_heartbeat": null,
-  "host_id": "e026d83a-d560-414c-80f0-2aae1dce713f",
-  "daemon_api_key": "4036180c47b1403e965f4c97ea0963d5",
+  "host_id": "d8c0edfe-1132-4f67-91d9-9dbbbc88f231",
+  "daemon_api_key": "0ed73d4d5f154f86902cf977d78788f6",
   "docker_proxy": null
 }

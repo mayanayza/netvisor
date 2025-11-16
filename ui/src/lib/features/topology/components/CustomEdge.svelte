@@ -5,11 +5,15 @@
 		BaseEdge,
 		EdgeLabel,
 		getBezierPath,
-		getStraightPath
+		getStraightPath,
+		type Edge
 	} from '@xyflow/svelte';
-	import { topology, topologyOptions } from '../store';
-	import type { TopologyEdge } from '../types/base';
+	import { selectedEdge, selectedNode, topology, topologyOptions } from '../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
+	import { groups } from '$lib/features/groups/store';
+	import { createColorHelper } from '$lib/shared/utils/styling';
+	import type { TopologyEdge } from '../types/base';
+	import { getEdgeDisplayState, edgeHoverState, groupHoverState } from '../interactions';
 
 	let {
 		id,
@@ -19,13 +23,11 @@
 		targetX,
 		targetY,
 		targetPosition,
-		markerEnd,
-		markerStart,
 		sourceHandleId,
 		targetHandleId,
-		style,
 		label,
-		data
+		data,
+		interactionWidth
 	}: EdgeProps = $props();
 
 	const nodes = $derived($topology.nodes);
@@ -33,7 +35,78 @@
 	const edgeData = data as TopologyEdge;
 	const edgeTypeMetadata = edgeTypes.getMetadata(edgeData.edge_type);
 
+	// Get group reactively - updates when groups store changes
+	let group = $derived.by(() => {
+		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
+			return $groups.find((g) => g.id == edgeData.group_id) || null;
+		}
+		return null;
+	});
+
 	let hideEdge = $derived($topologyOptions.hide_edge_types.includes(edgeData.edge_type));
+
+	// Get display state from helper - Make reactive to hover stores
+	let displayState = $derived.by(() => {
+		// Subscribe to hover stores to trigger reactivity
+		void $edgeHoverState;
+		void $groupHoverState;
+
+		// Create a minimal edge object for the helper
+		const edge: Edge = {
+			id,
+			source: edgeData.source as string,
+			target: edgeData.target as string,
+			data: edgeData
+		} as Edge;
+
+		return getEdgeDisplayState(edge, $selectedNode, $selectedEdge);
+	});
+
+	let shouldShowFull = $derived(displayState.shouldShowFull);
+	let isSelected = $derived($selectedEdge?.id === id);
+
+	// Calculate edge color - use group color if available, otherwise use edge type color
+	let edgeColorHelper = $derived.by(() => {
+		if (group?.color) {
+			return createColorHelper(group.color);
+		}
+		return edgeTypes.getColorHelper(edgeData.edge_type);
+	});
+
+	// Determine if this edge should use the two-color dashed effect
+	let isGroupEdge = $derived(edgeTypeMetadata.is_group_edge);
+	let useMultiColorDash = $derived(isGroupEdge && shouldShowFull);
+
+	// Calculate base edge properties
+	let baseStrokeWidth = $derived(!$topologyOptions.no_fade_edges && shouldShowFull ? 3 : 2);
+	let baseOpacity = $derived(!$topologyOptions.no_fade_edges && !shouldShowFull ? 0.2 : 1);
+
+	// Calculate edge style for primary layer (dashed white overlay for group edges, or normal edge)
+	let edgeStyle = $derived.by(() => {
+		// For group edges with multi-color dash: white dashes
+		// For non-group dashed edges: use standard 5 5 pattern with edge color
+		let strokeColor = edgeColorHelper.rgb;
+		let dashArray = '';
+
+		if (useMultiColorDash && isSelected) {
+			// Group edge currently selected
+			strokeColor = 'rgba(0, 0, 0, 0.4)';
+		} else if (useMultiColorDash && !isSelected) {
+			// Other group edges, subtler highlight
+			strokeColor = 'rgba(0, 0, 0, 0.15)';
+		} else if (!isGroupEdge && edgeTypeMetadata.is_dashed) {
+			dashArray = 'stroke-dasharray: 5 5;';
+		}
+
+		return `stroke: ${strokeColor}; stroke-width: ${baseStrokeWidth}px; opacity: ${baseOpacity}; ${dashArray} transition: opacity 0.2s ease-in-out, stroke-width 0.2s ease-in-out;`;
+	});
+
+	// Calculate edge style for secondary solid layer (only for group edges when shown full)
+	let solidBaseStyle = $derived.by(() => {
+		if (!useMultiColorDash) return '';
+		// Solid base color underneath the white dashes
+		return `stroke: ${edgeColorHelper.rgb}; stroke-width: ${baseStrokeWidth}px; opacity: ${baseOpacity}; transition: opacity 0.2s ease-in-out, stroke-width 0.2s ease-in-out;`;
+	});
 
 	// Calculate dynamic offset for multi-hop edges
 	function calculateDynamicOffset(isMultiHop: boolean): number {
@@ -82,7 +155,8 @@
 		return Math.max(minimumOffset, maxOutcrop + padding);
 	}
 
-	let [edgePath, labelX, labelY] = $derived.by(() => {
+	// Helper function to get the path calculation function based on edge style
+	function getPathFunction(edge_style: string) {
 		const isMultiHop = (edgeData.is_multi_hop as boolean) || false;
 		const offset = calculateDynamicOffset(isMultiHop);
 
@@ -95,27 +169,44 @@
 			targetPosition
 		};
 
-		switch (edgeTypeMetadata.edge_style) {
-			case 'straight':
+		switch (edge_style) {
+			case 'Straight':
 				return getStraightPath(basePathProperties);
-			case 'smoothstep':
+			case 'Smoothstep':
+			case 'SmoothStep':
 				return getSmoothStepPath({
 					...basePathProperties,
 					borderRadius: 10,
 					offset
 				});
-			case 'bezier':
+			case 'Bezier':
+			case 'SimpleBezier':
 				return getBezierPath(basePathProperties);
-			case 'simplebezier':
-				return getBezierPath(basePathProperties);
-			case 'step':
+			case 'Step':
+				return getSmoothStepPath({
+					...basePathProperties,
+					borderRadius: 10,
+					offset
+				});
+			default:
 				return getSmoothStepPath({
 					...basePathProperties,
 					borderRadius: 10,
 					offset
 				});
 		}
+	}
+
+	// Calculate edge path and label position - DRY approach
+	let pathData = $derived.by(() => {
+		// Use group edge_style if available, otherwise use edge type metadata
+		const edge_style = group ? group.edge_style : edgeTypeMetadata.edge_style;
+		return getPathFunction(edge_style);
 	});
+
+	let edgePath = $derived(pathData[0]);
+	let labelX = $derived(pathData[1]);
+	let labelY = $derived(pathData[2]);
 
 	let labelOffsetX = $state(0);
 	let labelOffsetY = $state(0);
@@ -141,15 +232,31 @@
 </script>
 
 {#if !hideEdge}
-	<BaseEdge path={edgePath} {markerEnd} {markerStart} {style} {id} />
+	<!-- Solid base layer for group edges when shown full (rendered first, behind) -->
+	{#if useMultiColorDash}
+		<BaseEdge path={edgePath} style={solidBaseStyle} {id} interactionWidth={0} class="solid-base" />
+	{/if}
 
-	{#if label}
-		<EdgeLabel x={labelX + labelOffsetX} y={labelY + labelOffsetY} style="background: none;">
+	<!-- Primary edge layer (white dashes for group edges when shown, normal for everything else) -->
+	<BaseEdge
+		path={edgePath}
+		style={edgeStyle}
+		{id}
+		interactionWidth={interactionWidth || 20}
+		class={useMultiColorDash ? 'dashed-overlay' : ''}
+	/>
+
+	{#if label && shouldShowFull}
+		<EdgeLabel
+			x={labelX + labelOffsetX}
+			y={labelY + labelOffsetY}
+			style="background: none; pointer-events: none;"
+		>
 			<div
 				class="card text-secondary nopan"
 				style="font-size: 12px; font-weight: 500; padding: 0.5rem 0.75rem; border-color: rgb(55 65 81); cursor: {isDragging
 					? 'grabbing'
-					: 'grab'};"
+					: 'grab'}; pointer-events: auto;"
 				draggable="true"
 				role="button"
 				tabindex="0"
@@ -162,3 +269,13 @@
 		</EdgeLabel>
 	{/if}
 {/if}
+
+<style>
+	/* Override SvelteFlow's animated behavior ONLY for our solid base layer - keep it solid */
+	:global(.svelte-flow__edge.animated .svelte-flow__edge-path.solid-base) {
+		stroke-dasharray: 0 !important;
+		animation: none !important;
+	}
+
+	/* Let the dashed overlay use SvelteFlow's built-in animation */
+</style>

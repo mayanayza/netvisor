@@ -4,10 +4,11 @@
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { getServicesForHost } from '$lib/features/services/store';
 	import { isContainerSubnet } from '$lib/features/subnets/store';
-	import { topologyOptions } from '../store';
+	import { selectedEdge, selectedNode, topologyOptions } from '../store';
 	import type { NodeRenderData } from '../types/base';
 	import { get } from 'svelte/store';
 	import { formatPort } from '$lib/shared/utils/formatting';
+	import { connectedNodeIds } from '../interactions';
 
 	let { data, width, height }: NodeProps = $props();
 
@@ -66,15 +67,34 @@
 			: null
 	);
 
+	let isNodeSelected = $derived($selectedNode?.id === nodeData?.interface_id);
+
+	// Calculate if this node should fade out when another node is selected
+	// Calculate if this node should fade out when another node is selected
+	let shouldFadeOut = $derived.by(() => {
+		if (!$selectedNode && !$selectedEdge) return false;
+		if (!nodeData) return false;
+
+		// Check if this node is in the connected set
+		return !$connectedNodeIds.has(nodeData.interface_id);
+	});
+
+	let nodeOpacity = $derived(shouldFadeOut ? 0.3 : 1);
+
 	const hostColorHelper = entities.getColorHelper('Host');
 	const virtualizationColorHelper = entities.getColorHelper('Virtualization');
+
+	let cardClass = $derived(
+		`card ${isNodeSelected ? 'ring-2 ring-blue-500 hover:ring-2 hover:ring-blue-500' : ''} ${nodeData?.isVirtualized ? `border-color: ${virtualizationColorHelper.border}` : ''}`
+	);
 </script>
 
 {#if nodeData}
 	<div
-		class={`card ${nodeData.isVirtualized ? `border-color: ${virtualizationColorHelper.border}` : ''}`}
-		style={`width: ${width}px; height: ${height}px; display: flex; flex-direction: column; padding: 0;`}
+		class={cardClass}
+		style={`width: ${width}px; height: ${height}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out;`}
 	>
+		<!-- Rest of component stays the same -->
 		<!-- Header section with gradient transition to body -->
 		{#if nodeData.headerText}
 			<div class="relative flex-shrink-0 px-2 pt-2 text-center">

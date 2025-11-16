@@ -18,7 +18,7 @@ services:
       - NETVISOR_HEARTBEAT_INTERVAL=30
       - NETVISOR_NETWORK_ID=0
     volumes:
-      - daemon-config:/root/.config/netvisor/daemon
+      - daemon-config:/root/.config/daemon
       # Comment out the line below to disable docker discovery
       - /var/run/docker.sock:/var/run/docker.sock:ro
 

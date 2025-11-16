@@ -154,6 +154,7 @@ async-stripe-types = { version = "1.0.0-alpha.2" }
 async-stripe-webhook = { version = "1.0.0-alpha.2" }
 moka = { version = "0.12.11", features = ["future"] }
 nanoid = "0.4.0"
+serde_with = "3.15.1"
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -168,6 +169,7 @@ windows = { version = "0.52", features = [
 openssl = { version = "0.10.73", features = ["vendored"] }
 
 [dev-dependencies]
+reqwest = { version = "0.12", features = ["blocking"] }
 walkdir = "2.5"
 tar = "0.4"
 testcontainers = "0.25.0"

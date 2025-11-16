@@ -1,3 +1,5 @@
+version: 2
+
 secret:
   ignored_paths:
     - 'backend/src/tests/*'

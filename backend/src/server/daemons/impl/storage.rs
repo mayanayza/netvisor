@@ -1,9 +1,7 @@
-use std::net::IpAddr;
-
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use std::net::IpAddr;
 use uuid::Uuid;
 
 use crate::server::{
@@ -96,11 +94,11 @@ impl StorableEntity for Daemon {
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         let ip: IpAddr = serde_json::from_str(&row.get::<String, _>("ip"))
-            .or(Err(Error::msg("Failed to deserialize IP")))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize IP: {}", e))?;
 
         let capabilities: DaemonCapabilities =
             serde_json::from_value(row.get::<serde_json::Value, _>("capabilities"))
-                .or(Err(Error::msg("Failed to deserialize capabilities")))?;
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize capabilities: {}", e))?;
 
         Ok(Daemon {
             id: row.get("id"),

@@ -17,7 +17,7 @@
 		<span class="text-secondary mb-2 block text-sm font-medium">VM Service</span>
 		<div class="card">
 			<EntityDisplayWrapper
-				context={{ interfaceIds: [] }}
+				context={{ interfaceId: null }}
 				item={$vmService}
 				displayComponent={ServiceDisplay}
 			/>
