@@ -8,19 +8,10 @@ export const organization = writable<Organization | null>();
 export const invites = writable<OrganizationInvite[]>([]);
 
 export async function onboard(request: OnboardingRequest): Promise<void> {
-	await api.request<Organization, Organization | null>(
-		'/onboarding',
-		organization,
-		(org) => {
-			console.log('Onboarding response:', org);
-			console.log('is_onboarded:', org.is_onboarded);
-			return org;
-		},
-		{
-			method: 'POST',
-			body: JSON.stringify(request)
-		}
-	);
+	await api.request<Organization, Organization | null>('/onboarding', organization, (org) => org, {
+		method: 'POST',
+		body: JSON.stringify(request)
+	});
 }
 
 export async function getOrganization(): Promise<Organization | null> {

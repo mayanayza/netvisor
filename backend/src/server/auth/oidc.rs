@@ -186,7 +186,7 @@ impl OidcService {
         &self,
         code: &str,
         pending_auth: OidcPendingAuth,
-        organization_id: Option<Uuid>,
+        org_id: Option<Uuid>,
         permissions: Option<UserOrgPermissions>,
     ) -> Result<User> {
         let user_info = self.exchange_code(code, pending_auth).await?;
@@ -218,7 +218,7 @@ impl OidcService {
                 email,
                 user_info.subject,
                 self.provider_name.clone(),
-                organization_id,
+                org_id,
                 permissions,
             )
             .await

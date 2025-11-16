@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::server::users::r#impl::permissions::UserOrgPermissions;
-
 /// Login request from client
 /// Note: 'name' is used as the username
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -24,8 +22,6 @@ pub struct RegisterRequest {
     #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
     #[validate(custom(function = "validate_password_complexity"))]
     pub password: String,
-    pub organization_id: Option<Uuid>,
-    pub permissions: Option<UserOrgPermissions>,
 }
 
 /// Validate password complexity requirements
@@ -70,6 +66,4 @@ pub struct UpdateEmailPasswordRequest {
 pub struct OidcAuthorizeParams {
     pub link: Option<bool>,
     pub return_url: Option<String>,
-    pub organization_id: Option<Uuid>,
-    pub permissions: Option<UserOrgPermissions>,
 }

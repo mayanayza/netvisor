@@ -14,17 +14,15 @@
 	import { networks } from '$lib/features/networks/store';
 	import { subnets } from '$lib/features/subnets/store';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
-	import { config, getConfig } from '$lib/shared/stores/config';
-	import { getMetadata } from '$lib/shared/stores/metadata';
+	import { getConfig } from '$lib/shared/stores/config';
 	import { getOrganization, organization } from '$lib/features/organizations/store';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
-	import { getCurrentBillingPlans } from '$lib/features/billing/store';
+	import { getRoute } from '$lib/shared/utils/navigation';
+	import { apiKeys } from '$lib/features/api_keys/store';
+	import { daemons } from '$lib/features/daemons/store';
 
 	// Accept children as a snippet prop
 	let { children }: { children: Snippet } = $props();
-
-	// Reactive values from stores
-	let billingEnabled = $derived($config ? $config.billing_enabled : false);
 
 	// Effect to reset data when user logs out
 	$effect(() => {
@@ -34,6 +32,9 @@
 			services.set([]);
 			subnets.set([]);
 			groups.set([]);
+			organization.set(null);
+			apiKeys.set([]);
+			daemons.set([]);
 			networks.set([]);
 		}
 	});
@@ -56,7 +57,6 @@
 	}
 
 	onMount(async () => {
-		await getOrganization();
 		const sessionId = $page.url.searchParams.get('session_id');
 
 		// Check for OIDC error in URL
@@ -71,7 +71,7 @@
 		}
 
 		// Check authentication status and get public server config
-		await Promise.all([checkAuth(), getConfig(), getMetadata()]);
+		await Promise.all([checkAuth(), getConfig()]);
 
 		// Redirect to auth page if not authenticated and not already there
 		if (!$isAuthenticated) {
@@ -80,24 +80,10 @@
 				await goto(`${resolve('/auth')}${$page.url.search}`);
 			}
 		} else {
+			await getOrganization();
+
 			if ($organization) {
-				// Check onboarding - don't redirect if already on onboarding page
-				if (!$organization.is_onboarded) {
-					if ($page.url.pathname !== '/onboarding') {
-						await goto(resolve('/onboarding'));
-					}
-					return; // Stop here regardless of whether we redirected or not
-				}
-
-				// Only check billing if onboarded
-				if (!billingEnabled) {
-					if ($page.url.pathname !== '/') {
-						await goto(resolve('/'));
-					}
-					return;
-				}
-
-				// Billing logic (only runs if onboarded)
+				// Handle Stripe session callback (billing activation)
 				if (sessionId && !isBillingPlanActive($organization)) {
 					// Clean up URL first
 					const cleanUrl = new URL($page.url);
@@ -107,18 +93,19 @@
 					// Poll for webhook to complete
 					const activated = await waitForBillingActivation();
 					if (activated) {
-						await goto(resolve('/'));
+						// After billing is activated, navigate to correct route
+						const correctRoute = getRoute();
+						// eslint-disable-next-line svelte/no-navigation-without-resolve
+						await goto(correctRoute);
 						return;
 					}
-				} else if (isBillingPlanActive($organization)) {
-					if ($page.url.pathname === '/billing') {
-						await goto(resolve('/'));
-					}
-				} else if (!isBillingPlanActive($organization)) {
-					if ($page.url.pathname !== '/billing') {
-						await getCurrentBillingPlans();
-						await goto(resolve('/billing'));
-					}
+				}
+
+				// Determine correct route and redirect if needed
+				const correctRoute = getRoute();
+				if ($page.url.pathname !== correctRoute) {
+					// eslint-disable-next-line svelte/no-navigation-without-resolve
+					await goto(correctRoute);
 				}
 			} else {
 				pushError('Failed to load organization. Please refresh the page.');

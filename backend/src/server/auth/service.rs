@@ -46,7 +46,12 @@ impl AuthService {
     }
 
     /// Register a new user with password
-    pub async fn register(&self, request: RegisterRequest) -> Result<User> {
+    pub async fn register(
+        &self,
+        request: RegisterRequest,
+        org_id: Option<Uuid>,
+        permissions: Option<UserOrgPermissions>,
+    ) -> Result<User> {
         request
             .validate()
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
@@ -67,8 +72,8 @@ impl AuthService {
             Some(hash_password(&request.password)?),
             None,
             None,
-            request.organization_id,
-            request.permissions,
+            org_id,
+            permissions,
         )
         .await
     }
@@ -79,7 +84,7 @@ impl AuthService {
         email: EmailAddress,
         oidc_subject: String,
         oidc_provider: String,
-        organization_id: Option<Uuid>,
+        org_id: Option<Uuid>,
         permissions: Option<UserOrgPermissions>,
     ) -> Result<User> {
         // Provision user with OIDC
@@ -88,7 +93,7 @@ impl AuthService {
             None,
             Some(oidc_subject),
             Some(oidc_provider),
-            organization_id,
+            org_id,
             permissions,
         )
         .await
@@ -101,7 +106,7 @@ impl AuthService {
         password_hash: Option<String>,
         oidc_subject: Option<String>,
         oidc_provider: Option<String>,
-        organization_id: Option<Uuid>,
+        org_id: Option<Uuid>,
         permissions: Option<UserOrgPermissions>,
     ) -> Result<User> {
         let all_users = self
@@ -132,8 +137,8 @@ impl AuthService {
 
             self.user_service.update(&mut seed_user).await
         } else {
-            // Not first user - create new user with or without org
-            let org_id = if let Some(org_id) = organization_id {
+            // If being invited, use provied org ID, otherwise create a new one
+            let org_id = if let Some(org_id) = org_id {
                 org_id
             } else {
                 // Create new organization for this user
@@ -149,6 +154,9 @@ impl AuthService {
                     .await?;
                 organization.id
             };
+
+            // If being invited, will have permissions; otherwise, new user and should be owner of org
+            let permissions = permissions.unwrap_or(UserOrgPermissions::Owner);
 
             // Create user based on auth method
             if let Some(hash) = password_hash {

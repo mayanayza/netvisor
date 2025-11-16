@@ -15,9 +15,7 @@
 	let formData: RegisterRequest & { confirmPassword: string } = {
 		email: '',
 		password: '',
-		confirmPassword: '',
-		permissions: null,
-		organization_id: null
+		confirmPassword: ''
 	};
 
 	// Reset form when modal opens
@@ -29,9 +27,7 @@
 		formData = {
 			email: '',
 			password: '',
-			confirmPassword: '',
-			permissions: null,
-			organization_id: null
+			confirmPassword: ''
 		};
 	}
 
@@ -41,9 +37,7 @@
 			// Only pass username and password to onRegister
 			await onRegister({
 				email: formData.email,
-				password: formData.password,
-				permissions: null,
-				organization_id: null
+				password: formData.password
 			});
 		} finally {
 			loading = false;

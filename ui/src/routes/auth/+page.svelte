@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { login, register } from '$lib/features/auth/store';
+	import { checkAuth, login, register } from '$lib/features/auth/store';
 	import LoginModal from '$lib/features/auth/components/LoginModal.svelte';
 	import RegisterModal from '$lib/features/auth/components/RegisterModal.svelte';
 	import type { LoginRequest, RegisterRequest } from '$lib/features/auth/types/base';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import { page } from '$app/stores';
+	import { getOrganization } from '$lib/features/organizations/store';
+	import { navigate } from '$lib/shared/utils/navigation';
 
 	let showLogin = $state(true);
 
@@ -14,18 +16,24 @@
 
 	async function handleLogin(data: LoginRequest) {
 		const user = await login(data);
-		if (!user) {
-			return;
-		}
-		window.location.href = '/';
+		if (!user) return;
+
+		// Refresh auth state and organization
+		await Promise.all([checkAuth(), getOrganization()]);
+
+		// Navigate to correct destination
+		await navigate();
 	}
 
 	async function handleRegister(data: RegisterRequest) {
 		const user = await register(data);
-		if (!user) {
-			return;
-		}
-		window.location.href = '/';
+		if (!user) return;
+
+		// Refresh auth state and organization
+		await Promise.all([checkAuth(), getOrganization()]);
+
+		// Navigate to correct destination
+		await navigate();
 	}
 
 	function switchToRegister() {

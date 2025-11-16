@@ -12,6 +12,7 @@
 	import { startDiscoverySSE } from '$lib/features/discovery/SSEStore';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
 	import type { Component } from 'svelte';
+	import { getMetadata } from '$lib/shared/stores/metadata';
 
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
@@ -46,7 +47,7 @@
 		if (dataLoadingStarted) return;
 		dataLoadingStarted = true;
 
-		await getNetworks();
+		await Promise.all([getNetworks(), getMetadata()]);
 
 		// Load initial data
 		storeWatcherUnsubs = [

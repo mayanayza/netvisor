@@ -49,15 +49,22 @@ async fn register(
         return Err(ApiError::forbidden("User registration is disabled"));
     }
 
-    let user = state.services.auth_service.register(request).await?;
+    let (org_id, permissions) = match process_pending_invite(&state, &session).await {
+        Ok(Some((org_id, permissions))) => (Some(org_id), Some(permissions)),
+        Ok(_) => (None, None),
+        Err(e) => {
+            return Err(ApiError::internal_error(&format!(
+                "Failed to process invite: {}",
+                e
+            )));
+        }
+    };
 
-    if let Err(e) = process_pending_invite(&state, &session, user.id).await {
-        tracing::error!(
-            "Failed to process pending invite during registration: {}",
-            e
-        );
-        // Don't fail registration, just log the error
-    }
+    let user = state
+        .services
+        .auth_service
+        .register(request, org_id, permissions)
+        .await?;
 
     session
         .insert("user_id", user.id)
@@ -73,14 +80,6 @@ async fn login(
     Json(request): Json<LoginRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     let user = state.services.auth_service.login(request).await?;
-
-    if let Err(e) = process_pending_invite(&state, &session, user.id).await {
-        tracing::error!(
-            "Failed to process pending invite during registration: {}",
-            e
-        );
-        // Don't fail registration, just log the error
-    }
 
     session
         .insert("user_id", user.id)
@@ -182,14 +181,6 @@ async fn oidc_authorize(
                 .return_url
                 .ok_or_else(|| ApiError::bad_request("return_url parameter is required"))?,
         )
-        .await
-        .map_err(|e| ApiError::internal_error(&format!("Failed to save session: {}", e)))?;
-    session
-        .insert("oidc_organization_id", params.organization_id)
-        .await
-        .map_err(|e| ApiError::internal_error(&format!("Failed to save session: {}", e)))?;
-    session
-        .insert("oidc_permissions", params.permissions)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to save session: {}", e)))?;
 
@@ -297,15 +288,20 @@ async fn oidc_callback(
             }
         }
     } else {
-        // LOGIN FLOW
-        let organization_id: Option<Uuid> = session
-            .remove("oidc_organization_id")
-            .await
-            .unwrap_or_default();
-        let permissions = session.remove("oidc_permissions").await.unwrap_or_default();
+        let (org_id, permissions) = match process_pending_invite(&state, &session).await {
+            Ok(Some((org_id, permissions))) => (Some(org_id), Some(permissions)),
+            Ok(_) => (None, None),
+            Err(e) => {
+                return Err(Redirect::to(&format!(
+                    "{}?error={}",
+                    return_url,
+                    urlencoding::encode(&format!("Failed to process invite: {}", e))
+                )));
+            }
+        };
 
         match oidc_service
-            .login_or_register(&params.code, pending_auth, organization_id, permissions)
+            .login_or_register(&params.code, pending_auth, org_id, permissions)
             .await
         {
             Ok(user) => {
@@ -316,14 +312,6 @@ async fn oidc_callback(
                         return_url,
                         urlencoding::encode(&format!("Failed to create session: {}", e))
                     )));
-                }
-
-                if let Err(e) = process_pending_invite(&state, &session, user.id).await {
-                    tracing::error!(
-                        "Failed to process pending invite during registration: {}",
-                        e
-                    );
-                    // Don't fail registration, just log the error
                 }
 
                 // Clear session data

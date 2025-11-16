@@ -11,7 +11,7 @@ use crate::server::shared::types::api::ApiError;
 use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::ApiResult;
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
-use anyhow::{Error, anyhow};
+use anyhow::Error;
 use axum::Json;
 use axum::Router;
 use axum::extract::Path;
@@ -219,23 +219,55 @@ async fn accept_invite_link(
     // Check if user is already logged in
     if let Ok(Some(user_id)) = session.get::<uuid::Uuid>("user_id").await {
         // User is logged in - add them to the organization immediately
-        if let Err(e) = process_pending_invite(&state, &session, user_id).await {
-            tracing::error!("Failed to process invite for logged-in user: {}", e);
-            return Err(Redirect::to(&format!(
-                "/?error={}",
-                urlencoding::encode(&e.to_string())
-            )));
-        };
+        if let Some((org_id, permissions)) = process_pending_invite(&state, &session)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to process invite for logged-in user: {}", e);
+                Redirect::to(&format!("/?error={}", urlencoding::encode(&e.to_string())))
+            })?
+        {
+            let mut user = state
+                .services
+                .user_service
+                .get_by_id(&user_id)
+                .await
+                .map_err(|_| {
+                    Redirect::to(&format!(
+                        "/?error={}",
+                        urlencoding::encode(&format!(
+                            "Failed get user to update organization {}",
+                            user_id
+                        ))
+                    ))
+                })?
+                .ok_or_else(|| {
+                    Redirect::to(&format!(
+                        "/?error={}",
+                        urlencoding::encode(&format!(
+                            "Failed to update organization for user {}",
+                            user_id
+                        ))
+                    ))
+                })?;
 
-        // Mark invite as used
-        if let Err(e) = state.services.organization_service.use_invite(&token).await {
-            tracing::error!("Failed to mark invite as used: {}", e);
+            user.base.organization_id = org_id;
+            user.base.permissions = permissions;
+            // Update user's organization
+            state
+                .services
+                .user_service
+                .update(&mut user)
+                .await
+                .map_err(|_| {
+                    Redirect::to(&format!(
+                        "/?error={}",
+                        urlencoding::encode(&format!(
+                            "Failed update user organization {}",
+                            user_id
+                        ))
+                    ))
+                })?;
         }
-
-        // Clear pending invite from session
-        let _ = session.remove::<uuid::Uuid>("pending_org_invite").await;
-        let _ = session.remove::<String>("pending_invite_token").await;
-        let _ = session.remove::<String>("pending_invite_permissions").await;
 
         // Redirect to home
         return Ok(Redirect::to("/"));
@@ -251,17 +283,16 @@ async fn accept_invite_link(
 pub async fn process_pending_invite(
     state: &Arc<AppState>,
     session: &Session,
-    user_id: Uuid,
-) -> Result<(), Error> {
+) -> Result<Option<(Uuid, UserOrgPermissions)>, Error> {
     // Check for pending invite in session
     let pending_org_id = match session.get::<Uuid>("pending_org_invite").await {
         Ok(Some(org_id)) => org_id,
-        _ => return Ok(()), // No pending invite
+        _ => return Ok(None), // No pending invite
     };
 
     let invite_token = match session.get::<String>("pending_invite_token").await {
         Ok(Some(token)) => token,
-        _ => return Ok(()), // No token stored
+        _ => return Ok(None), // No token stored
     };
 
     let permissions = match session
@@ -269,31 +300,13 @@ pub async fn process_pending_invite(
         .await
     {
         Ok(Some(permissions)) => permissions,
-        _ => return Ok(()), // No token stored
+        _ => return Ok(None), // No permissions stored
     };
 
     tracing::info!(
-        "Processing pending invite for user {} to organization {}",
-        user_id,
+        "Processing pending invite to organization {}",
         pending_org_id
     );
-
-    let mut user = state
-        .services
-        .user_service
-        .get_by_id(&user_id)
-        .await?
-        .ok_or_else(|| anyhow!("Failed to update organization for user {}", user_id))?;
-
-    user.base.organization_id = pending_org_id;
-    user.base.permissions = permissions;
-    // Update user's organization
-    state
-        .services
-        .user_service
-        .update(&mut user)
-        .await
-        .map_err(|e| anyhow!("Failed to add user to organization: {}", e))?;
 
     // Mark invite as used
     if let Err(e) = state
@@ -303,12 +316,12 @@ pub async fn process_pending_invite(
         .await
     {
         tracing::error!("Failed to mark invite as used: {}", e);
-        // Don't fail the whole operation if we can't mark it as used
     }
 
     // Clear session data
     let _ = session.remove::<Uuid>("pending_org_invite").await;
     let _ = session.remove::<String>("pending_invite_token").await;
+    let _ = session.remove::<String>("pending_invite_permissions").await;
 
-    Ok(())
+    Ok(Some((pending_org_id, permissions)))
 }

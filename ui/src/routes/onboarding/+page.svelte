@@ -5,10 +5,11 @@
 	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import type { OnboardingRequest } from '$lib/features/auth/types/base';
 	import { onboard } from '$lib/features/organizations/store';
+	import { navigate } from '$lib/shared/utils/navigation';
 
 	async function handleSubmit(formData: OnboardingRequest) {
 		await onboard(formData);
-		window.location.href = '/';
+		await navigate();
 	}
 
 	function handleClose() {

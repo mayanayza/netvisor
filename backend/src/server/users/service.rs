@@ -71,9 +71,8 @@ impl UserService {
         oidc_subject: String,
         oidc_provider: Option<String>,
         organization_id: Uuid,
-        permissions: Option<UserOrgPermissions>,
+        permissions: UserOrgPermissions,
     ) -> Result<User, Error> {
-        let permissions = permissions.unwrap_or(UserOrgPermissions::Owner);
         let user = User::new(UserBase::new_oidc(
             email,
             oidc_subject,
@@ -91,9 +90,8 @@ impl UserService {
         email: EmailAddress,
         password_hash: String,
         organization_id: Uuid,
-        permissions: Option<UserOrgPermissions>,
+        permissions: UserOrgPermissions,
     ) -> Result<User, Error> {
-        let permissions = permissions.unwrap_or(UserOrgPermissions::Owner);
         let user = User::new(UserBase::new_password(
             email,
             password_hash,
