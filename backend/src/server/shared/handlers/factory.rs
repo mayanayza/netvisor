@@ -1,26 +1,37 @@
+use crate::server::api_keys::r#impl::base::{ApiKey, ApiKeyBase};
+use crate::server::auth::middleware::{AuthenticatedUser, RequireOwner};
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
 use crate::server::config::PublicConfigResponse;
 use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::github::handlers::get_stars;
 use crate::server::groups::r#impl::types::GroupType;
 use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::networks::r#impl::{Network, NetworkBase};
+use crate::server::organizations::r#impl::base::Organization;
 use crate::server::services::definitions::ServiceDefinitionRegistry;
 use crate::server::shared::entities::Entity;
+use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::traits::StorableEntity;
+use crate::server::shared::types::api::{ApiError, ApiResult};
 use crate::server::shared::types::metadata::{MetadataProvider, MetadataRegistry};
 use crate::server::subnets::r#impl::types::SubnetType;
 use crate::server::topology::types::edges::EdgeType;
+use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::{
-    auth::handlers as auth_handlers, config::AppState, daemons::handlers as daemon_handlers,
-    discovery::handlers as discovery_handlers, groups::handlers as group_handlers,
-    hosts::handlers as host_handlers, networks::handlers as network_handlers,
+    auth::handlers as auth_handlers, billing::handlers as billing_handlers, config::AppState,
+    daemons::handlers as daemon_handlers, discovery::handlers as discovery_handlers,
+    groups::handlers as group_handlers, hosts::handlers as host_handlers,
+    networks::handlers as network_handlers, organizations::handlers as organization_handlers,
     services::handlers as service_handlers, shared::types::api::ApiResponse,
     subnets::handlers as subnet_handlers, topology::handlers as topology_handlers,
     users::handlers as user_handlers,
-    organizations::handlers as organization_handlers,
-    billing::handlers as billing_handlers
 };
+use anyhow::anyhow;
 use axum::extract::State;
+use axum::routing::post;
 use axum::{Json, Router, routing::get};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use strum::{IntoDiscriminant, IntoEnumIterator};
 
@@ -41,9 +52,11 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/api/health", get(get_health))
         .route("/api/metadata", get(get_metadata_registry))
         .route("/api/config", get(get_public_config))
+        .route("/api/github-stars", get(get_stars))
+        .route("/api/onboarding", post(onboarding))
 }
 
-async fn get_metadata_registry() -> Json<ApiResponse<MetadataRegistry>> {
+async fn get_metadata_registry(_user: AuthenticatedUser) -> Json<ApiResponse<MetadataRegistry>> {
     let registry = MetadataRegistry {
         service_definitions: ServiceDefinitionRegistry::all_service_definitions()
             .iter()
@@ -58,7 +71,10 @@ async fn get_metadata_registry() -> Json<ApiResponse<MetadataRegistry>> {
         ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
         discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
         billing_plans: BillingPlan::iter().map(|p| p.to_metadata()).collect(),
-        features: Feature::iter().map(|f| f.to_metadata()).collect()
+        features: Feature::iter().map(|f| f.to_metadata()).collect(),
+        permissions: UserOrgPermissions::iter()
+            .map(|p| p.to_metadata())
+            .collect(),
     };
 
     Json(ApiResponse::success(registry))
@@ -85,5 +101,75 @@ pub async fn get_public_config(
             .clone()
             .unwrap_or("OIDC Provider".to_string()),
         billing_enabled: state.config.stripe_secret.is_some(),
+        has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
     }))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OnboardingRequest {
+    pub organization_name: String,
+    pub network_name: String,
+    pub populate_seed_data: bool,
+}
+
+pub async fn onboarding(
+    State(state): State<Arc<AppState>>,
+    RequireOwner(user): RequireOwner,
+    Json(request): Json<OnboardingRequest>,
+) -> ApiResult<Json<ApiResponse<Organization>>> {
+    let mut org = state
+        .services
+        .organization_service
+        .get_by_id(&user.organization_id)
+        .await?
+        .ok_or_else(|| anyhow!("Could not find organization."))?;
+
+    if org.base.is_onboarded {
+        return Err(ApiError::bad_request("Org is already onboarded"));
+    }
+
+    // Billing not enabled = self hosted
+    if state.config.stripe_secret.is_none() {
+        org.base.plan = Some(BillingPlan::default())
+    }
+
+    org.base.name = request.organization_name;
+    org.base.is_onboarded = true;
+    let updated_org = state.services.organization_service.update(&mut org).await?;
+
+    let mut network = Network::new(NetworkBase::new(user.organization_id));
+    network.base.name = request.network_name;
+
+    let network = state.services.network_service.create(network).await?;
+
+    if request.populate_seed_data {
+        state
+            .services
+            .network_service
+            .seed_default_data(network.id)
+            .await?;
+    }
+
+    if let Some(integrated_daemon_url) = &state.config.integrated_daemon_url {
+        let api_key = state
+            .services
+            .api_key_service
+            .create(ApiKey::new(ApiKeyBase {
+                key: "".to_string(),
+                name: "Integrated Daemon API Key".to_string(),
+                last_used: None,
+                expires_at: None,
+                network_id: network.id,
+                is_enabled: true,
+            }))
+            .await?;
+
+        state
+            .services
+            .daemon_service
+            .initialize_local_daemon(integrated_daemon_url.clone(), network.id, api_key.base.key)
+            .await?;
+    }
+
+    Ok(Json(ApiResponse::success(updated_org)))
 }

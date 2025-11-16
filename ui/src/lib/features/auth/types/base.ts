@@ -14,3 +14,9 @@ export interface SessionUser {
 	user_id: string;
 	name: string;
 }
+
+export interface OnboardingRequest {
+	organization_name: string;
+	network_name: string;
+	populate_seed_data: boolean;
+}

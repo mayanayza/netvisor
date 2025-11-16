@@ -1,9 +1,11 @@
 use crate::server::{
-    auth::middleware::AuthenticatedUser, config::AppState, networks::service::NetworkService, shared::{
+    auth::middleware::{AuthenticatedUser, RequireMember},
+    config::AppState,
+    shared::{
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
-    }
+    },
 };
 use async_trait::async_trait;
 use axum::{
@@ -35,20 +37,6 @@ where
     fn validate(&self) -> Result<(), String> {
         Ok(())
     }
-
-    async fn get_user_allowed_network_ids_filter(user: AuthenticatedUser, network_service: Arc<NetworkService>) -> Result<EntityFilter, ApiError> {
-        let org_filter = EntityFilter::unfiltered().organization_id(&user.organization_id);
-
-        let network_ids: Vec<Uuid> = network_service
-            .get_all(org_filter)
-            .await
-            .map_err(|e| ApiError::internal_error(&e.to_string()))?
-            .iter()
-            .map(|n| n.id())
-            .collect();
-
-        Ok(EntityFilter::unfiltered().network_ids(&network_ids))
-    }
 }
 
 /// Create a standard CRUD router
@@ -66,7 +54,7 @@ where
 
 pub async fn create_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Json(request): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
@@ -96,7 +84,7 @@ pub async fn get_all_handler<T>(
 where
     T: CrudHandlers + 'static,
 {
-    let network_filter = T::get_user_allowed_network_ids_filter(user, state.services.network_service.clone()).await?;
+    let network_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
 
     let service = T::get_service(&state);
     let entities = service
@@ -109,7 +97,7 @@ where
 
 pub async fn get_by_id_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
@@ -127,7 +115,7 @@ where
 
 pub async fn update_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
     Json(mut request): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
@@ -153,7 +141,7 @@ where
 
 pub async fn delete_handler<T>(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>>
 where

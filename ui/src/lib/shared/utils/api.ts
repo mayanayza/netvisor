@@ -7,19 +7,19 @@ export function getServerTarget(): string {
 	const parsedUrl = new URL(baseUrl);
 
 	return env.PUBLIC_SERVER_HOSTNAME && env.PUBLIC_SERVER_HOSTNAME !== 'default'
-			? env.PUBLIC_SERVER_HOSTNAME
-			: parsedUrl.hostname;
+		? env.PUBLIC_SERVER_HOSTNAME
+		: parsedUrl.hostname;
 }
 
 export function getServerPort(): string {
 	const baseUrl = window.location.origin;
 	const parsedUrl = new URL(baseUrl);
 
-	if (parsedUrl.hostname == 'localhost') return '60072'
+	if (parsedUrl.hostname == 'localhost') return '60072';
 
 	return env.PUBLIC_SERVER_HOSTNAME === 'default'
-			? parsedUrl.port || '60072'
-			: env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
+		? parsedUrl.port || '60072'
+		: env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
 }
 
 export function getServerProtocol(): string {
@@ -30,11 +30,11 @@ export function getServerProtocol(): string {
 }
 
 export function getServerUrl() {
-	return `${getServerProtocol()}://${getServerTarget()}:${getServerPort()}`
+	return `${getServerProtocol()}://${getServerTarget()}:${getServerPort()}`;
 }
 
 export function getUiUrl() {
-	return window.location.href
+	return window.location.href;
 }
 
 interface ApiResponse<T> {
@@ -116,15 +116,7 @@ class ApiClient {
 			}
 		}
 
-		const baseUrl = window.location.origin; // e.g., "http://localhost:60072" or "https://netvisor.example.com"
-
-		const url = new URL(getServerUrl()+`/api${endpoint}`)
-			// env.PUBLIC_SERVER_HOSTNAME === 'default'
-			// 	? new URL(`/api${endpoint}`, baseUrl)
-			// 	: new URL(
-			// 			`/api${endpoint}`,
-			// 			`${window.location.protocol}//${env.PUBLIC_SERVER_HOSTNAME}${env.PUBLIC_SERVER_PORT ? `:${env.PUBLIC_SERVER_PORT}` : ''}`
-			// 		);
+		const url = new URL(getServerUrl() + `/api${endpoint}`);
 
 		const baseErrorMessage = `Failed to ${method} from ${endpoint}`;
 

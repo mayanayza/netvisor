@@ -109,15 +109,13 @@ impl ServiceFactory {
                 None
             };
 
-            let billing_service = if let Some(stripe_secret) = config.stripe_secret.clone() {
-                Some(Arc::new(BillingService::new(
-                    stripe_secret,
+            let billing_service = config.stripe_secret.map(|s| {
+                Arc::new(BillingService::new(
+                    s,
                     organization_service.clone(),
                     user_service.clone(),
-                )))
-            } else {
-                None
-            };
+                ))
+            });
 
             (oidc_service, billing_service)
         } else {

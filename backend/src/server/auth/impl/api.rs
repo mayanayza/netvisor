@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::server::users::r#impl::base::UserOrgPermissions;
+use crate::server::users::r#impl::permissions::UserOrgPermissions;
 
 /// Login request from client
 /// Note: 'name' is used as the username
@@ -13,7 +13,7 @@ pub struct LoginRequest {
 
     #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
     pub password: String,
-    }
+}
 
 /// Registration request from client
 /// Note: 'name' is used as the username

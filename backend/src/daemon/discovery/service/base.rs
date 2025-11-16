@@ -59,23 +59,6 @@ use crate::{
     },
 };
 
-#[derive(Clone)]
-pub struct DiscoverySession {
-    pub info: DiscoverySessionInfo,
-    pub gateway_ips: Vec<IpAddr>,
-    pub processed_count: Arc<AtomicUsize>,
-}
-
-impl DiscoverySession {
-    pub fn new(info: DiscoverySessionInfo, gateway_ips: Vec<IpAddr>) -> Self {
-        Self {
-            info,
-            gateway_ips,
-            processed_count: Arc::new(AtomicUsize::new(0)),
-        }
-    }
-}
-
 pub struct DiscoveryRunner<T> {
     pub service: Arc<DaemonDiscoveryService>,
     pub manager: Arc<DaemonDiscoverySessionManager>,
@@ -92,6 +75,23 @@ impl<T> DiscoveryRunner<T> {
             service,
             manager,
             domain,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct DiscoverySession {
+    pub info: DiscoverySessionInfo,
+    pub gateway_ips: Vec<IpAddr>,
+    pub processed_count: Arc<AtomicUsize>,
+}
+
+impl DiscoverySession {
+    pub fn new(info: DiscoverySessionInfo, gateway_ips: Vec<IpAddr>) -> Self {
+        Self {
+            info,
+            gateway_ips,
+            processed_count: Arc::new(AtomicUsize::new(0)),
         }
     }
 }

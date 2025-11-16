@@ -25,7 +25,6 @@ use axum::{
     response::Json,
     routing::{delete, get, post, put},
 };
-use axum_macros::debug_handler;
 use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -45,7 +44,6 @@ pub fn create_router() -> Router<Arc<AppState>> {
 const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
 
 /// Register a new daemon
-#[debug_handler]
 async fn register_daemon(
     State(state): State<Arc<AppState>>,
     _daemon: AuthenticatedDaemon,

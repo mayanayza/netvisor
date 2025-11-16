@@ -74,7 +74,7 @@
 						{subtitle}
 					</p>
 				{/if}
-				{#if status}
+				{#if status && viewMode == 'list'}
 					<div class="mr-4 flex-shrink-0">
 						<Tag {...status} />
 					</div>

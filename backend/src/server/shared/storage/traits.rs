@@ -21,7 +21,7 @@ use crate::server::{
     },
     shared::{storage::filter::EntityFilter, types::entities::EntitySource},
     subnets::r#impl::types::SubnetType,
-    users::r#impl::base::UserOrgPermissions,
+    users::r#impl::permissions::UserOrgPermissions,
 };
 
 #[async_trait]

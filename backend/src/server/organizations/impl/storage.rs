@@ -60,6 +60,7 @@ impl StorableEntity for Organization {
                     stripe_customer_id,
                     plan,
                     plan_status,
+                    is_onboarded,
                 },
         } = self.clone();
 
@@ -72,6 +73,7 @@ impl StorableEntity for Organization {
                 "stripe_customer_id",
                 "plan",
                 "plan_status",
+                "is_onboarded",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -81,6 +83,7 @@ impl StorableEntity for Organization {
                 SqlValue::OptionalString(stripe_customer_id),
                 SqlValue::OptionBillingPlan(plan),
                 SqlValue::OptionBillingPlanStatus(plan_status),
+                SqlValue::Bool(is_onboarded),
             ],
         ))
     }
@@ -103,6 +106,7 @@ impl StorableEntity for Organization {
                 stripe_customer_id: row.get("stripe_customer_id"),
                 plan,
                 plan_status,
+                is_onboarded: row.get("is_onboarded"),
             },
         })
     }

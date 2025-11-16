@@ -25,6 +25,7 @@ pub struct CliArgs {
     pub oidc_redirect_url: Option<String>,
     pub oidc_provider_name: Option<String>,
     pub stripe_secret: Option<String>,
+    pub stripe_webhook_secret: Option<String>,
 }
 
 /// Flattened server configuration struct
@@ -75,6 +76,8 @@ pub struct ServerConfig {
 
     /// Stripe Secret
     pub stripe_secret: Option<String>,
+
+    pub stripe_webhook_secret: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -84,6 +87,7 @@ pub struct PublicConfigResponse {
     pub oidc_enabled: bool,
     pub oidc_provider_name: String,
     pub billing_enabled: bool,
+    pub has_integrated_daemon: bool,
 }
 
 impl Default for ServerConfig {
@@ -104,6 +108,7 @@ impl Default for ServerConfig {
             oidc_provider_name: None,
             stripe_key: None,
             stripe_secret: None,
+            stripe_webhook_secret: None,
         }
     }
 }
@@ -152,6 +157,9 @@ impl ServerConfig {
         }
         if let Some(stripe_secret) = cli_args.stripe_secret {
             figment = figment.merge(("stripe_secret", stripe_secret));
+        }
+        if let Some(stripe_webhook_secret) = cli_args.stripe_webhook_secret {
+            figment = figment.merge(("stripe_webhook_secret", stripe_webhook_secret));
         }
 
         figment = figment.merge(("disable_registration", cli_args.disable_registration));

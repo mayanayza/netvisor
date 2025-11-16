@@ -7,24 +7,14 @@ use validator::Validate;
 
 use crate::server::billing::types::base::BillingPlan;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, Default)]
 pub struct OrganizationBase {
     pub stripe_customer_id: Option<String>,
     #[validate(length(min = 0, max = 100))]
     pub name: String,
     pub plan: Option<BillingPlan>,
     pub plan_status: Option<SubscriptionStatus>,
-}
-
-impl Default for OrganizationBase {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            stripe_customer_id: None,
-            plan: None,
-            plan_status: None,
-        }
-    }
+    pub is_onboarded: bool,
 }
 
 #[derive(Debug, Clone, Validate, Serialize, Deserialize)]

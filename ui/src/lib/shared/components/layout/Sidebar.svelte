@@ -1,23 +1,59 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import AuthSettingsModal from '$lib/features/auth/components/AuthSettingsModal.svelte';
+	import { currentUser } from '$lib/features/auth/store';
+	import BillingSettingsModal from '$lib/features/billing/BillingSettingsModal.svelte';
+	import { organization } from '$lib/features/organizations/store';
+	import { isBillingPlanActive } from '$lib/features/organizations/types';
+	import SupportModal from '$lib/features/support/SupportModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import type { IconComponent } from '$lib/shared/utils/types';
-	import { Menu, ChevronDown, History, Calendar, User } from 'lucide-svelte';
+	import { Menu, ChevronDown, History, Calendar, User, LifeBuoy, CreditCard } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import type { Component } from 'svelte';
+	import type { UserOrgPermissions } from '$lib/features/users/types';
 
-	export let activeTab: string = 'hosts';
-	export let onTabChange: (tab: string) => void;
-	export let collapsed = false;
+	// Import tab components
+	import TopologyTab from '$lib/features/topology/components/TopologyTab.svelte';
+	import DiscoverySessionTab from '$lib/features/discovery/components/tabs/DiscoverySessionTab.svelte';
+	import DiscoveryScheduledTab from '$lib/features/discovery/components/tabs/DiscoveryScheduledTab.svelte';
+	import DiscoveryHistoryTab from '$lib/features/discovery/components/tabs/DiscoveryHistoryTab.svelte';
+	import NetworksTab from '$lib/features/networks/components/NetworksTab.svelte';
+	import SubnetTab from '$lib/features/subnets/components/SubnetTab.svelte';
+	import GroupTab from '$lib/features/groups/components/GroupTab.svelte';
+	import HostTab from '$lib/features/hosts/components/HostTab.svelte';
+	import ServiceTab from '$lib/features/services/components/ServiceTab.svelte';
+	import DaemonTab from '$lib/features/daemons/components/DaemonTab.svelte';
+	import ApiKeyTab from '$lib/features/api_keys/components/ApiKeyTab.svelte';
+	import UserTab from '$lib/features/users/components/UserTab.svelte';
 
-	let showAuthSettings = false;
+	let {
+		activeTab = $bindable('topology'),
+		collapsed = $bindable(false),
+		activeComponent = $bindable<Component | null>(null)
+	}: {
+		activeTab?: string;
+		collapsed?: boolean;
+		activeComponent?: Component | null;
+	} = $props();
+
+	// Derived values from stores
+	let userPermissions = $derived($currentUser?.permissions);
+	let isBillingEnabled = $derived($organization ? isBillingPlanActive($organization) : false);
+
+	let showAuthSettings = $state(false);
+	let showSupport = $state(false);
+	let showBilling = $state(false);
 
 	interface NavItem {
 		id: string;
 		label: string;
 		icon: IconComponent;
-		position?: 'main' | 'bottom'; // Allow items to be positioned at bottom
-		onClick?: () => void | Promise<void>; // Custom click handler
+		component?: Component;
+		position?: 'main' | 'bottom';
+		onClick?: () => void | Promise<void>;
+		requiredPermissions?: UserOrgPermissions[]; // Which permissions can see this item
+		requiresBilling?: boolean; // Whether this requires billing to be enabled
 	}
 
 	interface NavSection {
@@ -31,12 +67,19 @@
 
 	const SIDEBAR_STORAGE_KEY = 'netvisor-sidebar-collapsed';
 
-	// Configuration for navigation - can include sections or standalone items
-	const navConfig: NavConfig = [
+	// Base navigation config (before filtering)
+	const baseNavConfig: NavConfig = [
 		{
 			id: 'visualize',
 			label: 'Visualize',
-			items: [{ id: 'topology', label: 'Topology', icon: entities.getIconComponent('Topology') }]
+			items: [
+				{
+					id: 'topology',
+					label: 'Topology',
+					icon: entities.getIconComponent('Topology'),
+					component: TopologyTab
+				}
+			]
 		},
 		{
 			id: 'discover',
@@ -45,39 +88,182 @@
 				{
 					id: 'discovery-sessions',
 					label: 'Sessions',
-					icon: entities.getIconComponent('Discovery')
+					icon: entities.getIconComponent('Discovery'),
+					component: DiscoverySessionTab,
+					requiredPermissions: ['Member', 'Owner']
 				},
-				{ id: 'discovery-scheduled', label: 'Scheduled', icon: Calendar as IconComponent },
-				{ id: 'discovery-history', label: 'History', icon: History as IconComponent }
+				{
+					id: 'discovery-scheduled',
+					label: 'Scheduled',
+					icon: Calendar as IconComponent,
+					component: DiscoveryScheduledTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'discovery-history',
+					label: 'History',
+					icon: History as IconComponent,
+					component: DiscoveryHistoryTab,
+					requiredPermissions: ['Member', 'Owner']
+				}
 			]
 		},
 		{
 			id: 'manage',
 			label: 'Manage',
 			items: [
-				{ id: 'networks', label: 'Networks', icon: entities.getIconComponent('Network') },
-				{ id: 'subnets', label: 'Subnets', icon: entities.getIconComponent('Subnet') },
-				{ id: 'groups', label: 'Groups', icon: entities.getIconComponent('Group') },
-				{ id: 'hosts', label: 'Hosts', icon: entities.getIconComponent('Host') },
-				{ id: 'services', label: 'Services', icon: entities.getIconComponent('Service') },
-				{ id: 'daemons', label: 'Daemons', icon: entities.getIconComponent('Daemon') },
-				{ id: 'api-keys', label: 'API Keys', icon: entities.getIconComponent('ApiKey') }
+				{
+					id: 'networks',
+					label: 'Networks',
+					icon: entities.getIconComponent('Network'),
+					component: NetworksTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'subnets',
+					label: 'Subnets',
+					icon: entities.getIconComponent('Subnet'),
+					component: SubnetTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'groups',
+					label: 'Groups',
+					icon: entities.getIconComponent('Group'),
+					component: GroupTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'hosts',
+					label: 'Hosts',
+					icon: entities.getIconComponent('Host'),
+					component: HostTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'services',
+					label: 'Services',
+					icon: entities.getIconComponent('Service'),
+					component: ServiceTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'daemons',
+					label: 'Daemons',
+					icon: entities.getIconComponent('Daemon'),
+					component: DaemonTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'api-keys',
+					label: 'API Keys',
+					icon: entities.getIconComponent('ApiKey'),
+					component: ApiKeyTab,
+					requiredPermissions: ['Member', 'Owner']
+				},
+				{
+					id: 'users',
+					label: 'Users',
+					icon: entities.getIconComponent('User'),
+					component: UserTab,
+					requiredPermissions: ['Member', 'Owner']
+				}
 			]
 		},
-		// Bottom items
 		{
-			id: 'account',
-			label: 'Account',
-			icon: User as IconComponent,
+			id: 'settings',
+			label: 'Settings',
+			items: [
+				{
+					id: 'account',
+					label: 'Account',
+					icon: User as IconComponent,
+					onClick: async () => {
+						showAuthSettings = true;
+					}
+				},
+				{
+					id: 'billing',
+					label: 'Billing',
+					icon: CreditCard as IconComponent,
+					onClick: async () => {
+						showBilling = true;
+					},
+					requiredPermissions: ['Owner'],
+					requiresBilling: true
+				}
+			]
+		},
+		{
+			id: 'support',
+			label: 'Support',
+			icon: LifeBuoy,
 			position: 'bottom',
 			onClick: async () => {
-				showAuthSettings = true;
+				showSupport = true;
 			}
 		}
 	];
 
+	// Helper to check if user has required permissions
+	function hasRequiredPermissions(item: NavItem): boolean {
+		// If no permissions specified, everyone can see it
+		if (!item.requiredPermissions || item.requiredPermissions.length === 0) {
+			return true;
+		}
+
+		// If user has no permissions, they can't see items with permission requirements
+		if (!userPermissions) {
+			return false;
+		}
+
+		// Check if user's permission is in the allowed list
+		return item.requiredPermissions.includes(userPermissions);
+	}
+
+	// Helper to check billing requirements
+	function meetsBillingRequirement(item: NavItem): boolean {
+		// If billing not required, always show
+		if (!item.requiresBilling) {
+			return true;
+		}
+
+		// If billing is required, check if it's enabled
+		return isBillingEnabled;
+	}
+
+	// Helper to check if item should be visible
+	function isItemVisible(item: NavItem): boolean {
+		return hasRequiredPermissions(item) && meetsBillingRequirement(item);
+	}
+
+	// Filter nav config based on user permissions and billing status
+	let navConfig = $derived.by((): NavConfig => {
+		return baseNavConfig
+			.map((configItem) => {
+				if (isSection(configItem)) {
+					// Filter items within the section
+					const visibleItems = configItem.items.filter(isItemVisible);
+
+					// Only include section if it has visible items
+					if (visibleItems.length === 0) {
+						return null;
+					}
+
+					return {
+						...configItem,
+						items: visibleItems
+					};
+				} else {
+					// Standalone item - check if it should be visible
+					return isItemVisible(configItem) ? configItem : null;
+				}
+			})
+			.filter((item): item is NavSection | NavItem => item !== null);
+	});
+
 	// Track collapsed state for each section
-	let sectionStates: Record<string, boolean> = {};
+	let sectionStates = $state<Record<string, boolean>>({});
 
 	// Helper to check if item is a section
 	function isSection(item: NavSection | NavItem): item is NavSection {
@@ -92,11 +278,28 @@
 		});
 	}
 
-	const mainNavItems = filterByPosition(navConfig, 'main');
-	const bottomNavItems = filterByPosition(navConfig, 'bottom');
+	// Find component for a given tab ID
+	function findComponentForTab(tabId: string): Component | null {
+		for (const item of navConfig) {
+			if (isSection(item)) {
+				const found = item.items.find((i) => i.id === tabId);
+				if (found?.component) return found.component;
+			} else if (item.id === tabId && 'component' in item) {
+				return item.component || null;
+			}
+		}
+		return null;
+	}
+
+	// Update active component when activeTab changes
+	$effect(() => {
+		activeComponent = findComponentForTab(activeTab);
+	});
+
+	let mainNavItems = $derived(filterByPosition(navConfig, 'main'));
+	let bottomNavItems = $derived(filterByPosition(navConfig, 'bottom'));
 
 	onMount(() => {
-		// Load collapsed states from localStorage
 		// Show auth modal
 		if (typeof window !== 'undefined') {
 			if ($page.url.searchParams.get('auth_modal')) {
@@ -110,7 +313,7 @@
 				}
 
 				// Load section states
-				navConfig.forEach((item) => {
+				baseNavConfig.forEach((item) => {
 					if (isSection(item)) {
 						const key = `netvisor-section-${item.id}-collapsed`;
 						const sectionStored = localStorage.getItem(key);
@@ -157,7 +360,7 @@
 		if (item.onClick) {
 			item.onClick();
 		} else {
-			onTabChange(item.id);
+			activeTab = item.id;
 		}
 	}
 
@@ -179,7 +382,7 @@
 	<div class="flex min-h-0 flex-1 flex-col">
 		<div class="border-b border-gray-700 px-2 py-4">
 			<button
-				on:click={toggleCollapse}
+				onclick={toggleCollapse}
 				class="text-tertiary hover:text-secondary flex w-full items-center rounded-lg transition-colors hover:bg-gray-800"
 				style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 				aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -203,7 +406,7 @@
 						<li>
 							{#if !collapsed}
 								<button
-									on:click={() => toggleSection(configItem.id)}
+									onclick={() => toggleSection(configItem.id)}
 									class={sectionHeaderClass}
 									style="height: 2rem; padding: 0.25rem 0.75rem;"
 								>
@@ -221,15 +424,14 @@
 									{#each configItem.items as item (item.id)}
 										<li>
 											<button
-												on:click={() => handleItemClick(item)}
-												class="{baseClasses} {activeTab === item.id ||
-												(item.id === 'account' && showAuthSettings)
+												onclick={() => handleItemClick(item)}
+												class="{baseClasses} {activeTab === item.id
 													? 'text-primary border border-blue-600 bg-blue-700'
 													: inactiveButtonClass}"
 												style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 												title={collapsed ? item.label : ''}
 											>
-												<svelte:component this={item.icon} class="h-5 w-5 flex-shrink-0" />
+												<item.icon class="h-5 w-5 flex-shrink-0" />
 												{#if !collapsed}
 													<span class="ml-3 truncate">{item.label}</span>
 												{/if}
@@ -243,7 +445,7 @@
 						<!-- Standalone item (no section, no indentation) -->
 						<li>
 							<button
-								on:click={() => handleItemClick(configItem)}
+								onclick={() => handleItemClick(configItem)}
 								class="{baseClasses} {activeTab === configItem.id ||
 								(configItem.id === 'account' && showAuthSettings)
 									? 'text-primary border border-blue-600 bg-blue-700'
@@ -251,7 +453,7 @@
 								style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 								title={collapsed ? configItem.label : ''}
 							>
-								<svelte:component this={configItem.icon} class="h-5 w-5 flex-shrink-0" />
+								<configItem.icon class="h-5 w-5 flex-shrink-0" />
 								{#if !collapsed}
 									<span class="ml-3 truncate">{configItem.label}</span>
 								{/if}
@@ -264,13 +466,13 @@
 	</div>
 
 	<!-- Bottom Navigation -->
-	<div class="flex-shrink-0 border-t border-gray-700 px-2 py-4">
+	<div class="flex-shrink-0 border-t border-gray-700 px-2 py-2">
 		<ul class="space-y-1">
 			{#each bottomNavItems as item (item.id)}
 				{#if !isSection(item)}
 					<li>
 						<button
-							on:click={() => handleItemClick(item)}
+							onclick={() => handleItemClick(item)}
 							class="{baseClasses} {activeTab === item.id ||
 							(item.id === 'account' && showAuthSettings)
 								? 'text-primary border border-blue-600 bg-blue-700'
@@ -278,7 +480,7 @@
 							style="height: 2.5rem; padding: 0.5rem 0.75rem;"
 							title={collapsed ? item.label : ''}
 						>
-							<svelte:component this={item.icon} class="h-5 w-5 flex-shrink-0" />
+							<item.icon class="h-5 w-5 flex-shrink-0" />
 							{#if !collapsed}
 								<span class="ml-3 truncate">{item.label}</span>
 							{/if}
@@ -291,3 +493,5 @@
 </div>
 
 <AuthSettingsModal isOpen={showAuthSettings} onClose={() => (showAuthSettings = false)} />
+<SupportModal isOpen={showSupport} onClose={() => (showSupport = false)} />
+<BillingSettingsModal isOpen={showBilling} onClose={() => (showBilling = false)} />

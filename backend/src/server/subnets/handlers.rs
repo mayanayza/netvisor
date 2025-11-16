@@ -1,9 +1,9 @@
+use crate::server::auth::middleware::{AuthenticatedEntity, MemberOrDaemon};
 use crate::server::shared::handlers::traits::{
     CrudHandlers, delete_handler, get_by_id_handler, update_handler,
 };
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
     config::AppState,
     shared::{
         services::traits::CrudService,
@@ -27,7 +27,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 pub async fn create_handler(
     State(state): State<Arc<AppState>>,
-    _entity: AuthenticatedEntity,
+    MemberOrDaemon { .. }: MemberOrDaemon,
     Json(request): Json<Subnet>,
 ) -> ApiResult<Json<ApiResponse<Subnet>>> {
     if let Err(err) = request.validate() {
@@ -52,27 +52,7 @@ async fn get_all_subnets(
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
     let service = &state.services.subnet_service;
 
-    let network_ids = match entity {
-        AuthenticatedEntity::Daemon(network_id) => {
-            vec![network_id]
-        }
-        AuthenticatedEntity::User {
-            organization_id, ..
-        } => {
-            let filter = EntityFilter::unfiltered().organization_id(&organization_id);
-
-            state
-                .services
-                .network_service
-                .get_all(filter)
-                .await?
-                .iter()
-                .map(|n| n.id)
-                .collect()
-        }
-    };
-
-    let filter = EntityFilter::unfiltered().network_ids(&network_ids);
+    let filter = EntityFilter::unfiltered().network_ids(&entity.network_ids());
 
     let subnets = service.get_all(filter).await?;
 

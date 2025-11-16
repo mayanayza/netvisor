@@ -1,3 +1,5 @@
+import type { UserOrgPermissions } from '../users/types';
+
 export interface Organization {
 	id: string;
 	created_at: string;
@@ -6,13 +8,18 @@ export interface Organization {
 	name: string;
 	plan: BillingPlan;
 	plan_status: string;
+	is_onboarded: boolean;
 }
 
 export function isBillingPlanActive(organization: Organization) {
 	return organization.plan_status == 'active' || organization.plan_status == 'trialing';
 }
 
-type BillingPlan = HomelabStarterBillingPlan | HomelabProBillingPlan | TeamBillingPlan;
+type BillingPlan =
+	| HomelabStarterBillingPlan
+	| HomelabProBillingPlan
+	| TeamBillingPlan
+	| CommunityBillingPlan;
 
 export interface HomelabStarterBillingPlan {
 	type: 'HomelabStarter';
@@ -39,4 +46,29 @@ export interface TeamBillingPlan {
 		rate: string;
 	};
 	trial_days: number;
+}
+
+export interface CommunityBillingPlan {
+	type: 'Community';
+	price: {
+		cents: number;
+		rate: string;
+	};
+	trial_days: number;
+}
+
+export interface CreateInviteRequest {
+	url: string;
+	expiration_hours: number | null;
+	permissions: UserOrgPermissions;
+}
+
+export interface OrganizationInvite {
+	token: string;
+	permissions: UserOrgPermissions;
+	url: string;
+	expires_at: string;
+	created_at: string;
+	created_by: string;
+	organization_id: string;
 }

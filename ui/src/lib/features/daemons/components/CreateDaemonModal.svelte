@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
 	import { networks } from '$lib/features/networks/store';
 	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
@@ -39,24 +38,16 @@
 			pushError('Failed to generate API key');
 		}
 	}
-	
+
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
 	$: runCommand = `netvisor-daemon --server-target ${getServerProtocol()}://${getServerTarget()} --server-port ${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (key) {
-		dockerCompose = populateDockerCompose(
-			dockerTemplate,
-			selectedNetworkId,
-			key
-		);
+		dockerCompose = populateDockerCompose(dockerTemplate, selectedNetworkId, key);
 	}
 
-	function populateDockerCompose(
-		template: string,
-		networkId: string,
-		key: string
-	): string {
+	function populateDockerCompose(template: string, networkId: string, key: string): string {
 		// Replace lines that contain env vars
 		let splitString = '# Daemon configuration';
 		let [beforeKey, afterKey] = template.split(splitString);

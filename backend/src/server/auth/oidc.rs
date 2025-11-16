@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::server::{
     auth::service::AuthService,
-    users::r#impl::base::{User, UserOrgPermissions},
+    users::r#impl::{base::User, permissions::UserOrgPermissions},
 };
 
 #[derive(Debug, Serialize, Deserialize)]

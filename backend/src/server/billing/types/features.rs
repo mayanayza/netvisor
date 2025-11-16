@@ -1,25 +1,21 @@
-use serde::Serialize;
-use strum::Display;
-use strum::EnumIter;
 use crate::server::shared::types::metadata::EntityMetadataProvider;
 use crate::server::shared::types::metadata::HasId;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
 use serde::Deserialize;
+use serde::Serialize;
+use strum::Display;
+use strum::EnumIter;
 use strum::IntoStaticStr;
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumIter, IntoStaticStr, Display)]
+#[derive(Debug, Clone, Serialize, Deserialize, EnumIter, IntoStaticStr, Display, Default)]
 pub enum Feature {
     MaxNetworks,
+    #[default]
     TeamMembers,
     ShareViews,
     OnboardingCall,
-    DedicatedSupportChannel
-}
-
-impl Default for Feature {
-    fn default() -> Self {
-        Feature::TeamMembers
-    }
+    DedicatedSupportChannel,
+    CommercialLicense,
 }
 
 impl HasId for Feature {
@@ -31,6 +27,7 @@ impl HasId for Feature {
             Feature::ShareViews => "share_views",
             Feature::OnboardingCall => "onboarding_call",
             Feature::DedicatedSupportChannel => "dedicated_support_channel",
+            Feature::CommercialLicense => "commercial_license",
         }
     }
 }
@@ -53,27 +50,29 @@ impl TypeMetadataProvider for Feature {
             Feature::TeamMembers => "Team Members",
             Feature::ShareViews => "Share Views",
             Feature::OnboardingCall => "Onboarding Call",
-            Feature::DedicatedSupportChannel => "Dedicated Support Channel",
+            Feature::DedicatedSupportChannel => "Dedicated Discord Channel",
+            Feature::CommercialLicense => "Commercial License",
         }
     }
 
     fn description(&self) -> &'static str {
         match self {
-            Feature::MaxNetworks =>  "How many networks your organization can create",
+            Feature::MaxNetworks => "How many networks your organization can create",
             // Feature::ApiAccess => "Access NetVisor APIs programmatically to bring your data into other applications",
             Feature::TeamMembers => "Collaborate on networks with team members and customers",
             Feature::ShareViews => "Share live network diagrams with others",
-            Feature::OnboardingCall => "30 minute onboarding call to ensure you're getting the most out of NetVisor",
-            Feature::DedicatedSupportChannel => "A dedicated discord channel for support and questions",
+            Feature::OnboardingCall => {
+                "30 minute onboarding call to ensure you're getting the most out of NetVisor"
+            }
+            Feature::DedicatedSupportChannel => {
+                "A dedicated discord channel for support and questions"
+            }
+            Feature::CommercialLicense => "Use NetVisor under a commercial license",
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
-
-        let use_null_as_unlimited = match self {
-            Feature::MaxNetworks => true,
-            _ => false
-        };
+        let use_null_as_unlimited = matches!(self, Feature::MaxNetworks);
 
         serde_json::json!({
             "use_null_as_unlimited": use_null_as_unlimited

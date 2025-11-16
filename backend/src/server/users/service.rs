@@ -7,7 +7,10 @@ use crate::server::{
             traits::{StorableEntity, Storage},
         },
     },
-    users::r#impl::base::{User, UserBase, UserOrgPermissions},
+    users::r#impl::{
+        base::{User, UserBase},
+        permissions::UserOrgPermissions,
+    },
 };
 use anyhow::Error;
 use anyhow::Result;

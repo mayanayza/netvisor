@@ -6,20 +6,19 @@
 	import { getMetadata } from '$lib/shared/stores/metadata';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import { getCurrentBillingPlans } from '$lib/features/billing/store';
-	
-	const loading = loadData([getConfig, getMetadata, getCurrentBillingPlans])
-	
+
+	const loading = loadData([getConfig, getMetadata, getCurrentBillingPlans]);
 </script>
 
 {#if $loading}
-	<Loading/>
+	<Loading />
 {:else}
 	<div class="relative flex min-h-screen items-center justify-center bg-gray-900">
 		<!-- Background image with overlay -->
 		<div class="absolute inset-0 z-0">
-			<div 
+			<div
 				class="h-full w-full bg-cover bg-center bg-no-repeat"
-				style="background-image: url('/path/to/your/image.jpg')"
+				style="background-image: url('/images/diagram.png')"
 			></div>
 		</div>
 

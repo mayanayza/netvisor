@@ -11,12 +11,9 @@ export async function getNetworks() {
 	const user = get(currentUser);
 
 	if (user) {
-		const result = await api.request<Network[]>(
-			`/networks`,
-			networks,
-			(networks) => networks,
-			{ method: 'GET' }
-		);
+		const result = await api.request<Network[]>(`/networks`, networks, (networks) => networks, {
+			method: 'GET'
+		});
 
 		if (result && result.success && result.data) {
 			const current = get(networks).find((n) => n.is_default) || get(networks)[0];

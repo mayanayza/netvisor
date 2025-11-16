@@ -1,14 +1,16 @@
 use std::fmt::Display;
 use std::str::FromStr;
 
-use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
+use crate::server::{
+    shared::storage::traits::{SqlValue, StorableEntity},
+    users::r#impl::permissions::UserOrgPermissions,
+};
 use anyhow::{Error, Result};
 use chrono::{DateTime, Utc};
 use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
-use strum::Display;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -89,12 +91,6 @@ impl UserBase {
             oidc_subject: None,
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Display)]
-pub enum UserOrgPermissions {
-    Owner,
-    Member,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

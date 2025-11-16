@@ -9,7 +9,8 @@ CREATE TABLE organizations (
     plan JSONB,
     plan_status TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_onboarded BOOLEAN
 );
 
 CREATE INDEX idx_organizations_stripe_customer ON organizations(stripe_customer_id);

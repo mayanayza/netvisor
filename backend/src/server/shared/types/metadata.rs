@@ -10,7 +10,8 @@ pub struct MetadataRegistry {
     pub ports: Vec<TypeMetadata>,
     pub discovery_types: Vec<TypeMetadata>,
     pub billing_plans: Vec<TypeMetadata>,
-    pub features: Vec<TypeMetadata>
+    pub features: Vec<TypeMetadata>,
+    pub permissions: Vec<TypeMetadata>,
 }
 
 #[derive(Serialize, Debug, Clone)]

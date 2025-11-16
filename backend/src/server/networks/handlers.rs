@@ -1,10 +1,9 @@
+use crate::server::auth::middleware::{AuthenticatedUser, RequireMember};
 use crate::server::shared::handlers::traits::{
-    CrudHandlers, delete_handler, get_by_id_handler, update_handler
+    CrudHandlers, delete_handler, get_by_id_handler, update_handler,
 };
-use anyhow::anyhow;
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
-    auth::middleware::AuthenticatedUser,
     config::AppState,
     networks::r#impl::Network,
     shared::{
@@ -13,6 +12,7 @@ use crate::server::{
         types::api::{ApiResponse, ApiResult},
     },
 };
+use anyhow::anyhow;
 use axum::{
     Router,
     extract::State,
@@ -32,7 +32,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 pub async fn create_handler(
     State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
+    RequireMember(user): RequireMember,
     Json(request): Json<Network>,
 ) -> ApiResult<Json<ApiResponse<Network>>> {
     if let Err(err) = request.validate() {
@@ -42,11 +42,27 @@ pub async fn create_handler(
         )));
     }
 
-    let organization = state.services.organization_service.get_by_id(&user.organization_id).await?.ok_or_else(|| anyhow!("Failed to get organization for user {}", user.user_id))?;
-    let networks = state.services.network_service.get_all(EntityFilter::unfiltered().organization_id(&organization.id)).await?;
+    let organization = state
+        .services
+        .organization_service
+        .get_by_id(&user.organization_id)
+        .await?
+        .ok_or_else(|| anyhow!("Failed to get organization for user {}", user.user_id))?;
 
-    if let Some(plan) = organization.base.plan && let Some(max_networks) = plan.features().max_networks && networks.len() == max_networks {
-        return Err(ApiError::forbidden(&format!("Current plan ({}) only supports {} networks. Please upgrade for additional networks.", plan, max_networks)))
+    let networks = state
+        .services
+        .network_service
+        .get_all(EntityFilter::unfiltered().organization_id(&organization.id))
+        .await?;
+
+    if let Some(plan) = organization.base.plan
+        && let Some(max_networks) = plan.features().max_networks
+        && networks.len() >= max_networks
+    {
+        return Err(ApiError::forbidden(&format!(
+            "Current plan ({}) only allows for {} network(s). Please upgrade for additional networks.",
+            plan, max_networks
+        )));
     }
 
     let service = Network::get_service(&state);

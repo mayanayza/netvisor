@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { billingPlans, features, getMetadata } from '$lib/shared/stores/metadata';
+	import { billingPlans, features } from '$lib/shared/stores/metadata';
 	import { Check, X } from 'lucide-svelte';
 	import { checkout, currentPlans } from './store';
 	import type { BillingPlan } from './types';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getConfig } from '$lib/shared/stores/config';
+	import GithubStars from '../../shared/components/data/GithubStars.svelte';
 
 	async function handlePlanSelect(plan: BillingPlan) {
 		const checkoutUrl = await checkout(plan);
@@ -13,7 +12,7 @@
 		}
 	}
 
-	function formatPrice(plan: typeof $currentPlans[0]): string {
+	function formatPrice(plan: (typeof $currentPlans)[0]): string {
 		return `$${plan.price.cents / 100} per ${plan.price.rate}`;
 	}
 
@@ -92,58 +91,70 @@
 </script>
 
 <div class="space-y-6 px-10">
+	<!-- GitHub Stars Island -->
+	<div class="flex justify-center">
+		<div
+			class="inline-flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800/90 px-4 py-3 shadow-xl backdrop-blur-sm"
+		>
+			<span class="text-secondary text-sm">Open source on GitHub</span>
+			<GithubStars />
+		</div>
+	</div>
+
+	<!-- Pricing Table Card -->
 	<div class="card overflow-hidden p-0">
 		<div class="overflow-x-auto">
 			<table class="w-full table-fixed">
 				<!-- Header Row: Plan Names and Prices -->
-				<!-- Header Row: Plan Names and Prices -->
-<thead>
-	<tr class="border-b border-gray-700">
-		<!-- Feature labels column -->
-		<th class="border-r border-gray-700 p-4" style="width: {columnWidth}"></th>
+				<thead>
+					<tr class="border-b border-gray-700">
+						<!-- Feature labels column -->
+						<th class="border-r border-gray-700 p-4" style="width: {columnWidth}"></th>
 
-		<!-- Plan headers with equal width -->
-		{#each $currentPlans as plan}
-			{@const description = billingPlans.getDescription(plan.type)}
-			{@const IconComponent = billingPlans.getIconComponent(plan.type)}
-			{@const colorHelper = billingPlans.getColorHelper(plan.type)}
-			<th class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
-				<div class="flex h-full min-h-[200px] flex-col justify-between space-y-3">
-					<!-- Top: Icon and Name -->
-					<div class="flex flex-col items-center space-y-2">
-						<div class="flex justify-center">
-							<IconComponent class="{colorHelper.icon} h-8 w-8" />
-						</div>
-						<div class="text-primary text-lg font-semibold">
-							{billingPlans.getName(plan.type)}
-						</div>
-					</div>
+						<!-- Plan headers with equal width -->
+						{#each $currentPlans as plan (plan.type)}
+							{@const description = billingPlans.getDescription(plan.type)}
+							{@const IconComponent = billingPlans.getIconComponent(plan.type)}
+							{@const colorHelper = billingPlans.getColorHelper(plan.type)}
+							<th class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
+								<div class="flex h-full min-h-[200px] flex-col justify-between space-y-3">
+									<!-- Top: Icon and Name -->
+									<div class="flex flex-col items-center space-y-2">
+										<div class="flex justify-center">
+											<IconComponent class="{colorHelper.icon} h-8 w-8" />
+										</div>
+										<div class="text-primary text-lg font-semibold">
+											{billingPlans.getName(plan.type)}
+										</div>
+									</div>
 
-					<!-- Center: Price and Trial -->
-					<div class="flex flex-col items-center space-y-1">
-						<div class="text-primary text-2xl font-bold">{formatPrice(plan)}</div>
-						{#if plan.trial_days > 0}
-							<div class="text-success text-xs font-medium">
-								{plan.trial_days}-day free trial
-							</div>
-						{/if}
-					</div>
+									<!-- Center: Price and Trial -->
+									<div class="flex flex-col items-center space-y-1">
+										<div class="text-primary text-2xl font-bold">{formatPrice(plan)}</div>
+										{#if plan.trial_days > 0}
+											<div class="text-xs font-medium text-success">
+												{plan.trial_days}-day free trial
+											</div>
+										{/if}
+									</div>
 
-					<!-- Bottom: Description -->
-					<div class="flex items-end justify-center">
-						{#if description}
-							<div class="text-tertiary text-center text-xs leading-tight">{description}</div>
-						{/if}
-					</div>
-				</div>
-			</th>
-		{/each}
-	</tr>
-</thead>
+									<!-- Bottom: Description -->
+									<div class="flex items-end justify-center">
+										{#if description}
+											<div class="text-tertiary text-center text-xs leading-tight">
+												{description}
+											</div>
+										{/if}
+									</div>
+								</div>
+							</th>
+						{/each}
+					</tr>
+				</thead>
 
 				<!-- Feature Rows -->
 				<tbody>
-					{#each sortedFeatureKeys as featureKey}
+					{#each sortedFeatureKeys as featureKey (featureKey)}
 						{@const featureDescription = features.getDescription(featureKey)}
 						<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
 							<!-- Feature label -->
@@ -159,19 +170,19 @@
 							</td>
 
 							<!-- Feature values per plan -->
-							{#each $currentPlans as plan}
+							{#each $currentPlans as plan (plan.type)}
 								{@const value = getFeatureValue(plan.type, featureKey)}
 								<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
 									{#if typeof value === 'boolean'}
 										{#if value}
-											<Check class="text-success mx-auto h-5 w-5" />
+											<Check class="mx-auto h-8 w-8 text-success" />
 										{:else}
-											<X class="text-tertiary mx-auto h-5 w-5" />
+											<X class="text-muted mx-auto h-8 w-8" />
 										{/if}
 									{:else if value === null}
 										<span class="text-tertiary">—</span>
 									{:else}
-										<span class="text-secondary text-sm">{value}</span>
+										<span class="text-secondary text-lg">{value}</span>
 									{/if}
 								</td>
 							{/each}
@@ -186,12 +197,13 @@
 						<td class="border-r border-gray-700 p-4"></td>
 
 						<!-- Select buttons -->
-						{#each $currentPlans as plan}
+						{#each $currentPlans as plan (plan.type)}
 							<td class="border-r border-gray-700 p-4 last:border-r-0">
 								<button
 									type="button"
 									onclick={() => handlePlanSelect(plan)}
-									class="btn-primary w-full">
+									class="btn-primary w-full"
+								>
 									Select
 								</button>
 							</td>

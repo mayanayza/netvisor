@@ -9,6 +9,7 @@ use crate::server::{
         service::hash_password,
     },
     config::AppState,
+    organizations::handlers::process_pending_invite,
     shared::{
         services::traits::CrudService,
         types::api::{ApiError, ApiResponse, ApiResult},
@@ -50,6 +51,14 @@ async fn register(
 
     let user = state.services.auth_service.register(request).await?;
 
+    if let Err(e) = process_pending_invite(&state, &session, user.id).await {
+        tracing::error!(
+            "Failed to process pending invite during registration: {}",
+            e
+        );
+        // Don't fail registration, just log the error
+    }
+
     session
         .insert("user_id", user.id)
         .await
@@ -64,6 +73,14 @@ async fn login(
     Json(request): Json<LoginRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     let user = state.services.auth_service.login(request).await?;
+
+    if let Err(e) = process_pending_invite(&state, &session, user.id).await {
+        tracing::error!(
+            "Failed to process pending invite during registration: {}",
+            e
+        );
+        // Don't fail registration, just log the error
+    }
 
     session
         .insert("user_id", user.id)
@@ -86,7 +103,6 @@ async fn get_current_user(
     State(state): State<Arc<AppState>>,
     session: Session,
 ) -> ApiResult<Json<ApiResponse<User>>> {
-    
     let user_id: Uuid = session
         .get("user_id")
         .await
@@ -300,6 +316,14 @@ async fn oidc_callback(
                         return_url,
                         urlencoding::encode(&format!("Failed to create session: {}", e))
                     )));
+                }
+
+                if let Err(e) = process_pending_invite(&state, &session, user.id).await {
+                    tracing::error!(
+                        "Failed to process pending invite during registration: {}",
+                        e
+                    );
+                    // Don't fail registration, just log the error
                 }
 
                 // Clear session data

@@ -11,6 +11,7 @@
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { config, getConfig } from '$lib/shared/stores/config';
 	import { loadData } from '$lib/shared/utils/dataLoader';
+	import { organization } from '$lib/features/organizations/store';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -23,8 +24,6 @@
 	let activeSection: 'main' | 'credentials' = 'main';
 	let isLinkingOidc = false;
 	let savingCredentials = false;
-
-	console.log(enableOidc);
 
 	let formData: { email: string; password: string; confirmPassword: string } = {
 		email: '',
@@ -154,8 +153,16 @@
 					<h3 class="text-primary mb-3 text-sm font-semibold">User Information</h3>
 					<div class="space-y-2">
 						<div class="flex justify-between">
+							<span class="text-secondary text-sm">Organization:</span>
+							<span class="text-primary font-mono text-xs">{$organization?.name}</span>
+						</div>
+						<div class="flex justify-between">
 							<span class="text-secondary text-sm">Email:</span>
 							<span class="text-primary text-sm">{user.email}</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-secondary text-sm">Permissions:</span>
+							<span class="text-primary font-mono text-xs">{user.permissions}</span>
 						</div>
 						<div class="flex justify-between">
 							<span class="text-secondary text-sm">User ID:</span>

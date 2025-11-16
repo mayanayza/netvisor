@@ -7,6 +7,7 @@ use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId};
 pub enum Entity {
     Network,
     ApiKey,
+    User,
     Discovery,
     Daemon,
 
@@ -41,6 +42,7 @@ impl EntityMetadataProvider for Entity {
             Entity::Daemon => "green",
             Entity::Discovery => "green",
             Entity::ApiKey => "yellow",
+            Entity::User => "blue",
 
             Entity::Host => "blue",
             Entity::Service => "purple",
@@ -65,6 +67,7 @@ impl EntityMetadataProvider for Entity {
     fn icon(&self) -> &'static str {
         match self {
             Entity::Network => "Globe",
+            Entity::User => "User",
             Entity::ApiKey => "Key",
             Entity::Daemon => "SatelliteDish",
             Entity::Discovery => "Radar",

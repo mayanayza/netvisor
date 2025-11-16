@@ -5,14 +5,15 @@ use crate::server::shared::types::metadata::TypeMetadataProvider;
 use crate::server::users::service::UserService;
 use anyhow::Error;
 use anyhow::anyhow;
-use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdate;
-use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdateAddress;
-use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdateName;
-use stripe_product::Price;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use stripe::Client;
+use stripe_billing::billing_portal_session::CreateBillingPortalSession;
 use stripe_billing::{Subscription, SubscriptionStatus};
+use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdate;
+use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdateAddress;
+use stripe_checkout::checkout_session::CreateCheckoutSessionCustomerUpdateName;
+use stripe_checkout::checkout_session::CreateCheckoutSessionSubscriptionData;
 use stripe_checkout::checkout_session::{
     CreateCheckoutSession, CreateCheckoutSessionLineItems, CreateCheckoutSessionTaxIdCollection,
 };
@@ -21,6 +22,7 @@ use stripe_checkout::{
 };
 use stripe_core::customer::CreateCustomer;
 use stripe_core::{CustomerId, EventType};
+use stripe_product::Price;
 use stripe_product::price::CreatePriceRecurring;
 use stripe_product::price::SearchPrice;
 use stripe_product::price::{CreatePrice, CreatePriceRecurringUsageType};
@@ -31,7 +33,7 @@ pub struct BillingService {
     pub stripe: stripe::Client,
     pub organization_service: Arc<OrganizationService>,
     pub user_service: Arc<UserService>,
-    pub plans: OnceLock<Vec<BillingPlan>>
+    pub plans: OnceLock<Vec<BillingPlan>>,
 }
 
 impl BillingService {
@@ -44,7 +46,7 @@ impl BillingService {
             stripe: Client::new(stripe_secret),
             organization_service,
             user_service,
-            plans: OnceLock::new()
+            plans: OnceLock::new(),
         }
     }
 
@@ -52,20 +54,22 @@ impl BillingService {
         self.plans.get().map(|v| v.to_vec()).unwrap_or_default()
     }
 
-    pub async fn get_price_from_lookup_key(&self, lookup_key: String) -> Result<Option<Price>, Error> {
+    pub async fn get_price_from_lookup_key(
+        &self,
+        lookup_key: String,
+    ) -> Result<Option<Price>, Error> {
         let price = SearchPrice::new(format!("lookup_key: \"{}\"", lookup_key))
-                .limit(1)
-                .send(&self.stripe)
-                .await?
-                .data
-                .first()
-                .cloned();
+            .limit(1)
+            .send(&self.stripe)
+            .await?
+            .data
+            .first()
+            .cloned();
 
         Ok(price)
     }
 
     pub async fn initialize_products(&self, plans: Vec<BillingPlan>) -> Result<(), Error> {
-
         let mut created_plans = Vec::new();
 
         for plan in plans {
@@ -92,7 +96,10 @@ impl BillingService {
                 }
             };
 
-            match self.get_price_from_lookup_key(plan.stripe_price_lookup_key()).await? {
+            match self
+                .get_price_from_lookup_key(plan.stripe_price_lookup_key())
+                .await?
+            {
                 Some(p) => {
                     tracing::info!("Price {} already exists", p.id);
                 }
@@ -132,11 +139,13 @@ impl BillingService {
         success_url: String,
         cancel_url: String,
     ) -> Result<CheckoutSession, Error> {
-
         // Get or create Stripe customer
         let customer_id = self.get_or_create_customer(organization_id).await?;
 
-        let price = self.get_price_from_lookup_key(plan.stripe_price_lookup_key()).await?.ok_or_else(|| anyhow!("Could not find price for selected plan"))?;
+        let price = self
+            .get_price_from_lookup_key(plan.stripe_price_lookup_key())
+            .await?
+            .ok_or_else(|| anyhow!("Could not find price for selected plan"))?;
 
         let create_checkout_session = CreateCheckoutSession::new()
             .customer(customer_id)
@@ -148,8 +157,10 @@ impl BillingService {
                 name: Some(CreateCheckoutSessionCustomerUpdateName::Auto),
                 address: if plan.is_business_plan() {
                     Some(CreateCheckoutSessionCustomerUpdateAddress::Auto)
-                } else { None },
-                shipping: None
+                } else {
+                    None
+                },
+                shipping: None,
             })
             .tax_id_collection(CreateCheckoutSessionTaxIdCollection::new(
                 plan.is_business_plan(),
@@ -162,7 +173,17 @@ impl BillingService {
                 tax_rates: None,
                 dynamic_tax_rates: None,
             }])
-            .metadata([("organization_id".to_string(), organization_id.to_string())]);
+            .metadata([("organization_id".to_string(), organization_id.to_string())])
+            .subscription_data(CreateCheckoutSessionSubscriptionData {
+                metadata: Some(
+                    [
+                        ("organization_id".to_string(), organization_id.to_string()),
+                        ("plan".to_string(), serde_json::to_string(&plan)?),
+                    ]
+                    .into(),
+                ),
+                ..Default::default()
+            });
 
         create_checkout_session
             .send(&self.stripe)
@@ -204,8 +225,12 @@ impl BillingService {
     }
 
     /// Handle webhook events
-    pub async fn handle_webhook(&self, payload: &str, signature: &str) -> Result<(), Error> {
-        let webhook_secret = std::env::var("STRIPE_WEBHOOK_SECRET")?;
+    pub async fn handle_webhook(
+        &self,
+        payload: &str,
+        signature: &str,
+        webhook_secret: String,
+    ) -> Result<(), Error> {
         let event = Webhook::construct_event(payload, signature, &webhook_secret)?;
 
         match event.type_ {
@@ -216,7 +241,7 @@ impl BillingService {
                     self.handle_subscription_update(sub).await?;
                 }
             }
-            EventType::CustomerSubscriptionDeleted => {
+            EventType::CustomerSubscriptionPaused | EventType::CustomerSubscriptionDeleted => {
                 if let EventObject::CustomerSubscriptionDeleted(sub) = event.data.object {
                     self.handle_subscription_deleted(sub).await?;
                 }
@@ -244,6 +269,14 @@ impl BillingService {
             .metadata
             .get("organization_id")
             .ok_or_else(|| anyhow!("No organization_id in subscription metadata"))?;
+
+        let plan_str = sub
+            .metadata
+            .get("plan")
+            .ok_or_else(|| anyhow!("No plan in subscription metadata"))?;
+
+        let plan: BillingPlan = serde_json::from_str(plan_str)?;
+
         let org_id = Uuid::parse_str(org_id)?;
 
         let mut organization = self
@@ -253,6 +286,7 @@ impl BillingService {
             .ok_or_else(|| anyhow!("Could not find organization to update subscriptions status"))?;
 
         organization.base.plan_status = Some(sub.status);
+        organization.base.plan = Some(plan);
 
         self.organization_service.update(&mut organization).await?;
 
@@ -277,12 +311,41 @@ impl BillingService {
             .await?
             .ok_or_else(|| anyhow!("Could not find organization to update subscriptions status"))?;
 
+        self.organization_service
+            .revoke_org_invites(&organization.id)
+            .await?;
+
         organization.base.plan_status = Some(SubscriptionStatus::Canceled);
 
         self.organization_service.update(&mut organization).await?;
 
         tracing::info!("Canceled subscription for organization {}", org_id);
         Ok(())
+    }
+
+    pub async fn create_portal_session(
+        &self,
+        organization_id: Uuid,
+        return_url: String,
+    ) -> Result<String, Error> {
+        // Get customer ID
+        let organization = self
+            .organization_service
+            .get_by_id(&organization_id)
+            .await?
+            .ok_or_else(|| anyhow!("Organization not found"))?;
+
+        let customer_id = organization
+            .base
+            .stripe_customer_id
+            .ok_or_else(|| anyhow!("No Stripe customer ID"))?;
+
+        let session = CreateBillingPortalSession::new(CustomerId::from(customer_id))
+            .return_url(return_url)
+            .send(&self.stripe)
+            .await?;
+
+        Ok(session.url)
     }
 
     // async fn handle_payment_succeeded(&self, _invoice: Invoice) -> Result<(), Error> {

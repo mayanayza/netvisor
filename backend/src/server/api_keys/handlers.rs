@@ -1,6 +1,6 @@
 use crate::server::{
     api_keys::r#impl::{api::ApiKeyResponse, base::ApiKey},
-    auth::middleware::AuthenticatedUser,
+    auth::middleware::RequireMember,
     config::AppState,
     shared::{
         handlers::traits::{CrudHandlers, delete_handler, get_all_handler, get_by_id_handler},
@@ -28,7 +28,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 pub async fn create_handler(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Json(api_key): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKeyResponse>>> {
     let service = ApiKey::get_service(&state);
@@ -42,7 +42,7 @@ pub async fn create_handler(
 
 pub async fn rotate_key_handler(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(api_key_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
     let service = ApiKey::get_service(&state);
@@ -53,7 +53,7 @@ pub async fn rotate_key_handler(
 
 pub async fn update_handler(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
     Json(mut request): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKey>>> {

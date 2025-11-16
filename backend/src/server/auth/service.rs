@@ -9,7 +9,7 @@ use crate::server::{
         storage::{filter::EntityFilter, traits::StorableEntity},
     },
     users::{
-        r#impl::base::{User, UserOrgPermissions},
+        r#impl::{base::User, permissions::UserOrgPermissions},
         service::UserService,
     },
 };
@@ -144,6 +144,7 @@ impl AuthService {
                         name: "My Organization".to_string(),
                         plan: None,
                         plan_status: None,
+                        is_onboarded: false,
                     }))
                     .await?;
                 organization.id

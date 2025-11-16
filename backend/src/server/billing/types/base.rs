@@ -3,20 +3,34 @@ use std::fmt::Display;
 use stripe_product::price::CreatePriceRecurringInterval;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
-use crate::server::{shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider}};
+use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Display, IntoStaticStr, EnumIter, EnumDiscriminants)]
+#[derive(
+    Debug, Clone, Copy, Serialize, Deserialize, Display, IntoStaticStr, EnumIter, EnumDiscriminants,
+)]
 #[serde(tag = "type")]
 pub enum BillingPlan {
+    Community { price: Price, trial_days: u32 },
     Starter { price: Price, trial_days: u32 },
     Pro { price: Price, trial_days: u32 },
     Team { price: Price, trial_days: u32 },
-
 }
 
 impl PartialEq for BillingPlan {
     fn eq(&self, other: &Self) -> bool {
         self.price() == other.price() && self.trial_days() == other.trial_days()
+    }
+}
+
+impl Default for BillingPlan {
+    fn default() -> Self {
+        BillingPlan::Community {
+            price: Price {
+                cents: 0,
+                rate: BillingRate::Month,
+            },
+            trial_days: 0,
+        }
     }
 }
 
@@ -62,6 +76,7 @@ pub struct BillingPlanFeatures {
     pub share_views: bool,
     pub onboarding_call: bool,
     pub dedicated_support_channel: bool,
+    pub commercial_license: bool,
 }
 
 impl BillingPlan {
@@ -75,10 +90,7 @@ impl BillingPlan {
     }
 
     pub fn is_business_plan(&self) -> bool {
-        match self {
-            BillingPlan::Team { .. } => true,
-            _ => false,
-        }
+        matches!(self, BillingPlan::Team { .. })
     }
 
     pub fn stripe_product_id(&self) -> String {
@@ -95,6 +107,7 @@ impl BillingPlan {
 
     pub fn price(&self) -> Price {
         match self {
+            BillingPlan::Community { price, .. } => *price,
             BillingPlan::Starter { price, .. } => *price,
             BillingPlan::Pro { price, .. } => *price,
             BillingPlan::Team { price, .. } => *price,
@@ -103,6 +116,7 @@ impl BillingPlan {
 
     pub fn trial_days(&self) -> u32 {
         match self {
+            BillingPlan::Community { trial_days, .. } => *trial_days,
             BillingPlan::Starter { trial_days, .. } => *trial_days,
             BillingPlan::Pro { trial_days, .. } => *trial_days,
             BillingPlan::Team { trial_days, .. } => *trial_days,
@@ -111,6 +125,15 @@ impl BillingPlan {
 
     pub fn features(&self) -> BillingPlanFeatures {
         match self {
+            Self::Community { .. } => BillingPlanFeatures {
+                max_networks: None,
+                // api_access: true,
+                team_members: true,
+                share_views: true,
+                onboarding_call: true,
+                dedicated_support_channel: true,
+                commercial_license: false,
+            },
             Self::Starter { .. } => BillingPlanFeatures {
                 max_networks: Some(1),
                 // api_access: false,
@@ -118,6 +141,7 @@ impl BillingPlan {
                 share_views: false,
                 onboarding_call: false,
                 dedicated_support_channel: false,
+                commercial_license: false,
             },
             Self::Pro { .. } => BillingPlanFeatures {
                 max_networks: Some(3),
@@ -126,6 +150,7 @@ impl BillingPlan {
                 share_views: true,
                 onboarding_call: false,
                 dedicated_support_channel: false,
+                commercial_license: false,
             },
             Self::Team { .. } => BillingPlanFeatures {
                 max_networks: None,
@@ -134,6 +159,7 @@ impl BillingPlan {
                 share_views: true,
                 onboarding_call: true,
                 dedicated_support_channel: true,
+                commercial_license: true,
             },
         }
     }
@@ -148,6 +174,7 @@ impl HasId for BillingPlan {
 impl EntityMetadataProvider for BillingPlan {
     fn icon(&self) -> &'static str {
         match self {
+            BillingPlan::Community { .. } => "Heart",
             BillingPlan::Starter { .. } => "ThumbsUp",
             BillingPlan::Pro { .. } => "Zap",
             BillingPlan::Team { .. } => "Users",
@@ -156,6 +183,7 @@ impl EntityMetadataProvider for BillingPlan {
 
     fn color(&self) -> &'static str {
         match self {
+            BillingPlan::Community { .. } => "pink",
             BillingPlan::Starter { .. } => "blue",
             BillingPlan::Pro { .. } => "yellow",
             BillingPlan::Team { .. } => "orange",
@@ -166,6 +194,7 @@ impl EntityMetadataProvider for BillingPlan {
 impl TypeMetadataProvider for BillingPlan {
     fn name(&self) -> &'static str {
         match self {
+            BillingPlan::Community { .. } => "Community",
             BillingPlan::Starter { .. } => "Starter",
             BillingPlan::Pro { .. } => "Pro",
             BillingPlan::Team { .. } => "Team",
@@ -174,11 +203,14 @@ impl TypeMetadataProvider for BillingPlan {
 
     fn description(&self) -> &'static str {
         match self {
-            BillingPlan::Starter { .. } => "Automatically create living documentation of your network",
-            BillingPlan::Pro { .. } => {
-                "Visualize multiple networks and share network diagrams"
+            BillingPlan::Community { .. } => "Community plan for individuals self-hosting NetVisor",
+            BillingPlan::Starter { .. } => {
+                "Automatically create living documentation of your network"
             }
-            BillingPlan::Team { .. } => "Collaborate on infrastructure documentation with your team",
+            BillingPlan::Pro { .. } => "Visualize multiple networks and share network diagrams",
+            BillingPlan::Team { .. } => {
+                "Collaborate on infrastructure documentation with your team"
+            }
         }
     }
 
