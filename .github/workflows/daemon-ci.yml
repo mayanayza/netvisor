@@ -49,7 +49,7 @@ jobs:
         run: cargo clippy --bin daemon --all-features -- -D warnings
       
       - name: Test daemon binary
-        run: cargo test --bin daemon
+        run: cargo test --lib
       
       - name: Build daemon (release)
         run: cargo build --release --bin daemon

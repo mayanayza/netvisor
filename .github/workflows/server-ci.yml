@@ -49,7 +49,7 @@ jobs:
         run: cargo clippy --bin server --all-features -- -D warnings
       
       - name: Test server binary
-        run: cargo test --bin server
+        run: cargo test --lib
       
       - name: Build server (release)
         run: cargo build --release --bin server
