@@ -95,11 +95,13 @@ impl ServiceService {
             _ => {
                 self.storage.create(&service).await?;
                 tracing::info!(
-                    "Created service {} for host {}",
-                    service,
-                    service.base.host_id
+                    service_id = %service.id,
+                    service_name = %service.base.name,
+                    host_id = %service.base.host_id,
+                    binding_count = %service.base.bindings.len(),
+                    "Service created"
                 );
-                tracing::debug!("Result: {:?}", service);
+                tracing::trace!("Result: {:?}", service);
                 service
             }
         };
@@ -117,7 +119,7 @@ impl ServiceService {
         let lock = self.get_service_lock(&existing_service.id).await;
         let _guard = lock.lock().await;
 
-        tracing::debug!(
+        tracing::trace!(
             "Upserting new service data {:?} into {:?}",
             new_service_data,
             existing_service
@@ -199,16 +201,16 @@ impl ServiceService {
 
         if !data.is_empty() {
             tracing::info!(
-                "Upserted service {} with new data: {}",
-                existing_service,
-                data.join(", ")
+                service_id = %existing_service.id,
+                service_name = %existing_service.base.name,
+                updates = %data.join(", "),
+                "Upserted service with new data"
             );
             tracing::debug!("Result {:?}", existing_service);
         } else {
-            tracing::info!(
-                "No new information to upsert from service {} to service {}",
-                new_service_data,
-                existing_service,
+            tracing::debug!(
+                "Service upsert - no changes needed for {}",
+                existing_service
             );
         }
 
@@ -219,7 +221,7 @@ impl ServiceService {
         let lock = self.get_service_lock(&service.id).await;
         let _guard = lock.lock().await;
 
-        tracing::debug!("Updating service: {:?}", service);
+        tracing::trace!("Updating service: {:?}", service);
 
         let current_service = self
             .get_by_id(&service.id)
@@ -231,11 +233,12 @@ impl ServiceService {
 
         self.storage.update(&mut service).await?;
         tracing::info!(
-            "Updated service {} for host {}",
-            service,
-            service.base.host_id
+            service_id = %service.id,
+            service_name = %service.base.name,
+            host_id = %service.base.host_id,
+            "Service updated"
         );
-        tracing::debug!("Result: {:?}", service);
+        tracing::trace!("Result: {:?}", service);
         Ok(service)
     }
 
@@ -244,7 +247,7 @@ impl ServiceService {
         current_service: &Service,
         updates: Option<&Service>,
     ) -> Result<(), Error> {
-        tracing::debug!(
+        tracing::trace!(
             "Updating group bindings referencing {:?}, with changes {:?}",
             current_service,
             updates
@@ -314,7 +317,7 @@ impl ServiceService {
         let lock = self.get_service_lock(&service.id).await;
         let _guard = lock.lock().await;
 
-        tracing::debug!(
+        tracing::trace!(
             "Preparing service {:?} for transfer from host {:?} to host {:?}",
             service,
             original_host,
@@ -393,7 +396,14 @@ impl ServiceService {
 
         mutable_service.base.network_id = updated_host.base.network_id;
 
-        tracing::debug!(
+        tracing::info!(
+            "Reassigned service {} bindings for from host {} to host {}",
+            mutable_service,
+            original_host,
+            updated_host
+        );
+
+        tracing::trace!(
             "Reassigned service {:?} bindings for from host {:?} to host {:?}",
             mutable_service,
             original_host,

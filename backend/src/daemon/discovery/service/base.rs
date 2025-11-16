@@ -177,7 +177,7 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
             );
         }
 
-        tracing::debug!(
+        tracing::trace!(
             "Discovery update reported for session {}",
             session.info.session_id
         );
@@ -252,6 +252,15 @@ pub trait DiscoversNetworkedEntities:
         })
         .await?;
 
+        let session = self.as_ref().get_session().await?;
+
+        tracing::info!(
+            session_id = %session.info.session_id,
+            discovery_type = ?self.discovery_type(),
+            total_to_process = %session.info.total_to_process,
+            "Discovery session started"
+        );
+
         Ok(())
     }
 
@@ -269,7 +278,11 @@ pub trait DiscoversNetworkedEntities:
 
         match &discovery_result {
             Ok(_) => {
-                tracing::info!("Discovery session {} completed successfully", session_id);
+                tracing::info!(
+                    session_id = %session_id,
+                    processed = %final_processed_count,
+                    "Discovery session completed successfully"
+                );
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Complete,
                     processed: final_processed_count,
@@ -279,7 +292,11 @@ pub trait DiscoversNetworkedEntities:
                 .await?;
             }
             Err(_) if cancel.is_cancelled() => {
-                tracing::warn!("Discovery session {} was cancelled", session_id);
+                tracing::warn!(
+                    session_id = %session_id,
+                    processed = %final_processed_count,
+                    "Discovery session cancelled"
+                );
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Cancelled,
                     processed: final_processed_count,
@@ -289,7 +306,12 @@ pub trait DiscoversNetworkedEntities:
                 .await?;
             }
             Err(e) => {
-                tracing::error!("Discovery session {} failed: {}", session_id, e);
+                tracing::error!(
+                    session_id = %session_id,
+                    processed = %final_processed_count,
+                    error = %e,
+                    "Discovery session failed"
+                );
 
                 let error = DiscoveryCriticalError::from_error_string(e.to_string())
                     .map(|e| e.to_string())
@@ -310,11 +332,9 @@ pub trait DiscoversNetworkedEntities:
         *current_session = None;
 
         if cancel.is_cancelled() {
-            tracing::info!("Discovery session {} was cancelled", session_id);
             return Ok(());
         }
 
-        tracing::info!("Discovery session {} finished", session_id,);
         Ok(())
     }
 
@@ -387,7 +407,13 @@ pub trait DiscoversNetworkedEntities:
             host.base.name = interface.base.ip_address.to_string()
         }
 
-        tracing::info!("Processed host for ip {}", interface.base.ip_address);
+        tracing::info!(
+            ip = %interface.base.ip_address,
+            host_name = %host.base.name,
+            service_count = %services.len(),
+            "Processed host for ip {}",
+            interface.base.ip_address
+        );
         Ok(Some((host, services)))
     }
 
@@ -544,11 +570,10 @@ pub trait DiscoversNetworkedEntities:
         // Always report when complete
         {
             tracing::debug!(
-                "Progress update: {}/{} (threshold: {}, total: {})",
-                current_processed,
-                total_to_process,
-                threshold,
-                total_to_process
+                processed = %current_processed,
+                total = %total_to_process,
+                percentage = format!("{:.1}%", current_processed as f32 / total_to_process as f32),
+                "Discovery progress update"
             );
 
             self.report_discovery_update(DiscoverySessionUpdate::scanning(current_processed))

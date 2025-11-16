@@ -37,6 +37,12 @@ impl ApiKeyService {
     pub async fn create(&self, api_key: ApiKey) -> Result<ApiKey> {
         let key = self.generate_api_key();
 
+        tracing::debug!(
+            api_key_name = %api_key.base.name,
+            network_id = %api_key.base.network_id,
+            "Creating API key"
+        );
+
         let api_key = ApiKey::new(ApiKeyBase {
             key: key.clone(),
             name: api_key.base.name,
@@ -46,10 +52,24 @@ impl ApiKeyService {
             is_enabled: true,
         });
 
-        self.storage.create(&api_key).await
+        let created = self.storage.create(&api_key).await?;
+
+        tracing::info!(
+            api_key_id = %created.id,
+            api_key_name = %created.base.name,
+            network_id = %created.base.network_id,
+            "API key created"
+        );
+
+        Ok(created)
     }
 
     pub async fn rotate_key(&self, api_key_id: Uuid) -> Result<String> {
+        tracing::info!(
+            api_key_id = %api_key_id,
+            "Rotating API key"
+        );
+
         if let Some(mut api_key) = self.get_by_id(&api_key_id).await? {
             let new_key = self.generate_api_key();
 
@@ -57,8 +77,18 @@ impl ApiKeyService {
 
             self.update(&mut api_key).await?;
 
+            tracing::info!(
+                api_key_id = %api_key_id,
+                api_key_name = %api_key.base.name,
+                "API key rotated successfully"
+            );
+
             Ok(new_key)
         } else {
+            tracing::warn!(
+                api_key_id = %api_key_id,
+                "API key not found for rotation"
+            );
             Err(anyhow!(
                 "Could not find api key {}. Unable to update API key.",
                 api_key_id

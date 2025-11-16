@@ -65,7 +65,7 @@ dev-container-rebuild-clean:
 	docker compose -f docker-compose.dev.yml up
 
 dev-down:
-	docker compose -f docker-compose.dev.yml down --volumes --rmi all
+	docker compose -f docker-compose.dev.yml down --volumes --rmi local
 
 build:
 	@echo "Building Server + UI Docker image..."

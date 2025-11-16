@@ -18,18 +18,6 @@ where
     /// Get reference to the storage
     fn storage(&self) -> &Arc<GenericPostgresStorage<T>>;
 
-    /// Create entity
-    async fn create(&self, entity: T) -> Result<T, anyhow::Error> {
-        // User-created have uuid nil
-        let entity = if entity.id() == Uuid::nil() {
-            T::new(entity.get_base())
-        } else {
-            entity
-        };
-
-        self.storage().create(&entity).await
-    }
-
     /// Get entity by ID
     async fn get_by_id(&self, id: &Uuid) -> Result<Option<T>, anyhow::Error> {
         self.storage().get_by_id(id).await
@@ -45,13 +33,78 @@ where
         self.storage().get_one(filter).await
     }
 
-    /// Update entity
-    async fn update(&self, entity: &mut T) -> Result<T, anyhow::Error> {
-        self.storage().update(entity).await
-    }
-
     /// Delete entity by ID
     async fn delete(&self, id: &Uuid) -> Result<(), anyhow::Error> {
-        self.storage().delete(id).await
+        // ADD logging before deletion
+        if let Some(entity) = self.get_by_id(id).await? {
+            tracing::info!(
+                entity_type = T::table_name(),
+                entity_id = %id,
+                entity_name = %entity,
+                "Deleting entity"
+            );
+            self.storage().delete(id).await?;
+            tracing::debug!(
+                entity_type = T::table_name(),
+                entity_id = %id,
+                "Entity deleted successfully"
+            );
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "{} with id {} not found",
+                T::table_name(),
+                id
+            ))
+        }
+    }
+
+    /// Create entity
+    async fn create(&self, entity: T) -> Result<T, anyhow::Error> {
+        let entity = if entity.id() == Uuid::nil() {
+            T::new(entity.get_base())
+        } else {
+            entity
+        };
+
+        // ADD logging before creation
+        tracing::debug!(
+            entity_type = T::table_name(),
+            entity_id = %entity.id(),
+            entity_name = %entity,
+            "Creating entity"
+        );
+
+        let created = self.storage().create(&entity).await?;
+
+        tracing::info!(
+            entity_type = T::table_name(),
+            entity_id = %created.id(),
+            entity_name = %created,
+            "Entity created"
+        );
+
+        Ok(created)
+    }
+
+    /// Update entity
+    async fn update(&self, entity: &mut T) -> Result<T, anyhow::Error> {
+        tracing::debug!(
+            entity_type = T::table_name(),
+            entity_id = %entity.id(),
+            entity_name = %entity,
+            "Updating entity"
+        );
+
+        let updated = self.storage().update(entity).await?;
+
+        tracing::info!(
+            entity_type = T::table_name(),
+            entity_id = %updated.id(),
+            entity_name = %updated,
+            "Entity updated"
+        );
+
+        Ok(updated)
     }
 }

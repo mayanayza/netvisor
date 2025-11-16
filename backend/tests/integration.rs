@@ -2,6 +2,7 @@ use email_address::EmailAddress;
 use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
+use netvisor::server::discovery::r#impl::types::DiscoveryType;
 use netvisor::server::networks::r#impl::Network;
 use netvisor::server::organizations::r#impl::base::Organization;
 #[cfg(feature = "generate-fixtures")]
@@ -13,7 +14,6 @@ use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
 use netvisor::server::users::r#impl::base::User;
 use std::process::{Child, Command};
-use uuid::Uuid;
 
 const BASE_URL: &str = "http://localhost:60072";
 const TEST_PASSWORD: &str = "TestPassword123!";
@@ -39,6 +39,7 @@ impl ContainerManager {
                 "docker-compose.dev.yml",
                 "up",
                 "--build",
+                "--force-recreate",
                 "--wait",
             ])
             .current_dir("..")
@@ -66,8 +67,18 @@ impl ContainerManager {
             .current_dir("..")
             .output();
 
+        // Stop and remove containers/volumes, but keep third-party images
         let _ = Command::new("docker")
-            .args(["compose", "down", "-v", "--remove-orphans"])
+            .args([
+                "compose",
+                "-f",
+                "docker-compose.dev.yml",
+                "down",
+                "-v",
+                "--rmi",
+                "local", // Only remove locally built images (netvisor-*), not pulled images
+                "--remove-orphans",
+            ])
             .current_dir("..")
             .output();
 
@@ -284,11 +295,9 @@ async fn wait_for_network(client: &TestClient) -> Result<Network, String> {
     .await
 }
 
-async fn wait_for_daemon(client: &TestClient, network_id: Uuid) -> Result<Daemon, String> {
+async fn wait_for_daemon(client: &TestClient) -> Result<Daemon, String> {
     retry("wait for daemon registration", 15, 2, || async {
-        let daemons: Vec<Daemon> = client
-            .get(&format!("/api/daemons?network_id={}", network_id))
-            .await?;
+        let daemons: Vec<Daemon> = client.get(&format!("/api/daemons")).await?;
 
         if daemons.is_empty() {
             return Err("No daemons registered yet".to_string());
@@ -331,6 +340,11 @@ async fn run_discovery(client: &TestClient) -> Result<(), String> {
                             if let Some(data) = line.strip_prefix("data: ") {
                                 if let Ok(update) = serde_json::from_str::<DiscoveryUpdatePayload>(data) {
 
+                                    // Only care about Network discovery, not SelfReport
+                                    if !matches!(update.discovery_type, DiscoveryType::Network { .. }) {
+                                        continue;
+                                    }
+
                                     println!(
                                         "📊 Discovery: {} - {}/{} processed",
                                         update.phase,
@@ -358,22 +372,24 @@ async fn run_discovery(client: &TestClient) -> Result<(), String> {
     }
 }
 
-async fn verify_home_assistant_discovered(
-    client: &TestClient,
-    network_id: Uuid,
-) -> Result<Service, String> {
+async fn verify_home_assistant_discovered(client: &TestClient) -> Result<Service, String> {
     println!("\n=== Verifying Home Assistant Discovery ===");
 
     retry("find Home Assistant service", 10, 2, || async {
-        let services: Vec<Service> = client
-            .get(&format!("/api/services?network_id={}", network_id))
-            .await?;
+        let services: Vec<Service> = client.get(&format!("/api/services")).await?;
 
         if services.is_empty() {
             return Err("No services found yet".to_string());
         }
 
-        println!("✅ Found {} service(s)", services.len());
+        println!("✅ Found {} service(s):", services.len());
+        for service in &services {
+            println!(
+                "   - {} ({})",
+                service.base.name,
+                service.base.service_definition.id()
+            );
+        }
 
         services
             .into_iter()
@@ -528,7 +544,7 @@ async fn test_full_integration() {
 
     // Wait for daemon
     println!("\n=== Waiting for Daemon ===");
-    let daemon = wait_for_daemon(&client, network.id)
+    let daemon = wait_for_daemon(&client)
         .await
         .expect("Failed to find daemon");
     println!("✅ Daemon registered: {}", daemon.id);
@@ -537,7 +553,7 @@ async fn test_full_integration() {
     run_discovery(&client).await.expect("Discovery failed");
 
     // Verify service discovered
-    let _service = verify_home_assistant_discovered(&client, network.id)
+    let _service = verify_home_assistant_discovered(&client)
         .await
         .expect("Failed to find Home Assistant");
 

@@ -67,7 +67,11 @@ impl DaemonRuntimeService {
                     }
                 }
             } else {
-                tracing::warn!("network_id not set, skipping work request");
+                let daemon_id = self.config_store.get_id().await?;
+                tracing::warn!(
+                    daemon_id = %daemon_id,
+                    "Work request skipped - network_id not configured"
+                );
             }
         }
     }
@@ -100,7 +104,10 @@ impl DaemonRuntimeService {
                     .send()
                     .await?;
 
-                tracing::info!("💓 Heartbeat sent");
+                tracing::info!(
+                    daemon_id = %daemon_id,
+                    "💓 Heartbeat sent"
+                );
 
                 if !response.status().is_success() {
                     let api_response: ApiResponse<()> = response.json().await?;
@@ -109,7 +116,10 @@ impl DaemonRuntimeService {
                         let error_msg = api_response
                             .error
                             .unwrap_or_else(|| "Unknown error".to_string());
-                        tracing::warn!("    ❤️‍🩹 Heartbeat failed: {}", error_msg);
+                        tracing::error!(
+                            error = %error_msg,
+                            "❤️‍🩹 Heartbeat failed - check network connectivity"
+                        );
                     }
                 }
 
@@ -117,7 +127,10 @@ impl DaemonRuntimeService {
                     tracing::warn!("Failed to update heartbeat timestamp: {}", e);
                 }
             } else {
-                tracing::warn!("network_id not set, skipping heartbeat");
+                tracing::warn!(
+                    daemon_id = %daemon_id,
+                    "Heartbeat skipped - network_id not configured"
+                );
             }
         }
     }
@@ -142,7 +155,12 @@ impl DaemonRuntimeService {
         self.register_with_server(daemon_id, network_id, has_docker_client)
             .await?;
 
-        tracing::info!("Daemon fully initialized!");
+        tracing::info!(
+            daemon_id = %daemon_id,
+            network_id = %network_id,
+            has_docker = %has_docker_client,
+            "Daemon fully initialized"
+        );
 
         Ok(())
     }

@@ -89,6 +89,13 @@ impl HostService {
         // Since bindings were already reassigned above, we just update the host record
         let host_with_final_services = self.storage.update(&mut created_host).await?;
 
+        tracing::info!(
+            host_id = %created_host.id,
+            host_name = %created_host.base.name,
+            service_count = %created_services.len(),
+            "Created host with services"
+        );
+
         Ok((host_with_final_services, created_services))
     }
 
@@ -130,7 +137,7 @@ impl HostService {
             _ => {
                 self.storage.create(&host).await?;
                 tracing::info!("Created host {}: {}", host.base.name, host.id);
-                tracing::debug!("Result: {:?}", host);
+                tracing::trace!("Result: {:?}", host);
                 host
             }
         };
@@ -154,7 +161,7 @@ impl HostService {
         self.storage.update(&mut host).await?;
 
         tracing::info!("Updated host {:?}: {:?}", host.base.name, host.id);
-        tracing::debug!("Result: {:?}", host);
+        tracing::trace!("Result: {:?}", host);
 
         Ok(host)
     }
@@ -256,18 +263,17 @@ impl HostService {
 
         if !data.is_empty() {
             tracing::info!(
-                "Upserted new discovery data: {} to host {}: {}",
-                existing_host.base.name,
-                existing_host.id,
-                data.join(", ")
+                host_id = %existing_host.id,
+                host_name = %existing_host.base.name,
+                updates = %data.join(", "),
+                "Upserted discovery data to host"
             );
             tracing::trace!("Result: {:?}", existing_host);
         } else {
-            tracing::info!(
-                "No new information to upsert from host {} to host {}: {}",
+            tracing::debug!(
+                "No new data to upsert from host {} to {}",
                 new_host_data.base.name,
-                existing_host.base.name,
-                existing_host.id
+                existing_host.base.name
             );
         }
 
@@ -318,6 +324,7 @@ impl HostService {
         // Update host_id, network_id, and interface/port binding IDs to what's available on new host
         // bindings IDs from old host may no longer exist if new host already had the port / interface
         let service_transfer_futures: Vec<_> = other_host_services
+            .clone()
             .into_iter()
             .map(|s| {
                 self.service_service.reassign_service_interface_bindings(
@@ -357,8 +364,15 @@ impl HostService {
 
         // Delete host, ignore services because they are just being moved to other host
         self.delete_host(&other_host.id, false).await?;
-        tracing::info!("Consolidated host {} into {}", other_host, updated_host);
-        tracing::debug!("Result: {:?}", updated_host);
+        tracing::info!(
+            source_host_id = %other_host.id,
+            source_host_name = %other_host.base.name,
+            dest_host_id = %updated_host.id,
+            dest_host_name = %updated_host.base.name,
+            transferred_services = %other_host_services.len(),
+            "Hosts consolidated"
+        );
+        tracing::trace!("Consolidation result: {:?}", updated_host);
         Ok(updated_host)
     }
 
@@ -398,9 +412,15 @@ impl HostService {
 
         let updated_services = try_join_all(update_service_futures).await?;
 
-        tracing::info!("Updated host {} services", updates);
-        tracing::debug!(
-            "Result - host: {:?}, updated services: {:?}, deleted services: {:?}",
+        tracing::info!(
+            host_id = %current_host.id,
+            host_name = %current_host.base.name,
+            updated_services = %updated_services.len(),
+            deleted_services = %delete_services.len(),
+            "Host services updated"
+        );
+        tracing::trace!(
+            "Full update - host: {:?}, updated: {:?}, deleted: {:?}",
             updates,
             updated_services,
             delete_services
@@ -433,10 +453,11 @@ impl HostService {
 
         self.storage.delete(id).await?;
         tracing::info!(
-            "Deleted host {}: {}; deleted service + associated subnet/group bindings: {}",
-            host.base.name,
-            host.id,
-            !delete_services
+            host_id = %host.id,
+            host_name = %host.base.name,
+            service_count = %host.base.services.len(),
+            deleted_services = %delete_services,
+            "Host deleted"
         );
         Ok(())
     }

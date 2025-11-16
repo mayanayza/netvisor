@@ -200,7 +200,12 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                             Ok(None)
                         }
                         Err(e) => {
-                            tracing::debug!("Host {} - scan error: {}", ip, e);
+                            tracing::warn!(
+                                ip = %ip,
+                                error = %e,
+                                phase = "port_endpoint_scan",
+                                "Scan error"
+                            );
                             Err(e)
                         }
                         Ok(Some((all_ports, endpoint_responses))) => {
@@ -253,7 +258,10 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                     tracing::warn!("✗ Host {} - failed to create in database", ip);
                                 }
                             } else {
-                                tracing::debug!("Host {} - process_host returned None", ip);
+                                tracing::debug!(
+        ip = %ip,
+        "Host processing returned None - no services matched or error occurred"
+    );
                             }
                             Ok(None)
                         }
@@ -282,7 +290,11 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                     if DiscoveryCriticalError::is_critical_error(e.to_string()) {
                         return Err(e);
                     } else {
-                        tracing::warn!("Error during scanning/processing: {}", e);
+                        tracing::warn!(
+                            error = %e,
+                            phase = "scan_and_process",
+                            "Host scan/processing error"
+                        );
                     }
                 }
             }
@@ -292,12 +304,11 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                 .await?;
         }
 
-        tracing::info!("📊 Scan complete:");
-        tracing::info!("  - Total IPs: {}", total_ips);
-        tracing::info!("  - Scanned: {}", scanned);
-        tracing::info!(
-            "  - Successfully created: {} hosts",
-            successful_discoveries.len()
+        tracing::warn!(
+            total_ips = %total_ips,
+            scanned = %scanned,
+            discovered = %successful_discoveries.len(),
+            "📊 Scan complete"
         );
 
         Ok(successful_discoveries)
@@ -359,7 +370,11 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                 }
             }
             Err(e) => {
-                tracing::debug!("Error scanning host {}: {}", ip, e);
+                tracing::warn!(
+                    ip = %ip,
+                    error = %e,
+                    "Host scan failed"
+                );
 
                 if DiscoveryCriticalError::is_critical_error(e.to_string()) {
                     Err(e)

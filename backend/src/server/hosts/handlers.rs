@@ -43,7 +43,11 @@ async fn create_host(
     let host_service = &state.services.host_service;
 
     if let Err(e) = request.host.base.validate() {
-        tracing::error!("Host validation failed: {:?}", e);
+        tracing::warn!(
+            error = %e,
+            host_name = %request.host.base.name,
+            "Host validation failed"
+        );
         return Err(ApiError::bad_request(&format!(
             "Host validation failed: {}",
             e

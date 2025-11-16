@@ -39,7 +39,13 @@ impl CrudService<Subnet> for SubnetService {
             subnet
         };
 
-        tracing::debug!("Creating subnet {:?}", subnet);
+        tracing::debug!(
+            subnet_id = %subnet.id,
+            subnet_name = %subnet.base.name,
+            subnet_cidr = %subnet.base.cidr,
+            network_id = %subnet.base.network_id,
+            "Creating subnet"
+        );
 
         let subnet_from_storage = match all_subnets.iter().find(|s| subnet.eq(s)) {
             // Docker will default to the same subnet range for bridge networks, so we need a way to distinguish docker bridge subnets
@@ -85,18 +91,25 @@ impl CrudService<Subnet> for SubnetService {
                 } =>
             {
                 tracing::warn!(
-                    "Duplicate subnet for {}: {} found, returning existing {}: {}",
-                    subnet.base.name,
-                    subnet.id,
-                    existing_subnet.base.name,
-                    existing_subnet.id
+                    existing_subnet_id = %existing_subnet.id,
+                    existing_subnet_name = %existing_subnet.base.name,
+                    new_subnet_id = %subnet.id,
+                    new_subnet_name = %subnet.base.name,
+                    subnet_cidr = %subnet.base.cidr,
+                    "Duplicate subnet found, returning existing"
                 );
                 existing_subnet.clone()
             }
             // If there's no existing subnet, create a new one
             _ => {
                 self.storage.create(&subnet).await?;
-                tracing::info!("Created subnet {}: {}", subnet.base.name, subnet.id);
+                tracing::info!(
+                    subnet_id = %subnet.id,
+                    subnet_name = %subnet.base.name,
+                    subnet_cidr = %subnet.base.cidr,
+                    network_id = %subnet.base.network_id,
+                    "Subnet created"
+                );
                 subnet
             }
         };
@@ -108,6 +121,13 @@ impl CrudService<Subnet> for SubnetService {
             .get_by_id(id)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Subnet not found"))?;
+
+        tracing::info!(
+            subnet_id = %subnet.id,
+            subnet_name = %subnet.base.name,
+            subnet_cidr = %subnet.base.cidr,
+            "Deleting subnet"
+        );
 
         let filter = EntityFilter::unfiltered().network_ids(&[subnet.base.network_id]);
 
@@ -127,10 +147,21 @@ impl CrudService<Subnet> for SubnetService {
             None
         });
 
-        try_join_all(update_futures).await?;
+        let updated_hosts = try_join_all(update_futures).await?;
+
+        tracing::debug!(
+            subnet_id = %subnet.id,
+            affected_hosts = %updated_hosts.len(),
+            "Cleaned up host interfaces referencing subnet"
+        );
 
         self.storage.delete(id).await?;
-        tracing::info!("Deleted subnet {}: {}", subnet.base.name, subnet.id);
+        tracing::info!(
+            subnet_id = %subnet.id,
+            subnet_name = %subnet.base.name,
+            affected_hosts = %updated_hosts.len(),
+            "Subnet deleted"
+        );
         Ok(())
     }
 }

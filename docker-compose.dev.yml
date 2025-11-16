@@ -12,7 +12,7 @@ services:
       netvisor-dev:
         ipv4_address: 172.25.0.2
 
-  postgres:
+  postgres-dev:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: netvisor
@@ -21,7 +21,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5435:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -40,7 +40,7 @@ services:
       - "60072:60072"
     environment:
       - RUST_LOG=debug,sqlx=off,tower_http=off
-      - NETVISOR_DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/netvisor
+      - NETVISOR_DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres-dev:5432/netvisor
       - NETVISOR_WEB_EXTERNAL_PATH=/app/static
       - NETVISOR_LOG_LEVEL=${NETVISOR_LOG_LEVEL:-debug}
       - NETVISOR_INTEGRATED_DAEMON_URL=${NETVISOR_INTEGRATED_DAEMON_URL:-http://daemon:60073}
@@ -52,7 +52,7 @@ services:
       - cargo-git:/usr/local/cargo/git
       - server-target:/app/target
     depends_on:
-      postgres:
+      postgres-dev:
         condition: service_healthy
       daemon:
         condition: service_healthy
@@ -109,6 +109,12 @@ services:
     ports:
       - 8123:8123
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8123 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 60s
     networks:
       netvisor-dev:
         ipv4_address: 172.25.0.5

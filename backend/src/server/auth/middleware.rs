@@ -43,6 +43,13 @@ impl AuthenticatedEntity {
         }
     }
 
+    pub fn entity_id(&self) -> String {
+        match self {
+            AuthenticatedEntity::User { user_id, .. } => user_id.to_string(),
+            AuthenticatedEntity::Daemon(network_id) => format!("Daemon for network {}", network_id),
+        }
+    }
+
     /// Get network_ids that daemon / user have access to
     pub fn network_ids(&self) -> Vec<Uuid> {
         match self {

@@ -132,6 +132,14 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
             )
             .await;
 
+        if let Ok(ref container_data) = discovered_hosts_services {
+            tracing::info!(
+                total_containers = %container_list.len(),
+                discovered = %container_data.len(),
+                "🐳 Docker scan complete"
+            );
+        }
+
         let discovery_result = if discovered_hosts_services.is_ok() {
             Ok(())
         } else {
@@ -329,7 +337,13 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             match result {
                 Ok(Some((host, services))) => all_container_data.push((host, services)),
                 Ok(None) => {}
-                Err(e) => tracing::warn!("Error processing container: {}", e),
+                Err(e) => {
+                    tracing::warn!(
+                        error = %e,
+                        phase = "container_processing",
+                        "Container processing error"
+                    );
+                }
             }
 
             last_reported_processed_count = self
@@ -396,14 +410,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             docker_service_id,
             ..
         } = params;
-
-        tracing::info!(
-            "Processing host mode container {}",
-            container
-                .name
-                .as_ref()
-                .unwrap_or(&"Unknown Container Name".to_string())
-        );
 
         let host_ip = self.as_ref().utils.get_own_ip_address()?;
 
