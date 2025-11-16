@@ -63,8 +63,6 @@
 		const error = $page.url.searchParams.get('error');
 		if (error) {
 			pushError(decodeURIComponent(error));
-
-			// Clean up URL
 			const cleanUrl = new URL($page.url);
 			cleanUrl.searchParams.delete('error');
 			window.history.replaceState({}, '', cleanUrl.toString());
@@ -85,15 +83,12 @@
 			if ($organization) {
 				// Handle Stripe session callback (billing activation)
 				if (sessionId && !isBillingPlanActive($organization)) {
-					// Clean up URL first
 					const cleanUrl = new URL($page.url);
 					cleanUrl.searchParams.delete('session_id');
 					window.history.replaceState({}, '', cleanUrl.toString());
 
-					// Poll for webhook to complete
 					const activated = await waitForBillingActivation();
 					if (activated) {
-						// After billing is activated, navigate to correct route
 						const correctRoute = getRoute();
 						// eslint-disable-next-line svelte/no-navigation-without-resolve
 						await goto(correctRoute);
@@ -101,7 +96,7 @@
 					}
 				}
 
-				// Determine correct route and redirect if needed
+				// Check if current page matches where user should be
 				const correctRoute = getRoute();
 				if ($page.url.pathname !== correctRoute) {
 					// eslint-disable-next-line svelte/no-navigation-without-resolve

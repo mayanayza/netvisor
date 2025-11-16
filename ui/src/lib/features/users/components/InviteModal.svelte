@@ -11,33 +11,43 @@
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
-	import { permissions } from '$lib/shared/stores/metadata';
+	import { permissions, metadata } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
 
-	export let isOpen = false;
-	export let onClose: () => void;
+	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
-	let copied = false;
-	let copyTimeoutId: ReturnType<typeof setTimeout> | null = null;
-	let generatingInvite = false;
-	let invite: OrganizationInvite | null = null;
+	// Force Svelte to track reactivity
+	$effect(() => {
+		void $metadata;
+		void $currentUser;
+	});
 
-	let permissionOptions: { value: string; label: string }[] = permissions
-		.getItems()
-		.filter((p) =>
-			$currentUser
-				? permissions.getMetadata($currentUser.permissions).can_manage.includes(p.id)
-				: false
-		)
-		.map((p) => ({ value: p.id, label: p.name + ' - ' + p.description }));
+	let copied = $state(false);
+	let copyTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
+	let generatingInvite = $state(false);
+	let invite = $state<OrganizationInvite | null>(null);
+
+	// Make permission options reactive to metadata and currentUser changes
+	let permissionOptions = $derived(
+		permissions
+			.getItems()
+			.filter((p) =>
+				$currentUser
+					? permissions.getMetadata($currentUser.permissions).can_manage.includes(p.id)
+					: false
+			)
+			.map((p) => ({ value: p.id, label: p.name + ' - ' + p.description }))
+	);
 
 	// Create form field with validation
 	const permissionsField = field('permissions', 'Viewer', [required()]);
 
 	// Reset form when modal opens
-	$: if (isOpen && !invite) {
-		permissionsField.set('Viewer');
-	}
+	$effect(() => {
+		if (isOpen && !invite) {
+			permissionsField.set('Viewer');
+		}
+	});
 
 	function handleClose() {
 		invite = null;
@@ -81,11 +91,13 @@
 	}
 
 	// Cleanup timeout on component destroy
-	$: if (!isOpen && copyTimeoutId) {
-		clearTimeout(copyTimeoutId);
-		copyTimeoutId = null;
-		copied = false;
-	}
+	$effect(() => {
+		if (!isOpen && copyTimeoutId) {
+			clearTimeout(copyTimeoutId);
+			copyTimeoutId = null;
+			copied = false;
+		}
+	});
 </script>
 
 <EditModal
@@ -121,11 +133,7 @@
 
 		<!-- Generate Invite Button (shown when no invite exists) -->
 		{#if !invite}
-			<button
-				on:click={handleGenerateInvite}
-				disabled={generatingInvite}
-				class="btn-primary w-full"
-			>
+			<button onclick={handleGenerateInvite} disabled={generatingInvite} class="btn-primary w-full">
 				<RotateCcw class="mr-2 h-4 w-4" />
 				{generatingInvite ? 'Generating...' : 'Generate Invite Link'}
 			</button>
@@ -146,7 +154,7 @@
 					</div>
 
 					<!-- Copy Button -->
-					<button on:click={handleCopy} class="btn-primary w-full" disabled={copied}>
+					<button onclick={handleCopy} class="btn-primary w-full" disabled={copied}>
 						{#if copied}
 							<Check class="mr-2 h-4 w-4" />
 							Copied!

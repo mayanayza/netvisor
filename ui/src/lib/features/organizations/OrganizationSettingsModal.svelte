@@ -12,36 +12,46 @@
 	import { getOrganization, organization, updateOrganization } from './store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
-	export let isOpen = false;
-	export let onClose: () => void;
+	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
-	let saving = false;
-	let activeSection: 'main' | 'edit' = 'main';
+	// Force Svelte to track organization reactivity
+	$effect(() => {
+		void $organization;
+	});
 
-	$: if (isOpen && $currentUser) {
-		loadOrganization();
-	}
+	let saving = $state(false);
+	let activeSection = $state<'main' | 'edit'>('main');
+
+	$effect(() => {
+		if (isOpen && $currentUser) {
+			loadOrganization();
+		}
+	});
 
 	async function loadOrganization() {
 		if (!$currentUser) return;
 		await getOrganization();
 	}
 
-	$: org = $organization;
+	let org = $derived($organization);
 
 	// Form data
-	let formData = {
+	let formData = $state({
 		name: ''
-	};
+	});
 
 	const name = field('name', '', [required()]);
 
-	$: if (isOpen && activeSection === 'edit' && org) {
-		name.set(org.name);
-		formData.name = org.name;
-	}
+	$effect(() => {
+		if (isOpen && activeSection === 'edit' && org) {
+			name.set(org.name);
+			formData.name = org.name;
+		}
+	});
 
-	$: formData.name = $name.value;
+	$effect(() => {
+		formData.name = $name.value;
+	});
 
 	async function handleSave() {
 		if (!org) return;
@@ -75,9 +85,11 @@
 		}
 	}
 
-	$: modalTitle = activeSection === 'main' ? 'Organization Settings' : 'Edit Organization';
-	$: showSave = activeSection === 'edit';
-	$: cancelLabel = activeSection === 'main' ? 'Close' : 'Back';
+	let modalTitle = $derived(
+		activeSection === 'main' ? 'Organization Settings' : 'Edit Organization'
+	);
+	let showSave = $derived(activeSection === 'edit');
+	let cancelLabel = $derived(activeSection === 'main' ? 'Close' : 'Back');
 </script>
 
 <EditModal
@@ -103,7 +115,9 @@
 				<!-- Organization Info -->
 				<InfoCard title="Organization Information">
 					<InfoRow label="Name">{org.name}</InfoRow>
-					<InfoRow label="Plan">{org.plan.type}</InfoRow>
+					{#if org.plan}
+						<InfoRow label="Plan">{org.plan.type}</InfoRow>
+					{/if}
 					<InfoRow label="Created">
 						{formatTimestamp(org.created_at)}
 					</InfoRow>
@@ -118,7 +132,7 @@
 							<p class="text-secondary text-xs">Update your organization's display name</p>
 						</div>
 						<button
-							on:click={() => {
+							onclick={() => {
 								activeSection = 'edit';
 								name.set(org.name);
 							}}

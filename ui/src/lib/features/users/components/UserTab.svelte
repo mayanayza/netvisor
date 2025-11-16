@@ -8,21 +8,32 @@
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import UserCard from './UserCard.svelte';
 	import InviteCard from './InviteCard.svelte';
-	import { getInvites, invites, organization } from '$lib/features/organizations/store';
+	import {
+		getInvites,
+		getOrganization,
+		invites,
+		organization
+	} from '$lib/features/organizations/store';
 	import { UserPlus } from 'lucide-svelte';
 	import { isUser, type UserOrInvite } from '../types';
 	import InviteModal from './InviteModal.svelte';
-	import { billingPlans } from '$lib/shared/stores/metadata';
+	import { billingPlans, metadata } from '$lib/shared/stores/metadata';
 
-	const loading = loadData([getUsers, getInvites]);
+	// Force Svelte to track metadata reactivity
+	$effect(() => {
+		void $metadata;
+		void $organization;
+	});
 
-	let showInviteModal = false;
+	const loading = loadData([getUsers, getInvites, getOrganization]);
+
+	let showInviteModal = $state(false);
 
 	// Combine users and invites into single array
-	$: combinedItems = [
+	let combinedItems = $derived([
 		...$users.map((user) => ({ type: 'user' as const, data: user })),
 		...$invites.map((invite) => ({ type: 'invite' as const, data: invite }))
-	] as UserOrInvite[];
+	] as UserOrInvite[]);
 
 	async function handleCreateInvite() {
 		showInviteModal = true;
@@ -32,19 +43,23 @@
 		showInviteModal = false;
 	}
 
-	let headerButtons = [];
+	// Make headerButtons reactive
+	let headerButtons = $derived.by(() => {
+		if (!$organization || !$organization.plan) return [];
 
-	if ($organization) {
 		let features = billingPlans.getMetadata($organization.plan.type).features;
 		let canInviteUsers = features.share_views || features.team_members;
-		if (canInviteUsers) {
-			headerButtons.push({
-				cta: 'Invite User',
-				onClick: handleCreateInvite,
-				IconComponent: UserPlus
-			});
-		}
-	}
+
+		return canInviteUsers
+			? [
+					{
+						cta: 'Invite User',
+						onClick: handleCreateInvite,
+						IconComponent: UserPlus
+					}
+				]
+			: [];
+	});
 
 	// Only define fields for users (invites won't be filtered/sorted)
 	const userFields: FieldConfig<UserOrInvite>[] = [

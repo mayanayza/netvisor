@@ -3,12 +3,17 @@
 	import type { User } from '../types';
 	import { Trash2 } from 'lucide-svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
-	import { entities, permissions } from '$lib/shared/stores/metadata';
+	import { entities, permissions, metadata } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
 	import { deleteUser } from '../store';
 
-	export let user: User;
-	export let viewMode: 'card' | 'list';
+	let { user, viewMode }: { user: User; viewMode: 'card' | 'list' } = $props();
+
+	// Force Svelte to track metadata reactivity
+	$effect(() => {
+		void $metadata;
+		void $currentUser;
+	});
 
 	function handleDeleteUser() {
 		if (confirm(`Are you sure you want to delete this user?`)) {
@@ -16,12 +21,14 @@
 		}
 	}
 
-	$: canManage = $currentUser
-		? permissions.getMetadata($currentUser.permissions).can_manage.includes(user.permissions)
-		: false;
+	let canManage = $derived(
+		$currentUser
+			? permissions.getMetadata($currentUser.permissions).can_manage.includes(user.permissions)
+			: false
+	);
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: user.email,
 		iconColor: entities.getColorHelper('User').icon,
 		Icon: entities.getIconComponent('User'),
@@ -52,19 +59,17 @@
 				value: formatTimestamp(user.created_at)
 			}
 		],
-		actions: [
-			...(canManage
-				? [
-						{
-							label: 'Delete',
-							icon: Trash2,
-							onClick: () => handleDeleteUser(),
-							class: 'btn-icon-danger'
-						}
-					]
-				: [])
-		]
-	};
+		actions: canManage
+			? [
+					{
+						label: 'Delete',
+						icon: Trash2,
+						onClick: () => handleDeleteUser(),
+						class: 'btn-icon-danger'
+					}
+				]
+			: []
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} />

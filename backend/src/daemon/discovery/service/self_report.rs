@@ -130,6 +130,12 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         // Update capabilities
         let interfaced_subnet_ids: Vec<Uuid> = created_subnets.iter().map(|s| s.id).collect();
 
+        tracing::info!(
+            "Updating capabilities with {} interfaced subnets: {:?}",
+            interfaced_subnet_ids.len(),
+            interfaced_subnet_ids
+        );
+
         self.update_capabilities(has_docker_socket, interfaced_subnet_ids)
             .await?;
 

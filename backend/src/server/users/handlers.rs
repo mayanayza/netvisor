@@ -70,7 +70,7 @@ pub async fn delete_user(
         .await?
         .len();
 
-    if require_admin.0.permissions == UserOrgPermissions::Owner && count_owners == 1 {
+    if user_to_be_deleted.base.permissions == UserOrgPermissions::Owner && count_owners == 1 {
         return Err(ApiError::conflict(
             "Can't delete the only owner in an organization.",
         ));

@@ -9,20 +9,26 @@
 	import { openCustomerPortal } from './store';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 
-	export let isOpen = false;
-	export let onClose: () => void;
+	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
-	$: if (isOpen && $currentUser) {
-		loadOrganization();
-	}
+	// Force Svelte to track organization reactivity
+	$effect(() => {
+		void $organization;
+	});
+
+	$effect(() => {
+		if (isOpen && $currentUser) {
+			loadOrganization();
+		}
+	});
 
 	async function loadOrganization() {
 		if (!$currentUser) return;
 		await getOrganization();
 	}
 
-	$: org = $organization;
-	$: planActive = org ? isBillingPlanActive(org) : false;
+	let org = $derived($organization);
+	let planActive = $derived(org ? isBillingPlanActive(org) : false);
 
 	function formatPlanStatus(status: string): string {
 		return status.charAt(0).toUpperCase() + status.slice(1);
@@ -79,8 +85,8 @@
 							{:else}
 								<AlertCircle class="h-4 w-4 text-yellow-400" />
 							{/if}
-							<span class={`text-sm font-medium ${getPlanStatusColor(org.plan_status)}`}>
-								{formatPlanStatus(org.plan_status)}
+							<span class={`text-sm font-medium ${getPlanStatusColor(org.plan_status || '')}`}>
+								{formatPlanStatus(org.plan_status || '')}
 							</span>
 						</div>
 					</div>
@@ -89,20 +95,22 @@
 						<div class="flex items-baseline justify-between">
 							<div>
 								<p class="text-primary text-lg font-semibold">
-									{billingPlans.getName(org.plan.type)}
+									{billingPlans.getName(org.plan?.type || null)}
 								</p>
-								{#if org.plan.trial_days > 0 && org.plan_status === 'trialing'}
+								{#if org.plan && org.plan.trial_days > 0 && org.plan_status === 'trialing'}
 									<p class="text-secondary mt-1 text-xs">
 										Includes {org.plan.trial_days}-day free trial
 									</p>
 								{/if}
 							</div>
-							<div class="text-right">
-								<p class="text-primary text-2xl font-bold">
-									${org.plan.price.cents / 100}
-								</p>
-								<p class="text-secondary text-xs">per {org.plan.price.rate}</p>
-							</div>
+							{#if org.plan}
+								<div class="text-right">
+									<p class="text-primary text-2xl font-bold">
+										${org.plan.price.cents / 100}
+									</p>
+									<p class="text-secondary text-xs">per {org.plan.price.rate}</p>
+								</div>
+							{/if}
 						</div>
 
 						{#if org.plan_status === 'trialing'}
@@ -130,7 +138,7 @@
 
 			<!-- Actions -->
 			<div class="space-y-3">
-				<button on:click={handleManageSubscription} class="btn-primary w-full">
+				<button onclick={handleManageSubscription} class="btn-primary w-full">
 					Manage Subscription
 				</button>
 			</div>

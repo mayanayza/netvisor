@@ -383,7 +383,7 @@ async fn verify_home_assistant_discovered(
     .await
 }
 
-// #[cfg(feature = "generate-fixtures")]
+#[cfg(feature = "generate-fixtures")]
 async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
@@ -415,7 +415,7 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// #[cfg(feature = "generate-fixtures")]
+#[cfg(feature = "generate-fixtures")]
 async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Error>> {
     // First, find the config file location in the container
     let find_output = std::process::Command::new("docker")
@@ -470,7 +470,7 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
-// #[cfg(feature = "generate-fixtures")]
+#[cfg(feature = "generate-fixtures")]
 async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions()
         .iter()
@@ -541,7 +541,7 @@ async fn test_full_integration() {
         .await
         .expect("Failed to find Home Assistant");
 
-    // #[cfg(feature = "generate-fixtures")]
+    #[cfg(feature = "generate-fixtures")]
     {
         generate_db_fixture()
             .await

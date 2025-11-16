@@ -5,6 +5,11 @@
 	import type { BillingPlan } from './types';
 	import GithubStars from '../../shared/components/data/GithubStars.svelte';
 
+	$effect(() => {
+		void $currentPlans;
+		void billingPlans;
+	});
+
 	async function handlePlanSelect(plan: BillingPlan) {
 		const checkoutUrl = await checkout(plan);
 		if (checkoutUrl) {
