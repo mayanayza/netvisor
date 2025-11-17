@@ -4,6 +4,7 @@ export interface DaemonBase {
 	ip: string;
 	port: number;
 	last_seen: string;
+	mode: 'Pull' | 'Push';
 	capabilities: {
 		has_docker_socket: boolean;
 		interfaced_subnet_ids: string[];

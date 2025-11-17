@@ -36,7 +36,7 @@
 					? permissions.getMetadata($currentUser.permissions).can_manage.includes(p.id)
 					: false
 			)
-			.map((p) => ({ value: p.id, label: p.name + ' - ' + p.description }))
+			.map((p) => ({ value: p.id, label: p.name, description: p.description }))
 	);
 
 	// Create form field with validation

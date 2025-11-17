@@ -1,12 +1,15 @@
 use axum::{Router, http::Method};
 use clap::Parser;
-use netvisor::daemon::{
-    runtime::types::DaemonAppState,
-    shared::{
-        handlers::create_router,
-        storage::{AppConfig, CliArgs, ConfigStore},
+use netvisor::{
+    daemon::{
+        runtime::types::DaemonAppState,
+        shared::{
+            handlers::create_router,
+            storage::{AppConfig, CliArgs, ConfigStore},
+        },
+        utils::base::{DaemonUtils, PlatformDaemonUtils},
     },
-    utils::base::{DaemonUtils, PlatformDaemonUtils},
+    server::daemons::r#impl::base::DaemonMode,
 };
 use std::sync::Arc;
 use tower::ServiceBuilder;
@@ -68,6 +71,9 @@ struct Cli {
     /// Docker socket proxy
     #[arg(long)]
     docker_proxy: Option<String>,
+
+    #[arg(long)]
+    mode: Option<DaemonMode>,
 }
 
 impl From<Cli> for CliArgs {
@@ -84,6 +90,7 @@ impl From<Cli> for CliArgs {
             concurrent_scans: cli.concurrent_scans,
             daemon_api_key: cli.daemon_api_key,
             docker_proxy: cli.docker_proxy,
+            mode: cli.mode,
         }
     }
 }
@@ -118,6 +125,7 @@ async fn main() -> anyhow::Result<()> {
     let server_addr = &config_store.get_server_endpoint().await?;
     let network_id = &config_store.get_network_id().await?;
     let api_key = &config_store.get_api_key().await?;
+    let mode = &config_store.get_mode().await?;
 
     let state = DaemonAppState::new(config_store, utils).await?;
     let runtime_service = state.services.runtime_service.clone();
@@ -164,12 +172,23 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("Missing network ID - waiting for server to hit /api/initialize...");
     }
 
-    // Spawn heartbeat task in background
-    tokio::spawn(async move {
-        if let Err(e) = runtime_service.heartbeat().await {
-            tracing::warn!("Failed to update heartbeat timestamp: {}", e);
-        }
-    });
+    if *mode == DaemonMode::Push {
+        tracing::info!("Daemon running in Push mode");
+        // Spawn heartbeat task in background
+        tokio::spawn(async move {
+            if let Err(e) = runtime_service.heartbeat().await {
+                tracing::warn!("Failed to update heartbeat timestamp: {}", e);
+            }
+        });
+    } else {
+        tracing::info!("Daemon running in Pull mode");
+        // Spawn request work in background
+        tokio::spawn(async move {
+            if let Err(e) = runtime_service.request_work().await {
+                tracing::warn!("Failed to request work: {}", e);
+            }
+        });
+    }
 
     // 7. Keep process alive
     tokio::signal::ctrl_c().await?;

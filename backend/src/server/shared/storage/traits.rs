@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::server::{
     billing::types::base::BillingPlan,
-    daemons::r#impl::api::DaemonCapabilities,
+    daemons::r#impl::{api::DaemonCapabilities, base::DaemonMode},
     discovery::r#impl::types::{DiscoveryType, RunType},
     groups::r#impl::types::GroupType,
     hosts::r#impl::{
@@ -93,4 +93,5 @@ pub enum SqlValue {
     OptionBillingPlan(Option<BillingPlan>),
     OptionBillingPlanStatus(Option<SubscriptionStatus>),
     EdgeStyle(EdgeStyle),
+    DaemonMode(DaemonMode),
 }

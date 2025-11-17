@@ -1,3 +1,4 @@
+use crate::daemon::discovery::manager::DaemonDiscoverySessionManager;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
 use crate::server::daemons::r#impl::api::{DaemonCapabilities, DiscoveryUpdatePayload};
@@ -17,14 +18,19 @@ pub struct DaemonRuntimeService {
     pub config_store: Arc<ConfigStore>,
     pub client: reqwest::Client,
     pub utils: PlatformDaemonUtils,
+    pub discovery_manager: Arc<DaemonDiscoverySessionManager>,
 }
 
 impl DaemonRuntimeService {
-    pub fn new(config_store: Arc<ConfigStore>) -> Self {
+    pub fn new(
+        config_store: Arc<ConfigStore>,
+        discovery_manager: Arc<DaemonDiscoverySessionManager>,
+    ) -> Self {
         Self {
             config_store,
             client: reqwest::Client::new(),
             utils: create_system_utils(),
+            discovery_manager,
         }
     }
 
@@ -40,6 +46,7 @@ impl DaemonRuntimeService {
         interval_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         let server_target = self.config_store.get_server_endpoint().await?;
+        let daemon_id = self.config_store.get_id().await?;
 
         loop {
             interval_timer.tick().await;
@@ -47,27 +54,67 @@ impl DaemonRuntimeService {
             if self.config_store.get_network_id().await?.is_some() {
                 let response = self
                     .client
-                    .post(format!("{}/api/discovery/request-work", server_target))
+                    .post(format!(
+                        "{}/api/daemons/{}/request-work",
+                        server_target, daemon_id
+                    ))
+                    .json(&daemon_id)
                     .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
 
-                tracing::info!("Checking for work...");
+                tracing::info!(
+                    daemon_id = %daemon_id,
+                    "Checking for work..."
+                );
 
-                if !response.status().is_success() {
-                    let api_response: ApiResponse<Option<DiscoveryUpdatePayload>> =
-                        response.json().await?;
+                let api_response: ApiResponse<(Option<DiscoveryUpdatePayload>, bool)> =
+                    response.json().await?;
 
-                    if !api_response.success {
-                        let error_msg = api_response
-                            .error
-                            .unwrap_or_else(|| "Unknown error".to_string());
-                        tracing::warn!("Failed to check for work: {}", error_msg);
-                    } else if let Some(Some(_payload)) = api_response.data {
+                if !api_response.success {
+                    let error_msg = api_response
+                        .error
+                        .unwrap_or_else(|| "Unknown error".to_string());
+                    tracing::warn!(
+                        daemon_id = %daemon_id,
+                        err = %error_msg,
+                        "Failed to check for work"
+                    );
+                } else if let Some((payload, cancel_current_session)) = api_response.data {
+                    if !cancel_current_session && payload.is_none() {
+                        tracing::info!(
+                            daemon_id = %daemon_id,
+                            "No work available at this time"
+                        );
                     }
+
+                    if cancel_current_session {
+                        tracing::info!(
+                            daemon_id = %daemon_id,
+                            "Received cancellation request from server"
+                        );
+                        self.discovery_manager.cancel_current_session().await;
+                    }
+
+                    if let Some(payload) = payload
+                        && !self.discovery_manager.is_discovery_running().await
+                    {
+                        tracing::info!(
+                            daemon_id = %daemon_id,
+                            session_id = %payload.session_id,
+                            "Received discovery session from server"
+                        );
+                        self.discovery_manager
+                            .initiate_session(payload.into())
+                            .await;
+                    }
+                } else {
+                    tracing::info!(
+                        daemon_id = %daemon_id,
+                        "No work available at this time"
+                    );
                 }
             } else {
-                let daemon_id = self.config_store.get_id().await?;
                 tracing::warn!(
                     daemon_id = %daemon_id,
                     "Work request skipped - network_id not configured"
@@ -112,15 +159,13 @@ impl DaemonRuntimeService {
                 if !response.status().is_success() {
                     let api_response: ApiResponse<()> = response.json().await?;
 
-                    if !api_response.success {
-                        let error_msg = api_response
-                            .error
-                            .unwrap_or_else(|| "Unknown error".to_string());
-                        tracing::error!(
-                            error = %error_msg,
-                            "Heartbeat failed - check network connectivity"
-                        );
-                    }
+                    let error_msg = api_response
+                        .error
+                        .unwrap_or_else(|| "Unknown error".to_string());
+                    tracing::error!(
+                        error = %error_msg,
+                        "Heartbeat failed - check network connectivity"
+                    );
                 }
 
                 if let Err(e) = self.config_store.update_heartbeat().await {
@@ -173,6 +218,7 @@ impl DaemonRuntimeService {
         has_docker_socket: bool,
     ) -> Result<()> {
         let bind_address = self.config_store.get_bind_address().await?;
+        let mode = self.config_store.get_mode().await?;
 
         let daemon_ip = if bind_address == "0.0.0.0" || bind_address == "::" {
             // If binding to all interfaces, auto-detect the primary IP
@@ -192,6 +238,7 @@ impl DaemonRuntimeService {
                 network_id,
                 daemon_ip,
                 daemon_port,
+                mode,
                 capabilities: DaemonCapabilities {
                     has_docker_socket,
                     interfaced_subnet_ids: Vec::new(),

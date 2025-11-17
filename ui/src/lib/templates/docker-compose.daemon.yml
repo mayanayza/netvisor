@@ -12,6 +12,7 @@ services:
 
       # Daemon configuration
       - NETVISOR_PORT=60073
+      - NETVISOR_MODE=Pull
       - NETVISOR_BIND_ADDRESS=0.0.0.0
       - NETVISOR_NAME=netvisor-daemon
       - NETVISOR_LOG_LEVEL=info

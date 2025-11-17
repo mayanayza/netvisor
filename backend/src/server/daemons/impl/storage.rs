@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::server::{
     daemons::r#impl::{
         api::DaemonCapabilities,
-        base::{Daemon, DaemonBase},
+        base::{Daemon, DaemonBase, DaemonMode},
     },
     shared::storage::traits::{SqlValue, StorableEntity},
 };
@@ -63,6 +63,7 @@ impl StorableEntity for Daemon {
                     port,
                     capabilities,
                     last_seen,
+                    mode,
                 },
         } = self.clone();
 
@@ -77,6 +78,7 @@ impl StorableEntity for Daemon {
                 "capabilities",
                 "port",
                 "ip",
+                "mode",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -88,13 +90,17 @@ impl StorableEntity for Daemon {
                 SqlValue::DaemonCapabilities(capabilities),
                 SqlValue::U16(port),
                 SqlValue::IpAddr(ip),
+                SqlValue::DaemonMode(mode),
             ],
         ))
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         let ip: IpAddr = serde_json::from_str(&row.get::<String, _>("ip"))
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize IP: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize ip: {}", e))?;
+
+        let mode: DaemonMode = serde_json::from_str(&row.get::<String, _>("mode"))
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize mode: {}", e))?;
 
         let capabilities: DaemonCapabilities =
             serde_json::from_value(row.get::<serde_json::Value, _>("capabilities"))
@@ -110,6 +116,7 @@ impl StorableEntity for Daemon {
                 last_seen: row.get("last_seen"),
                 host_id: row.get("host_id"),
                 network_id: row.get("network_id"),
+                mode,
                 capabilities,
             },
         })

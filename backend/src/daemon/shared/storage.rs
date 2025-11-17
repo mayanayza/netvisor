@@ -10,6 +10,8 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
+use crate::server::daemons::r#impl::base::DaemonMode;
+
 /// CLI arguments structure (for figment integration)
 #[derive(Debug)]
 pub struct CliArgs {
@@ -24,6 +26,7 @@ pub struct CliArgs {
     pub concurrent_scans: Option<usize>,
     pub daemon_api_key: Option<String>,
     pub docker_proxy: Option<String>,
+    pub mode: Option<DaemonMode>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
@@ -44,10 +47,16 @@ pub struct AppConfig {
 
     // Runtime state
     pub id: Uuid,
+    #[serde(default)]
     pub last_heartbeat: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
     pub host_id: Option<Uuid>,
+    #[serde(default)]
     pub daemon_api_key: Option<String>,
+    #[serde(default)]
     pub docker_proxy: Option<String>,
+    #[serde(default)]
+    pub mode: DaemonMode,
 }
 
 impl Default for AppConfig {
@@ -67,6 +76,7 @@ impl Default for AppConfig {
             daemon_api_key: None,
             concurrent_scans: 15,
             docker_proxy: None,
+            mode: DaemonMode::Push,
         }
     }
 }
@@ -126,6 +136,9 @@ impl AppConfig {
         }
         if let Some(docker_proxy) = cli_args.docker_proxy {
             figment = figment.merge(("docker_proxy", docker_proxy));
+        }
+        if let Some(mode) = cli_args.mode {
+            figment = figment.merge(("mode", mode));
         }
 
         let config: AppConfig = figment
@@ -248,6 +261,11 @@ impl ConfigStore {
     pub async fn get_bind_address(&self) -> Result<String> {
         let config = self.config.read().await;
         Ok(config.bind_address.clone())
+    }
+
+    pub async fn get_mode(&self) -> Result<DaemonMode> {
+        let config = self.config.read().await;
+        Ok(config.mode)
     }
 
     pub async fn set_network_id(&self, network_id: Uuid) -> Result<()> {

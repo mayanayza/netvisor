@@ -66,10 +66,10 @@ impl TypeMetadataProvider for UserOrgPermissions {
                 "Full organization control: manage billing, invite any role, and access all administrative features"
             }
             UserOrgPermissions::Admin => {
-                "Team administrator: manage users and invites, create and modify all infrastructure, but cannot access billing"
+                "Manage users and invites, create and modify all infrastructure, but cannot access billing"
             }
             UserOrgPermissions::Member => {
-                "Team member: create and modify networks, hosts, services, run discovery scans, and invite Viewers"
+                "Create and modify networks, hosts, services, run discovery scans, and invite Viewers"
             }
             UserOrgPermissions::Viewer => "Read-only access: view network topology",
         }
