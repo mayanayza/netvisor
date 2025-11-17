@@ -89,6 +89,7 @@ pub mod cloudflared;
 pub mod wg_dashboard;
 
 // ReverseProxy
+pub mod caddy;
 pub mod haproxy;
 pub mod kong;
 pub mod nginx_proxy_manager;
@@ -177,6 +178,7 @@ pub mod redis_db;
 pub mod activemq;
 pub mod kafka;
 pub mod mqtt;
+pub mod ntfy;
 pub mod rabbitmq;
 
 // Development
@@ -223,6 +225,7 @@ pub mod homarr;
 pub mod homepage;
 pub mod jump;
 pub mod linkstack;
+pub mod proxmox_datacenter_manager;
 
 // Monitoring
 pub mod coolercontrol;
@@ -284,6 +287,7 @@ pub mod print_server;
 pub mod autobrr;
 pub mod backrest;
 pub mod cleanuparr;
+pub mod freshrss;
 pub mod grocy;
 pub mod huntarr;
 pub mod karakeep;

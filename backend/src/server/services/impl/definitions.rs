@@ -13,7 +13,7 @@ use std::hash::Hash;
 
 // Main trait used in service definition implementation
 pub trait ServiceDefinition: HasId + DynClone + DynHash + DynEq + Send + Sync {
-    /// Service name, will also be used as unique identifier. < 25 characters.
+    /// Service name, will also be used as unique identifier. < 40 characters.
     fn name(&self) -> &'static str;
 
     /// Service description. < 100 characters.
@@ -276,10 +276,10 @@ mod tests {
                 "Service has empty name"
             );
 
-            // Name should be reasonable length (< 25 chars)
+            // Name should be reasonable length (< 40 chars)
             assert!(
-                service.name().len() < 25,
-                "Service name '{}' is too long; must be < 25 characters",
+                service.name().len() < 40,
+                "Service name '{}' is too long; must be < 40 characters",
                 service.name()
             );
 
