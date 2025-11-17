@@ -32,8 +32,26 @@ jobs:
       
       - name: Run all tests
         run: |
+          set -x  # Enable verbose mode
           make dev-down
           rm -rf ./data/daemon_config/*
+          
+          # Check Docker is working
+          docker --version
+          docker compose version
+          
+          # Show available disk space
+          df -h
+          
+          # Show memory
+          free -h
+          
+          # Try to start containers with verbose output
+          docker compose -f docker-compose.dev.yml up --build --wait --verbose
+          
+          # If it fails, show logs
+          docker compose -f docker-compose.dev.yml logs
+          
           export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test"
           cd backend && cargo test --features generate-fixtures -- --nocapture --test-threads=1
       
