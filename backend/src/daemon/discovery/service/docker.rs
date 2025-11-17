@@ -411,6 +411,14 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             ..
         } = params;
 
+        tracing::info!(
+            "Processing host mode container {}",
+            container
+                .name
+                .as_ref()
+                .unwrap_or(&"Unknown Container Name".to_string())
+        );
+
         let host_ip = self.as_ref().utils.get_own_ip_address()?;
 
         if let Some(Some(p)) = container.config.as_ref().map(|c| c.exposed_ports.as_ref()) {

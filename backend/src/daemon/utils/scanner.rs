@@ -187,7 +187,7 @@ pub async fn scan_tcp_ports(
         })
         .collect();
 
-    let open_ports = batch_scan(ports, batch_size, cancel, move |port| async move {
+    let open_ports = batch_scan(ports.clone(), batch_size, cancel, move |port| async move {
         let socket = SocketAddr::new(ip, port.number());
 
         // Try connection with timeout, retry once on timeout for slow hosts
@@ -270,6 +270,13 @@ pub async fn scan_tcp_ports(
     })
     .await;
 
+    tracing::debug!(
+        ip = %ip,
+        ports_scanned = %ports.len(),
+        responses = %open_ports.len(),
+        "UDP port scan complete"
+    );
+
     Ok(open_ports)
 }
 
@@ -292,7 +299,7 @@ pub async fn scan_udp_ports(
 
     let is_gateway = gateway_ips.contains(&ip);
 
-    let open_ports = batch_scan(ports, udp_batch_size, cancel, |port| async move {
+    let open_ports = batch_scan(ports.clone(), udp_batch_size, cancel, |port| async move {
         let result = match port {
             53 => test_dns_service(ip).await,
             123 => test_ntp_service(ip).await,
@@ -309,7 +316,7 @@ pub async fn scan_udp_ports(
 
         match result {
             Ok(Some(detected_port)) => {
-                tracing::debug!("Found open UDP port {}:{}", ip, detected_port);
+                tracing::trace!("Found open UDP port {}:{}", ip, detected_port);
                 Some(PortBase::new_udp(detected_port))
             }
             Ok(None) => None,
@@ -322,6 +329,13 @@ pub async fn scan_udp_ports(
         }
     })
     .await;
+
+    tracing::debug!(
+        ip = %ip,
+        ports_scanned = %ports.len(),
+        responses = %open_ports.len(),
+        "UDP port scan complete"
+    );
 
     Ok(open_ports)
 }
@@ -456,7 +470,7 @@ pub async fn scan_endpoints(
     })
     .await;
 
-    tracing::info!(
+    tracing::debug!(
         ip = %ip,
         endpoints_scanned = %total_endpoints,
         responses = %responses.len(),
@@ -598,8 +612,7 @@ pub async fn test_dhcp_service(ip: IpAddr, subnet_cidr: &IpCidr) -> Result<Optio
     msg.encode(&mut encoder)?;
 
     if socket.send_to(&buf, broadcast_addr).await.is_ok()
-        && let Some(port) =
-            wait_for_dhcp_responses(&socket, ip, transaction_id, "broadcast", 3).await?
+        && let Some(port) = wait_for_dhcp_responses(&socket, ip, transaction_id, 3).await?
     {
         return Ok(Some(port));
     }
@@ -608,8 +621,7 @@ pub async fn test_dhcp_service(ip: IpAddr, subnet_cidr: &IpCidr) -> Result<Optio
     let unicast_addr = SocketAddr::new(ip, 67);
 
     if socket.send_to(&buf, unicast_addr).await.is_ok()
-        && let Some(port) =
-            wait_for_dhcp_responses(&socket, ip, transaction_id, "unicast", 3).await?
+        && let Some(port) = wait_for_dhcp_responses(&socket, ip, transaction_id, 3).await?
     {
         return Ok(Some(port));
     }
@@ -622,12 +634,11 @@ async fn wait_for_dhcp_responses(
     socket: &UdpSocket,
     expected_ip: IpAddr,
     expected_xid: u32,
-    method: &str,
     max_attempts: usize,
 ) -> Result<Option<u16>, Error> {
     let mut response_buf = [0u8; 1500];
 
-    for attempt in 1..=max_attempts {
+    for _ in 1..=max_attempts {
         match timeout(
             Duration::from_millis(2000), // Longer timeout per attempt
             socket.recv_from(&mut response_buf),
@@ -641,38 +652,16 @@ async fn wait_for_dhcp_responses(
 
                 let response_ip = from.ip();
 
-                tracing::trace!(
-                    "Received {} byte DHCP {} response (attempt {}/{}) from {}",
-                    len,
-                    method,
-                    attempt,
-                    max_attempts,
-                    response_ip
-                );
-
                 // Check if response came from the IP we're testing
                 if response_ip != expected_ip {
-                    tracing::trace!(
-                        "Response from {} (testing {}), checking next response...",
-                        response_ip,
-                        expected_ip
-                    );
                     continue; // Keep trying - might get another response
                 }
 
                 // Parse and validate DHCP message
                 match Message::decode(&mut dhcproto::Decoder::new(&response_buf[..len])) {
                     Ok(response_msg) => {
-                        tracing::trace!(
-                            "Parsed DHCP response - xid: {:#x} (expected {:#x}), op: {:?}",
-                            response_msg.xid(),
-                            expected_xid,
-                            response_msg.opcode()
-                        );
-
                         // Verify transaction ID matches
                         if response_msg.xid() != expected_xid {
-                            tracing::trace!("XID mismatch, checking next response...");
                             continue;
                         }
 
@@ -685,50 +674,26 @@ async fn wait_for_dhcp_responses(
                             }
                         });
 
-                        tracing::trace!("DHCP message type: {:?}", message_type);
-
                         let is_valid = matches!(
                             message_type,
                             Some(&MessageType::Offer) | Some(&MessageType::Ack)
                         );
 
                         if is_valid {
-                            tracing::info!(
-                                "✓ DHCP server detected at {}:67 via {} method (response type: {:?})",
-                                expected_ip,
-                                method,
-                                message_type
-                            );
                             return Ok(Some(67));
                         } else {
-                            tracing::trace!(
-                                "Invalid DHCP response type, checking next response..."
-                            );
                             continue;
                         }
                     }
-                    Err(e) => {
-                        tracing::trace!("Failed to parse DHCP response: {}, checking next...", e);
+                    Err(_) => {
                         continue;
                     }
                 }
             }
-            Ok(Err(e)) => {
-                tracing::trace!(
-                    "Error receiving DHCP {} response (attempt {}): {}",
-                    method,
-                    attempt,
-                    e
-                );
+            Ok(Err(_)) => {
                 break; // Socket error, no point continuing
             }
             Err(_) => {
-                tracing::trace!(
-                    "DHCP {} timeout on attempt {}/{}",
-                    method,
-                    attempt,
-                    max_attempts
-                );
                 // Timeout - continue to next attempt
             }
         }

@@ -334,13 +334,22 @@ impl Service {
         } = service_params;
 
         if let Ok(mut result) = service_definition.discovery_pattern().matches(&params) {
-            tracing::debug!("Matched service with params {:?}", params);
-
             tracing::info!(
-                "{}: Service {:?} matched with ports {:?}",
-                interface.base.ip_address,
-                service_definition,
-                result.ports,
+                service = %service_definition.name(),
+                host_ip = %interface.base.ip_address,
+                network_id = %network_id,
+                daemon_id = %daemon_id,
+                discovery_type = ?discovery_type,
+                matched_ports = ?result.ports.iter().map(|p| p.base.number()).collect::<Vec<_>>(),
+                match_confidence = ?result.details.confidence,
+                "Service discovered"
+            );
+
+            tracing::debug!(
+                service_id = %service_definition.id(),
+                match_reason = ?result.details.reason,
+                full_params = ?params,
+                "Service match details"
             );
 
             let mut name = service_definition.name().to_string();
@@ -389,6 +398,11 @@ impl Service {
 
             Some((service, result))
         } else {
+            tracing::trace!(
+                service = %service_definition.name(),
+                host_ip = %interface.base.ip_address,
+                "Service pattern did not match"
+            );
             None
         }
     }

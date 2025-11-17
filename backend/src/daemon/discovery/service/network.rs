@@ -162,11 +162,6 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .get_optimal_concurrent_scans(configured_concurrent_scans)
             .await?;
 
-        tracing::info!(
-            "🔍 Starting scan with concurrent_scans={}",
-            concurrent_scans
-        );
-
         let session = self.as_ref().get_session().await?;
         let scanned_count = session.processed_count.clone();
 
@@ -182,7 +177,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .collect();
 
         let total_ips = all_ips_with_subnets.len();
-        tracing::info!("📋 Total IPs to scan: {}", total_ips);
+        tracing::info!("Total IPs to scan: {}", total_ips);
 
         let results = stream::iter(all_ips_with_subnets)
             .map(|(ip, subnet)| {

@@ -109,12 +109,6 @@ services:
     ports:
       - 8123:8123
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8123 || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
-      start_period: 60s
     networks:
       netvisor-dev:
         ipv4_address: 172.25.0.5

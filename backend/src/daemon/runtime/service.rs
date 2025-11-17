@@ -106,7 +106,7 @@ impl DaemonRuntimeService {
 
                 tracing::info!(
                     daemon_id = %daemon_id,
-                    "💓 Heartbeat sent"
+                    "Heartbeat sent"
                 );
 
                 if !response.status().is_success() {
@@ -118,7 +118,7 @@ impl DaemonRuntimeService {
                             .unwrap_or_else(|| "Unknown error".to_string());
                         tracing::error!(
                             error = %error_msg,
-                            "❤️‍🩹 Heartbeat failed - check network connectivity"
+                            "Heartbeat failed - check network connectivity"
                         );
                     }
                 }

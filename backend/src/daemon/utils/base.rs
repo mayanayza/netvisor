@@ -239,7 +239,7 @@ pub trait DaemonUtils {
 
         if result == 1 {
             tracing::warn!(
-                "⚠️  Very low concurrency (1 host). File descriptor limit is {}. \
+                "Very low concurrency (1 host). File descriptor limit is {}. \
                  Consider increasing for better performance.",
                 fd_limit
             );
