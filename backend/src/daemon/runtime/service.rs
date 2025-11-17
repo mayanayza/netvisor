@@ -173,6 +173,7 @@ impl DaemonRuntimeService {
         has_docker_socket: bool,
     ) -> Result<()> {
         let bind_address = self.config_store.get_bind_address().await?;
+        let mode = self.config_store.get_mode().await?;
 
         let daemon_ip = if bind_address == "0.0.0.0" || bind_address == "::" {
             // If binding to all interfaces, auto-detect the primary IP
@@ -192,6 +193,7 @@ impl DaemonRuntimeService {
                 network_id,
                 daemon_ip,
                 daemon_port,
+                mode,
                 capabilities: DaemonCapabilities {
                     has_docker_socket,
                     interfaced_subnet_ids: Vec::new(),

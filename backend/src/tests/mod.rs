@@ -2,7 +2,7 @@ use crate::server::{
     config::{AppState, ServerConfig},
     daemons::r#impl::{
         api::DaemonCapabilities,
-        base::{Daemon, DaemonBase},
+        base::{Daemon, DaemonBase, DaemonMode},
     },
     groups::r#impl::{
         base::{Group, GroupBase},
@@ -159,6 +159,7 @@ pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
         ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)),
         port: 60073,
         last_seen: Utc::now(),
+        mode: DaemonMode::Push,
         capabilities: DaemonCapabilities {
             has_docker_socket: false,
             interfaced_subnet_ids: Vec::new(),

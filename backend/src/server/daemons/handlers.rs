@@ -69,6 +69,7 @@ async fn register_daemon(
         port: request.daemon_port,
         capabilities: request.capabilities.clone(),
         last_seen: Utc::now(),
+        mode: request.mode,
     });
 
     daemon.id = request.daemon_id;

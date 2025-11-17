@@ -4,7 +4,10 @@ use crate::{
     daemon::discovery::types::base::{
         DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate,
     },
-    server::{daemons::r#impl::base::Daemon, discovery::r#impl::types::DiscoveryType},
+    server::{
+        daemons::r#impl::base::{Daemon, DaemonMode},
+        discovery::r#impl::types::DiscoveryType,
+    },
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -26,6 +29,7 @@ pub struct DaemonRegistrationRequest {
     pub network_id: Uuid,
     pub daemon_ip: IpAddr,
     pub daemon_port: u16,
+    pub mode: DaemonMode,
     pub capabilities: DaemonCapabilities,
 }
 

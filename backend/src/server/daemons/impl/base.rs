@@ -1,7 +1,9 @@
 use std::{fmt::Display, net::IpAddr};
 
 use chrono::{DateTime, Utc};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use uuid::Uuid;
 
 use crate::server::daemons::r#impl::api::DaemonCapabilities;
@@ -15,6 +17,7 @@ pub struct DaemonBase {
     pub port: u16,
     #[serde(default)]
     pub capabilities: DaemonCapabilities,
+    pub mode: DaemonMode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,4 +33,13 @@ impl Display for Daemon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.base.ip, self.id)
     }
+}
+
+#[derive(
+    Debug, Display, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ValueEnum,
+)]
+pub enum DaemonMode {
+    #[default]
+    Push,
+    Pull,
 }
