@@ -131,9 +131,9 @@ jobs:
         working-directory: backend
         run: |          
           if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --bin daemon --target ${{ matrix.target }} --features vendored-openssl
+            cross build --release --bin daemon --target ${{ matrix.target }}
           else
-            cargo build --release --bin daemon --target ${{ matrix.target }} --features vendored-openssl  
+            cargo build --release --bin daemon --target ${{ matrix.target }}
           fi
         shell: bash
       
