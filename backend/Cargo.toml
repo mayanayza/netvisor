@@ -145,7 +145,7 @@ email_address = "0.2.9"
 urlencoding = "2.1.3"
 rlimit = "0.10.2"
 libc = "0.2.177"
-async-stripe = { version = "1.0.0-alpha.2", features = ["rustls-tls-native"] }
+async-stripe = { version = "1.0.0-alpha.2", features = ["rustls-tls-webpki-roots"] }
 async-stripe-core = { version = "1.0.0-alpha.2", features = ["customer"] }
 async-stripe-product = { version = "1.0.0-alpha.2", features = ["product", "price"] }
 async-stripe-billing = { version = "1.0.0-alpha.2", features = ["plan", "subscription", "deserialize", "serialize", "billing_portal_session"] }
@@ -177,4 +177,3 @@ top-english-words = "1.1.1"
 
 [features]
 generate-fixtures = []
-vendored-openssl = ["openssl/vendored"]

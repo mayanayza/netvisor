@@ -129,15 +129,7 @@ jobs:
       
       - name: Build daemon
         working-directory: backend
-        env:
-          OPENSSL_STATIC: "1"
-          OPENSSL_DIR: "/usr"
-          OPENSSL_LIB_DIR: "/usr/lib"
-          OPENSSL_INCLUDE_DIR: "/usr/include"
-        run: |
-          # Force vendored for the build
-          export RUSTFLAGS="-C target-feature=+crt-static"
-          
+        run: |          
           if [ "${{ matrix.use_cross }}" = "true" ]; then
             cross build --release --bin daemon --target ${{ matrix.target }} --features vendored-openssl
           else
