@@ -124,18 +124,19 @@ jobs:
       
       - name: Install cross
         if: matrix.use_cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross --tag v0.2.5
       
       - name: Build daemon
         working-directory: backend
         env:
-          OPENSSL_STATIC: 1
-          OPENSSL_VENDORED: 1  # Add this
+          OPENSSL_STATIC: "1"
+          OPENSSL_VENDORED: "1"
         run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
-            cross build --release --bin daemon --target ${{ matrix.target }} --features vendored-openssl
+            cross build --release --bin daemon --target ${{ matrix.target }}
           else
-            cargo build --release --bin daemon --target ${{ matrix.target }} --features vendored-openssl
+            cargo build --release --bin daemon --target ${{ matrix.target }}
           fi
         shell: bash
       
