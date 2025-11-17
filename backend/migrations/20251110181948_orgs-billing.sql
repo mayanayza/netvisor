@@ -17,7 +17,7 @@ CREATE INDEX idx_organizations_stripe_customer ON organizations(stripe_customer_
 
 -- Step 2: Add organization_id and permissions to users table
 ALTER TABLE users ADD COLUMN organization_id UUID;
-ALTER TABLE users ADD COLUMN permissions TEXT NOT NULL DEFAULT 'Member';
+ALTER TABLE users ADD COLUMN permissions JSONB NOT NULL DEFAULT '"Member"'::jsonb;
 
 -- Step 3: Create a single organization and assign users
 DO $$
@@ -43,9 +43,10 @@ BEGIN
         SET organization_id = new_org_id;
 
         -- Set the oldest user as Owner
-        UPDATE users
-        SET permissions = 'Owner'
+        UPDATE users 
+        SET permissions = '"Owner"'::jsonb 
         WHERE id = oldest_user_id;
+
 
         -- All other users default to Member (already set by column default)
         
