@@ -32,13 +32,17 @@ jobs:
 
       - name: Free up disk space
         run: |
-          # Clean Docker images, containers, and build cache
+          # Remove pre-installed tools we don't need
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          # Clean Docker completely
           docker system prune -af --volumes
           
-          # Show disk usage before and after
           echo "=== Disk space after cleanup ==="
           df -h
-            
+                  
       - name: Run all tests
         run: |
           make dev-down

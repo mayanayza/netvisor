@@ -37,7 +37,7 @@ services:
       - ui-build:/app/static:ro
       - cargo-cache:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - server-target:/app/target
+      - rust-target:/app/target
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -72,7 +72,7 @@ services:
       - ./data/daemon_config:/root/.config/netvisor/daemon
       - cargo-cache:/usr/local/cargo/registry
       - cargo-git:/usr/local/cargo/git
-      - daemon-target:/app/target
+      - rust-target:/app/target
     command: sh -c "cargo run --bin daemon"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:60073/api/health || exit 1"]
@@ -104,8 +104,7 @@ volumes:
   ui-build:
   cargo-cache:
   cargo-git:
-  server-target:
-  daemon-target:
+  rust-target:
   data-volume:
   daemon-config-volume:
   postgres_data:
