@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { api, getServerUrl } from '../../shared/utils/api';
 import type { LoginRequest, RegisterRequest } from './types/base';
 import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 import type { User } from '../users/types';
@@ -82,6 +82,42 @@ export async function register(request: RegisterRequest): Promise<User | null> {
  */
 export async function logout(): Promise<void> {
 	const result = await api.request<void>('/auth/logout', null, null, { method: 'POST' });
+
+	if (result && result.success) {
+		isAuthenticated.set(false);
+		currentUser.set(null);
+		pushSuccess('Logged out successfully');
+	} else {
+		pushError('Logout failed');
+	}
+}
+
+/**
+ * Forgot password
+ */
+export async function forgotPassword(email: string): Promise<void> {
+	const result = await api.request<void>('/auth/forgot-password', null, null, {
+		method: 'POST',
+		body: JSON.stringify({ email, url: getServerUrl() })
+	});
+
+	if (result && result.success) {
+		isAuthenticated.set(false);
+		currentUser.set(null);
+		pushSuccess('Logged out successfully');
+	} else {
+		pushError('Logout failed');
+	}
+}
+
+/**
+ * Reset password
+ */
+export async function resetPassword(password: string, token: string): Promise<void> {
+	const result = await api.request<void>('/auth/reset-password', null, null, {
+		method: 'POST',
+		body: JSON.stringify({ password, token })
+	});
 
 	if (result && result.success) {
 		isAuthenticated.set(false);

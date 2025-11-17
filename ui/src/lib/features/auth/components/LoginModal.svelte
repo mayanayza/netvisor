@@ -1,10 +1,13 @@
 <script lang="ts">
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import type { LoginRequest } from '../types/base';
-	import LoginForm from './LoginForm.svelte';
 	import { config, getConfig } from '$lib/shared/stores/config';
+	import { email as emailValidator, required } from 'svelte-forms/validators';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import { field } from 'svelte-forms';
+	import { minLength } from '$lib/shared/components/forms/validators';
 
 	export let orgName: string | null = null;
 	export let invitedBy: string | null = null;
@@ -12,6 +15,7 @@
 	export let onLogin: (data: LoginRequest) => Promise<void> | void;
 	export let onClose: () => void;
 	export let onSwitchToRegister: (() => void) | null = null;
+	export let onSwitchToForgot: (() => void) | null = null;
 
 	const loading = loadData([getConfig]);
 	let signingIn = false;
@@ -28,6 +32,14 @@
 	$: if (isOpen) {
 		resetForm();
 	}
+
+	// Create form fields with validation
+	const email = field('email', formData.email, [required(), emailValidator()]);
+	const password = field('password', formData.password, [required(), minLength(12)]);
+
+	// Update formData when field values change
+	$: formData.email = $email.value;
+	$: formData.password = $password.value;
 
 	async function handleOidcLogin() {
 		// Pass current URL as return_url parameter
@@ -78,8 +90,28 @@
 			body={`You have been invited to join ${orgName} by ${invitedBy}. Please sign in or register to continue.`}
 		/>
 	{/if}
-	<!-- Content (remove padding to eliminate gap) -->
-	<LoginForm {formApi} bind:formData />
+	<div class="space-y-6">
+		<div class="space-y-4">
+			<TextInput
+				label="Email"
+				id="name"
+				{formApi}
+				placeholder="Enter your email"
+				required={true}
+				field={email}
+			/>
+
+			<TextInput
+				label="Password"
+				id="password"
+				type="password"
+				{formApi}
+				placeholder="Enter your password"
+				required={true}
+				field={password}
+			/>
+		</div>
+	</div>
 
 	<!-- Custom footer with register link -->
 	<svelte:fragment slot="footer">
@@ -121,6 +153,18 @@
 					</p>
 				</div>
 			{/if}
+			<div class="text-center">
+				<p class="text-sm text-gray-400">
+					Forgot your password?
+					<button
+						type="button"
+						on:click={onSwitchToForgot}
+						class="font-medium text-blue-400 hover:text-blue-300"
+					>
+						Reset password
+					</button>
+				</p>
+			</div>
 		</div>
 	</svelte:fragment>
 </EditModal>

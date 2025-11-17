@@ -1,7 +1,10 @@
 <script lang="ts">
 	import type { RegisterRequest } from '../types/base';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
-	import RegisterForm from './RegisterForm.svelte';
+	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import Password from '$lib/shared/components/forms/input/Password.svelte';
+	import { field } from 'svelte-forms';
 
 	export let orgName: string | null = null;
 	export let invitedBy: string | null = null;
@@ -17,6 +20,12 @@
 		password: '',
 		confirmPassword: ''
 	};
+
+	// Create form fields with validation
+	const email = field('email', formData.email, [required(), emailValidator()]);
+
+	// Update formData when field values change
+	$: formData.email = $email.value;
 
 	// Reset form when modal opens
 	$: if (isOpen) {
@@ -75,7 +84,23 @@
 	{/if}
 
 	<!-- Content -->
-	<RegisterForm {formApi} bind:formData />
+	<div class="space-y-6">
+		<TextInput
+			label="Email"
+			id="email"
+			{formApi}
+			placeholder="Enter email"
+			required={true}
+			field={email}
+		/>
+
+		<Password
+			{formApi}
+			bind:value={formData.password}
+			bind:confirmValue={formData.confirmPassword}
+			showConfirm={true}
+		/>
+	</div>
 
 	<!-- Custom footer with login link -->
 	<svelte:fragment slot="footer">
