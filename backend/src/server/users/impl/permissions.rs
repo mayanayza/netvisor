@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, str::FromStr};
 use strum::{Display, EnumIter, IntoEnumIterator, IntoStaticStr};
 
 use crate::server::shared::{
@@ -21,6 +21,21 @@ pub enum UserOrgPermissions {
 impl UserOrgPermissions {
     pub fn as_str(&self) -> &'static str {
         self.into()
+    }
+}
+
+impl FromStr for UserOrgPermissions {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<UserOrgPermissions, Self::Err> {
+        match input {
+            "Owner" => Ok(UserOrgPermissions::Owner),
+            "Admin" => Ok(UserOrgPermissions::Admin),
+            "Member" => Ok(UserOrgPermissions::Member),
+            "Visualizer" => Ok(UserOrgPermissions::Visualizer),
+            "None" => Ok(UserOrgPermissions::None),
+            _ => Err(()),
+        }
     }
 }
 

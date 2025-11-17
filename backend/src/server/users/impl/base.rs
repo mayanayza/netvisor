@@ -202,9 +202,10 @@ impl StorableEntity for User {
         let email = EmailAddress::from_str(&row.get::<String, _>("email"))
             .map_err(|e| Error::msg(format!("Failed to parse email: {}", e)))?;
 
-        let permissions: UserOrgPermissions =
-            serde_json::from_str(&row.get::<String, _>("permissions"))
-                .or(Err(Error::msg("Failed to deserialize permissions")))?;
+        let permissions_str = row.get::<String, _>("permissions");
+        let permissions: UserOrgPermissions = permissions_str
+            .parse()
+            .or(Err(Error::msg("Failed to parse permissions")))?;
 
         Ok(User {
             id: row.get("id"),
