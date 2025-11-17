@@ -177,3 +177,4 @@ top-english-words = "1.1.1"
 
 [features]
 generate-fixtures = []
+vendored-openssl = ["openssl/vendored"]
