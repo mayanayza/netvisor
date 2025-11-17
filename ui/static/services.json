@@ -1,11 +1,5 @@
 [
   {
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
-  },
-  {
     "description": "NetVisor Server API for network management",
     "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains netvisor",
     "logo_url": "/logos/netvisor-logo.png",
@@ -130,6 +124,12 @@
     "discovery_pattern": "Any of: (Endpoint response body from <ip>:80/ contains grocy.css, Endpoint response body from <ip>:443/ contains grocy.css)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grocy.svg",
     "name": "Grocy"
+  },
+  {
+    "description": "A free, self-hostable news aggregator",
+    "discovery_pattern": "Endpoint response body from <ip>:80/themes/manifest.json contains FreshRSS feed aggregator",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freshrss.svg",
+    "name": "FreshRSS"
   },
   {
     "description": "Torrent cleanup tool for Sonarr and Radarr",
@@ -390,6 +390,12 @@
     "name": "CoolerControl"
   },
   {
+    "description": "A single pane of glass for managing clustered & non-clustered Proxmox nodes",
+    "discovery_pattern": "Endpoint response body from <ip>:8443/ contains pdm-ui_bundle.js",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
+    "name": "Proxmox Datacenter Manager"
+  },
+  {
     "description": "A highly customizable link sharing platform",
     "discovery_pattern": "All of: (Endpoint response from <ip> has header set-cookie with value linkstack_session, Endpoint response body from <ip>:8080/ contains LinkStack)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/linkstack.svg",
@@ -594,6 +600,12 @@
     "name": "RabbitMQ"
   },
   {
+    "description": "Simple HTTP-based pub-sub notification service",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:80/ contains ntfy web, Endpoint response body from <ip>:2856/ contains ntfy web)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/ntfy.svg",
+    "name": "Ntfy"
+  },
+  {
     "description": "Generic MQTT broker",
     "discovery_pattern": "Any of: (1883/tcp is open, 8883/tcp is open)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mqtt.svg",
@@ -706,6 +718,12 @@
     "discovery_pattern": "All of: (2377/tcp is open, 7946/tcp is open)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
     "name": "Docker Swarm"
+  },
+  {
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   },
   {
     "description": "A generic docker container",
@@ -982,6 +1000,12 @@
     "discovery_pattern": "Endpoint response body from <ip>:8404/stats contains haproxy",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/haproxy.svg",
     "name": "HAProxy"
+  },
+  {
+    "description": "Lightweight & versatile reverse proxy, web & file server",
+    "discovery_pattern": "Endpoint response body from <ip>:2019/reverse_proxy/upstreams contains num_requests",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/caddy.svg",
+    "name": "Caddy"
   },
   {
     "description": "Wireguard dashboard for visualizing and managing wireguard clients and server",
