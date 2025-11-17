@@ -409,7 +409,7 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
             "exec",
-            "netvisor-postgres-1",
+            "netvisor-postgres-dev-1",
             "pg_dump",
             "-U",
             "postgres",
