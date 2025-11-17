@@ -89,6 +89,7 @@ pub mod cloudflared;
 pub mod wg_dashboard;
 
 // ReverseProxy
+pub mod caddy;
 pub mod haproxy;
 pub mod kong;
 pub mod nginx_proxy_manager;
