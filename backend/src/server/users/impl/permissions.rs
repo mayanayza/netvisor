@@ -18,6 +18,12 @@ pub enum UserOrgPermissions {
     None,
 }
 
+impl UserOrgPermissions {
+    pub fn as_str(&self) -> &'static str {
+        self.into()
+    }
+}
+
 impl PartialOrd for UserOrgPermissions {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
