@@ -14,11 +14,12 @@ services:
       - "${NETVISOR_DAEMON_PORT:-60073}:${NETVISOR_DAEMON_PORT:-60073}"
     environment:
       <<: *netvisor-env
-      NETVISOR_SERVER_TARGET: ${NETVISOR_SERVER_TARGET:-http://127.0.0.1}
+      NETVISOR_SERVER_URL: ${NETVISOR_SERVER_URL:-http://127.0.0.1:60072}
       NETVISOR_PORT: ${NETVISOR_DAEMON_PORT:-60073}
       NETVISOR_BIND_ADDRESS: ${NETVISOR_BIND_ADDRESS:-0.0.0.0}
       NETVISOR_NAME: ${NETVISOR_NAME:-netvisor-daemon}
       NETVISOR_HEARTBEAT_INTERVAL: ${NETVISOR_HEARTBEAT_INTERVAL:-30}
+      NETVISOR_MODE: ${NETVISOR_MODE:-Push}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${NETVISOR_DAEMON_PORT:-60073}/api/health || exit 1"]
       interval: 5s

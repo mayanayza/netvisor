@@ -69,8 +69,12 @@ pub struct DaemonCli {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     // Server connection
-    pub server_url: String,
+    pub server_url: Option<String>,
     pub network_id: Option<Uuid>,
+
+    // Legacy server connection
+    pub server_target: Option<String>,
+    pub server_port: Option<u16>,
 
     // Daemon settings
     pub daemon_port: u16,
@@ -97,7 +101,7 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            server_url: "http://localhost:60072".to_string(),
+            server_url: None,
             network_id: None,
             daemon_port: 60073,
             bind_address: "0.0.0.0".to_string(),
@@ -111,6 +115,8 @@ impl Default for AppConfig {
             concurrent_scans: 15,
             docker_proxy: None,
             mode: DaemonMode::Push,
+            server_port: None,
+            server_target: None,
         }
     }
 }
@@ -313,7 +319,16 @@ impl ConfigStore {
 
     pub async fn get_server_url(&self) -> Result<String> {
         let config = self.config.read().await;
-        Ok(config.server_url.clone())
+
+        if let Some(server_port) = config.server_port
+            && let Some(server_target) = &config.server_target
+        {
+            Ok(format!("http://{}:{}", server_target, server_port))
+        } else if let Some(server_url) = config.server_url.clone() {
+            Ok(server_url)
+        } else {
+            Err(anyhow::anyhow!("Server URL is not configured"))
+        }
     }
 
     pub async fn get_concurrent_scans(&self) -> Result<usize> {
