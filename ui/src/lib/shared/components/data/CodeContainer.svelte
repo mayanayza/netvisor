@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { pushWarning } from '$lib/shared/stores/feedback';
+	import { pushSuccess, pushWarning } from '$lib/shared/stores/feedback';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 	import Prism from '@magidoc/plugin-svelte-prismjs';
 	import 'prismjs/components/prism-yaml';
@@ -17,6 +17,7 @@
 	async function copyJson() {
 		try {
 			await navigator.clipboard.writeText(code);
+			pushSuccess('Copied to clipboard!');
 		} catch (error) {
 			pushWarning('Failed to copy to clipboard: ' + error);
 		}

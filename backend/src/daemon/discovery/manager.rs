@@ -145,7 +145,6 @@ impl DaemonDiscoverySessionManager {
 
         // Don't wait - just return success
         // The spawned task will handle cleanup
-        tracing::info!("Cancellation signal sent");
         true
     }
 

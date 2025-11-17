@@ -2,7 +2,10 @@ use crate::server::{
     auth::middleware::AuthenticatedDaemon,
     config::AppState,
     daemons::r#impl::{
-        api::{DaemonCapabilities, DaemonRegistrationRequest, DaemonRegistrationResponse},
+        api::{
+            DaemonCapabilities, DaemonRegistrationRequest, DaemonRegistrationResponse,
+            DiscoveryUpdatePayload,
+        },
         base::{Daemon, DaemonBase},
     },
     discovery::r#impl::{
@@ -39,7 +42,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/register", post(register_daemon))
         .route("/{id}/heartbeat", post(receive_heartbeat))
         .route("/{id}/update-capabilities", post(update_capabilities))
-        .route("/{id}/request-work", get(receive_work_request))
+        .route("/{id}/request-work", post(receive_work_request))
 }
 
 const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
@@ -153,9 +156,9 @@ async fn update_capabilities(
     Json(updated_capabilities): Json<DaemonCapabilities>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     tracing::debug!(
-        "Updating capabilities for daemon {}: {:?}",
-        id,
-        updated_capabilities
+        id = %id,
+        capabilities = %updated_capabilities,
+        "Updating capabilities for daemon",
     );
     let service = &state.services.daemon_service;
 
@@ -200,16 +203,36 @@ async fn receive_work_request(
     State(state): State<Arc<AppState>>,
     _daemon: AuthenticatedDaemon,
     Path(id): Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<()>>> {
+    Json(daemon_id): Json<Uuid>,
+) -> ApiResult<Json<ApiResponse<(Option<DiscoveryUpdatePayload>, bool)>>> {
     let service = &state.services.daemon_service;
 
-    let daemon = service
+    let mut daemon = service
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
         .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
 
-    tracing::info!("Received work request from daemon {}", daemon.id);
+    daemon.base.last_seen = Utc::now();
 
-    Ok(Json(ApiResponse::success(())))
+    service
+        .update(&mut daemon)
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to update heartbeat: {}", e)))?;
+
+    let sessions = state
+        .services
+        .discovery_service
+        .get_sessions_for_daemon(&daemon_id)
+        .await;
+    let cancel = state
+        .services
+        .discovery_service
+        .pull_cancellation_for_daemon(&daemon_id)
+        .await;
+
+    Ok(Json(ApiResponse::success((
+        sessions.first().cloned(),
+        cancel,
+    ))))
 }

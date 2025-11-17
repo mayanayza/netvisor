@@ -47,10 +47,15 @@ pub struct AppConfig {
 
     // Runtime state
     pub id: Uuid,
+    #[serde(default)]
     pub last_heartbeat: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default)]
     pub host_id: Option<Uuid>,
+    #[serde(default)]
     pub daemon_api_key: Option<String>,
+    #[serde(default)]
     pub docker_proxy: Option<String>,
+    #[serde(default)]
     pub mode: DaemonMode,
 }
 

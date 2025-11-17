@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::{fmt::Display, net::IpAddr};
 
 use crate::{
     daemon::discovery::types::base::{
@@ -20,6 +20,16 @@ pub struct DaemonCapabilities {
     pub has_docker_socket: bool,
     #[serde(default)]
     pub interfaced_subnet_ids: Vec<Uuid>,
+}
+
+impl Display for DaemonCapabilities {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "DaemonCapabilities {{ has_docker_socket: {}, interfaced_subnet_ids: {:?} }}",
+            self.has_docker_socket, self.interfaced_subnet_ids
+        )
+    }
 }
 
 /// Daemon registration request from daemon to server

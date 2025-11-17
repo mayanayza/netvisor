@@ -13,6 +13,9 @@
 	import { RotateCcwKey } from 'lucide-svelte';
 	import { createEmptyApiKeyFormData, createNewApiKey } from '$lib/features/api_keys/store';
 	import { getServerPort, getServerProtocol, getServerTarget } from '$lib/shared/utils/api';
+	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
+	import { field } from 'svelte-forms';
+	import { required } from 'svelte-forms/validators';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -21,6 +24,11 @@
 	let keyStore: Writable<string | null> = writable(null);
 	$: key = $keyStore;
 	let selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
+	let isNewDaemon = daemon === null;
+
+	let daemonModeField = field('daemonMode', daemon ? daemon.mode : 'Push', [required()], {
+		checkOnInit: false
+	});
 
 	function handleOnClose() {
 		keyStore.set(null);
@@ -40,14 +48,24 @@
 	}
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-target ${getServerProtocol()}://${getServerTarget()} --server-port ${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-target ${getServerProtocol()}://${getServerTarget()} --server-port ${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (key) {
-		dockerCompose = populateDockerCompose(dockerTemplate, selectedNetworkId, key);
+		dockerCompose = populateDockerCompose(
+			dockerTemplate,
+			selectedNetworkId,
+			$daemonModeField.value,
+			key
+		);
 	}
 
-	function populateDockerCompose(template: string, networkId: string, key: string): string {
+	function populateDockerCompose(
+		template: string,
+		networkId: string,
+		daemonMode: string,
+		key: string
+	): string {
 		// Replace lines that contain env vars
 		let splitString = '# Daemon configuration';
 		let [beforeKey, afterKey] = template.split(splitString);
@@ -58,6 +76,9 @@
 			.map((line) => {
 				if (line.includes('NETVISOR_SERVER_TARGET=')) {
 					return `      - NETVISOR_SERVER_TARGET=${getServerProtocol()}://${getServerTarget()}`;
+				}
+				if (line.includes('NETVISOR_MODE=')) {
+					return `      - NETVISOR_MODE=${daemonMode}`;
 				}
 				if (line.includes('NETVISOR_SERVER_PORT=')) {
 					return `      - NETVISOR_SERVER_PORT=${getServerPort()}`;
@@ -80,6 +101,7 @@
 	onCancel={handleOnClose}
 	showSave={false}
 	size="xl"
+	let:formApi
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
@@ -90,6 +112,29 @@
 		{#if !daemon}
 			<SelectNetwork bind:selectedNetworkId></SelectNetwork>
 		{/if}
+
+		<SelectInput
+			label="Daemon Mode"
+			id="daemonMode"
+			field={daemonModeField}
+			disabled={!isNewDaemon}
+			helpText="Select whether the daemon will Pull work from the server or have work Pushed to it. Note: Mode cannot be changed after daemon creation."
+			{formApi}
+			options={[
+				{
+					label: 'Push',
+					value: 'Push',
+					description:
+						'Server pushes work to the daemon. Session start and cancellations will happen when initated by server.'
+				},
+				{
+					label: 'Pull',
+					value: 'Pull',
+					description:
+						'Daemon pulls work from the server, as determined by HEARTBEAT_INTERVAL. Session start and cancellations will happen as daemon polls server for work.'
+				}
+			]}
+		/>
 
 		<div class="pb-2">
 			<div class="flex items-start gap-2">

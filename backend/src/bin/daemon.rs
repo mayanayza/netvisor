@@ -185,7 +185,7 @@ async fn main() -> anyhow::Result<()> {
         // Spawn request work in background
         tokio::spawn(async move {
             if let Err(e) = runtime_service.request_work().await {
-                tracing::warn!("Failed to update heartbeat timestamp: {}", e);
+                tracing::warn!("Failed to request work: {}", e);
             }
         });
     }
