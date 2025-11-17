@@ -33,30 +33,11 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler::<Discovery>))
         .route("/{id}", delete(delete_handler::<Discovery>))
         .route("/{id}", get(get_by_id_handler::<Discovery>))
-        .route("/request-work", get(receive_work_request))
         .route("/start-session", post(start_session))
         .route("/active-sessions", get(get_active_sessions))
         .route("/{session_id}/cancel", post(cancel_discovery))
         .route("/{session_id}/update", post(receive_discovery_update))
         .route("/stream", get(discovery_stream))
-}
-
-/// Receive work request from daemon and respond with any pending sessions to run
-async fn receive_work_request(
-    State(state): State<Arc<AppState>>,
-    AuthenticatedDaemon(daemon_network_id): AuthenticatedDaemon,
-) -> ApiResult<Json<ApiResponse<Option<DiscoveryUpdatePayload>>>> {
-    let sessions = state
-        .services
-        .discovery_service
-        .get_all_sessions(&[daemon_network_id])
-        .await;
-
-    if let Some(next_session) = sessions.first() {
-        Ok(Json(ApiResponse::success(Some(next_session.clone()))))
-    } else {
-        Ok(Json(ApiResponse::success(None)))
-    }
 }
 
 /// Receive discovery progress update from daemon

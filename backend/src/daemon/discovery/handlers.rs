@@ -1,17 +1,10 @@
-use crate::daemon::discovery::manager::DaemonDiscoverySessionManager;
-use crate::daemon::discovery::service::base::{DiscoveryRunner, RunsDiscovery};
-use crate::daemon::discovery::service::docker::DockerScanDiscovery;
-use crate::daemon::discovery::service::network::NetworkScanDiscovery;
-use crate::daemon::discovery::service::self_report::SelfReportDiscovery;
 use crate::daemon::runtime::types::DaemonAppState;
-use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::{
     daemons::r#impl::api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
 use axum::{Router, extract::State, response::Json, routing::post};
 use std::sync::Arc;
-use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<DaemonAppState>> {
@@ -31,79 +24,15 @@ async fn handle_discovery_request(
         request.session_id
     );
 
-    let manager = state.services.discovery_manager.clone();
-    let cancel_token = manager.start_new_session().await;
-
-    let handle = match &request.discovery_type {
-        DiscoveryType::SelfReport { host_id } => spawn_discovery(
-            DiscoveryRunner::new(
-                state.services.discovery_service.clone(),
-                state.services.discovery_manager.clone(),
-                SelfReportDiscovery::new(*host_id),
-            ),
-            request.clone(),
-            cancel_token,
-            manager.clone(),
-        ),
-        DiscoveryType::Docker {
-            host_id,
-            host_naming_fallback,
-        } => spawn_discovery(
-            DiscoveryRunner::new(
-                state.services.discovery_service.clone(),
-                state.services.discovery_manager.clone(),
-                DockerScanDiscovery::new(*host_id, *host_naming_fallback),
-            ),
-            request.clone(),
-            cancel_token,
-            manager.clone(),
-        ),
-        DiscoveryType::Network {
-            subnet_ids,
-            host_naming_fallback,
-        } => spawn_discovery(
-            DiscoveryRunner::new(
-                state.services.discovery_service.clone(),
-                state.services.discovery_manager.clone(),
-                NetworkScanDiscovery::new(subnet_ids.clone(), *host_naming_fallback),
-            ),
-            request.clone(),
-            cancel_token,
-            manager.clone(),
-        ),
-    };
-
-    manager.set_current_task(handle).await;
+    state
+        .services
+        .discovery_manager
+        .initiate_session(request)
+        .await;
 
     Ok(Json(ApiResponse::success(DaemonDiscoveryResponse {
         session_id,
     })))
-}
-
-fn spawn_discovery<T>(
-    discovery: DiscoveryRunner<T>,
-    request: DaemonDiscoveryRequest,
-    cancel_token: CancellationToken,
-    manager: Arc<DaemonDiscoverySessionManager>,
-) -> tokio::task::JoinHandle<()>
-where
-    DiscoveryRunner<T>: RunsDiscovery + 'static,
-    T: 'static + Send + Sync,
-{
-    tokio::spawn(async move {
-        match discovery.discover(request, cancel_token.clone()).await {
-            Ok(()) => {
-                tracing::info!("Discovery completed successfully");
-            }
-            Err(e) => {
-                tracing::error!("Discovery failed: {}", e);
-            }
-        }
-        // Only clear if NOT cancelled - the cancel handler will clear it
-        if !cancel_token.is_cancelled() {
-            manager.clear_completed_task().await;
-        }
-    })
 }
 
 async fn handle_cancel_request(

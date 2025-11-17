@@ -184,7 +184,7 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("Daemon running in Pull mode");
         // Spawn request work in background
         tokio::spawn(async move {
-            if let Err(e) = runtime_service.heartbeat().await {
+            if let Err(e) = runtime_service.request_work().await {
                 tracing::warn!("Failed to update heartbeat timestamp: {}", e);
             }
         });

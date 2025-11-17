@@ -17,8 +17,13 @@ impl DaemonServiceFactory {
         // Initialize services with proper dependencies
 
         let discovery_service = Arc::new(DaemonDiscoveryService::new(config.clone()));
-        let discovery_manager = Arc::new(DaemonDiscoverySessionManager::new());
-        let runtime_service = Arc::new(DaemonRuntimeService::new(config.clone()));
+        let discovery_manager = Arc::new(DaemonDiscoverySessionManager::new(
+            discovery_service.clone(),
+        ));
+        let runtime_service = Arc::new(DaemonRuntimeService::new(
+            config.clone(),
+            discovery_manager.clone(),
+        ));
 
         Ok(Self {
             discovery_service,

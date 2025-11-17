@@ -1,3 +1,4 @@
+use crate::daemon::discovery::manager::DaemonDiscoverySessionManager;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
 use crate::server::daemons::r#impl::api::{DaemonCapabilities, DiscoveryUpdatePayload};
@@ -17,14 +18,19 @@ pub struct DaemonRuntimeService {
     pub config_store: Arc<ConfigStore>,
     pub client: reqwest::Client,
     pub utils: PlatformDaemonUtils,
+    pub discovery_manager: Arc<DaemonDiscoverySessionManager>,
 }
 
 impl DaemonRuntimeService {
-    pub fn new(config_store: Arc<ConfigStore>) -> Self {
+    pub fn new(
+        config_store: Arc<ConfigStore>,
+        discovery_manager: Arc<DaemonDiscoverySessionManager>,
+    ) -> Self {
         Self {
             config_store,
             client: reqwest::Client::new(),
             utils: create_system_utils(),
+            discovery_manager,
         }
     }
 
@@ -47,7 +53,7 @@ impl DaemonRuntimeService {
             if self.config_store.get_network_id().await?.is_some() {
                 let response = self
                     .client
-                    .post(format!("{}/api/discovery/request-work", server_target))
+                    .post(format!("{}/api/daemons/request-work", server_target))
                     .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
@@ -63,7 +69,13 @@ impl DaemonRuntimeService {
                             .error
                             .unwrap_or_else(|| "Unknown error".to_string());
                         tracing::warn!("Failed to check for work: {}", error_msg);
-                    } else if let Some(Some(_payload)) = api_response.data {
+                    } else if let Some(Some(payload)) = api_response.data {
+                        tracing::info!("Received work payload from server");
+                        self.discovery_manager
+                            .initiate_session(payload.into())
+                            .await;
+                    } else {
+                        tracing::info!("No work available at this time");
                     }
                 }
             } else {

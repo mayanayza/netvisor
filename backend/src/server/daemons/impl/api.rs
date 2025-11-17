@@ -47,6 +47,15 @@ pub struct DaemonDiscoveryRequest {
     pub discovery_type: DiscoveryType,
 }
 
+impl From<DiscoveryUpdatePayload> for DaemonDiscoveryRequest {
+    fn from(payload: DiscoveryUpdatePayload) -> Self {
+        Self {
+            session_id: payload.session_id,
+            discovery_type: payload.discovery_type,
+        }
+    }
+}
+
 /// Daemon discovery response (for immediate acknowledgment)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonDiscoveryResponse {

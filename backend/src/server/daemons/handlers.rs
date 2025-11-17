@@ -39,6 +39,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/register", post(register_daemon))
         .route("/{id}/heartbeat", post(receive_heartbeat))
         .route("/{id}/update-capabilities", post(update_capabilities))
+        .route("/{id}/request-work", get(receive_work_request))
 }
 
 const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
@@ -191,6 +192,24 @@ async fn receive_heartbeat(
         .update(&mut daemon)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to update heartbeat: {}", e)))?;
+
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn receive_work_request(
+    State(state): State<Arc<AppState>>,
+    _daemon: AuthenticatedDaemon,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let service = &state.services.daemon_service;
+
+    let daemon = service
+        .get_by_id(&id)
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
+        .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
+
+    tracing::info!("Received work request from daemon {}", daemon.id);
 
     Ok(Json(ApiResponse::success(())))
 }
