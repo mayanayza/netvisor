@@ -31,6 +31,7 @@ use stripe_webhook::{EventObject, Webhook};
 use uuid::Uuid;
 pub struct BillingService {
     pub stripe: stripe::Client,
+    pub webhook_secret: String,
     pub organization_service: Arc<OrganizationService>,
     pub user_service: Arc<UserService>,
     pub plans: OnceLock<Vec<BillingPlan>>,
@@ -39,11 +40,13 @@ pub struct BillingService {
 impl BillingService {
     pub fn new(
         stripe_secret: String,
+        webhook_secret: String,
         organization_service: Arc<OrganizationService>,
         user_service: Arc<UserService>,
     ) -> Self {
         Self {
             stripe: Client::new(stripe_secret),
+            webhook_secret,
             organization_service,
             user_service,
             plans: OnceLock::new(),
@@ -228,13 +231,8 @@ impl BillingService {
     }
 
     /// Handle webhook events
-    pub async fn handle_webhook(
-        &self,
-        payload: &str,
-        signature: &str,
-        webhook_secret: String,
-    ) -> Result<(), Error> {
-        let event = Webhook::construct_event(payload, signature, &webhook_secret)?;
+    pub async fn handle_webhook(&self, payload: &str, signature: &str) -> Result<(), Error> {
+        let event = Webhook::construct_event(payload, signature, &self.webhook_secret)?;
 
         match event.type_ {
             EventType::CustomerSubscriptionCreated | EventType::CustomerSubscriptionUpdated => {

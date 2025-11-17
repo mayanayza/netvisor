@@ -2,8 +2,8 @@ use crate::server::{
     api_keys,
     auth::{
         r#impl::api::{
-            LoginRequest, OidcAuthorizeParams, OidcCallbackParams, RegisterRequest,
-            UpdateEmailPasswordRequest,
+            ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
+            RegisterRequest, ResetPasswordRequest, UpdateEmailPasswordRequest,
         },
         oidc::OidcPendingAuth,
         service::hash_password,
@@ -38,6 +38,8 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/oidc/authorize", get(oidc_authorize))
         .route("/oidc/callback", get(oidc_callback))
         .route("/oidc/unlink", post(unlink_oidc_account))
+        .route("/forgot-password", post(forgot_password))
+        .route("/reset-password", post(reset_password))
 }
 
 async fn register(
@@ -147,6 +149,32 @@ async fn update_password_auth(
     state.services.user_service.update(&mut user).await?;
 
     Ok(Json(ApiResponse::success(user)))
+}
+
+async fn forgot_password(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ForgotPasswordRequest>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    state
+        .services
+        .auth_service
+        .initiate_password_reset(&request.email, request.url)
+        .await?;
+
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn reset_password(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ResetPasswordRequest>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    state
+        .services
+        .auth_service
+        .complete_password_reset(&request.token, &request.new_password)
+        .await?;
+
+    Ok(Json(ApiResponse::success(())))
 }
 
 async fn oidc_authorize(

@@ -155,6 +155,7 @@ async-stripe-webhook = { version = "1.0.0-alpha.2", default-features = false }
 moka = { version = "0.12.11", features = ["future"] }
 nanoid = "0.4.0"
 serde_with = "3.15.1"
+lettre = "0.11.19"
 
 # === Platform-specific Dependencies ===
 [target.'cfg(target_os = "linux")'.dependencies]

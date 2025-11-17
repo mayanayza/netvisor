@@ -102,6 +102,10 @@ pub async fn get_public_config(
             .unwrap_or("OIDC Provider".to_string()),
         billing_enabled: state.config.stripe_secret.is_some(),
         has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
+        has_email_service: state.config.smtp_password.is_some()
+            && state.config.smtp_username.is_some()
+            && state.config.smtp_email.is_some()
+            && state.config.smtp_relay.is_some(),
     }))
 }
 

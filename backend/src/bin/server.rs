@@ -84,6 +84,22 @@ struct Cli {
     /// OIDC redirect url
     #[arg(long)]
     stripe_webhook_secret: Option<String>,
+
+    #[arg(long)]
+    smtp_username: Option<String>,
+
+    #[arg(long)]
+    smtp_password: Option<String>,
+
+    /// Email used as to/from in emails send by NetVisor
+    #[arg(long)]
+    smtp_email: Option<String>,
+
+    #[arg(long)]
+    smtp_relay: Option<String>,
+
+    #[arg(long)]
+    smtp_port: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -103,6 +119,10 @@ impl From<Cli> for CliArgs {
             oidc_redirect_url: cli.oidc_redirect_url,
             stripe_secret: cli.stripe_secret,
             stripe_webhook_secret: cli.stripe_webhook_secret,
+            smtp_email: cli.smtp_email,
+            smtp_password: cli.smtp_password,
+            smtp_relay: cli.smtp_relay,
+            smtp_username: cli.smtp_username,
         }
     }
 }

@@ -72,16 +72,8 @@ async fn handle_webhook(
         .and_then(|v| v.to_str().ok())
         .ok_or_else(|| ApiError::bad_request("Missing stripe-signature header"))?;
 
-    let webhook_secret = state
-        .config
-        .stripe_webhook_secret
-        .clone()
-        .ok_or_else(|| ApiError::internal_error("Stripe webhook secret not provided"))?;
-
     if let Some(billing_service) = &state.services.billing_service {
-        billing_service
-            .handle_webhook(&body, signature, webhook_secret)
-            .await?;
+        billing_service.handle_webhook(&body, signature).await?;
         Ok(Json(ApiResponse::success(())))
     } else {
         Err(ApiError::bad_request(

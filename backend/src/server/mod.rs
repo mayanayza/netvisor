@@ -4,6 +4,7 @@ pub mod billing;
 pub mod config;
 pub mod daemons;
 pub mod discovery;
+pub mod email;
 pub mod github;
 pub mod groups;
 pub mod hosts;

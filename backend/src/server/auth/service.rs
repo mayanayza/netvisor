@@ -1,5 +1,6 @@
 use crate::server::{
     auth::r#impl::api::{LoginRequest, RegisterRequest},
+    email::service::EmailService,
     organizations::{
         r#impl::base::{Organization, OrganizationBase},
         service::OrganizationService,
@@ -27,7 +28,9 @@ use validator::Validate;
 pub struct AuthService {
     pub user_service: Arc<UserService>,
     organization_service: Arc<OrganizationService>,
+    email_service: Option<Arc<EmailService>>,
     login_attempts: Arc<RwLock<HashMap<EmailAddress, (u32, Instant)>>>,
+    password_reset_tokens: Arc<RwLock<HashMap<String, (Uuid, Instant)>>>,
 }
 
 impl AuthService {
@@ -37,11 +40,14 @@ impl AuthService {
     pub fn new(
         user_service: Arc<UserService>,
         organization_service: Arc<OrganizationService>,
+        email_service: Option<Arc<EmailService>>,
     ) -> Self {
         Self {
             user_service,
             organization_service,
+            email_service,
             login_attempts: Arc::new(RwLock::new(HashMap::new())),
+            password_reset_tokens: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -247,6 +253,70 @@ impl AuthService {
         verify_password(&request.password, password_hash)?;
 
         Ok(user.clone())
+    }
+
+    /// Initiate password reset process - generates a token
+    pub async fn initiate_password_reset(
+        &self,
+        email: &EmailAddress,
+        url: String,
+    ) -> Result<String> {
+        let email_service = self
+            .email_service
+            .as_ref()
+            .ok_or_else(|| anyhow!("Email service not configured"))?
+            .clone();
+
+        let all_users = self
+            .user_service
+            .get_all(EntityFilter::unfiltered())
+            .await?;
+        let user = all_users
+            .iter()
+            .find(|u| &u.base.email == email)
+            .ok_or_else(|| anyhow!("No user found with that email address"))?;
+
+        let token = Uuid::new_v4().to_string();
+        let mut tokens = self.password_reset_tokens.write().await;
+        tokens.insert(token.clone(), (user.id, Instant::now()));
+
+        email_service.send_email(
+            user.base.email.clone(),
+            "NetVisor Password Reset",
+            &format!(
+                "<a href={}/reset-password?token={}>Click here to reset your password</a>",
+                url, token
+            ),
+        )?;
+
+        Ok(token)
+    }
+
+    /// Reset password using token
+    pub async fn complete_password_reset(&self, token: &str, new_password: &str) -> Result<()> {
+        let mut tokens = self.password_reset_tokens.write().await;
+        let (user_id, created_at) = tokens
+            .remove(token)
+            .ok_or_else(|| anyhow!("Invalid or expired password reset token"))?;
+
+        // Check if token is expired (valid for 1 hour)
+        if created_at.elapsed().as_secs() > 3600 {
+            return Err(anyhow!("Password reset token has expired"));
+        }
+
+        // Get user
+        let mut user = self
+            .user_service
+            .get_by_id(&user_id)
+            .await?
+            .ok_or_else(|| anyhow!("User not found"))?;
+
+        // Update password
+        let hashed_password = hash_password(new_password)?;
+        user.set_password(hashed_password);
+        self.user_service.update(&mut user).await?;
+
+        Ok(())
     }
 
     /// Cleanup old login attempts (called periodically from background task)
