@@ -26,6 +26,11 @@ pub struct CliArgs {
     pub oidc_provider_name: Option<String>,
     pub stripe_secret: Option<String>,
     pub stripe_webhook_secret: Option<String>,
+    pub smtp_username: Option<String>,
+    pub smtp_password: Option<String>,
+    pub smtp_relay: Option<String>,
+    pub smtp_email: Option<String>,
+    pub public_url: Option<String>,
 }
 
 /// Flattened server configuration struct
@@ -46,6 +51,9 @@ pub struct ServerConfig {
 
     /// Where static web assets are located for serving
     pub web_external_path: Option<PathBuf>,
+
+    /// Public URL for server for email links, webhooks, etc
+    pub public_url: String,
 
     /// URL for daemon running in same docker stack or in other local context
     pub integrated_daemon_url: Option<String>,
@@ -78,6 +86,14 @@ pub struct ServerConfig {
     pub stripe_secret: Option<String>,
 
     pub stripe_webhook_secret: Option<String>,
+
+    pub smtp_username: Option<String>,
+
+    pub smtp_password: Option<String>,
+
+    pub smtp_relay: Option<String>,
+
+    pub smtp_email: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,6 +104,8 @@ pub struct PublicConfigResponse {
     pub oidc_provider_name: String,
     pub billing_enabled: bool,
     pub has_integrated_daemon: bool,
+    pub has_email_service: bool,
+    pub public_url: String,
 }
 
 impl Default for ServerConfig {
@@ -97,6 +115,7 @@ impl Default for ServerConfig {
             log_level: "info".to_string(),
             rust_log: "".to_string(),
             database_url: "postgresql://postgres:password@localhost:5432/netvisor".to_string(),
+            public_url: "http://localhost:60072".to_string(),
             web_external_path: None,
             use_secure_session_cookies: false,
             integrated_daemon_url: None,
@@ -109,6 +128,10 @@ impl Default for ServerConfig {
             stripe_key: None,
             stripe_secret: None,
             stripe_webhook_secret: None,
+            smtp_username: None,
+            smtp_password: None,
+            smtp_email: None,
+            smtp_relay: None,
         }
     }
 }
@@ -160,6 +183,21 @@ impl ServerConfig {
         }
         if let Some(stripe_webhook_secret) = cli_args.stripe_webhook_secret {
             figment = figment.merge(("stripe_webhook_secret", stripe_webhook_secret));
+        }
+        if let Some(smtp_username) = cli_args.smtp_username {
+            figment = figment.merge(("smtp_username", smtp_username));
+        }
+        if let Some(smtp_password) = cli_args.smtp_password {
+            figment = figment.merge(("smtp_password", smtp_password));
+        }
+        if let Some(smtp_relay) = cli_args.smtp_relay {
+            figment = figment.merge(("smtp_relay", smtp_relay));
+        }
+        if let Some(smtp_email) = cli_args.smtp_email {
+            figment = figment.merge(("smtp_email", smtp_email));
+        }
+        if let Some(public_url) = cli_args.public_url {
+            figment = figment.merge(("public_url", public_url));
         }
 
         figment = figment.merge(("disable_registration", cli_args.disable_registration));

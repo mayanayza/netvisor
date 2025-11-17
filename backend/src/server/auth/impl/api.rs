@@ -67,3 +67,14 @@ pub struct OidcAuthorizeParams {
     pub link: Option<bool>,
     pub return_url: Option<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ForgotPasswordRequest {
+    pub email: EmailAddress,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    pub password: String,
+}

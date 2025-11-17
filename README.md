@@ -555,13 +555,12 @@ Both the server and daemon support multiple configuration methods with the follo
 
 | Parameter | CLI Flag | Environment Variable | Config File Key | Default | Description |
 |-----------|----------|---------------------|-----------------|---------|-------------|
-| Server Target | `--server-target` | `NETVISOR_SERVER_TARGET` | `server_target` | `None` | IP address or hostname of the NetVisor server (required) |
-| Server Port | `--server-port` | `NETVISOR_SERVER_PORT` | `server_port` | `60072` | Port the NetVisor server is listening on |
+| Server URL | `--server-url` | `NETVISOR_SERVER_URL` | `server_URL` | `http://127.0.0.1:60072` | URL where the daemon can reach the server (required) |
 | Daemon Port | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `daemon_port` | `60073` | Port for the daemon to listen on |
 | Bind Address | `--bind-address` | `NETVISOR_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind the daemon to |
 | Daemon Name | `--name` | `NETVISOR_NAME` | `name` | `netvisor-daemon` | Human-readable name for this daemon instance |
 | Log Level | `--log-level` | `NETVISOR_LOG_LEVEL` | `log_level` | `info` | Logging verbosity (`trace`, `debug`, `info`, `warn`, `error`) |
-| Heartbeat Interval | `--heartbeat-interval` | `NETVISOR_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates to the server |
+| Heartbeat Interval | `--heartbeat-interval` | `NETVISOR_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates / work requests (for daemons in pull mode) to the server |
 | Concurrent Scans | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | - | Maximum number of hosts to scan in parallel during discovery  |
 | Network ID | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | `None` | Network ID to report discoveries to (auto-assigned for integrated daemon) |
 | API Key | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | `None` | API key for daemon authentication with server (generated via UI) |
@@ -625,13 +624,13 @@ The server supports the following configuration options:
 
 | Parameter | CLI Flag | Environment Variable | Default | Description |
 |-----------|----------|---------------------|---------|-------------|
+| Server Public URL | `--public-url` | `NETVISOR_SERVER_PORT` | `60072` | Public URL for webhooks, email links, etc |
 | Server Port | `--server-port` | `NETVISOR_SERVER_PORT` | `60072` | Port for the server to listen on |
 | Log Level | `--log-level` | `NETVISOR_LOG_LEVEL` | `info` | Logging verbosity (`trace`, `debug`, `info`, `warn`, `error`) |
-| Rust Log | `--rust-log` | `NETVISOR_RUST_LOG` | `""` | Low-level Rust framework logging (advanced) |
 | Database URL | `--database-url` | `NETVISOR_DATABASE_URL` | `postgresql://postgres:password@localhost:5432/netvisor` | PostgreSQL connection string |
 | Use Secure Cookies | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Enable secure session cookies for HTTPS deployments |
 | Integrated Daemon URL | `--integrated-daemon-url` | `NETVISOR_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL where the server can reach the integrated daemon |
-| Disable Registration | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | `http://172.17.0.1:60073` | Flag to disable new user registration |
+| Disable Registration | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | false | Flag to disable new user registration |
 | OIDC Issuer URL | `--oidc-issuer-url` | `NETVISOR_OIDC_ISSUER_URL` | - | The OIDC provider's issuer URL (must end with `/`). Example: `https://authentik.company.com/application/o/netvisor/` |
 | OIDC Client ID | `--oidc-client-id` | `NETVISOR_OIDC_CLIENT_ID` | - | OAuth2 client ID from your OIDC provider |
 | OIDC Client Secret | `--oidc-client-secret` | `NETVISOR_OIDC_CLIENT_SECRET` | - | OAuth2 client secret from your OIDC provider |

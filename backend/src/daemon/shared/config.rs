@@ -1,5 +1,6 @@
 use anyhow::{Context, Error, Result};
 use async_fs;
+use clap::{Parser, arg, command};
 use directories_next::ProjectDirs;
 use figment::{
     Figment,
@@ -12,30 +13,68 @@ use uuid::Uuid;
 
 use crate::server::daemons::r#impl::base::DaemonMode;
 
-/// CLI arguments structure (for figment integration)
-#[derive(Debug)]
-pub struct CliArgs {
-    pub server_target: Option<String>,
-    pub server_port: Option<u16>,
-    pub network_id: Option<Uuid>,
-    pub daemon_port: Option<u16>,
-    pub name: Option<String>,
-    pub bind_address: Option<String>,
-    pub log_level: Option<String>,
-    pub heartbeat_interval: Option<u64>,
-    pub concurrent_scans: Option<usize>,
-    pub daemon_api_key: Option<String>,
-    pub docker_proxy: Option<String>,
-    pub mode: Option<DaemonMode>,
+#[derive(Parser)]
+#[command(name = "netvisor-daemon")]
+#[command(about = "NetVisor network discovery and test execution daemon")]
+pub struct DaemonCli {
+    /// Complete Server URL
+    #[arg(long)]
+    server_url: Option<String>,
+
+    /// Network ID to join
+    #[arg(long)]
+    network_id: Option<String>,
+
+    /// Daemon listen port
+    #[arg(short, long)]
+    daemon_port: Option<u16>,
+
+    /// Daemon listen host
+    #[arg(long)]
+    host: Option<String>,
+
+    /// Daemon name
+    #[arg(long)]
+    name: Option<String>,
+
+    /// Log level
+    #[arg(long)]
+    log_level: Option<String>,
+
+    /// Heartbeat interval in seconds
+    #[arg(long)]
+    heartbeat_interval: Option<u64>,
+
+    /// Daemon bind address
+    #[arg(long)]
+    bind_address: Option<String>,
+
+    /// Concurrent scans for discovery
+    #[arg(long)]
+    concurrent_scans: Option<usize>,
+
+    /// API key
+    #[arg(long)]
+    daemon_api_key: Option<String>,
+
+    /// Docker socket proxy
+    #[arg(long)]
+    docker_proxy: Option<String>,
+
+    #[arg(long)]
+    mode: Option<DaemonMode>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     // Server connection
-    pub server_target: Option<String>,
+    pub server_url: Option<String>,
     pub network_id: Option<Uuid>,
-    pub server_port: u16,
+
+    // Legacy server connection
+    pub server_target: Option<String>,
+    pub server_port: Option<u16>,
 
     // Daemon settings
     pub daemon_port: u16,
@@ -62,9 +101,8 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            server_target: None,
+            server_url: None,
             network_id: None,
-            server_port: 60072,
             daemon_port: 60073,
             bind_address: "0.0.0.0".to_string(),
             name: "netvisor-daemon".to_string(),
@@ -77,6 +115,8 @@ impl Default for AppConfig {
             concurrent_scans: 15,
             docker_proxy: None,
             mode: DaemonMode::Push,
+            server_port: None,
+            server_target: None,
         }
     }
 }
@@ -89,7 +129,7 @@ impl AppConfig {
         let config_path = proj_dirs.config_dir().join("config.json");
         Ok((config_path.exists(), config_path))
     }
-    pub fn load(cli_args: CliArgs) -> anyhow::Result<Self> {
+    pub fn load(cli_args: DaemonCli) -> anyhow::Result<Self> {
         let (config_exists, config_path) = AppConfig::get_config_path()?;
 
         // Standard configuration layering: Defaults → Config file → Env → CLI (highest priority)
@@ -104,14 +144,11 @@ impl AppConfig {
         figment = figment.merge(Env::prefixed("NETVISOR_"));
 
         // Add CLI overrides (highest priority) - only if explicitly provided
-        if let Some(server_target) = cli_args.server_target {
-            figment = figment.merge(("server_target", server_target));
+        if let Some(server_url) = cli_args.server_url {
+            figment = figment.merge(("server_url", server_url));
         }
         if let Some(network_id) = cli_args.network_id {
             figment = figment.merge(("network_id", network_id));
-        }
-        if let Some(server_port) = cli_args.server_port {
-            figment = figment.merge(("server_port", server_port));
         }
         if let Some(daemon_port) = cli_args.daemon_port {
             figment = figment.merge(("daemon_port", daemon_port));
@@ -280,13 +317,17 @@ impl ConfigStore {
         Ok(config.network_id)
     }
 
-    pub async fn get_server_endpoint(&self) -> Result<String> {
+    pub async fn get_server_url(&self) -> Result<String> {
         let config = self.config.read().await;
 
-        if let Some(ip) = &config.server_target {
-            Ok(format!("{}:{}", ip, config.server_port))
+        if let Some(server_port) = config.server_port
+            && let Some(server_target) = &config.server_target
+        {
+            Ok(format!("http://{}:{}", server_target, server_port))
+        } else if let Some(server_url) = config.server_url.clone() {
+            Ok(server_url)
         } else {
-            Err(Error::msg("No IP configured for server"))
+            Err(anyhow::anyhow!("Server URL is not configured"))
         }
     }
 
@@ -323,7 +364,7 @@ mod tests {
 
     use serial_test::serial;
 
-    use crate::{daemon::shared::storage::AppConfig, tests::DAEMON_CONFIG_FIXTURE};
+    use crate::{daemon::shared::config::AppConfig, tests::DAEMON_CONFIG_FIXTURE};
 
     #[test]
     #[serial]

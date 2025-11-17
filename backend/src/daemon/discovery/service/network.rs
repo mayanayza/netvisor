@@ -238,19 +238,30 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                 )
                                 .await
                             {
+
+                                let services_matched = services.len();
+
                                 tracing::info!(
-                                    "✓ Host {} - processed, {} services matched",
-                                    ip,
-                                    services.len()
+                                    ip = %ip,
+                                    services_matched = %services_matched,
+                                    "Host processed"
                                 );
 
                                 if let Ok((created_host, _)) =
                                     self.create_host(host, services).await
                                 {
-                                    tracing::info!("✓ Host {} - created successfully", ip);
+                                    tracing::info!(
+                                        ip = %ip,
+                                        services_matched = %services_matched,
+                                        "Host created"
+                                    );
                                     return Ok::<Option<Host>, Error>(Some(created_host));
                                 } else {
-                                    tracing::warn!("✗ Host {} - failed to create in database", ip);
+                                    tracing::warn!(
+                                        ip = %ip,
+                                        services_matched = %services_matched,
+                                        "Host creation failed"
+                                    );
                                 }
                             } else {
                                 tracing::debug!(
@@ -439,7 +450,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
     }
 
     async fn get_subnets(&self) -> Result<Vec<Subnet>, Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         let api_key = self
             .as_ref()

@@ -44,6 +44,9 @@ use std::sync::Arc;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
 use uuid::Uuid;
 
+pub mod database;
+pub mod dependencies;
+
 pub const DAEMON_CONFIG_FIXTURE: &str = "src/tests/daemon_config.json";
 pub const SERVER_DB_FIXTURE: &str = "src/tests/netvisor.sql";
 

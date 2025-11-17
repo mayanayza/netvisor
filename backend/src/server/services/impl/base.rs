@@ -108,6 +108,15 @@ impl PartialEq for Service {
             return true;
         }
 
+        // Gateway services are singletons per host - only one gateway per host
+        // They typically only have interface bindings (no ports)
+        // Handles: Gateway discovered on eth0, eth1, wlan0 -> should be same service
+        if ServiceDefinitionExt::is_gateway(&self.base.service_definition) {
+            return true;
+        }
+
+        // For non-gateway generic services, use port bindings and container info
+
         // === GENERIC SERVICE EQUALITY ===
         // All possible permutations of generic services on the same host:
 

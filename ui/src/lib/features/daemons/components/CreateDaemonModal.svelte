@@ -48,7 +48,7 @@
 	}
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-target ${getServerProtocol()}://${getServerTarget()} --server-port ${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-url ${getServerProtocol()}://${getServerTarget()}:${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (key) {
@@ -74,14 +74,11 @@
 		return template
 			.split('\n')
 			.map((line) => {
-				if (line.includes('NETVISOR_SERVER_TARGET=')) {
-					return `      - NETVISOR_SERVER_TARGET=${getServerProtocol()}://${getServerTarget()}`;
+				if (line.includes('NETVISOR_SERVER_URL=')) {
+					return `      - NETVISOR_SERVER_URL=${getServerProtocol()}://${getServerTarget()}:${getServerPort()}`;
 				}
 				if (line.includes('NETVISOR_MODE=')) {
 					return `      - NETVISOR_MODE=${daemonMode}`;
-				}
-				if (line.includes('NETVISOR_SERVER_PORT=')) {
-					return `      - NETVISOR_SERVER_PORT=${getServerPort()}`;
 				}
 				if (line.includes('NETVISOR_NETWORK_ID=')) {
 					return `      - NETVISOR_NETWORK_ID=${networkId}`;

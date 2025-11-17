@@ -40,8 +40,11 @@ async fn create_checkout_session(
     Json(request): Json<CreateCheckoutRequest>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
     // Build success/cancel URLs
-    let success_url = format!("{}?session_id={{CHECKOUT_SESSION_ID}}", request.url);
-    let cancel_url = request.url.to_string();
+    let success_url = format!(
+        "{}?session_id={{CHECKOUT_SESSION_ID}}",
+        state.config.public_url.clone()
+    );
+    let cancel_url = format!("{}/billing", state.config.public_url.clone());
 
     if let Some(billing_service) = state.services.billing_service.clone() {
         let current_plans = billing_service.get_plans();
@@ -72,16 +75,8 @@ async fn handle_webhook(
         .and_then(|v| v.to_str().ok())
         .ok_or_else(|| ApiError::bad_request("Missing stripe-signature header"))?;
 
-    let webhook_secret = state
-        .config
-        .stripe_webhook_secret
-        .clone()
-        .ok_or_else(|| ApiError::internal_error("Stripe webhook secret not provided"))?;
-
     if let Some(billing_service) = &state.services.billing_service {
-        billing_service
-            .handle_webhook(&body, signature, webhook_secret)
-            .await?;
+        billing_service.handle_webhook(&body, signature).await?;
         Ok(Json(ApiResponse::success(())))
     } else {
         Err(ApiError::bad_request(

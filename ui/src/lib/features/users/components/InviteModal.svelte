@@ -11,7 +11,7 @@
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
-	import { permissions, metadata } from '$lib/shared/stores/metadata';
+	import { permissions, metadata, entities } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
@@ -40,12 +40,12 @@
 	);
 
 	// Create form field with validation
-	const permissionsField = field('permissions', 'Viewer', [required()]);
+	const permissionsField = field('permissions', 'Visualizer', [required()]);
 
 	// Reset form when modal opens
 	$effect(() => {
 		if (isOpen && !invite) {
-			permissionsField.set('Viewer');
+			permissionsField.set('Visualizer');
 		}
 	});
 
@@ -111,7 +111,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={UserPlus} color="#3b82f6" />
+		<ModalHeaderIcon Icon={UserPlus} color={entities.getColorHelper('User').icon} />
 	</svelte:fragment>
 
 	<div class="space-y-6">

@@ -1,6 +1,11 @@
 import { writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
-import type { LoginRequest, RegisterRequest } from './types/base';
+import type {
+	ForgotPasswordRequest,
+	LoginRequest,
+	RegisterRequest,
+	ResetPasswordRequest
+} from './types/base';
 import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 import type { User } from '../users/types';
 
@@ -90,4 +95,43 @@ export async function logout(): Promise<void> {
 	} else {
 		pushError('Logout failed');
 	}
+}
+
+/**
+ * Forgot password
+ */
+export async function forgotPassword(request: ForgotPasswordRequest): Promise<void> {
+	const result = await api.request<void>('/auth/forgot-password', null, null, {
+		method: 'POST',
+		body: JSON.stringify(request)
+	});
+
+	if (result && result.success) {
+		pushSuccess('Password reset link sent to your email');
+	} else {
+		pushError('Failed to send password reset link');
+	}
+}
+
+/**
+ * Reset password
+ */
+export async function resetPassword(request: ResetPasswordRequest): Promise<User | null> {
+	const result = await api.request<User, User | null>(
+		'/auth/reset-password',
+		currentUser,
+		(user) => user,
+		{
+			method: 'POST',
+			body: JSON.stringify(request)
+		}
+	);
+
+	if (result && result.success && result.data != undefined) {
+		isAuthenticated.set(true);
+		pushSuccess('Your password has been reset');
+		pushSuccess(`Welcome, ${result.data.email}!`);
+		return result.data;
+	}
+	return null;
 }

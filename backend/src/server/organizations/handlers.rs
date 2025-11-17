@@ -57,9 +57,9 @@ async fn create_invite(
     Json(request): Json<CreateInviteRequest>,
 ) -> ApiResult<Json<ApiResponse<OrganizationInvite>>> {
     // We know they have either team_members or share_views enabled
-    if !plan.features().team_members && request.permissions > UserOrgPermissions::Viewer {
+    if !plan.features().team_members && request.permissions > UserOrgPermissions::Visualizer {
         return Err(ApiError::forbidden(
-            "You can only create Viewer invites on your current plan. Please upgrade to a Team plan to add Members and Admins.",
+            "You can only create Visualizer invites on your current plan. Please upgrade to a Team plan to add Members and Admins.",
         ));
     }
 
@@ -72,7 +72,12 @@ async fn create_invite(
     let invite = state
         .services
         .organization_service
-        .create_invite(request, user.organization_id, user.user_id)
+        .create_invite(
+            request,
+            user.organization_id,
+            user.user_id,
+            state.config.public_url.clone(),
+        )
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 
