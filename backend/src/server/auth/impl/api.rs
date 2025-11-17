@@ -77,6 +77,5 @@ pub struct ForgotPasswordRequest {
 #[derive(Debug, Deserialize)]
 pub struct ResetPasswordRequest {
     pub token: String,
-    pub new_password: String,
-    pub url: String,
+    pub password: String,
 }

@@ -256,11 +256,7 @@ impl AuthService {
     }
 
     /// Initiate password reset process - generates a token
-    pub async fn initiate_password_reset(
-        &self,
-        email: &EmailAddress,
-        url: String,
-    ) -> Result<String> {
+    pub async fn initiate_password_reset(&self, email: &EmailAddress, url: String) -> Result<()> {
         let email_service = self
             .email_service
             .as_ref()
@@ -271,10 +267,16 @@ impl AuthService {
             .user_service
             .get_all(EntityFilter::unfiltered())
             .await?;
-        let user = all_users
-            .iter()
-            .find(|u| &u.base.email == email)
-            .ok_or_else(|| anyhow!("No user found with that email address"))?;
+
+        // Find user but don't expose if they exist or not
+        let user = match all_users.iter().find(|u| &u.base.email == email) {
+            Some(user) => user,
+            None => {
+                // User doesn't exist - but we still return Ok to prevent enumeration
+                tracing::info!("Password reset requested for non-existent email");
+                return Ok(());
+            }
+        };
 
         let token = Uuid::new_v4().to_string();
         let mut tokens = self.password_reset_tokens.write().await;
@@ -284,16 +286,16 @@ impl AuthService {
             user.base.email.clone(),
             "NetVisor Password Reset",
             &format!(
-                "<a href={}/reset-password?token={}>Click here to reset your password</a>",
+                "<a href=\"{}/reset-password?token={}\">Click here to reset your password</a>",
                 url, token
             ),
         )?;
 
-        Ok(token)
+        Ok(())
     }
 
     /// Reset password using token
-    pub async fn complete_password_reset(&self, token: &str, new_password: &str) -> Result<()> {
+    pub async fn complete_password_reset(&self, token: &str, new_password: &str) -> Result<User> {
         let mut tokens = self.password_reset_tokens.write().await;
         let (user_id, created_at) = tokens
             .remove(token)
@@ -316,7 +318,7 @@ impl AuthService {
         user.set_password(hashed_password);
         self.user_service.update(&mut user).await?;
 
-        Ok(())
+        Ok(user.clone())
     }
 
     /// Cleanup old login attempts (called periodically from background task)

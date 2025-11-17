@@ -166,15 +166,21 @@ async fn forgot_password(
 
 async fn reset_password(
     State(state): State<Arc<AppState>>,
+    session: Session,
     Json(request): Json<ResetPasswordRequest>,
-) -> ApiResult<Json<ApiResponse<()>>> {
-    state
+) -> ApiResult<Json<ApiResponse<User>>> {
+    let user = state
         .services
         .auth_service
-        .complete_password_reset(&request.token, &request.new_password)
+        .complete_password_reset(&request.token, &request.password)
         .await?;
 
-    Ok(Json(ApiResponse::success(())))
+    session
+        .insert("user_id", user.id)
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to save session: {}", e)))?;
+
+    Ok(Json(ApiResponse::success(user)))
 }
 
 async fn oidc_authorize(

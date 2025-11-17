@@ -58,12 +58,11 @@
 
 	async function handleRequestReset(email: string) {
 		await forgotPassword(email);
-		console.log('Requesting password reset for:', email);
 	}
 
 	async function handleResetPassword(token: string, password: string) {
 		await resetPassword(password, token);
-		console.log('Resetting password with token:', token);
+		await navigate();
 	}
 
 	function switchToRegister() {

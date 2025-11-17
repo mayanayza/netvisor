@@ -99,12 +99,10 @@ impl ServiceFactory {
             if let (Some(smtp_username), Some(smtp_password), Some(smtp_email), Some(smtp_relay)) =
                 (c.smtp_username, c.smtp_password, c.smtp_email, c.smtp_relay)
             {
-                return Some(Arc::new(EmailService::new(
-                    smtp_username,
-                    smtp_password,
-                    smtp_email,
-                    smtp_relay,
-                )));
+                return Some(Arc::new(
+                    EmailService::new(smtp_username, smtp_password, smtp_email, smtp_relay)
+                        .unwrap(),
+                ));
             }
             None
         });

@@ -102,28 +102,31 @@ export async function forgotPassword(email: string): Promise<void> {
 	});
 
 	if (result && result.success) {
-		isAuthenticated.set(false);
-		currentUser.set(null);
-		pushSuccess('Logged out successfully');
+		pushSuccess('Password reset link sent to your email');
 	} else {
-		pushError('Logout failed');
+		pushError('Failed to send password reset link');
 	}
 }
 
 /**
  * Reset password
  */
-export async function resetPassword(password: string, token: string): Promise<void> {
-	const result = await api.request<void>('/auth/reset-password', null, null, {
-		method: 'POST',
-		body: JSON.stringify({ password, token })
-	});
+export async function resetPassword(password: string, token: string): Promise<User | null> {
+	const result = await api.request<User, User | null>(
+		'/auth/reset-password',
+		currentUser,
+		(user) => user,
+		{
+			method: 'POST',
+			body: JSON.stringify({ password, token })
+		}
+	);
 
-	if (result && result.success) {
-		isAuthenticated.set(false);
-		currentUser.set(null);
-		pushSuccess('Logged out successfully');
-	} else {
-		pushError('Logout failed');
+	if (result && result.success && result.data != undefined) {
+		isAuthenticated.set(true);
+		pushSuccess('Your password has been reset');
+		pushSuccess(`Welcome, ${result.data.email}!`);
+		return result.data;
 	}
+	return null;
 }

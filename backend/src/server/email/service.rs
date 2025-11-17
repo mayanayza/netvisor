@@ -1,13 +1,15 @@
-use anyhow::Error;
+use anyhow::{Result, anyhow};
 use email_address::EmailAddress;
 use lettre::{
-    SmtpTransport, Transport, message::Mailbox, transport::smtp::authentication::Credentials,
+    SmtpTransport, Transport,
+    message::{Mailbox, MultiPart, SinglePart},
+    transport::smtp::authentication::Credentials,
 };
 
 #[derive(Clone)]
 pub struct EmailService {
     mailer: SmtpTransport,
-    email: Mailbox,
+    from: Mailbox,
 }
 
 impl EmailService {
@@ -16,34 +18,68 @@ impl EmailService {
         smtp_password: String,
         smtp_email: String,
         smtp_relay: String,
-    ) -> Self {
+    ) -> Result<Self> {
         let creds = Credentials::new(smtp_username, smtp_password);
 
-        EmailService {
-            mailer: SmtpTransport::relay(&smtp_relay)
-                .unwrap()
-                .credentials(creds)
-                .build(),
-            email: Mailbox::new(None, smtp_email.parse().unwrap()),
-        }
+        let mailer = SmtpTransport::relay(&smtp_relay)
+            .map_err(|e| anyhow!("Failed to create SMTP transport: {}", e))?
+            .credentials(creds)
+            .build();
+
+        let from = Mailbox::new(
+            Some("NetVisor".to_string()),
+            smtp_email
+                .parse()
+                .map_err(|e| anyhow!("Invalid from email address: {}", e))?,
+        );
+
+        Ok(EmailService { mailer, from })
     }
 
-    pub fn send_email(&self, to: EmailAddress, subject: &str, body: &str) -> Result<(), Error> {
+    /// Send an HTML email
+    pub fn send_email(&self, to: EmailAddress, subject: &str, html_body: &str) -> Result<()> {
         let to_mbox = Mailbox::new(
             None,
             to.email()
                 .parse()
-                .map_err(|e| Error::msg(format!("Invalid email address: {}", e)))?,
+                .map_err(|e| anyhow!("Invalid recipient email address: {}", e))?,
         );
 
         let email = lettre::Message::builder()
-            .from(self.email.clone())
+            .from(self.from.clone())
             .to(to_mbox)
             .subject(subject)
-            .body(body.to_string())?;
+            .multipart(
+                MultiPart::alternative()
+                    .singlepart(SinglePart::plain(strip_html_tags(html_body)))
+                    .singlepart(SinglePart::html(html_body.to_string())),
+            )?;
 
-        self.mailer.send(&email)?;
+        self.mailer
+            .send(&email)
+            .map_err(|e| anyhow!("Failed to send email: {}", e))?;
 
         Ok(())
     }
+}
+
+/// Strip HTML tags for plain text fallback
+fn strip_html_tags(html: &str) -> String {
+    // Basic HTML stripping - you might want a proper library for this
+    html.replace("<br>", "\n")
+        .replace("<br/>", "\n")
+        .replace("<br />", "\n")
+        .chars()
+        .fold((String::new(), false), |(mut text, in_tag), c| match c {
+            '<' => (text, true),
+            '>' => (text, false),
+            c if !in_tag => {
+                text.push(c);
+                (text, false)
+            }
+            _ => (text, in_tag),
+        })
+        .0
+        .trim()
+        .to_string()
 }
