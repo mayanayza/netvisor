@@ -106,6 +106,7 @@ pub async fn get_public_config(
             && state.config.smtp_username.is_some()
             && state.config.smtp_email.is_some()
             && state.config.smtp_relay.is_some(),
+        public_url: state.config.public_url.clone(),
     }))
 }
 

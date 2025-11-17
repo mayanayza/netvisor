@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api, getServerUrl } from '../../shared/utils/api';
+import { api } from '../../shared/utils/api';
 import type { CreateInviteRequest, OrganizationInvite, Organization } from './types';
 import type { OnboardingRequest } from '../auth/types/base';
 import type { UserOrgPermissions } from '../users/types';
@@ -46,7 +46,6 @@ export async function createInvite(
 	permissions: UserOrgPermissions
 ): Promise<OrganizationInvite | null> {
 	const request: CreateInviteRequest = {
-		url: getServerUrl(),
 		expiration_hours: null,
 		permissions
 	};

@@ -7,8 +7,7 @@ services:
     restart: unless-stopped
     environment:
       # Server connection
-      - NETVISOR_SERVER_TARGET=http://127.0.0.1
-      - NETVISOR_SERVER_PORT=60072
+      - NETVISOR_SERVER_URL=http://127.0.0.1:60072
 
       # Daemon configuration
       - NETVISOR_PORT=60073

@@ -3,7 +3,7 @@ use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
 use crate::server::daemons::r#impl::api::{DaemonCapabilities, DiscoveryUpdatePayload};
 use crate::{
-    daemon::shared::storage::ConfigStore,
+    daemon::shared::config::ConfigStore,
     server::{
         daemons::r#impl::api::{DaemonRegistrationRequest, DaemonRegistrationResponse},
         shared::types::api::ApiResponse,
@@ -45,7 +45,7 @@ impl DaemonRuntimeService {
         let mut interval_timer = tokio::time::interval(interval);
         interval_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-        let server_target = self.config_store.get_server_endpoint().await?;
+        let server_target = self.config_store.get_server_url().await?;
         let daemon_id = self.config_store.get_id().await?;
 
         loop {
@@ -135,7 +135,7 @@ impl DaemonRuntimeService {
         let mut interval_timer = tokio::time::interval(interval);
         interval_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-        let server_target = self.config_store.get_server_endpoint().await?;
+        let server_target = self.config_store.get_server_url().await?;
 
         loop {
             interval_timer.tick().await;
@@ -245,7 +245,7 @@ impl DaemonRuntimeService {
                 },
             };
 
-            let server_target = self.config_store.get_server_endpoint().await?;
+            let server_target = self.config_store.get_server_url().await?;
 
             let response = self
                 .client

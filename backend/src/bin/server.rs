@@ -100,6 +100,10 @@ struct Cli {
 
     #[arg(long)]
     smtp_port: Option<String>,
+
+    /// Server URL used in features like password reset and invite links
+    #[arg(long)]
+    public_url: Option<String>,
 }
 
 impl From<Cli> for CliArgs {
@@ -123,6 +127,7 @@ impl From<Cli> for CliArgs {
             smtp_password: cli.smtp_password,
             smtp_relay: cli.smtp_relay,
             smtp_username: cli.smtp_username,
+            public_url: cli.public_url,
         }
     }
 }

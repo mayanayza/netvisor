@@ -30,6 +30,7 @@ pub struct CliArgs {
     pub smtp_password: Option<String>,
     pub smtp_relay: Option<String>,
     pub smtp_email: Option<String>,
+    pub public_url: Option<String>,
 }
 
 /// Flattened server configuration struct
@@ -50,6 +51,9 @@ pub struct ServerConfig {
 
     /// Where static web assets are located for serving
     pub web_external_path: Option<PathBuf>,
+
+    /// Public URL for server for email links, webhooks, etc
+    pub public_url: String,
 
     /// URL for daemon running in same docker stack or in other local context
     pub integrated_daemon_url: Option<String>,
@@ -101,6 +105,7 @@ pub struct PublicConfigResponse {
     pub billing_enabled: bool,
     pub has_integrated_daemon: bool,
     pub has_email_service: bool,
+    pub public_url: String,
 }
 
 impl Default for ServerConfig {
@@ -110,6 +115,7 @@ impl Default for ServerConfig {
             log_level: "info".to_string(),
             rust_log: "".to_string(),
             database_url: "postgresql://postgres:password@localhost:5432/netvisor".to_string(),
+            public_url: "http://localhost:60072".to_string(),
             web_external_path: None,
             use_secure_session_cookies: false,
             integrated_daemon_url: None,
@@ -189,6 +195,9 @@ impl ServerConfig {
         }
         if let Some(smtp_email) = cli_args.smtp_email {
             figment = figment.merge(("smtp_email", smtp_email));
+        }
+        if let Some(public_url) = cli_args.public_url {
+            figment = figment.merge(("public_url", public_url));
         }
 
         figment = figment.merge(("disable_registration", cli_args.disable_registration));

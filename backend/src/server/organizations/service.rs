@@ -80,12 +80,13 @@ impl OrganizationService {
         request: CreateInviteRequest,
         organization_id: Uuid,
         user_id: Uuid,
+        url: String,
     ) -> Result<OrganizationInvite, Error> {
         let expiration_hours = request.expiration_hours.unwrap_or(168); // Default 7 days
 
         let invite = OrganizationInvite::new(
             organization_id,
-            request.url.clone(),
+            url,
             user_id,
             expiration_hours,
             request.permissions,

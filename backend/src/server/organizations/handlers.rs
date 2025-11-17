@@ -72,7 +72,12 @@ async fn create_invite(
     let invite = state
         .services
         .organization_service
-        .create_invite(request, user.organization_id, user.user_id)
+        .create_invite(
+            request,
+            user.organization_id,
+            user.user_id,
+            state.config.public_url.clone(),
+        )
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 

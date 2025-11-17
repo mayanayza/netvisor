@@ -1,6 +1,11 @@
 import { writable } from 'svelte/store';
-import { api, getServerUrl } from '../../shared/utils/api';
-import type { LoginRequest, RegisterRequest } from './types/base';
+import { api } from '../../shared/utils/api';
+import type {
+	ForgotPasswordRequest,
+	LoginRequest,
+	RegisterRequest,
+	ResetPasswordRequest
+} from './types/base';
 import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 import type { User } from '../users/types';
 
@@ -95,10 +100,10 @@ export async function logout(): Promise<void> {
 /**
  * Forgot password
  */
-export async function forgotPassword(email: string): Promise<void> {
+export async function forgotPassword(request: ForgotPasswordRequest): Promise<void> {
 	const result = await api.request<void>('/auth/forgot-password', null, null, {
 		method: 'POST',
-		body: JSON.stringify({ email, url: getServerUrl() })
+		body: JSON.stringify(request)
 	});
 
 	if (result && result.success) {
@@ -111,14 +116,14 @@ export async function forgotPassword(email: string): Promise<void> {
 /**
  * Reset password
  */
-export async function resetPassword(password: string, token: string): Promise<User | null> {
+export async function resetPassword(request: ResetPasswordRequest): Promise<User | null> {
 	const result = await api.request<User, User | null>(
 		'/auth/reset-password',
 		currentUser,
 		(user) => user,
 		{
 			method: 'POST',
-			body: JSON.stringify({ password, token })
+			body: JSON.stringify(request)
 		}
 	);
 

@@ -71,7 +71,6 @@ pub struct OidcAuthorizeParams {
 #[derive(Debug, Deserialize)]
 pub struct ForgotPasswordRequest {
     pub email: EmailAddress,
-    pub url: String,
 }
 
 #[derive(Debug, Deserialize)]

@@ -58,7 +58,6 @@ export interface CommunityBillingPlan {
 }
 
 export interface CreateInviteRequest {
-	url: string;
 	expiration_hours: number | null;
 	permissions: UserOrgPermissions;
 }

@@ -40,8 +40,11 @@ async fn create_checkout_session(
     Json(request): Json<CreateCheckoutRequest>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
     // Build success/cancel URLs
-    let success_url = format!("{}?session_id={{CHECKOUT_SESSION_ID}}", request.url);
-    let cancel_url = request.url.to_string();
+    let success_url = format!(
+        "{}?session_id={{CHECKOUT_SESSION_ID}}",
+        state.config.public_url.clone()
+    );
+    let cancel_url = format!("{}/billing", state.config.public_url.clone());
 
     if let Some(billing_service) = state.services.billing_service.clone() {
         let current_plans = billing_service.get_plans();

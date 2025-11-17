@@ -19,9 +19,8 @@ export interface OnboardingRequest {
 	populate_seed_data: boolean;
 }
 
-export interface ForgotPassordRequest {
+export interface ForgotPasswordRequest {
 	email: string;
-	url: string;
 }
 
 export interface ResetPasswordRequest {

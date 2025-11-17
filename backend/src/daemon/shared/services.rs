@@ -1,7 +1,7 @@
 use crate::daemon::{
     discovery::{manager::DaemonDiscoverySessionManager, service::base::DaemonDiscoveryService},
     runtime::service::DaemonRuntimeService,
-    shared::storage::ConfigStore,
+    shared::config::ConfigStore,
 };
 use anyhow::Result;
 use std::sync::Arc;

@@ -158,7 +158,7 @@ async fn forgot_password(
     state
         .services
         .auth_service
-        .initiate_password_reset(&request.email, request.url)
+        .initiate_password_reset(&request.email, state.config.public_url.clone())
         .await?;
 
     Ok(Json(ApiResponse::success(())))

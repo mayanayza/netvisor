@@ -439,7 +439,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
     }
 
     async fn get_subnets(&self) -> Result<Vec<Subnet>, Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         let api_key = self
             .as_ref()

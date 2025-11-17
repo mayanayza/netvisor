@@ -57,11 +57,11 @@
 	}
 
 	async function handleRequestReset(email: string) {
-		await forgotPassword(email);
+		await forgotPassword({ email });
 	}
 
 	async function handleResetPassword(token: string, password: string) {
-		await resetPassword(password, token);
+		await resetPassword({ password, token });
 		await navigate();
 	}
 

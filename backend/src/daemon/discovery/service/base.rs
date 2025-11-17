@@ -35,7 +35,7 @@ use uuid::Uuid;
 use crate::{
     daemon::{
         discovery::types::base::{DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate},
-        shared::storage::ConfigStore,
+        shared::config::ConfigStore,
         utils::base::{PlatformDaemonUtils, create_system_utils},
     },
     server::{
@@ -141,7 +141,7 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
 
     /// Report discovery progress to server
     async fn report_discovery_update(&self, update: DiscoverySessionUpdate) -> Result<(), Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
         let session = self.as_ref().get_session().await?;
         let discovery_type = self.discovery_type();
 
@@ -595,7 +595,7 @@ pub trait CreatesDiscoveredEntities:
         host: Host,
         services: Vec<Service>,
     ) -> Result<(Host, Vec<Service>), Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         tracing::info!("Creating host {}", host.base.name);
 
@@ -644,7 +644,7 @@ pub trait CreatesDiscoveredEntities:
     }
 
     async fn create_subnet(&self, subnet: &Subnet) -> Result<Subnet, Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         let api_key = self
             .as_ref()
@@ -686,7 +686,7 @@ pub trait CreatesDiscoveredEntities:
     }
 
     async fn create_service(&self, service: &Service) -> Result<Service, Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         let api_key = self
             .as_ref()
@@ -728,7 +728,7 @@ pub trait CreatesDiscoveredEntities:
     }
 
     async fn create_group(&self, group: &Group) -> Result<Group, Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         let api_key = self
             .as_ref()
