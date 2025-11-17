@@ -11,6 +11,7 @@ Thank you for your interest in contributing to NetVisor! We welcome contribution
 - [Adding Service Definitions](#adding-service-definitions)
 - [Testing](#testing)
 - [Submitting Your Contribution](#submitting-your-contribution)
+- [Licensing](#contributor-license-agreement)
 
 ## Getting Started
 
@@ -852,9 +853,19 @@ git push --no-verify    # Skip push hooks
 - Help others learn and grow
 - Follow the project's coding standards
 
-## License
+## Contributor License Agreement
 
-By contributing to NetVisor, you agree that your contributions will be licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+By submitting a contribution to NetVisor, you agree to the following terms:
+
+1. You grant the NetVisor project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute your contributions and such derivative works under any license (including commercial licenses).
+
+2. You grant the NetVisor project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer your contributions.
+
+3. You represent that you are legally entitled to grant the above licenses. If your employer has rights to intellectual property that you create, you represent that you have received permission to make the contributions on behalf of that employer, or that your employer has waived such rights for your contributions.
+
+4. You represent that your contribution is your original creation and that you have not copied it from another source.
+
+5. Your contributions will also be licensed to the public under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
 ---
 
