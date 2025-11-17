@@ -88,6 +88,11 @@ impl ContainerManager {
 
 impl Drop for ContainerManager {
     fn drop(&mut self) {
+        if std::env::var("CI").is_ok() && std::thread::panicking() {
+            println!("\n⚠️  Test failed in CI - leaving containers running for log inspection");
+            return;
+        }
+
         self.cleanup();
     }
 }
