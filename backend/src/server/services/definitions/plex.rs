@@ -22,7 +22,7 @@ impl ServiceDefinition for Plex {
         Pattern::AnyOf(vec![
             Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex", None),
             Pattern::Header(
-                PortBase::new_tcp(32400),
+                Some(PortBase::new_tcp(32400)),
                 "X-Plex-Protocol",
                 "1.0",
                 Some(401..401),
