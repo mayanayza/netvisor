@@ -90,6 +90,7 @@ impl ServiceFactory {
                     webhook_secret,
                     organization_service.clone(),
                     user_service.clone(),
+                    network_service.clone(),
                 )));
             }
             None

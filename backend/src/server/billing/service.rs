@@ -1,7 +1,10 @@
 use crate::server::billing::types::base::BillingPlan;
+use crate::server::networks::service::NetworkService;
 use crate::server::organizations::service::OrganizationService;
 use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
+use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::users::service::UserService;
 use anyhow::Error;
 use anyhow::anyhow;
@@ -34,6 +37,7 @@ pub struct BillingService {
     pub webhook_secret: String,
     pub organization_service: Arc<OrganizationService>,
     pub user_service: Arc<UserService>,
+    pub network_service: Arc<NetworkService>,
     pub plans: OnceLock<Vec<BillingPlan>>,
 }
 
@@ -43,11 +47,13 @@ impl BillingService {
         webhook_secret: String,
         organization_service: Arc<OrganizationService>,
         user_service: Arc<UserService>,
+        network_service: Arc<NetworkService>,
     ) -> Self {
         Self {
             stripe: Client::new(stripe_secret),
             webhook_secret,
             organization_service,
+            network_service,
             user_service,
             plans: OnceLock::new(),
         }
@@ -74,6 +80,11 @@ impl BillingService {
 
     pub async fn initialize_products(&self, plans: Vec<BillingPlan>) -> Result<(), Error> {
         let mut created_plans = Vec::new();
+
+        tracing::info!(
+            plan_count = plans.len(),
+            "Initializing Stripe products and prices"
+        );
 
         for plan in plans {
             // Check if product exists, create if not
@@ -129,7 +140,12 @@ impl BillingService {
             created_plans.push(plan)
         }
 
-        let _ = self.plans.set(created_plans);
+        let _ = self.plans.set(created_plans.clone());
+
+        tracing::info!(
+            initialized_plans = created_plans.len(),
+            "Successfully initialized all Stripe products"
+        );
 
         Ok(())
     }
@@ -144,6 +160,13 @@ impl BillingService {
     ) -> Result<CheckoutSession, Error> {
         // Get or create Stripe customer
         let customer_id = self.get_or_create_customer(organization_id).await?;
+
+        tracing::info!(
+            organization_id = %organization_id,
+            plan = %plan.name(),
+            customer_id = %customer_id,
+            "Creating checkout session"
+        );
 
         let price = self
             .get_price_from_lookup_key(plan.stripe_price_lookup_key())
@@ -188,10 +211,19 @@ impl BillingService {
                 ..Default::default()
             });
 
-        create_checkout_session
+        let session = create_checkout_session
             .send(&self.stripe)
             .await
-            .map_err(|e| anyhow!(e.to_string()))
+            .map_err(|e| anyhow!(e.to_string()))?;
+
+        tracing::info!(
+            organization_id = %organization_id,
+            plan = %plan.name(),
+            session_id = %session.id,
+            "Checkout session created successfully"
+        );
+
+        Ok(session)
     }
 
     /// Get existing customer or create new one
@@ -223,6 +255,13 @@ impl BillingService {
 
         let customer = create_customer.send(&self.stripe).await?;
 
+        tracing::info!(
+            organization_id = %organization_id,
+            customer_id = %customer.id,
+            customer_email = %first_owner.base.email,
+            "Created new Stripe customer"
+        );
+
         organization.base.stripe_customer_id = Some(customer.id.to_string());
 
         self.organization_service.update(&mut organization).await?;
@@ -233,6 +272,12 @@ impl BillingService {
     /// Handle webhook events
     pub async fn handle_webhook(&self, payload: &str, signature: &str) -> Result<(), Error> {
         let event = Webhook::construct_event(payload, signature, &self.webhook_secret)?;
+
+        tracing::debug!(
+            event_type = ?event.type_,
+            event_id = %event.id,
+            "Received Stripe webhook"
+        );
 
         match event.type_ {
             EventType::CustomerSubscriptionCreated | EventType::CustomerSubscriptionUpdated => {
@@ -258,7 +303,10 @@ impl BillingService {
             //     }
             // }
             _ => {
-                tracing::debug!("Unhandled webhook event: {:?}", event.type_);
+                tracing::debug!(
+                    event_type = ?event.type_,
+                    "Unhandled webhook event type"
+                );
             }
         }
 
@@ -278,6 +326,14 @@ impl BillingService {
 
         let plan: BillingPlan = serde_json::from_str(plan_str)?;
 
+        tracing::info!(
+            organization_id = %org_id,
+            plan = %plan.name(),
+            subscription_status = ?sub.status,
+            subscription_id = %sub.id,
+            "Subscription updated"
+        );
+
         let org_id = Uuid::parse_str(org_id)?;
 
         let mut organization = self
@@ -285,6 +341,59 @@ impl BillingService {
             .get_by_id(&org_id)
             .await?
             .ok_or_else(|| anyhow!("Could not find organization to update subscriptions status"))?;
+
+        // Update enabled features to match new plan
+        if let Some(max_networks) = plan.features().max_networks {
+            let networks = self
+                .network_service
+                .get_all(EntityFilter::unfiltered().organization_id(&org_id))
+                .await?;
+            let keep_ids = networks
+                .iter()
+                .take(max_networks)
+                .map(|n| n.id)
+                .collect::<Vec<Uuid>>();
+
+            for network in networks {
+                if !keep_ids.contains(&network.id) {
+                    self.network_service.delete(&network.id).await?;
+                    tracing::info!(
+                        organization_id = %org_id,
+                        network_id = %network.id,
+                        "Deleted network due to plan downgrade"
+                    );
+                }
+            }
+        }
+
+        match plan {
+            BillingPlan::Starter { .. } => {
+                let mut users = self
+                    .user_service
+                    .get_all(EntityFilter::unfiltered().organization_id(&org_id))
+                    .await?;
+                for user in &mut users {
+                    if user.base.permissions != UserOrgPermissions::Owner {
+                        user.base.permissions = UserOrgPermissions::None;
+                        self.user_service.update(user).await?;
+                    }
+                }
+            }
+            BillingPlan::Pro { .. } => {
+                let mut users = self
+                    .user_service
+                    .get_all(EntityFilter::unfiltered().organization_id(&org_id))
+                    .await?;
+                for user in &mut users {
+                    if user.base.permissions != UserOrgPermissions::Owner {
+                        user.base.permissions = UserOrgPermissions::Visualizer;
+                        self.user_service.update(user).await?;
+                    }
+                }
+            }
+            BillingPlan::Team { .. } => {}
+            BillingPlan::Community { .. } => {}
+        }
 
         organization.base.plan_status = Some(sub.status);
         organization.base.plan = Some(plan);
@@ -320,7 +429,11 @@ impl BillingService {
 
         self.organization_service.update(&mut organization).await?;
 
-        tracing::info!("Canceled subscription for organization {}", org_id);
+        tracing::info!(
+            organization_id = %org_id,
+            subscription_id = %sub.id,
+            "Subscription canceled, invites revoked"
+        );
         Ok(())
     }
 
@@ -341,10 +454,16 @@ impl BillingService {
             .stripe_customer_id
             .ok_or_else(|| anyhow!("No Stripe customer ID"))?;
 
-        let session = CreateBillingPortalSession::new(CustomerId::from(customer_id))
+        let session = CreateBillingPortalSession::new(CustomerId::from(customer_id.clone()))
             .return_url(return_url)
             .send(&self.stripe)
             .await?;
+
+        tracing::info!(
+            organization_id = %organization_id,
+            customer_id = %customer_id,
+            "Created billing portal session"
+        );
 
         Ok(session.url)
     }

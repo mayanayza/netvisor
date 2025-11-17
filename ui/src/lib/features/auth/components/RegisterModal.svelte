@@ -5,6 +5,7 @@
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import { field } from 'svelte-forms';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 
 	export let orgName: string | null = null;
 	export let invitedBy: string | null = null;
@@ -74,12 +75,11 @@
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}
-		<div class="mb-4 rounded-lg border border-blue-500/50 bg-blue-900/20 p-4 text-center">
-			<p class="text-sm text-blue-200">
-				You have been invited to join<br />
-				<span class="font-semibold">{orgName}</span> by
-				<span class="font-semibold">{invitedBy}</span>
-			</p>
+		<div class="mb-6">
+			<InlineInfo
+				title="You're invited!"
+				body={`You have been invited to join ${orgName} by ${invitedBy}. Please sign in or register to continue.`}
+			/>
 		</div>
 	{/if}
 

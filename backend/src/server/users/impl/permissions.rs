@@ -14,7 +14,8 @@ pub enum UserOrgPermissions {
     Owner,
     Admin,
     Member,
-    Viewer,
+    Visualizer,
+    None,
 }
 
 impl PartialOrd for UserOrgPermissions {
@@ -29,14 +30,16 @@ impl Ord for UserOrgPermissions {
             UserOrgPermissions::Owner => 4,
             UserOrgPermissions::Admin => 3,
             UserOrgPermissions::Member => 2,
-            UserOrgPermissions::Viewer => 1,
+            UserOrgPermissions::Visualizer => 1,
+            UserOrgPermissions::None => 0,
         };
 
         let other_rank = match other {
             UserOrgPermissions::Owner => 4,
             UserOrgPermissions::Admin => 3,
             UserOrgPermissions::Member => 2,
-            UserOrgPermissions::Viewer => 1,
+            UserOrgPermissions::Visualizer => 1,
+            UserOrgPermissions::None => 0,
         };
 
         self_rank.cmp(&other_rank)
@@ -69,9 +72,10 @@ impl TypeMetadataProvider for UserOrgPermissions {
                 "Manage users and invites, create and modify all infrastructure, but cannot access billing"
             }
             UserOrgPermissions::Member => {
-                "Create and modify networks, hosts, services, run discovery scans, and invite Viewers"
+                "Create and modify networks, hosts, services, run discovery scans, and invite Visualizers"
             }
-            UserOrgPermissions::Viewer => "Read-only access: view network topology",
+            UserOrgPermissions::Visualizer => "Read-only access: view network topology",
+            UserOrgPermissions::None => "No permissions assigned",
         }
     }
 
@@ -80,7 +84,8 @@ impl TypeMetadataProvider for UserOrgPermissions {
             UserOrgPermissions::Owner => "Owner",
             UserOrgPermissions::Admin => "Admin",
             UserOrgPermissions::Member => "Member",
-            UserOrgPermissions::Viewer => "Viewer",
+            UserOrgPermissions::Visualizer => "Visualizer",
+            UserOrgPermissions::None => "None",
         }
     }
 

@@ -85,10 +85,12 @@
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}
-		<InlineInfo
-			title="You're invited!"
-			body={`You have been invited to join ${orgName} by ${invitedBy}. Please sign in or register to continue.`}
-		/>
+		<div class="mb-6">
+			<InlineInfo
+				title="You're invited!"
+				body={`You have been invited to join ${orgName} by ${invitedBy}. Please sign in or register to continue.`}
+			/>
+		</div>
 	{/if}
 	<div class="space-y-6">
 		<div class="space-y-4">

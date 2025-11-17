@@ -282,14 +282,16 @@ impl AuthService {
         let mut tokens = self.password_reset_tokens.write().await;
         tokens.insert(token.clone(), (user.id, Instant::now()));
 
-        email_service.send_email(
-            user.base.email.clone(),
-            "NetVisor Password Reset",
-            &format!(
-                "<a href=\"{}/reset-password?token={}\">Click here to reset your password</a>",
-                url, token
-            ),
-        )?;
+        email_service
+            .send_email(
+                user.base.email.clone(),
+                "NetVisor Password Reset",
+                &format!(
+                    "<a href=\"{}/reset-password?token={}\">Click here to reset your password</a>",
+                    url, token
+                ),
+            )
+            .await?;
 
         Ok(())
     }

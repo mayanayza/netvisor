@@ -1,14 +1,14 @@
 use anyhow::{Result, anyhow};
 use email_address::EmailAddress;
 use lettre::{
-    SmtpTransport, Transport,
+    AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
     message::{Mailbox, MultiPart, SinglePart},
     transport::smtp::authentication::Credentials,
 };
 
 #[derive(Clone)]
 pub struct EmailService {
-    mailer: SmtpTransport,
+    mailer: AsyncSmtpTransport<Tokio1Executor>,
     from: Mailbox,
 }
 
@@ -21,7 +21,7 @@ impl EmailService {
     ) -> Result<Self> {
         let creds = Credentials::new(smtp_username, smtp_password);
 
-        let mailer = SmtpTransport::relay(&smtp_relay)
+        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp_relay)
             .map_err(|e| anyhow!("Failed to create SMTP transport: {}", e))?
             .credentials(creds)
             .build();
@@ -37,7 +37,7 @@ impl EmailService {
     }
 
     /// Send an HTML email
-    pub fn send_email(&self, to: EmailAddress, subject: &str, html_body: &str) -> Result<()> {
+    pub async fn send_email(&self, to: EmailAddress, subject: &str, html_body: &str) -> Result<()> {
         let to_mbox = Mailbox::new(
             None,
             to.email()
@@ -56,7 +56,8 @@ impl EmailService {
             )?;
 
         self.mailer
-            .send(&email)
+            .send(email)
+            .await
             .map_err(|e| anyhow!("Failed to send email: {}", e))?;
 
         Ok(())
@@ -65,21 +66,5 @@ impl EmailService {
 
 /// Strip HTML tags for plain text fallback
 fn strip_html_tags(html: &str) -> String {
-    // Basic HTML stripping - you might want a proper library for this
-    html.replace("<br>", "\n")
-        .replace("<br/>", "\n")
-        .replace("<br />", "\n")
-        .chars()
-        .fold((String::new(), false), |(mut text, in_tag), c| match c {
-            '<' => (text, true),
-            '>' => (text, false),
-            c if !in_tag => {
-                text.push(c);
-                (text, false)
-            }
-            _ => (text, in_tag),
-        })
-        .0
-        .trim()
-        .to_string()
+    html2text::from_read(html.as_bytes(), 80).unwrap_or_else(|_| html.to_string())
 }
