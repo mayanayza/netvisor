@@ -1,17 +1,4 @@
 services:
-  ui:
-    build: 
-      context: ./ui
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ./ui:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    networks:
-      netvisor-dev:
-        ipv4_address: 172.25.0.2
-
   postgres-dev:
     image: postgres:17-alpine
     environment:

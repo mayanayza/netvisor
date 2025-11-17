@@ -29,7 +29,16 @@ jobs:
       
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
-      
+
+      - name: Free up disk space
+        run: |
+          # Clean Docker images, containers, and build cache
+          docker system prune -af --volumes
+          
+          # Show disk usage before and after
+          echo "=== Disk space after cleanup ==="
+          df -h
+            
       - name: Run all tests
         run: |
           make dev-down
