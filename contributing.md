@@ -11,6 +11,7 @@ Thank you for your interest in contributing to NetVisor! We welcome contribution
 - [Adding Service Definitions](#adding-service-definitions)
 - [Testing](#testing)
 - [Submitting Your Contribution](#submitting-your-contribution)
+- [Licensing](#contributor-license-agreement)
 
 ## Getting Started
 
