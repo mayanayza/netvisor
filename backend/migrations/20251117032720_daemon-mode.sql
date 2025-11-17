@@ -1,0 +1,2 @@
+ALTER TABLE daemons 
+ADD COLUMN IF NOT EXISTS mode TEXT DEFAULT '"Push"';

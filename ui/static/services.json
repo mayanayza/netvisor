@@ -1,5 +1,11 @@
 [
   {
+    "description": "NetVisor Daemon API for network scanning",
+    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
+    "logo_url": "/logos/netvisor-logo.png",
+    "name": "NetVisor Daemon API"
+  },
+  {
     "description": "NetVisor Server API for network management",
     "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains netvisor",
     "logo_url": "/logos/netvisor-logo.png",
@@ -49,7 +55,7 @@
   },
   {
     "description": "Community-supported document management system",
-    "discovery_pattern": "Endpoint response body from <ip>:8000/accounts/login/? contains Paperless-ngx project",
+    "discovery_pattern": "Endpoint response body from <ip>:8000/ contains Paperless-ngx project",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/paperless-ngx.svg",
     "name": "Paperless-NGX"
   },
@@ -763,7 +769,7 @@
   },
   {
     "description": "Media server for streaming personal content",
-    "discovery_pattern": "Endpoint response body from <ip>:32400/web/index.html contains Plex",
+    "discovery_pattern": "Any of: (Endpoint response body from <ip>:32400/web/index.html contains Plex, Endpoint response status is between 401 and 401, and response from <ip>:32400 has header X-Plex-Protocol with value 1.0)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/plex.svg",
     "name": "Plex Media Server"
   },
@@ -1120,11 +1126,5 @@
     "discovery_pattern": "67/udp is open",
     "logo_url": "",
     "name": "Dhcp Server"
-  },
-  {
-    "description": "NetVisor Daemon API for network scanning",
-    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
-    "logo_url": "/logos/netvisor-logo.png",
-    "name": "NetVisor Daemon API"
   }
 ]

@@ -42,6 +42,10 @@
 				value: formatTimestamp(daemon.last_seen)
 			},
 			{
+				label: 'Mode',
+				value: daemon.mode
+			},
+			{
 				label: 'Has Docker Socket',
 				value: [
 					daemon.capabilities.has_docker_socket

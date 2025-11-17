@@ -136,7 +136,7 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
             tracing::info!(
                 total_containers = %container_list.len(),
                 discovered = %container_data.len(),
-                "🐳 Docker scan complete"
+                "Docker scan complete"
             );
         }
 

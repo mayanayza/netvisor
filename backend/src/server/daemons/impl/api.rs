@@ -1,10 +1,13 @@
-use std::net::IpAddr;
+use std::{fmt::Display, net::IpAddr};
 
 use crate::{
     daemon::discovery::types::base::{
         DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate,
     },
-    server::{daemons::r#impl::base::Daemon, discovery::r#impl::types::DiscoveryType},
+    server::{
+        daemons::r#impl::base::{Daemon, DaemonMode},
+        discovery::r#impl::types::DiscoveryType,
+    },
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -19,6 +22,16 @@ pub struct DaemonCapabilities {
     pub interfaced_subnet_ids: Vec<Uuid>,
 }
 
+impl Display for DaemonCapabilities {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "DaemonCapabilities {{ has_docker_socket: {}, interfaced_subnet_ids: {:?} }}",
+            self.has_docker_socket, self.interfaced_subnet_ids
+        )
+    }
+}
+
 /// Daemon registration request from daemon to server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonRegistrationRequest {
@@ -26,6 +39,7 @@ pub struct DaemonRegistrationRequest {
     pub network_id: Uuid,
     pub daemon_ip: IpAddr,
     pub daemon_port: u16,
+    pub mode: DaemonMode,
     pub capabilities: DaemonCapabilities,
 }
 
@@ -41,6 +55,15 @@ pub struct DaemonRegistrationResponse {
 pub struct DaemonDiscoveryRequest {
     pub session_id: Uuid,
     pub discovery_type: DiscoveryType,
+}
+
+impl From<DiscoveryUpdatePayload> for DaemonDiscoveryRequest {
+    fn from(payload: DiscoveryUpdatePayload) -> Self {
+        Self {
+            session_id: payload.session_id,
+            discovery_type: payload.discovery_type,
+        }
+    }
 }
 
 /// Daemon discovery response (for immediate acknowledgment)
