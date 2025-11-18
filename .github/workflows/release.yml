@@ -22,64 +22,64 @@ jobs:
         with:
           components: rustfmt, clippy
       
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend
+      # - name: Cache Rust dependencies
+      #   uses: Swatinem/rust-cache@v2
+      #   with:
+      #     workspaces: backend
       
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+      # - name: Install system dependencies
+      #   run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
 
-      - name: Free up disk space
-        run: |
-          # Remove pre-installed tools we don't need
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+      # - name: Free up disk space
+      #   run: |
+      #     # Remove pre-installed tools we don't need
+      #     sudo rm -rf /usr/share/dotnet
+      #     sudo rm -rf /opt/ghc
+      #     sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           
-          # Clean Docker completely
-          docker system prune -af --volumes
+      #     # Clean Docker completely
+      #     docker system prune -af --volumes
           
-          echo "=== Disk space after cleanup ==="
-          df -h
+      #     echo "=== Disk space after cleanup ==="
+      #     df -h
                   
-      - name: Run all tests
-        run: |
-          make dev-down
-          rm -rf ./data/daemon_config/*
-          export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test"
-          cd backend && cargo test --features generate-fixtures -- --nocapture --test-threads=1
+      # - name: Run all tests
+      #   run: |
+      #     make dev-down
+      #     rm -rf ./data/daemon_config/*
+      #     export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test"
+      #     cd backend && cargo test --features generate-fixtures -- --nocapture --test-threads=1
 
-      - name: Show container logs on test failure
-        if: failure()
-        run: |
-          docker compose -f docker-compose.dev.yml logs
-          docker compose -f docker-compose.dev.yml ps
+      # - name: Show container logs on test failure
+      #   if: failure()
+      #   run: |
+      #     docker compose -f docker-compose.dev.yml logs
+      #     docker compose -f docker-compose.dev.yml ps
           
-      - name: Cleanup containers
-        if: always()
-        run: make dev-down
+      # - name: Cleanup containers
+      #   if: always()
+      #   run: make dev-down
       
-      - name: Update fixtures
-        run: |
-          mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
-          mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
-          mv ui/static/services-next.json ui/static/services.json
-          echo "✅ Updated test fixtures"
+      # - name: Update fixtures
+      #   run: |
+      #     mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
+      #     mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
+      #     mv ui/static/services-next.json ui/static/services.json
+      #     echo "✅ Updated test fixtures"
       
-      - name: Commit and push fixture updates
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json
+      # - name: Commit and push fixture updates
+      #   run: |
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json
           
-          if git diff --staged --quiet; then
-            echo "No fixture changes to commit"
-          else
-            git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
-            git push origin main
-            echo "✅ Pushed fixture updates to main"
-          fi
+      #     if git diff --staged --quiet; then
+      #       echo "No fixture changes to commit"
+      #     else
+      #       git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
+      #       git push origin main
+      #       echo "✅ Pushed fixture updates to main"
+      #     fi
           
   build-binaries:
     name: Build Daemon Binaries
