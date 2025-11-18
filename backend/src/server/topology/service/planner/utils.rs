@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::server::topology::types::base::{Ixy, NodeLayout, Uxy};
+use crate::server::topology::types::layout::{Ixy, NodeLayout, Uxy};
 
 pub const SUBNET_PADDING: Uxy = Uxy { x: 125, y: 125 };
 pub const NODE_PADDING: Uxy = Uxy { x: 50, y: 50 };

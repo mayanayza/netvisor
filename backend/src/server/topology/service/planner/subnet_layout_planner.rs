@@ -16,8 +16,8 @@ use crate::server::{
             },
         },
         types::{
-            base::{Ixy, NodeLayout, SubnetLayout, Uxy},
             edges::Edge,
+            layout::{Ixy, NodeLayout, SubnetLayout, Uxy},
             nodes::{Node, NodeType, SubnetChild},
         },
     },

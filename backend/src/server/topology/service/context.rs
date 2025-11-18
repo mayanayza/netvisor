@@ -8,7 +8,7 @@ use crate::server::{
     },
     subnets::r#impl::base::Subnet,
     topology::types::{
-        api::TopologyRequestOptions,
+        api::TopologyOptions,
         edges::Edge,
         nodes::{Node, NodeType},
     },
@@ -21,7 +21,7 @@ pub struct TopologyContext<'a> {
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
     pub groups: &'a [Group],
-    pub options: &'a TopologyRequestOptions,
+    pub options: &'a TopologyOptions,
 }
 
 impl<'a> TopologyContext<'a> {
@@ -30,7 +30,7 @@ impl<'a> TopologyContext<'a> {
         subnets: &'a [Subnet],
         services: &'a [Service],
         groups: &'a [Group],
-        options: &'a TopologyRequestOptions,
+        options: &'a TopologyOptions,
     ) -> Self {
         Self {
             hosts,

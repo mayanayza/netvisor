@@ -4,8 +4,8 @@ use uuid::Uuid;
 use crate::server::topology::{
     service::context::TopologyContext,
     types::{
-        base::{Ixy, NodeLayout, Uxy},
         edges::EdgeType,
+        layout::{Ixy, NodeLayout, Uxy},
         nodes::SubnetChild,
     },
 };
