@@ -69,6 +69,11 @@
 		}
 	}
 
+	const isSecureContext =
+		window.isSecureContext ||
+		window.location.hostname === 'localhost' ||
+		window.location.hostname === '127.0.0.1';
+
 	async function handleCopy() {
 		if (!invite) return;
 
@@ -154,15 +159,17 @@
 					</div>
 
 					<!-- Copy Button -->
-					<button onclick={handleCopy} class="btn-primary w-full" disabled={copied}>
-						{#if copied}
-							<Check class="mr-2 h-4 w-4" />
-							Copied!
-						{:else}
-							<Copy class="mr-2 h-4 w-4" />
-							Copy Link
-						{/if}
-					</button>
+					{#if isSecureContext}
+						<button onclick={handleCopy} class="btn-primary w-full" disabled={copied}>
+							{#if copied}
+								<Check class="mr-2 h-4 w-4" />
+								Copied!
+							{:else}
+								<Copy class="mr-2 h-4 w-4" />
+								Copy Link
+							{/if}
+						</button>
+					{/if}
 				</div>
 			</div>
 
