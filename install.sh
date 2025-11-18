@@ -122,6 +122,6 @@ fi
 # Show manual run instructions
 echo ""
 echo "To run daemon manually:"
-echo "  netvisor-daemon --server-target YOUR_SERVER_IP --server-port 60072"
+echo "  netvisor-daemon --server-url YOUR_SERVER_URL"
 echo ""
 echo "Need help? Visit: https://github.com/${REPO}#readme"
