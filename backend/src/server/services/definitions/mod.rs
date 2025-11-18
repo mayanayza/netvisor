@@ -221,6 +221,7 @@ pub mod vault;
 pub mod vaultwarden;
 
 // Dashboard
+pub mod glance_app;
 pub mod homarr;
 pub mod homepage;
 pub mod jump;
