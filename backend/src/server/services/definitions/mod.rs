@@ -285,6 +285,7 @@ pub mod print_server;
 // ============= UTILITIES & MISC =============
 
 // Various Web/Dashboard/Development apps
+pub mod actual_budget;
 pub mod autobrr;
 pub mod backrest;
 pub mod cleanuparr;
