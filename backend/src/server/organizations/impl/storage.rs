@@ -1,4 +1,3 @@
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -89,13 +88,15 @@ impl StorableEntity for Organization {
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        let plan: Option<BillingPlan> =
-            serde_json::from_value(row.get::<serde_json::Value, _>("plan"))
-                .or(Err(Error::msg("Failed to deserialize plan")))?;
+        let plan: Option<BillingPlan> = row
+            .try_get::<Option<serde_json::Value>, _>("plan")
+            .unwrap_or(None)
+            .and_then(|v| serde_json::from_value(v).ok());
 
-        let plan_status: Option<SubscriptionStatus> =
-            serde_json::from_str(&row.get::<String, _>("plan_status"))
-                .or(Err(Error::msg("Failed to deserialize plan_status")))?;
+        let plan_status: Option<SubscriptionStatus> = row
+            .try_get::<Option<String>, _>("plan")
+            .unwrap_or(None)
+            .and_then(|v| serde_json::from_str(&v).ok());
 
         Ok(Organization {
             id: row.get("id"),
