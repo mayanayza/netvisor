@@ -63,19 +63,19 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 
 1. **Start the server** (includes integrated daemon):
 
-**Docker Compose**
-
-```bash
-curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
-```
-
-**Proxmox**
-
-You can use this [helper script](https://community-scripts.github.io/ProxmoxVE/scripts?id=netvisor) to create a NetVisor LXC on your Proxmox host.
-
-**Unraid**
-
-NetVisor is available as an Unraid community app.
+    **Docker Compose**
+    
+    ```bash
+    curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
+    ```
+    
+    **Proxmox**
+    
+    You can use this [helper script](https://community-scripts.github.io/ProxmoxVE/scripts?id=netvisor) to create a NetVisor LXC on your Proxmox host.
+    
+    **Unraid**
+    
+    NetVisor is available as an Unraid community app.
 
 2. **Access the UI** at `http://<your-server-ip>:60072`
 
