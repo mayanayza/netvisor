@@ -33,7 +33,7 @@ Complete guide to using NetVisor's features for network discovery, organization,
    - Alternatively, use OIDC authentication (see [Authentication](#authentication))
 
 <p align="center">
-  <img src="./media/registration.png" width="400" alt="Registration Screen">
+  <img src="../media/registration.png" width="400" alt="Registration Screen">
 </p>
 
 3. **Onboard**: 
@@ -48,7 +48,7 @@ Complete guide to using NetVisor's features for network discovery, organization,
 4. **Monitor discovery**: Switch to **Discover > Sessions** to watch the scan progress
 
 <p align="center">
-  <img src="./media/first_discovery.png" width="600" alt="First Discovery">
+  <img src="../media/first_discovery.png" width="600" alt="First Discovery">
 </p>
 
 5. **View results**: Once complete (5-10+ minutes), navigate to **Topology** to see your network diagram
@@ -128,7 +128,7 @@ These permission levels control what users can do:
 - You cannot delete the only Owner
 
 <p align="center">
-  <img src="./media/organization_users.png" width="800" alt="Organization Users">
+  <img src="../media/organization_users.png" width="800" alt="Organization Users">
 </p>
 
 ### Organization Settings
@@ -208,7 +208,7 @@ Networks are the primary organizational unit in NetVisor. Each network represent
 **Deleting a network**: Click the delete icon on the network card. This removes all associated hosts, services, and topology data.
 
 <p align="center">
-  <img src="./media/networks_tab.png" width="800" alt="Networks Tab">
+  <img src="../media/networks_tab.png" width="800" alt="Networks Tab">
 </p>
 
 ## Hosts
@@ -246,7 +246,7 @@ Hosts represent physical or virtual devices on your network. They are automatica
 **Deleting a host**: Click the delete icon. This removes the host and all its interfaces and services.
 
 <p align="center">
-  <img src="./media/hosts_tab.png" width="800" alt="Hosts Tab">
+  <img src="../media/hosts_tab.png" width="800" alt="Hosts Tab">
 </p>
 
 ### Consolidating Hosts
@@ -330,7 +330,7 @@ Services are organized into categories for filtering and organization:
 **Deleting a service**: Click the delete icon on the service card.
 
 <p align="center">
-  <img src="./media/services_tab.png" width="800" alt="Services Tab">
+  <img src="../media/services_tab.png" width="800" alt="Services Tab">
 </p>
 
 ## Subnets
@@ -402,7 +402,7 @@ Subnets with CIDR `0.0.0.0/0` don't represent real networks—they're organizati
 **Deleting a subnet**: Click the delete icon. Hosts on the subnet remain but lose subnet association.
 
 <p align="center">
-  <img src="./media/subnets_tab.png" width="800" alt="Subnets Tab">
+  <img src="../media/subnets_tab.png" width="800" alt="Subnets Tab">
 </p>
 
 ## Groups
@@ -454,7 +454,7 @@ Groups affect how your topology is displayed:
 **Deleting a group**: Click the delete icon. This only removes the logical grouping—services and hosts remain.
 
 <p align="center">
-  <img src="./media/groups_tab.png" width="800" alt="Groups Tab">
+  <img src="../media/groups_tab.png" width="800" alt="Groups Tab">
 </p>
 
 ### Use Cases
@@ -515,7 +515,7 @@ See [INSTALLATION.md](INSTALLATION.md#additional-daemons) for deployment instruc
 **Deleting a daemon**: Click the delete icon. You'll also need to uninstall the daemon from the host it's running on.
 
 <p align="center">
-  <img src="./media/daemons_tab.png" width="800" alt="Daemons Tab">
+  <img src="../media/daemons_tab.png" width="800" alt="Daemons Tab">
 </p>
 
 **Important**: Deleting a daemon does NOT delete discovered data. Hosts, services, and topology remain until explicitly deleted.
@@ -562,7 +562,7 @@ Disabled keys cannot authenticate, but can be re-enabled later.
 **Deleting an API key**: Click the delete icon. Any daemons using this key will stop authenticating and stop working.
 
 <p align="center">
-  <img src="./media/api_keys_tab.png" width="800" alt="API Keys Tab">
+  <img src="../media/api_keys_tab.png" width="800" alt="API Keys Tab">
 </p>
 
 ### Security Best Practices
@@ -654,7 +654,7 @@ Discovery is the process of scanning your network to find hosts and services.
 - Filter by daemon or network
 
 <p align="center">
-  <img src="./media/discovery_sessions.png" width="800" alt="Discovery Sessions">
+  <img src="../media/discovery_sessions.png" width="800" alt="Discovery Sessions">
 </p>
 
 ### Discovery Duration
@@ -682,7 +682,7 @@ Configure this per-discovery in the discovery type settings.
 The topology view generates an interactive diagram of your network structure.
 
 <p align="center">
-  <img src="./media/topology_full.png" width="800" alt="Discovery Sessions">
+  <img src="../media/topology_full.png" width="800" alt="Discovery Sessions">
 </p>
 
 ### Visual Elements
@@ -720,7 +720,7 @@ The topology view generates an interactive diagram of your network structure.
 Access the options panel via the button on the right side of the topology view:
 
 <p align="center">
-  <img src="./media/topology_options_overview.png" width="400" alt="Topology Options">
+  <img src="../media/topology_options_overview.png" width="400" alt="Topology Options">
 </p>
 
 **General Options**
@@ -755,7 +755,7 @@ Access the options panel via the button on the right side of the topology view:
 - On: All Docker containers grouped under one subnet per host
 
 <p align="center">
-  <img src="./media/topology_docker_grouping.png" width="700" alt="Docker Grouping Comparison">
+  <img src="../media/topology_docker_grouping.png" width="700" alt="Docker Grouping Comparison">
 </p>
 
 *Hide VM Provider on Containers*

@@ -99,7 +99,7 @@ See the [User Guide](USER_GUIDE.md) for detailed feature documentation.
 
 ## 🔍 What Gets Discovered?
 
-NetVisor automatically detects **50+ common services** including:
+NetVisor automatically detects **200+ common services** including:
 
 **Infrastructure & Networking**: Pi-hole, AdGuard Home, Unifi Controller, pfSense, OPNsense  
 **Virtualization & Containers**: Proxmox, Docker, Kubernetes, Portainer  
