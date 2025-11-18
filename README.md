@@ -23,7 +23,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 ## ✨ Key Features
 
 - **Automatic Discovery**: Scans networks to identify hosts, services, and their relationships
-- **50+ Service Definitions**: Auto-detects common services including Plex, Home Assistant, Proxmox, Docker, Pi-hole, and more
+- **200+ Service Definitions**: Auto-detects databases, web servers, containers, network infrastructure, monitoring tools, and enterprise applications
 - **Interactive Topology**: Generates visual network diagrams with extensive customization options
 - **Multi-VLAN Support**: Deploy daemons and scan across network segments to map complex topologies
 - **Docker Integration**: Discovers containerized services automatically
@@ -101,16 +101,16 @@ See the [User Guide](USER_GUIDE.md) for detailed feature documentation.
 
 NetVisor automatically detects **50+ common services** including:
 
-**Media Servers**: Plex, Jellyfin, Emby, Tautulli  
-**Home Automation**: Home Assistant, HomeKit, Philips Hue Bridge  
+**Infrastructure & Networking**: Pi-hole, AdGuard Home, Unifi Controller, pfSense, OPNsense  
 **Virtualization & Containers**: Proxmox, Docker, Kubernetes, Portainer  
-**Network Infrastructure**: Pi-hole, AdGuard Home, Unifi Controller, pfSense, OPNsense  
-**Storage & File Sharing**: Synology DSM, QNAP, TrueNAS, Nextcloud, Samba  
-**Monitoring & Observability**: Grafana, Prometheus, Uptime Kuma, Netdata  
-**Reverse Proxies & CDN**: Nginx Proxy Manager, Traefik, Caddy, Cloudflared  
-**Databases**: PostgreSQL, MySQL/MariaDB, MongoDB, Redis  
-**Web Servers**: Apache, Nginx, Lighttpd  
-**Development**: GitLab, Gitea, Jenkins, Ansible AWX  
+**Databases**: PostgreSQL, MySQL/MariaDB, MongoDB, Redis, Microsoft SQL Server  
+**Web Servers & Proxies**: Apache, Nginx, Lighttpd, Traefik, Caddy, HAProxy  
+**Monitoring & Observability**: Grafana, Prometheus, Zabbix, Netdata, Nagios  
+**Storage & File Sharing**: Synology DSM, QNAP, TrueNAS, Nextcloud, Samba, Windows File Server  
+**Development & CI/CD**: GitLab, Jenkins, Ansible AWX, GitHub Enterprise, Azure DevOps  
+**Communication & Collaboration**: Microsoft Exchange, Asterisk, FreePBX, Rocket.Chat  
+**Media & Content**: Plex, Jellyfin, Emby, streaming servers  
+**Automation & IoT**: Home Assistant, Node-RED, MQTT brokers
 
 For the complete list, see the [service definitions directory](https://github.com/mayanayza/netvisor/tree/main/backend/src/server/services/definitions).
 
