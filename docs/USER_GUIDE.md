@@ -720,7 +720,7 @@ The topology view generates an interactive diagram of your network structure.
 Access the options panel via the button on the right side of the topology view:
 
 <p align="center">
-  <img src="../media/topology_options_overview.png" width="400" alt="Topology Options">
+  <img src="../media/topology_options_overview.png" width="800" alt="Topology Options">
 </p>
 
 **General Options**
