@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.release.target_commitish }}
           fetch-depth: 0  # Fetch all history so we can push
       
       - name: Install Rust
@@ -76,9 +76,12 @@ jobs:
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
           else
+            # Get the current branch name
+            BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+            
             git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
-            git push origin main
-            echo "✅ Pushed fixture updates to main"
+            git push origin "$BRANCH_NAME"
+            echo "✅ Pushed fixture updates to $BRANCH_NAME"
           fi
           
   build-binaries:
