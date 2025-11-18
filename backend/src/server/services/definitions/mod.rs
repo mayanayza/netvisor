@@ -294,6 +294,7 @@ pub mod jotty;
 pub mod karakeep;
 pub mod lidarr;
 pub mod lubelogger;
+pub mod me_tube;
 pub mod mealie;
 pub mod memos;
 pub mod netbootxyz;
