@@ -1,4 +1,4 @@
-import { api, getUiUrl } from '$lib/shared/utils/api';
+import { api } from '$lib/shared/utils/api';
 import { writable } from 'svelte/store';
 import type { BillingPlan } from './types';
 import { pushError } from '$lib/shared/stores/feedback';
@@ -24,7 +24,7 @@ export async function getCurrentBillingPlans(): Promise<BillingPlan[]> {
 export async function checkout(plan: BillingPlan): Promise<string | null> {
 	const result = await api.request<string>(`/billing/checkout`, null, null, {
 		method: 'POST',
-		body: JSON.stringify({ plan, url: getUiUrl() })
+		body: JSON.stringify({ plan, url: window.location.origin })
 	});
 
 	if (result && result.success && result.data) {
@@ -36,8 +36,8 @@ export async function checkout(plan: BillingPlan): Promise<string | null> {
 
 export async function openCustomerPortal(): Promise<string | null> {
 	const result = await api.request<string>(`/billing/portal`, null, null, {
-		method: 'POST',
-		body: JSON.stringify(getUiUrl())
+		method: 'GET',
+		body: JSON.stringify(window.location.origin)
 	});
 
 	if (result && result.success && result.data) {

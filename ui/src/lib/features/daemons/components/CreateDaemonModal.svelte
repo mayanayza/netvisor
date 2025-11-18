@@ -12,10 +12,10 @@
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import { RotateCcwKey } from 'lucide-svelte';
 	import { createEmptyApiKeyFormData, createNewApiKey } from '$lib/features/api_keys/store';
-	import { getServerPort, getServerProtocol, getServerTarget } from '$lib/shared/utils/api';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
+	import { config } from '$lib/shared/stores/config';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -25,6 +25,8 @@
 	$: key = $keyStore;
 	let selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
 	let isNewDaemon = daemon === null;
+
+	let serverUrl = $config.public_url;
 
 	let daemonModeField = field('daemonMode', daemon ? daemon.mode : 'Push', [required()], {
 		checkOnInit: false
@@ -48,7 +50,7 @@
 	}
 
 	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
-	$: runCommand = `netvisor-daemon --server-url ${getServerProtocol()}://${getServerTarget()}:${getServerPort()} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
+	$: runCommand = `netvisor-daemon --server-url ${serverUrl} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (key) {
@@ -75,7 +77,7 @@
 			.split('\n')
 			.map((line) => {
 				if (line.includes('NETVISOR_SERVER_URL=')) {
-					return `      - NETVISOR_SERVER_URL=${getServerProtocol()}://${getServerTarget()}:${getServerPort()}`;
+					return `      - NETVISOR_SERVER_URL=${serverUrl}`;
 				}
 				if (line.includes('NETVISOR_MODE=')) {
 					return `      - NETVISOR_MODE=${daemonMode}`;
