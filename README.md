@@ -17,7 +17,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 > 💡 **Prefer not to self-host, or want to use this for your business?** [Get early access](https://netvisor.io) to NetVisor Cloud
 > 
 <p align="center">
-  <img src="./media/872shots_so.png" width="1200" alt="Example Visualization">
+  <img src="./media/hero.png" width="1200" alt="Example Visualization">
 </p>
 
 ## ✨ Key Features

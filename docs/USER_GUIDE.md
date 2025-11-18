@@ -681,6 +681,10 @@ Configure this per-discovery in the discovery type settings.
 
 The topology view generates an interactive diagram of your network structure.
 
+<p align="center">
+  <img src="./media/topology_full.png" width="800" alt="Discovery Sessions">
+</p>
+
 ### Visual Elements
 
 **Subnet Containers**
