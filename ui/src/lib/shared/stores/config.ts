@@ -10,6 +10,8 @@ export interface PublicServerConfig {
 	oidc_provider_name: string;
 	billing_enabled: boolean;
 	has_integrated_daemon: boolean;
+	has_email_service: boolean;
+	public_url: string;
 }
 
 export async function getConfig() {

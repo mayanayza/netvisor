@@ -28,8 +28,8 @@ BEGIN
     -- Check if there are any users
     IF EXISTS (SELECT 1 FROM users LIMIT 1) THEN
         -- Create a single organization
-        INSERT INTO organizations (name, created_at, updated_at)
-        VALUES ('My Organization', NOW(), NOW())
+        INSERT INTO organizations (name, created_at, updated_at, is_onboarded)
+        VALUES ('My Organization', NOW(), NOW(), TRUE)
         RETURNING id INTO new_org_id;
 
         -- Find the oldest user (by created_at)

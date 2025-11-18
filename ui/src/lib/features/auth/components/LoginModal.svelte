@@ -22,6 +22,7 @@
 
 	$: disableRegistration = $loading ? false : $config.disable_registration;
 	$: enableOidc = $loading ? true : $config.oidc_enabled;
+	$: enablePasswordReset = $loading ? true : $config.has_email_service;
 
 	let formData: LoginRequest = {
 		email: '',
@@ -155,18 +156,20 @@
 					</p>
 				</div>
 			{/if}
-			<div class="text-center">
-				<p class="text-sm text-gray-400">
-					Forgot your password?
-					<button
-						type="button"
-						on:click={onSwitchToForgot}
-						class="font-medium text-blue-400 hover:text-blue-300"
-					>
-						Reset password
-					</button>
-				</p>
-			</div>
+			{#if enablePasswordReset}
+				<div class="text-center">
+					<p class="text-sm text-gray-400">
+						Forgot your password?
+						<button
+							type="button"
+							on:click={onSwitchToForgot}
+							class="font-medium text-blue-400 hover:text-blue-300"
+						>
+							Reset password
+						</button>
+					</p>
+				</div>
+			{/if}
 		</div>
 	</svelte:fragment>
 </EditModal>

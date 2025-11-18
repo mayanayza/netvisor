@@ -85,7 +85,7 @@ where
             SqlValue::RunType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::DiscoveryType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Email(v) => query.bind(v.as_str()),
-            SqlValue::UserOrgPermissions(v) => query.bind(serde_json::to_string(v)?),
+            SqlValue::UserOrgPermissions(v) => query.bind(v.as_str()),
             SqlValue::DaemonMode(v) => query.bind(serde_json::to_string(v)?),
             SqlValue::OptionBillingPlan(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::OptionBillingPlanStatus(v) => query.bind(serde_json::to_string(v)?),
