@@ -1,7 +1,7 @@
 # NetVisor
 
-<p align="center">
-  <img src="./media/logo.png" width="200" alt="NetVisor Logo">
+<p align="left">
+  <img src="./media/logo.png" width="100" alt="NetVisor Logo">
 </p>
 
 **Automatically discover and visually document network infrastructure.**
