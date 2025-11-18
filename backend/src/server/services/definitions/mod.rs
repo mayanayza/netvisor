@@ -290,6 +290,7 @@ pub mod cleanuparr;
 pub mod freshrss;
 pub mod grocy;
 pub mod huntarr;
+pub mod jotty;
 pub mod karakeep;
 pub mod lidarr;
 pub mod lubelogger;
