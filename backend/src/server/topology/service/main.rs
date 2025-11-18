@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Error;
+use async_trait::async_trait;
 use petgraph::{Graph, graph::NodeIndex};
 use uuid::Uuid;
 
@@ -8,7 +9,10 @@ use crate::server::{
     groups::service::GroupService,
     hosts::service::HostService,
     services::{r#impl::base::Service, service::ServiceService},
-    shared::{services::traits::CrudService, storage::filter::EntityFilter},
+    shared::{
+        services::traits::CrudService,
+        storage::{filter::EntityFilter, generic::GenericPostgresStorage},
+    },
     subnets::service::SubnetService,
     topology::{
         service::{
@@ -16,15 +20,23 @@ use crate::server::{
             optimizer::main::TopologyOptimizer,
             planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
-        types::{api::TopologyOptions, edges::Edge, nodes::Node},
+        types::{api::TopologyOptions, base::Topology, edges::Edge, nodes::Node},
     },
 };
 
 pub struct TopologyService {
+    storage: Arc<GenericPostgresStorage<Topology>>,
     host_service: Arc<HostService>,
     subnet_service: Arc<SubnetService>,
     group_service: Arc<GroupService>,
     service_service: Arc<ServiceService>,
+}
+
+#[async_trait]
+impl CrudService<Topology> for TopologyService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Topology>> {
+        &self.storage
+    }
 }
 
 impl TopologyService {
@@ -33,12 +45,14 @@ impl TopologyService {
         subnet_service: Arc<SubnetService>,
         group_service: Arc<GroupService>,
         service_service: Arc<ServiceService>,
+        storage: Arc<GenericPostgresStorage<Topology>>,
     ) -> Self {
         Self {
             host_service,
             subnet_service,
             group_service,
             service_service,
+            storage,
         }
     }
 

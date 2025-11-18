@@ -64,7 +64,6 @@ where
             SqlValue::U16(v) => query.bind(Into::<i32>::into(*v)),
             SqlValue::I32(v) => query.bind(v),
             SqlValue::Bool(v) => query.bind(v),
-            SqlValue::Json(v) => query.bind(v),
             SqlValue::Timestamp(v) => query.bind(v),
             SqlValue::OptionTimestamp(v) => query.bind(v),
             SqlValue::UuidArray(v) => query.bind(serde_json::to_value(v)?),
@@ -90,6 +89,9 @@ where
             SqlValue::OptionBillingPlan(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::OptionBillingPlanStatus(v) => query.bind(serde_json::to_string(v)?),
             SqlValue::EdgeStyle(v) => query.bind(v.to_string()),
+            SqlValue::Nodes(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Edges(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::TopologyOptions(v) => query.bind(serde_json::to_value(v)?),
         };
 
         Ok(value)

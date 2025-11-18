@@ -1,17 +1,33 @@
 use crate::server::{
     auth::middleware::AuthenticatedUser,
     config::AppState,
-    shared::types::api::{ApiResponse, ApiResult},
-    topology::types::api::TopologyOptions,
+    shared::{
+        handlers::traits::{
+            create_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
+        },
+        types::api::{ApiResponse, ApiResult},
+    },
+    topology::types::{api::TopologyOptions, base::Topology},
 };
-use axum::{Router, extract::State, response::Json, routing::post};
+use axum::{
+    Router,
+    extract::State,
+    response::Json,
+    routing::{delete, get, post, put},
+};
 use std::sync::Arc;
 
 pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new().route("/", post(get_topology))
+    Router::new()
+        .route("/", post(create_handler::<Topology>))
+        .route("/", get(get_all_handler::<Topology>))
+        .route("/{id}", put(update_handler::<Topology>))
+        .route("/{id}", delete(delete_handler::<Topology>))
+        .route("/{id}", get(get_by_id_handler::<Topology>))
+        .route("/generate", post(generate_topology))
 }
 
-async fn get_topology(
+async fn generate_topology(
     State(state): State<Arc<AppState>>,
     _user: AuthenticatedUser,
     Json(request): Json<TopologyOptions>,

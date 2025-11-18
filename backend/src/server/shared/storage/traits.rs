@@ -21,7 +21,11 @@ use crate::server::{
     },
     shared::{storage::filter::EntityFilter, types::entities::EntitySource},
     subnets::r#impl::types::SubnetType,
-    topology::types::edges::EdgeStyle,
+    topology::types::{
+        api::TopologyOptions,
+        edges::{Edge, EdgeStyle},
+        nodes::Node,
+    },
     users::r#impl::permissions::UserOrgPermissions,
 };
 
@@ -69,7 +73,6 @@ pub enum SqlValue {
     I32(i32),
     U16(u16),
     Bool(bool),
-    Json(serde_json::Value),
     Email(EmailAddress),
     Timestamp(DateTime<Utc>),
     OptionTimestamp(Option<DateTime<Utc>>),
@@ -94,4 +97,7 @@ pub enum SqlValue {
     OptionBillingPlanStatus(Option<SubscriptionStatus>),
     EdgeStyle(EdgeStyle),
     DaemonMode(DaemonMode),
+    Nodes(Vec<Node>),
+    Edges(Vec<Edge>),
+    TopologyOptions(TopologyOptions),
 }
