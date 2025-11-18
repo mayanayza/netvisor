@@ -79,7 +79,7 @@
 
 	// Calculate base edge properties
 	let baseStrokeWidth = $derived(!$topologyOptions.no_fade_edges && shouldShowFull ? 3 : 2);
-	let baseOpacity = $derived(!$topologyOptions.no_fade_edges && !shouldShowFull ? 0.2 : 1);
+	let baseOpacity = $derived(!$topologyOptions.no_fade_edges && !shouldShowFull ? 0.4 : 1);
 
 	// Calculate edge style for primary layer (dashed white overlay for group edges, or normal edge)
 	let edgeStyle = $derived.by(() => {

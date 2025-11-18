@@ -79,3 +79,53 @@ impl TypeMetadataProvider for Feature {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::billing::types::base::BillingPlan;
+    use std::collections::HashSet;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn test_feature_ids_match_billing_plan_features_fields() {
+        // Get all Feature IDs
+        let feature_ids: HashSet<&str> = Feature::iter().map(|f| f.id()).collect();
+
+        // Get all keys from BillingPlanFeatures by serializing an instance
+        let features = BillingPlan::default().features();
+        let features_json = serde_json::to_value(&features).expect("Failed to serialize features");
+        let features_map = features_json
+            .as_object()
+            .expect("Features should be an object");
+
+        let billing_plan_keys: HashSet<&str> = features_map.keys().map(|s| s.as_str()).collect();
+
+        // Check that every Feature ID exists in BillingPlanFeatures
+        for feature_id in &feature_ids {
+            assert!(
+                billing_plan_keys.contains(feature_id),
+                "Feature ID '{}' does not exist in BillingPlanFeatures",
+                feature_id
+            );
+        }
+
+        // Check that every BillingPlanFeatures field has a corresponding Feature
+        for key in &billing_plan_keys {
+            assert!(
+                feature_ids.contains(key),
+                "BillingPlanFeatures field '{}' does not have a corresponding Feature variant",
+                key
+            );
+        }
+
+        // Verify they have the same count
+        assert_eq!(
+            feature_ids.len(),
+            billing_plan_keys.len(),
+            "Feature enum has {} variants but BillingPlanFeatures has {} fields",
+            feature_ids.len(),
+            billing_plan_keys.len()
+        );
+    }
+}

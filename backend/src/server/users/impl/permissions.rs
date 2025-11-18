@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, str::FromStr};
 use strum::{Display, EnumIter, IntoEnumIterator, IntoStaticStr};
 
 use crate::server::shared::{
@@ -14,7 +14,29 @@ pub enum UserOrgPermissions {
     Owner,
     Admin,
     Member,
-    Viewer,
+    Visualizer,
+    None,
+}
+
+impl UserOrgPermissions {
+    pub fn as_str(&self) -> &'static str {
+        self.into()
+    }
+}
+
+impl FromStr for UserOrgPermissions {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<UserOrgPermissions, Self::Err> {
+        match input {
+            "Owner" => Ok(UserOrgPermissions::Owner),
+            "Admin" => Ok(UserOrgPermissions::Admin),
+            "Member" => Ok(UserOrgPermissions::Member),
+            "Visualizer" => Ok(UserOrgPermissions::Visualizer),
+            "None" => Ok(UserOrgPermissions::None),
+            _ => Err(()),
+        }
+    }
 }
 
 impl PartialOrd for UserOrgPermissions {
@@ -29,14 +51,16 @@ impl Ord for UserOrgPermissions {
             UserOrgPermissions::Owner => 4,
             UserOrgPermissions::Admin => 3,
             UserOrgPermissions::Member => 2,
-            UserOrgPermissions::Viewer => 1,
+            UserOrgPermissions::Visualizer => 1,
+            UserOrgPermissions::None => 0,
         };
 
         let other_rank = match other {
             UserOrgPermissions::Owner => 4,
             UserOrgPermissions::Admin => 3,
             UserOrgPermissions::Member => 2,
-            UserOrgPermissions::Viewer => 1,
+            UserOrgPermissions::Visualizer => 1,
+            UserOrgPermissions::None => 0,
         };
 
         self_rank.cmp(&other_rank)
@@ -69,9 +93,10 @@ impl TypeMetadataProvider for UserOrgPermissions {
                 "Manage users and invites, create and modify all infrastructure, but cannot access billing"
             }
             UserOrgPermissions::Member => {
-                "Create and modify networks, hosts, services, run discovery scans, and invite Viewers"
+                "Create and modify networks, hosts, services, run discovery scans, and invite Visualizers"
             }
-            UserOrgPermissions::Viewer => "Read-only access: view network topology",
+            UserOrgPermissions::Visualizer => "Read-only access: view network topology",
+            UserOrgPermissions::None => "No permissions assigned",
         }
     }
 
@@ -80,7 +105,8 @@ impl TypeMetadataProvider for UserOrgPermissions {
             UserOrgPermissions::Owner => "Owner",
             UserOrgPermissions::Admin => "Admin",
             UserOrgPermissions::Member => "Member",
-            UserOrgPermissions::Viewer => "Viewer",
+            UserOrgPermissions::Visualizer => "Visualizer",
+            UserOrgPermissions::None => "None",
         }
     }
 

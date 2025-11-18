@@ -18,3 +18,12 @@ export interface OnboardingRequest {
 	network_name: string;
 	populate_seed_data: boolean;
 }
+
+export interface ForgotPasswordRequest {
+	email: string;
+}
+
+export interface ResetPasswordRequest {
+	password: string;
+	token: string;
+}

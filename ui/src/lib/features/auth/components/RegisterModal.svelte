@@ -1,7 +1,11 @@
 <script lang="ts">
 	import type { RegisterRequest } from '../types/base';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
-	import RegisterForm from './RegisterForm.svelte';
+	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import Password from '$lib/shared/components/forms/input/Password.svelte';
+	import { field } from 'svelte-forms';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 
 	export let orgName: string | null = null;
 	export let invitedBy: string | null = null;
@@ -17,6 +21,12 @@
 		password: '',
 		confirmPassword: ''
 	};
+
+	// Create form fields with validation
+	const email = field('email', formData.email, [required(), emailValidator()]);
+
+	// Update formData when field values change
+	$: formData.email = $email.value;
 
 	// Reset form when modal opens
 	$: if (isOpen) {
@@ -65,17 +75,32 @@
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}
-		<div class="mb-4 rounded-lg border border-blue-500/50 bg-blue-900/20 p-4 text-center">
-			<p class="text-sm text-blue-200">
-				You have been invited to join<br />
-				<span class="font-semibold">{orgName}</span> by
-				<span class="font-semibold">{invitedBy}</span>
-			</p>
+		<div class="mb-6">
+			<InlineInfo
+				title="You're invited!"
+				body={`You have been invited to join ${orgName} by ${invitedBy}. Please sign in or register to continue.`}
+			/>
 		</div>
 	{/if}
 
 	<!-- Content -->
-	<RegisterForm {formApi} bind:formData />
+	<div class="space-y-6">
+		<TextInput
+			label="Email"
+			id="email"
+			{formApi}
+			placeholder="Enter email"
+			required={true}
+			field={email}
+		/>
+
+		<Password
+			{formApi}
+			bind:value={formData.password}
+			bind:confirmValue={formData.confirmPassword}
+			showConfirm={true}
+		/>
+	</div>
 
 	<!-- Custom footer with login link -->
 	<svelte:fragment slot="footer">

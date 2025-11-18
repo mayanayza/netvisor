@@ -12,7 +12,7 @@ export interface User {
 	permissions: UserOrgPermissions;
 }
 
-export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Viewer';
+export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Visualizer' | 'None';
 
 export type UserOrInvite =
 	| { type: 'user'; data: User }

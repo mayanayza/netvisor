@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::daemon::{
-    shared::{services::DaemonServiceFactory, storage::ConfigStore},
+    shared::{config::ConfigStore, services::DaemonServiceFactory},
     utils::base::PlatformDaemonUtils,
 };
 

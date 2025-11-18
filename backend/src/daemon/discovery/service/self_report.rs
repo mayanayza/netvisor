@@ -246,7 +246,7 @@ impl DiscoveryRunner<SelfReportDiscovery> {
         has_docker_socket: bool,
         interfaced_subnet_ids: Vec<Uuid>,
     ) -> Result<(), Error> {
-        let server_target = self.as_ref().config_store.get_server_endpoint().await?;
+        let server_target = self.as_ref().config_store.get_server_url().await?;
 
         let capabilities = DaemonCapabilities {
             has_docker_socket,

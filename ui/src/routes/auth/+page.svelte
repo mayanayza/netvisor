@@ -1,7 +1,16 @@
 <script lang="ts">
-	import { checkAuth, login, register } from '$lib/features/auth/store';
+	import { onMount } from 'svelte';
+	import {
+		checkAuth,
+		forgotPassword,
+		login,
+		register,
+		resetPassword
+	} from '$lib/features/auth/store';
 	import LoginModal from '$lib/features/auth/components/LoginModal.svelte';
 	import RegisterModal from '$lib/features/auth/components/RegisterModal.svelte';
+	import ForgotPasswordModal from '$lib/features/auth/components/ForgotPasswordModal.svelte';
+	import ResetPasswordModal from '$lib/features/auth/components/ResetPasswordModal.svelte';
 	import type { LoginRequest, RegisterRequest } from '$lib/features/auth/types/base';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
@@ -9,10 +18,21 @@
 	import { getOrganization } from '$lib/features/organizations/store';
 	import { navigate } from '$lib/shared/utils/navigation';
 
-	let showLogin = $state(true);
+	type ModalType = 'login' | 'register' | 'forgot' | 'reset';
+	let activeModal = $state<ModalType>('login');
+	let resetToken = $state<string>('');
 
 	let orgName = $derived($page.url.searchParams.get('org_name'));
 	let invitedBy = $derived($page.url.searchParams.get('invited_by'));
+
+	onMount(() => {
+		// Check if we have a reset token in the URL
+		const token = $page.url.searchParams.get('token');
+		if (token) {
+			activeModal = 'reset';
+			resetToken = token;
+		}
+	});
 
 	async function handleLogin(data: LoginRequest) {
 		const user = await login(data);
@@ -36,12 +56,25 @@
 		await navigate();
 	}
 
+	async function handleRequestReset(email: string) {
+		await forgotPassword({ email });
+	}
+
+	async function handleResetPassword(token: string, password: string) {
+		await resetPassword({ password, token });
+		await navigate();
+	}
+
 	function switchToRegister() {
-		showLogin = false;
+		activeModal = 'register';
 	}
 
 	function switchToLogin() {
-		showLogin = true;
+		activeModal = 'login';
+	}
+
+	function switchToForgot() {
+		activeModal = 'forgot';
 	}
 
 	// Dummy onClose since we don't want to close these modals
@@ -71,16 +104,17 @@
 	<div class="flex flex-1 items-center justify-center">
 		<!-- Modal Content -->
 		<div class="relative z-10">
-			{#if showLogin}
+			{#if activeModal === 'login'}
 				<LoginModal
 					isOpen={true}
 					onLogin={handleLogin}
 					onClose={handleClose}
 					onSwitchToRegister={switchToRegister}
+					onSwitchToForgot={switchToForgot}
 					{orgName}
 					{invitedBy}
 				/>
-			{:else}
+			{:else if activeModal === 'register'}
 				<RegisterModal
 					isOpen={true}
 					onRegister={handleRegister}
@@ -88,6 +122,21 @@
 					onSwitchToLogin={switchToLogin}
 					{orgName}
 					{invitedBy}
+				/>
+			{:else if activeModal === 'forgot'}
+				<ForgotPasswordModal
+					isOpen={true}
+					onRequestReset={handleRequestReset}
+					onClose={handleClose}
+					onBackToLogin={switchToLogin}
+				/>
+			{:else if activeModal === 'reset'}
+				<ResetPasswordModal
+					isOpen={true}
+					token={resetToken}
+					onResetPassword={handleResetPassword}
+					onClose={handleClose}
+					onBackToLogin={switchToLogin}
 				/>
 			{/if}
 		</div>
