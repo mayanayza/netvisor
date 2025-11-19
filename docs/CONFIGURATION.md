@@ -135,7 +135,7 @@ environment:
 
 | Parameter | CLI Flag | Environment Variable | Default | Description |
 |-----------|----------|---------------------|---------|-------------|
-| **Server Public URL** | `--public-url` | `NETVISOR_SERVER_PUBLIC_URL` | `http://localhost:60072` | Public URL for webhooks, email links, etc |
+| **Server Public URL** | `--public-url` | `NETVISOR_PUBLIC_URL` | `http://localhost:60072` | Public URL for webhooks, email links, etc |
 | **Server Port** | `--server-port` | `NETVISOR_SERVER_PORT` | `60072` | Port for server to listen on |
 | **Database URL** | `--database-url` | `NETVISOR_DATABASE_URL` | *Required* | PostgreSQL connection string |
 | **Log Level** | `--log-level` | `NETVISOR_LOG_LEVEL` | `info` | Logging verbosity: `trace`, `debug`, `info`, `warn`, `error` |
