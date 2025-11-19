@@ -22,7 +22,7 @@ impl ServiceDefinition for SABnzbd {
         Pattern::Endpoint(
             PortBase::new_tcp(7777),
             "/Content/manifest.json",
-            "SABnzdb",
+            "SABnzbd",
             None,
         )
     }
