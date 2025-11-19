@@ -1,13 +1,15 @@
 use crate::server::{
-    auth::middleware::AuthenticatedUser,
+    auth::middleware::RequireMember,
     config::AppState,
     shared::{
         handlers::traits::{
-            create_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
+            CrudHandlers, delete_handler, get_all_handler, get_by_id_handler, update_handler,
         },
-        types::api::{ApiResponse, ApiResult},
+        services::traits::CrudService,
+        storage::traits::StorableEntity,
+        types::api::{ApiError, ApiResponse, ApiResult},
     },
-    topology::types::{api::TopologyOptions, base::Topology},
+    topology::types::base::Topology,
 };
 use axum::{
     Router,
@@ -19,23 +21,132 @@ use std::sync::Arc;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create_handler::<Topology>))
+        .route("/", post(create_handler))
         .route("/", get(get_all_handler::<Topology>))
         .route("/{id}", put(update_handler::<Topology>))
         .route("/{id}", delete(delete_handler::<Topology>))
         .route("/{id}", get(get_by_id_handler::<Topology>))
-        .route("/generate", post(generate_topology))
+        .route("/{id}/refresh", post(refresh))
+        .route("/{id}/lock", post(lock))
+        .route("/{id}/unlock", post(unlock))
 }
 
-async fn generate_topology(
+pub async fn create_handler(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
-    Json(request): Json<TopologyOptions>,
-) -> ApiResult<Json<ApiResponse<serde_json::Value>>> {
-    let service = &state.services.topology_service;
-    let graph = service.build_graph(request).await?;
+    RequireMember(user): RequireMember,
+    Json(mut topology): Json<Topology>,
+) -> ApiResult<Json<ApiResponse<Topology>>> {
+    if let Err(err) = topology.validate() {
+        tracing::warn!(
+            entity_type = Topology::table_name(),
+            user_id = %user.user_id,
+            error = %err,
+            "Entity validation failed"
+        );
+        return Err(ApiError::bad_request(&format!(
+            "{} validation failed: {}",
+            Topology::entity_name(),
+            err
+        )));
+    }
 
-    let json = serde_json::to_value(&graph)?;
+    tracing::debug!(
+        entity_type = Topology::table_name(),
+        user_id = %user.user_id,
+        "Create request received"
+    );
 
-    Ok(Json(ApiResponse::success(json)))
+    let service = Topology::get_service(&state);
+
+    let (hosts, services, subnets, groups) = service
+        .get_entity_data(topology.base.network_id, topology.base.options.clone())
+        .await?;
+
+    let (nodes, edges) =
+        service.build_graph(&topology.base.options, &hosts, &subnets, &services, &groups);
+
+    topology.base.hosts = hosts;
+    topology.base.services = services;
+    topology.base.subnets = subnets;
+    topology.base.groups = groups;
+    topology.base.edges = edges;
+    topology.base.nodes = nodes;
+    topology.refresh();
+
+    let created = service
+        .create(topology, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                entity_type = Topology::table_name(),
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to create entity"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
+
+    tracing::info!(
+        entity_type = Topology::table_name(),
+        entity_id = %created.id(),
+        user_id = %user.user_id,
+        "Entity created via API"
+    );
+
+    Ok(Json(ApiResponse::success(created)))
+}
+
+async fn refresh(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(mut topology): Json<Topology>,
+) -> ApiResult<Json<ApiResponse<Topology>>> {
+    let service = Topology::get_service(&state);
+
+    let (hosts, services, subnets, groups) = service
+        .get_entity_data(topology.base.network_id, topology.base.options.clone())
+        .await?;
+
+    let (nodes, edges) =
+        service.build_graph(&topology.base.options, &hosts, &subnets, &services, &groups);
+
+    topology.base.hosts = hosts;
+    topology.base.services = services;
+    topology.base.subnets = subnets;
+    topology.base.groups = groups;
+    topology.base.edges = edges;
+    topology.base.nodes = nodes;
+    topology.refresh();
+
+    let updated = service.update(&mut topology, user.into()).await?;
+
+    Ok(Json(ApiResponse::success(updated)))
+}
+
+async fn lock(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(mut topology): Json<Topology>,
+) -> ApiResult<Json<ApiResponse<Topology>>> {
+    let service = Topology::get_service(&state);
+
+    topology.lock(user.user_id);
+
+    let updated = service.update(&mut topology, user.into()).await?;
+
+    Ok(Json(ApiResponse::success(updated)))
+}
+
+async fn unlock(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(mut topology): Json<Topology>,
+) -> ApiResult<Json<ApiResponse<Topology>>> {
+    let service = Topology::get_service(&state);
+
+    topology.unlock();
+
+    let updated = service.update(&mut topology, user.into()).await?;
+
+    Ok(Json(ApiResponse::success(updated)))
 }

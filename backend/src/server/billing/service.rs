@@ -1,3 +1,4 @@
+use crate::server::auth::middleware::AuthenticatedEntity;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::service::OrganizationService;
@@ -157,9 +158,12 @@ impl BillingService {
         plan: BillingPlan,
         success_url: String,
         cancel_url: String,
+        authentication: AuthenticatedEntity,
     ) -> Result<CheckoutSession, Error> {
         // Get or create Stripe customer
-        let customer_id = self.get_or_create_customer(organization_id).await?;
+        let customer_id = self
+            .get_or_create_customer(organization_id, authentication)
+            .await?;
 
         tracing::info!(
             organization_id = %organization_id,
@@ -227,7 +231,11 @@ impl BillingService {
     }
 
     /// Get existing customer or create new one
-    async fn get_or_create_customer(&self, organization_id: Uuid) -> Result<CustomerId, Error> {
+    async fn get_or_create_customer(
+        &self,
+        organization_id: Uuid,
+        authentication: AuthenticatedEntity,
+    ) -> Result<CustomerId, Error> {
         // Check if org already has stripe_customer_id
         let mut organization = self
             .organization_service
@@ -264,7 +272,9 @@ impl BillingService {
 
         organization.base.stripe_customer_id = Some(customer.id.to_string());
 
-        self.organization_service.update(&mut organization).await?;
+        self.organization_service
+            .update(&mut organization, authentication)
+            .await?;
 
         Ok(customer.id)
     }
@@ -356,7 +366,9 @@ impl BillingService {
 
             for network in networks {
                 if !keep_ids.contains(&network.id) {
-                    self.network_service.delete(&network.id).await?;
+                    self.network_service
+                        .delete(&network.id, AuthenticatedEntity::System)
+                        .await?;
                     tracing::info!(
                         organization_id = %org_id,
                         network_id = %network.id,
@@ -375,7 +387,9 @@ impl BillingService {
                 for user in &mut users {
                     if user.base.permissions != UserOrgPermissions::Owner {
                         user.base.permissions = UserOrgPermissions::None;
-                        self.user_service.update(user).await?;
+                        self.user_service
+                            .update(user, AuthenticatedEntity::System)
+                            .await?;
                     }
                 }
             }
@@ -387,7 +401,9 @@ impl BillingService {
                 for user in &mut users {
                     if user.base.permissions != UserOrgPermissions::Owner {
                         user.base.permissions = UserOrgPermissions::Visualizer;
-                        self.user_service.update(user).await?;
+                        self.user_service
+                            .update(user, AuthenticatedEntity::System)
+                            .await?;
                     }
                 }
             }
@@ -398,7 +414,9 @@ impl BillingService {
         organization.base.plan_status = Some(sub.status);
         organization.base.plan = Some(plan);
 
-        self.organization_service.update(&mut organization).await?;
+        self.organization_service
+            .update(&mut organization, AuthenticatedEntity::System)
+            .await?;
 
         tracing::info!(
             "Updated organization {} subscription status to {}",
@@ -427,7 +445,9 @@ impl BillingService {
 
         organization.base.plan_status = Some(SubscriptionStatus::Canceled);
 
-        self.organization_service.update(&mut organization).await?;
+        self.organization_service
+            .update(&mut organization, AuthenticatedEntity::System)
+            .await?;
 
         tracing::info!(
             organization_id = %org_id,

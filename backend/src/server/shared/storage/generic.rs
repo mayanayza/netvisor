@@ -66,7 +66,11 @@ where
             SqlValue::Bool(v) => query.bind(v),
             SqlValue::Timestamp(v) => query.bind(v),
             SqlValue::OptionTimestamp(v) => query.bind(v),
-            SqlValue::UuidArray(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::UuidArray(v) => {
+                // Create a reference that lives as long as 'q
+                let slice: &'q [Uuid] = v;
+                query.bind(slice)
+            }
             SqlValue::OptionalString(v) => query.bind(v),
             SqlValue::EntitySource(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::IpCidr(v) => query.bind(serde_json::to_string(v)?),
@@ -92,6 +96,10 @@ where
             SqlValue::Nodes(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Edges(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::TopologyOptions(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Hosts(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Subnets(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Services(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Groups(v) => query.bind(serde_json::to_value(v)?),
         };
 
         Ok(value)

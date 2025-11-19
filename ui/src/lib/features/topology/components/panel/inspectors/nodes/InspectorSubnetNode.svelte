@@ -1,13 +1,12 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
-	import { getSubnetFromId } from '$lib/features/subnets/store';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
+	import { topology } from '$lib/features/topology/store';
 
 	let { node }: { node: Node } = $props();
 
-	let subnetStore = $derived(getSubnetFromId(node.id));
-	let subnet = $derived($subnetStore);
+	let subnet = $derived($topology.subnets.find((s) => s.id == node.id));
 </script>
 
 <div class="space-y-4">

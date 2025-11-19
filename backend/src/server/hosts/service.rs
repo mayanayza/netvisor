@@ -1,17 +1,27 @@
 use crate::server::{
+    auth::middleware::AuthenticatedEntity,
     daemons::service::DaemonService,
     hosts::r#impl::base::Host,
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
+        entities::Entity,
+        events::{
+            bus::EventBus,
+            types::{EntityEvent, EntityOperation},
+        },
         services::traits::CrudService,
-        storage::{filter::EntityFilter, generic::GenericPostgresStorage, traits::Storage},
+        storage::{
+            filter::EntityFilter,
+            generic::GenericPostgresStorage,
+            traits::{StorableEntity, Storage},
+        },
         types::entities::{EntitySource, EntitySourceDiscriminants},
     },
 };
 use anyhow::{Error, Result, anyhow};
 use async_trait::async_trait;
+use chrono::Utc;
 use futures::future::{join_all, try_join_all};
-use itertools::{Either, Itertools};
 use std::{collections::HashMap, sync::Arc};
 use strum::IntoDiscriminant;
 use tokio::sync::Mutex;
@@ -22,6 +32,7 @@ pub struct HostService {
     service_service: Arc<ServiceService>,
     daemon_service: Arc<DaemonService>,
     host_locks: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
+    event_bus: Arc<EventBus>,
 }
 
 #[async_trait]
@@ -29,78 +40,23 @@ impl CrudService<Host> for HostService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Host>> {
         &self.storage
     }
-}
 
-impl HostService {
-    pub fn new(
-        storage: Arc<GenericPostgresStorage<Host>>,
-        service_service: Arc<ServiceService>,
-        daemon_service: Arc<DaemonService>,
-    ) -> Self {
-        Self {
-            storage,
-            service_service,
-            daemon_service,
-            host_locks: Arc::new(Mutex::new(HashMap::new())),
-        }
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
     }
 
-    async fn get_host_lock(&self, host_id: &Uuid) -> Arc<Mutex<()>> {
-        let mut locks = self.host_locks.lock().await;
-        locks
-            .entry(*host_id)
-            .or_insert_with(|| Arc::new(Mutex::new(())))
-            .clone()
+    fn entity_type() -> Entity {
+        Entity::Host
     }
-
-    pub async fn create_host_with_services(
-        &self,
-        host: Host,
-        services: Vec<Service>,
-    ) -> Result<(Host, Vec<Service>)> {
-        // Create host first (handles duplicates via upsert_host)
-        let mut created_host = self.create_host(host.clone()).await?;
-
-        // Create services, handling case where created_host was upserted instead of created anew (ie during discovery), which means that host ID + interfaces/port IDs
-        // are different from what's mapped to the service and they need to be updated
-        let transfer_service_futures = services.into_iter().map(|service| {
-            self.service_service
-                .reassign_service_interface_bindings(service, &host, &created_host)
-        });
-
-        let transferred_services = join_all(transfer_service_futures).await;
-
-        let create_service_futures: Vec<_> = transferred_services
-            .into_iter()
-            .map(|s| self.service_service.create_service(s))
-            .collect();
-
-        let created_services = try_join_all(create_service_futures).await?;
-
-        // Add all successfully created/found services to the host
-        for service in &created_services {
-            if !created_host.base.services.contains(&service.id) {
-                created_host.base.services.push(service.id);
-            }
-        }
-
-        // Now we need to update just the service IDs, without triggering
-        // the deletion logic in update_host_services
-        // Since bindings were already reassigned above, we just update the host record
-        let host_with_final_services = self.storage.update(&mut created_host).await?;
-
-        tracing::info!(
-            host_id = %created_host.id,
-            host_name = %created_host.base.name,
-            service_count = %created_services.len(),
-            "Created host with services"
-        );
-
-        Ok((host_with_final_services, created_services))
+    fn get_network_id(&self, entity: &Host) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Host) -> Option<Uuid> {
+        None
     }
 
     /// Create a new host
-    pub async fn create_host(&self, host: Host) -> Result<Host> {
+    async fn create(&self, host: Host, authentication: AuthenticatedEntity) -> Result<Host> {
         // Manually created and needs actual UUID
         let host = if host.id == Uuid::nil() {
             Host::new(host.base.clone())
@@ -132,11 +88,31 @@ impl HostService {
                     existing_host.id
                 );
 
-                self.upsert_host(existing_host, host).await?
+                self.upsert_host(existing_host, host, authentication)
+                    .await?
             }
             _ => {
-                self.storage.create(&host).await?;
-                tracing::info!("Created host {}: {}", host.base.name, host.id);
+                let created = self.storage.create(&host).await?;
+
+                self.event_bus()
+                    .publish(EntityEvent {
+                        id: Uuid::new_v4(),
+                        entity_type: Self::entity_type(),
+                        entity_id: created.id(),
+                        network_id: self.get_network_id(&created),
+                        organization_id: self.get_organization_id(&created),
+                        operation: EntityOperation::Created,
+                        timestamp: Utc::now(),
+                        metadata: serde_json::json!({}),
+                        authentication,
+                    })
+                    .await?;
+
+                tracing::info!(
+                    name = %host.base.name,
+                    id = %host.id,
+                    "Created host"
+                );
                 tracing::trace!("Result: {:?}", host);
                 host
             }
@@ -145,7 +121,11 @@ impl HostService {
         Ok(host_from_storage)
     }
 
-    pub async fn update_host(&self, mut host: Host) -> Result<Host, Error> {
+    async fn update(
+        &self,
+        host: &mut Host,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Host, Error> {
         let lock = self.get_host_lock(&host.id).await;
         let _guard = lock.lock().await;
 
@@ -156,18 +136,113 @@ impl HostService {
             .await?
             .ok_or_else(|| anyhow!("Host '{}' not found", host.id))?;
 
-        self.update_host_services(&current_host, &host).await?;
+        self.update_host_services(&current_host, host, authentication.clone())
+            .await?;
 
-        self.storage.update(&mut host).await?;
+        let updated = self.storage.update(host).await?;
 
-        tracing::info!("Updated host {:?}: {:?}", host.base.name, host.id);
+        self.event_bus()
+            .publish(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: Self::entity_type(),
+                entity_id: updated.id(),
+                network_id: self.get_network_id(&updated),
+                organization_id: self.get_organization_id(&updated),
+                operation: EntityOperation::Updated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({}),
+                authentication,
+            })
+            .await?;
+
+        tracing::info!(
+            id = %host.id,
+            "Updated host"
+        );
         tracing::trace!("Result: {:?}", host);
 
-        Ok(host)
+        Ok(updated)
+    }
+}
+
+impl HostService {
+    pub fn new(
+        storage: Arc<GenericPostgresStorage<Host>>,
+        service_service: Arc<ServiceService>,
+        daemon_service: Arc<DaemonService>,
+        event_bus: Arc<EventBus>,
+    ) -> Self {
+        Self {
+            storage,
+            service_service,
+            daemon_service,
+            host_locks: Arc::new(Mutex::new(HashMap::new())),
+            event_bus,
+        }
+    }
+
+    async fn get_host_lock(&self, host_id: &Uuid) -> Arc<Mutex<()>> {
+        let mut locks = self.host_locks.lock().await;
+        locks
+            .entry(*host_id)
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone()
+    }
+
+    pub async fn create_host_with_services(
+        &self,
+        host: Host,
+        services: Vec<Service>,
+        authentication: AuthenticatedEntity,
+    ) -> Result<(Host, Vec<Service>)> {
+        // Create host first (handles duplicates via upsert_host)
+        let mut created_host = self.create(host.clone(), authentication.clone()).await?;
+
+        // Create services, handling case where created_host was upserted instead of created anew (ie during discovery), which means that host ID + interfaces/port IDs
+        // are different from what's mapped to the service and they need to be updated
+        let transfer_service_futures = services.into_iter().map(|service| {
+            self.service_service
+                .reassign_service_interface_bindings(service, &host, &created_host)
+        });
+
+        let transferred_services = join_all(transfer_service_futures).await;
+
+        let create_service_futures: Vec<_> = transferred_services
+            .into_iter()
+            .map(|s| self.service_service.create(s, authentication.clone()))
+            .collect();
+
+        let created_services = try_join_all(create_service_futures).await?;
+
+        // Add all successfully created/found services to the host
+        for service in &created_services {
+            if !created_host.base.services.contains(&service.id) {
+                created_host.base.services.push(service.id);
+            }
+        }
+
+        // Now we need to update just the service IDs, without triggering
+        // the deletion logic in update_host_services
+        // Since bindings were already reassigned above, we just update the host record
+        let host_with_final_services = self.storage.update(&mut created_host).await?;
+
+        tracing::info!(
+            host_id = %created_host.id,
+            host_name = %created_host.base.name,
+            service_count = %created_services.len(),
+            "Created host with services"
+        );
+
+        Ok((host_with_final_services, created_services))
     }
 
     /// Merge new discovery data with existing host
-    async fn upsert_host(&self, mut existing_host: Host, new_host_data: Host) -> Result<Host> {
+    async fn upsert_host(
+        &self,
+        mut existing_host: Host,
+        new_host_data: Host,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Host> {
         let mut interface_updates = 0;
         let mut port_updates = 0;
         let mut hostname_update = false;
@@ -262,6 +337,20 @@ impl HostService {
         }
 
         if !data.is_empty() {
+            self.event_bus()
+                .publish(EntityEvent {
+                    id: Uuid::new_v4(),
+                    entity_type: Self::entity_type(),
+                    entity_id: existing_host.id(),
+                    network_id: self.get_network_id(&existing_host),
+                    organization_id: self.get_organization_id(&existing_host),
+                    operation: EntityOperation::Updated,
+                    timestamp: Utc::now(),
+                    metadata: serde_json::json!({}),
+                    authentication,
+                })
+                .await?;
+
             tracing::info!(
                 host_id = %existing_host.id,
                 host_name = %existing_host.base.name,
@@ -284,6 +373,7 @@ impl HostService {
         &self,
         destination_host: Host,
         other_host: Host,
+        authentication: AuthenticatedEntity,
     ) -> Result<Host> {
         if destination_host.id == other_host.id {
             return Err(anyhow!("Can't consolidate a host with itself"));
@@ -313,12 +403,18 @@ impl HostService {
 
         if let Some(mut other_host_daemon) = other_host_daemon {
             other_host_daemon.base.host_id = destination_host.id;
-            self.daemon_service.update(&mut other_host_daemon).await?;
+            self.daemon_service
+                .update(&mut other_host_daemon, authentication.clone())
+                .await?;
         }
 
         // Add bindings, interfaces, sources from old host to new
         let updated_host = self
-            .upsert_host(destination_host.clone(), other_host.clone())
+            .upsert_host(
+                destination_host.clone(),
+                other_host.clone(),
+                authentication.clone(),
+            )
             .await?;
 
         // Update host_id, network_id, and interface/port binding IDs to what's available on new host
@@ -337,33 +433,49 @@ impl HostService {
 
         let prepped_for_transfer_services: Vec<Service> = join_all(service_transfer_futures).await;
 
-        let ((upsert_futures, delete_futures), update_futures): ((Vec<_>, Vec<_>), Vec<_>) =
-            prepped_for_transfer_services
+        // First, execute updates sequentially
+        for prepped_service in &prepped_for_transfer_services {
+            if !destination_host_services
                 .iter()
-                .partition_map(|prepped_service| {
-                    // If there's an existing service on the host, upsert the transferred service so to avoid duplicates
-                    // If not, just update the transferred service
-                    if let Some(existing_service) = destination_host_services
-                        .iter()
-                        .find(|s| *s == prepped_service)
-                    {
-                        Either::Left((
-                            self.service_service
-                                .upsert_service(existing_service.clone(), prepped_service.clone()),
-                            self.service_service.delete_service(&prepped_service.id),
-                        ))
-                    } else {
-                        Either::Right(self.service_service.update_service(prepped_service.clone()))
-                    }
-                });
+                .any(|s| s == prepped_service)
+            {
+                let mut owned_service = prepped_service.clone();
+                self.service_service
+                    .update(&mut owned_service, authentication.clone())
+                    .await?;
+            }
+        }
 
-        // Save the updated services to DB
-        let _upserted_services = try_join_all(upsert_futures).await?;
-        let _deleted_services = try_join_all(delete_futures).await?;
-        let _updated_services = try_join_all(update_futures).await?;
+        // Then collect upsert/delete futures for concurrent execution
+        let (upsert_futures, delete_futures): (Vec<_>, Vec<_>) = prepped_for_transfer_services
+            .iter()
+            .filter_map(|prepped_service| {
+                destination_host_services
+                    .iter()
+                    .find(|s| *s == prepped_service)
+                    .map(|existing_service| {
+                        (
+                            self.service_service.upsert_service(
+                                existing_service.clone(),
+                                prepped_service.clone(),
+                                authentication.clone(),
+                            ),
+                            self.service_service
+                                .delete(&prepped_service.id, authentication.clone()),
+                        )
+                    })
+            })
+            .unzip();
+
+        // Execute upsert/delete concurrently
+        let (_, _) = tokio::join!(
+            futures::future::join_all(upsert_futures),
+            futures::future::join_all(delete_futures),
+        );
 
         // Delete host, ignore services because they are just being moved to other host
-        self.delete_host(&other_host.id, false).await?;
+        self.delete_host(&other_host.id, false, authentication)
+            .await?;
         tracing::info!(
             source_host_id = %other_host.id,
             source_host_name = %other_host.base.name,
@@ -376,7 +488,12 @@ impl HostService {
         Ok(updated_host)
     }
 
-    async fn update_host_services(&self, current_host: &Host, updates: &Host) -> Result<(), Error> {
+    async fn update_host_services(
+        &self,
+        current_host: &Host,
+        updates: &Host,
+        authentication: AuthenticatedEntity,
+    ) -> Result<(), Error> {
         let host_filter = EntityFilter::unfiltered().host_id(&current_host.id);
 
         let services = self.service_service.get_all(host_filter).await?;
@@ -394,7 +511,7 @@ impl HostService {
 
         let delete_service_futures = delete_services
             .iter()
-            .map(|s| self.service_service.delete_service(&s.id));
+            .map(|s| self.service_service.delete(&s.id, authentication.clone()));
 
         try_join_all(delete_service_futures).await?;
 
@@ -402,11 +519,12 @@ impl HostService {
             let service_service = self.service_service.clone();
             let current_host = current_host.clone();
             let updates = updates.clone();
+            let authentication = authentication.clone();
             async move {
-                let updated = service_service
+                let mut updated = service_service
                     .reassign_service_interface_bindings(service, &current_host, &updates)
                     .await;
-                service_service.update_service(updated).await
+                service_service.update(&mut updated, authentication).await
             }
         });
 
@@ -429,7 +547,12 @@ impl HostService {
         Ok(())
     }
 
-    pub async fn delete_host(&self, id: &Uuid, delete_services: bool) -> Result<()> {
+    pub async fn delete_host(
+        &self,
+        id: &Uuid,
+        delete_services: bool,
+        authentication: AuthenticatedEntity,
+    ) -> Result<()> {
         let host_filter = EntityFilter::unfiltered().host_id(id);
         if self.daemon_service.get_one(host_filter).await?.is_some() {
             return Err(anyhow!(
@@ -447,11 +570,29 @@ impl HostService {
 
         if delete_services {
             for service_id in &host.base.services {
-                let _ = self.service_service.delete_service(service_id).await;
+                let _ = self
+                    .service_service
+                    .delete(service_id, authentication.clone())
+                    .await;
             }
         }
 
         self.storage.delete(id).await?;
+
+        self.event_bus()
+            .publish(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: Self::entity_type(),
+                entity_id: host.id(),
+                network_id: self.get_network_id(&host),
+                organization_id: self.get_organization_id(&host),
+                operation: EntityOperation::Deleted,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({}),
+                authentication,
+            })
+            .await?;
+
         tracing::info!(
             host_id = %host.id,
             host_name = %host.base.name,

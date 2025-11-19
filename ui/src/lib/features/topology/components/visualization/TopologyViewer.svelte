@@ -10,7 +10,7 @@
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../store';
+	import { optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 
@@ -18,9 +18,9 @@
 	import SubnetNode from './SubnetNode.svelte';
 	import InterfaceNode from './InterfaceNode.svelte';
 	import CustomEdge from './CustomEdge.svelte';
-	import { type TopologyEdge } from '../types/base';
+	import { type TopologyEdge } from '../../types/base';
 	import { onMount } from 'svelte';
-	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../interactions';
+	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
 
 	// Define node types
 	const nodeTypes = {
@@ -118,10 +118,8 @@
 
 				// Create edges with markers
 				const flowEdges: Edge[] = $topology.edges
-					.filter(
-						([, , edge]: [number, number, TopologyEdge]) => edge.edge_type != 'HostVirtualization'
-					)
-					.map(([, , edge]: [number, number, TopologyEdge], index: number): Edge => {
+					.filter((edge) => edge.edge_type != 'HostVirtualization')
+					.map((edge: TopologyEdge, index: number) => {
 						const edgeType = edge.edge_type as string;
 						const edgeMetadata = edgeTypes.getMetadata(edgeType);
 						const edgeColorHelper = edgeTypes.getColorHelper(edgeType);

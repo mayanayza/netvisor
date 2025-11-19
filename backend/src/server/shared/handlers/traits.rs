@@ -81,15 +81,18 @@ where
     );
 
     let service = T::get_service(&state);
-    let created = service.create(request).await.map_err(|e| {
-        tracing::error!(
-            entity_type = T::table_name(),
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to create entity"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
+    let created = service
+        .create(request, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                entity_type = T::table_name(),
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to create entity"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     tracing::info!(
         entity_type = T::table_name(),
@@ -229,16 +232,19 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
-    let updated = service.update(&mut request).await.map_err(|e| {
-        tracing::error!(
-            entity_type = T::table_name(),
-            entity_id = %id,
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to update entity"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
+    let updated = service
+        .update(&mut request, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                entity_type = T::table_name(),
+                entity_id = %id,
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to update entity"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     tracing::info!(
         entity_type = T::table_name(),
@@ -252,7 +258,7 @@ where
 
 pub async fn delete_handler<T>(
     State(state): State<Arc<AppState>>,
-    RequireMember(_user): RequireMember,
+    RequireMember(user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>>
 where
@@ -289,7 +295,7 @@ where
         "Delete request received"
     );
 
-    service.delete(&id).await.map_err(|e| {
+    service.delete(&id, user.into()).await.map_err(|e| {
         tracing::error!(
             entity_type = T::table_name(),
             entity_id = %id,

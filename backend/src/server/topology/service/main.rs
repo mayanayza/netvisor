@@ -6,21 +6,27 @@ use petgraph::{Graph, graph::NodeIndex};
 use uuid::Uuid;
 
 use crate::server::{
-    groups::service::GroupService,
-    hosts::service::HostService,
+    groups::{r#impl::base::Group, service::GroupService},
+    hosts::{r#impl::base::Host, service::HostService},
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
+        entities::Entity,
+        events::bus::EventBus,
         services::traits::CrudService,
         storage::{filter::EntityFilter, generic::GenericPostgresStorage},
     },
-    subnets::service::SubnetService,
+    subnets::{r#impl::base::Subnet, service::SubnetService},
     topology::{
         service::{
             context::TopologyContext, edge_builder::EdgeBuilder,
             optimizer::main::TopologyOptimizer,
             planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
-        types::{api::TopologyOptions, base::Topology, edges::Edge, nodes::Node},
+        types::{
+            base::{Topology, TopologyOptions},
+            edges::Edge,
+            nodes::Node,
+        },
     },
 };
 
@@ -30,12 +36,27 @@ pub struct TopologyService {
     subnet_service: Arc<SubnetService>,
     group_service: Arc<GroupService>,
     service_service: Arc<ServiceService>,
+    event_bus: Arc<EventBus>,
 }
 
 #[async_trait]
 impl CrudService<Topology> for TopologyService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Topology>> {
         &self.storage
+    }
+
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn entity_type() -> Entity {
+        Entity::Topology
+    }
+    fn get_network_id(&self, entity: &Topology) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Topology) -> Option<Uuid> {
+        None
     }
 }
 
@@ -46,6 +67,7 @@ impl TopologyService {
         group_service: Arc<GroupService>,
         service_service: Arc<ServiceService>,
         storage: Arc<GenericPostgresStorage<Topology>>,
+        event_bus: Arc<EventBus>,
     ) -> Self {
         Self {
             host_service,
@@ -53,11 +75,16 @@ impl TopologyService {
             group_service,
             service_service,
             storage,
+            event_bus,
         }
     }
 
-    pub async fn build_graph(&self, options: TopologyOptions) -> Result<Graph<Node, Edge>, Error> {
-        let network_filter = EntityFilter::unfiltered().network_ids(&options.network_ids);
+    pub async fn get_entity_data(
+        &self,
+        network_id: Uuid,
+        options: TopologyOptions,
+    ) -> Result<(Vec<Host>, Vec<Service>, Vec<Subnet>, Vec<Group>), Error> {
+        let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
         // Fetch all data
         let hosts = self.host_service.get_all(network_filter.clone()).await?;
         let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
@@ -69,13 +96,25 @@ impl TopologyService {
             .into_iter()
             .filter(|s| {
                 !options
+                    .request
                     .hide_service_categories
                     .contains(&s.base.service_definition.category())
             })
             .collect();
 
+        Ok((hosts, services, subnets, groups))
+    }
+
+    pub fn build_graph(
+        &self,
+        options: &TopologyOptions,
+        hosts: &[Host],
+        subnets: &[Subnet],
+        services: &[Service],
+        groups: &[Group],
+    ) -> (Vec<Node>, Vec<Edge>) {
         // Create context to avoid parameter passing
-        let ctx = TopologyContext::new(&hosts, &subnets, &services, &groups, &options);
+        let ctx = TopologyContext::new(hosts, subnets, services, groups, options);
 
         // Create all edges (needed for anchor analysis)
         let mut all_edges = Vec::new();
@@ -87,7 +126,7 @@ impl TopologyService {
         let (container_edges, docker_bridge_host_subnet_id_to_group_on) =
             EdgeBuilder::create_containerized_service_edges(
                 &ctx,
-                options.group_docker_bridges_by_host,
+                options.request.group_docker_bridges_by_host,
             );
 
         all_edges.extend(container_edges);
@@ -97,7 +136,7 @@ impl TopologyService {
         let (subnet_layouts, child_nodes) = layout_planner.create_subnet_child_nodes(
             &ctx,
             &mut all_edges,
-            options.group_docker_bridges_by_host,
+            options.request.group_docker_bridges_by_host,
             docker_bridge_host_subnet_id_to_group_on,
         );
 
@@ -123,6 +162,9 @@ impl TopologyService {
         // Add edges to graph
         EdgeBuilder::add_edges_to_graph(&mut graph, &node_indices, optimized_edges);
 
-        Ok(graph)
+        (
+            graph.node_weights().cloned().collect(),
+            graph.edge_weights().cloned().collect(),
+        )
     }
 }

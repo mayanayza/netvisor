@@ -5,6 +5,7 @@ use crate::server::{
             ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
             RegisterRequest, ResetPasswordRequest, UpdateEmailPasswordRequest,
         },
+        middleware::AuthenticatedUser,
         oidc::OidcPendingAuth,
         service::hash_password,
     },
@@ -123,6 +124,7 @@ async fn get_current_user(
 async fn update_password_auth(
     State(state): State<Arc<AppState>>,
     session: Session,
+    auth_user: AuthenticatedUser,
     Json(request): Json<UpdateEmailPasswordRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     let user_id: Uuid = session
@@ -146,7 +148,11 @@ async fn update_password_auth(
         user.base.email = email
     }
 
-    state.services.user_service.update(&mut user).await?;
+    state
+        .services
+        .user_service
+        .update(&mut user, auth_user.into())
+        .await?;
 
     Ok(Json(ApiResponse::success(user)))
 }

@@ -11,6 +11,7 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getServices, getGroups]);
 
@@ -103,16 +104,13 @@
 </script>
 
 <div class="space-y-6">
-	<TabHeader
-		title="Groups"
-		subtitle="Create custom groups to improve topology visualization"
-		buttons={[
-			{
-				onClick: handleCreateGroup,
-				cta: 'Create Group'
-			}
-		]}
-	/>
+	<TabHeader title="Groups" subtitle="Create custom groups to improve topology visualization">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateGroup}
+				><Plus class="h-5 w-5" />Create Group</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	{#if $loading}
 		<Loading />

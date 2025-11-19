@@ -6,6 +6,7 @@ use axum::{
 };
 use clap::Parser;
 use netvisor::server::{
+    auth::middleware::AuthenticatedEntity,
     billing::types::base::{BillingPlan, BillingRate, Price},
     config::{AppState, CliArgs, ServerConfig},
     organizations::r#impl::base::{Organization, OrganizationBase},
@@ -305,17 +306,23 @@ async fn main() -> anyhow::Result<()> {
     // First load - populate user and org
     if all_users.is_empty() {
         let organization = organization_service
-            .create(Organization::new(OrganizationBase {
-                stripe_customer_id: None,
-                plan: None,
-                plan_status: None,
-                name: "My Organization".to_string(),
-                is_onboarded: false,
-            }))
+            .create(
+                Organization::new(OrganizationBase {
+                    stripe_customer_id: None,
+                    plan: None,
+                    plan_status: None,
+                    name: "My Organization".to_string(),
+                    is_onboarded: false,
+                }),
+                AuthenticatedEntity::System,
+            )
             .await?;
 
         user_service
-            .create_user(User::new(UserBase::new_seed(organization.id)))
+            .create(
+                User::new(UserBase::new_seed(organization.id)),
+                AuthenticatedEntity::System,
+            )
             .await?;
     } else {
         tracing::debug!("Server already has data, skipping seed data");

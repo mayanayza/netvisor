@@ -12,6 +12,7 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
+	import { Plus } from 'lucide-svelte';
 
 	let showSubnetEditor = false;
 	let editingSubnet: Subnet | null = null;
@@ -105,16 +106,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Subnets"
-		subtitle="Manage network subnets and IP ranges"
-		buttons={[
-			{
-				onClick: handleCreateSubnet,
-				cta: 'Create Subnet'
-			}
-		]}
-	/>
+	<TabHeader title="Subnets" subtitle="Manage network subnets and IP ranges">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateSubnet}
+				><Plus class="h-5 w-5" />Create Subnet</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}

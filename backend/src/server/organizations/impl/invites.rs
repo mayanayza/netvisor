@@ -6,7 +6,7 @@ use crate::server::users::r#impl::permissions::UserOrgPermissions;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganizationInvite {
-    pub token: String,
+    pub id: Uuid,
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
     pub url: String,
@@ -25,7 +25,7 @@ impl OrganizationInvite {
     ) -> Self {
         let now = Utc::now();
         Self {
-            token: Self::generate_token(),
+            id: Uuid::new_v4(),
             organization_id,
             permissions,
             created_by,
@@ -44,9 +44,5 @@ impl OrganizationInvite {
         }
 
         true
-    }
-
-    fn generate_token() -> String {
-        nanoid::nanoid!(32)
     }
 }

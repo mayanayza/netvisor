@@ -2,7 +2,7 @@ import { derived, get, writable, type Readable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { ApiKey } from './types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
-import { currentNetwork } from '../networks/store';
+import { networks } from '../networks/store';
 
 export const apiKeys = writable<ApiKey[]>([]);
 
@@ -70,7 +70,7 @@ export function createEmptyApiKeyFormData(): ApiKey {
 		updated_at: utcTimeZoneSentinel,
 		expires_at: null,
 		last_used: null,
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		key: '',
 		is_enabled: true
 	};

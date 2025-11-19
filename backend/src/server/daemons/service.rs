@@ -1,6 +1,7 @@
 use crate::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
+        auth::middleware::AuthenticatedEntity,
         daemons::r#impl::{
             api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse},
             base::Daemon,
@@ -8,19 +9,27 @@ use crate::{
         hosts::r#impl::ports::PortBase,
         services::r#impl::endpoints::{ApplicationProtocol, Endpoint},
         shared::{
-            services::traits::CrudService, storage::generic::GenericPostgresStorage,
+            entities::Entity,
+            events::{
+                bus::EventBus,
+                types::{EntityEvent, EntityOperation},
+            },
+            services::traits::CrudService,
+            storage::generic::GenericPostgresStorage,
             types::api::ApiResponse,
         },
     },
 };
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct DaemonService {
     daemon_storage: Arc<GenericPostgresStorage<Daemon>>,
     client: reqwest::Client,
+    event_bus: Arc<EventBus>,
 }
 
 #[async_trait]
@@ -28,13 +37,31 @@ impl CrudService<Daemon> for DaemonService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Daemon>> {
         &self.daemon_storage
     }
+
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn entity_type() -> Entity {
+        Entity::Daemon
+    }
+    fn get_network_id(&self, entity: &Daemon) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Daemon) -> Option<Uuid> {
+        None
+    }
 }
 
 impl DaemonService {
-    pub fn new(daemon_storage: Arc<GenericPostgresStorage<Daemon>>) -> Self {
+    pub fn new(
+        daemon_storage: Arc<GenericPostgresStorage<Daemon>>,
+        event_bus: Arc<EventBus>,
+    ) -> Self {
         Self {
             daemon_storage,
             client: reqwest::Client::new(),
+            event_bus,
         }
     }
 
@@ -43,6 +70,7 @@ impl DaemonService {
         &self,
         daemon_id: &Uuid,
         request: DaemonDiscoveryRequest,
+        authentication: AuthenticatedEntity,
     ) -> Result<(), Error> {
         let daemon = self
             .get_by_id(daemon_id)
@@ -80,6 +108,22 @@ impl DaemonService {
             );
         }
 
+        let daemon_ref = &daemon;
+
+        self.event_bus()
+            .publish(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: Self::entity_type(),
+                entity_id: *daemon_id,
+                network_id: self.get_network_id(daemon_ref),
+                organization_id: self.get_organization_id(daemon_ref),
+                operation: EntityOperation::Custom("discovery_request_sent"),
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({}),
+                authentication,
+            })
+            .await?;
+
         tracing::info!(
             "Discovery request sent to daemon {} for session {}",
             daemon.id,
@@ -92,6 +136,7 @@ impl DaemonService {
         &self,
         daemon: &Daemon,
         session_id: Uuid,
+        authentication: AuthenticatedEntity,
     ) -> Result<(), anyhow::Error> {
         let endpoint = Endpoint {
             ip: Some(daemon.base.ip),
@@ -114,6 +159,22 @@ impl DaemonService {
                 response.status()
             );
         }
+
+        self.event_bus()
+            .publish(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: Self::entity_type(),
+                entity_id: daemon.id,
+                network_id: self.get_network_id(daemon),
+                organization_id: self.get_organization_id(daemon),
+                operation: EntityOperation::Custom("discovery_cancellation_sent"),
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "session_id": session_id
+                }),
+                authentication,
+            })
+            .await?;
 
         Ok(())
     }

@@ -67,7 +67,7 @@ pub async fn create_handler(
 
     let service = Network::get_service(&state);
     let created = service
-        .create(request)
+        .create(request, user.into())
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 

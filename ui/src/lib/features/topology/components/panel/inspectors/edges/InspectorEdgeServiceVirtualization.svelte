@@ -1,12 +1,11 @@
 <script lang="ts">
 	import type { Edge } from '@xyflow/svelte';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
-	import { getServiceById, services } from '$lib/features/services/store';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { getSubnetFromId } from '$lib/features/subnets/store';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
-	import { topologyOptions } from '$lib/features/topology/store';
-	import { getHostFromId, getInterfaceFromId } from '$lib/features/hosts/store';
+	import { topology, topologyOptions } from '$lib/features/topology/store';
+	import { getInterfaceFromId } from '$lib/features/hosts/store';
 	import { get } from 'svelte/store';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -14,25 +13,29 @@
 
 	let { edge, containerizingServiceId }: { edge: Edge; containerizingServiceId: string } = $props();
 
-	let containerizingService = $derived(getServiceById(containerizingServiceId));
+	let containerizingService = $derived(
+		$topology.services.find((s) => s.id == containerizingServiceId) || null
+	);
 
 	let containerizingHost = $derived(
-		$containerizingService ? getHostFromId($containerizingService.host_id) : null
+		containerizingService
+			? $topology.hosts.find((h) => h.id == containerizingService.host_id)
+			: null
 	);
 
 	// Target can be either a subnet (grouped) or a service (not grouped)
-	let isGrouped = $derived($topologyOptions.request_options.group_docker_bridges_by_host);
+	let isGrouped = $derived($topologyOptions.request.group_docker_bridges_by_host);
 
 	// Get containerized services - all if grouped, or just the one in edge.target if not
 	let containerizedServices = $derived(
 		isGrouped
-			? $services.filter(
+			? $topology.services.filter(
 					(s) =>
 						s.virtualization &&
 						s.virtualization.type === 'Docker' &&
 						s.virtualization.details.service_id === containerizingServiceId
 				)
-			: $services.filter((s) => s.bindings.some((b) => b.interface_id == edge.target))
+			: $topology.services.filter((s) => s.bindings.some((b) => b.interface_id == edge.target))
 	);
 
 	// Get all Docker Bridge subnets for those containerized services
@@ -66,22 +69,18 @@
 </script>
 
 <div class="space-y-3">
-	{#if $containerizingHost}
+	{#if containerizingHost}
 		<span class="text-secondary mb-2 block text-sm font-medium">Docker Host</span>
 		<div class="card">
-			<EntityDisplayWrapper
-				context={{}}
-				item={$containerizingHost}
-				displayComponent={HostDisplay}
-			/>
+			<EntityDisplayWrapper context={{}} item={containerizingHost} displayComponent={HostDisplay} />
 		</div>
 	{/if}
-	{#if $containerizingService}
+	{#if containerizingService}
 		<span class="text-secondary mb-2 block text-sm font-medium">Docker Service</span>
 		<div class="card">
 			<EntityDisplayWrapper
 				context={{ interfaceId: null }}
-				item={$containerizingService}
+				item={containerizingService}
 				displayComponent={ServiceDisplay}
 			/>
 		</div>

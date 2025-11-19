@@ -47,7 +47,7 @@ impl Default for ServiceBase {
     }
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq)]
 pub struct Service {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

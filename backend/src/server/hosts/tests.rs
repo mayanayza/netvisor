@@ -2,6 +2,7 @@ use serial_test::serial;
 
 use crate::{
     server::{
+        auth::middleware::AuthenticatedEntity,
         services::r#impl::bindings::Binding,
         shared::{
             services::traits::CrudService,
@@ -19,12 +20,12 @@ async fn test_host_deduplication_on_create() {
 
     let organization = services
         .organization_service
-        .create(organization())
+        .create(organization(), AuthenticatedEntity::System)
         .await
         .unwrap();
     let network = services
         .network_service
-        .create(network(&organization.id))
+        .create(network(&organization.id), AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -39,7 +40,7 @@ async fn test_host_deduplication_on_create() {
     };
     let (created1, _) = services
         .host_service
-        .create_host_with_services(host1.clone(), vec![])
+        .create_host_with_services(host1.clone(), vec![], AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -50,7 +51,7 @@ async fn test_host_deduplication_on_create() {
     };
     let (created2, _) = services
         .host_service
-        .create_host_with_services(host2.clone(), vec![])
+        .create_host_with_services(host2.clone(), vec![], AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -69,12 +70,12 @@ async fn test_host_upsert_merges_new_data() {
 
     let organization = services
         .organization_service
-        .create(organization())
+        .create(organization(), AuthenticatedEntity::System)
         .await
         .unwrap();
     let network = services
         .network_service
-        .create(network(&organization.id))
+        .create(network(&organization.id), AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -86,14 +87,14 @@ async fn test_host_upsert_merges_new_data() {
     let subnet1 = subnet(&network.id);
     services
         .subnet_service
-        .create(subnet1.clone())
+        .create(subnet1.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
     host1.base.interfaces = vec![interface(&subnet1.id)];
 
     let (created, _) = services
         .host_service
-        .create_host_with_services(host1.clone(), vec![])
+        .create_host_with_services(host1.clone(), vec![], AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -105,14 +106,14 @@ async fn test_host_upsert_merges_new_data() {
     let subnet2 = subnet(&network.id);
     services
         .subnet_service
-        .create(subnet2.clone())
+        .create(subnet2.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
     host2.base.interfaces = vec![interface(&subnet1.id), interface(&subnet2.id)];
 
     let (upserted, _) = services
         .host_service
-        .create_host_with_services(host2.clone(), vec![])
+        .create_host_with_services(host2.clone(), vec![], AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -133,19 +134,19 @@ async fn test_host_consolidation() {
 
     let organization = services
         .organization_service
-        .create(organization())
+        .create(organization(), AuthenticatedEntity::System)
         .await
         .unwrap();
     let network = services
         .network_service
-        .create(network(&organization.id))
+        .create(network(&organization.id), AuthenticatedEntity::System)
         .await
         .unwrap();
 
     let subnet_obj = subnet(&network.id);
     services
         .subnet_service
-        .create(subnet_obj.clone())
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -154,7 +155,7 @@ async fn test_host_consolidation() {
 
     let (created1, _) = services
         .host_service
-        .create_host_with_services(host1.clone(), vec![])
+        .create_host_with_services(host1.clone(), vec![], AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -169,7 +170,7 @@ async fn test_host_consolidation() {
 
     let (created2, created_svcs) = services
         .host_service
-        .create_host_with_services(host2.clone(), vec![svc])
+        .create_host_with_services(host2.clone(), vec![svc], AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -178,7 +179,11 @@ async fn test_host_consolidation() {
     // Consolidate host2 into host1
     let consolidated = services
         .host_service
-        .consolidate_hosts(created1.clone(), created2.clone())
+        .consolidate_hosts(
+            created1.clone(),
+            created2.clone(),
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 

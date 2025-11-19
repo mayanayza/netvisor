@@ -39,14 +39,17 @@ pub async fn create_handler(
     );
 
     let service = ApiKey::get_service(&state);
-    let api_key = service.create(api_key).await.map_err(|e| {
-        tracing::error!(
-            error = %e,
-            user_id = %user.user_id,
-            "Failed to create API key"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
+    let api_key = service
+        .create(api_key, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                error = %e,
+                user_id = %user.user_id,
+                "Failed to create API key"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     tracing::info!(
         api_key_id = %api_key.id,
@@ -73,15 +76,18 @@ pub async fn rotate_key_handler(
     );
 
     let service = ApiKey::get_service(&state);
-    let key = service.rotate_key(api_key_id).await.map_err(|e| {
-        tracing::error!(
-            api_key_id = %api_key_id,
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to rotate API key"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
+    let key = service
+        .rotate_key(api_key_id, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                api_key_id = %api_key_id,
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to rotate API key"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     tracing::info!(
         api_key_id = %api_key_id,
@@ -131,15 +137,18 @@ pub async fn update_handler(
     // Preserve the key - don't allow it to be changed via update
     request.base.key = existing.base.key;
 
-    let updated = service.update(&mut request).await.map_err(|e| {
-        tracing::error!(
-            api_key_id = %id,
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to update API key"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
+    let updated = service
+        .update(&mut request, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                api_key_id = %id,
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to update API key"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     tracing::info!(
         api_key_id = %id,

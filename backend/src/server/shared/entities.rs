@@ -1,10 +1,26 @@
+use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumDiscriminants, EnumIter, IntoStaticStr)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumDiscriminants,
+    EnumIter,
+    IntoStaticStr,
+    Serialize,
+    Deserialize,
+    Display,
+)]
 #[strum_discriminants(derive(Display))]
 pub enum Entity {
+    Organization,
+    Invite,
     Network,
     ApiKey,
     User,
@@ -38,11 +54,13 @@ impl HasId for Entity {
 impl EntityMetadataProvider for Entity {
     fn color(&self) -> &'static str {
         match self {
+            Entity::Organization => "blue",
             Entity::Network => "gray",
             Entity::Daemon => "green",
             Entity::Discovery => "green",
             Entity::ApiKey => "yellow",
             Entity::User => "blue",
+            Entity::Invite => "green",
 
             Entity::Host => "blue",
             Entity::Service => "purple",
@@ -66,8 +84,10 @@ impl EntityMetadataProvider for Entity {
 
     fn icon(&self) -> &'static str {
         match self {
+            Entity::Organization => "Building",
             Entity::Network => "Globe",
             Entity::User => "User",
+            Entity::Invite => "UserPlus",
             Entity::ApiKey => "Key",
             Entity::Daemon => "SatelliteDish",
             Entity::Discovery => "Radar",

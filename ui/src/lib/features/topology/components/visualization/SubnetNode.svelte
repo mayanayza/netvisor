@@ -2,20 +2,19 @@
 	import { Handle, NodeResizeControl, Position, useViewport, type NodeProps } from '@xyflow/svelte';
 	import { createColorHelper, twColorToRgba } from '$lib/shared/utils/styling';
 	import { subnetTypes } from '$lib/shared/stores/metadata';
-	import { getSubnetFromId, isContainerSubnet } from '$lib/features/subnets/store';
-	import { topologyOptions } from '../store';
-	import type { SubnetRenderData } from '../types/base';
+	import { isContainerSubnet } from '$lib/features/subnets/store';
+	import { topology, topologyOptions } from '../../store';
+	import type { SubnetRenderData } from '../../types/base';
 	import { get } from 'svelte/store';
 
 	let { id, data, selected, width, height }: NodeProps = $props();
 
-	let leftZoneTitle = $derived($topologyOptions.left_zone_title);
+	let leftZoneTitle = $derived($topologyOptions.local.left_zone_title);
 	let infra_width = $derived((data.infra_width as number) || 0);
 	let nodeStyle = $derived(`width: ${width}px; height: ${height}px;`);
 	let hasInfra = $derived(infra_width > 0);
 
-	let subnetStore = getSubnetFromId(id);
-	let subnet = $derived($subnetStore);
+	let subnet = $derived($topology.subnets.find((s) => s.id == id));
 
 	const viewport = useViewport();
 	let resizeHandleZoomLevel = $derived(viewport.current.zoom > 0.5);
@@ -89,7 +88,7 @@
 			{/if}
 		</div>
 
-		{#if resizeHandleZoomLevel && !$topologyOptions.hide_resize_handles}
+		{#if resizeHandleZoomLevel && !$topologyOptions.local.hide_resize_handles}
 			<NodeResizeControl
 				position="bottom-right"
 				style="z-index: 100; border: none; width: 20px; height: 20px;"

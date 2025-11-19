@@ -1,4 +1,5 @@
 use crate::server::{
+    auth::middleware::AuthenticatedEntity,
     groups::{
         r#impl::{base::Group, types::GroupType},
         service::GroupService,
@@ -9,14 +10,24 @@ use crate::server::{
     },
     services::r#impl::{base::Service, bindings::Binding, patterns::MatchDetails},
     shared::{
+        entities::Entity,
+        events::{
+            bus::EventBus,
+            types::{EntityEvent, EntityOperation},
+        },
         services::traits::CrudService,
-        storage::{filter::EntityFilter, generic::GenericPostgresStorage, traits::Storage},
+        storage::{
+            filter::EntityFilter,
+            generic::GenericPostgresStorage,
+            traits::{StorableEntity, Storage},
+        },
         types::entities::{EntitySource, EntitySourceDiscriminants},
     },
 };
 use anyhow::anyhow;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use chrono::Utc;
 use futures::lock::Mutex;
 use std::{
     collections::HashMap,
@@ -31,6 +42,7 @@ pub struct ServiceService {
     group_service: Arc<GroupService>,
     group_update_lock: Arc<Mutex<()>>,
     service_locks: Arc<Mutex<HashMap<Uuid, Arc<Mutex<()>>>>>,
+    event_bus: Arc<EventBus>,
 }
 
 #[async_trait]
@@ -38,35 +50,32 @@ impl CrudService<Service> for ServiceService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Service>> {
         &self.storage
     }
-}
 
-impl ServiceService {
-    pub fn new(
-        storage: Arc<GenericPostgresStorage<Service>>,
-        group_service: Arc<GroupService>,
-    ) -> Self {
-        Self {
-            storage,
-            group_service,
-            host_service: OnceLock::new(),
-            group_update_lock: Arc::new(Mutex::new(())),
-            service_locks: Arc::new(Mutex::new(HashMap::new())),
-        }
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
     }
 
-    async fn get_service_lock(&self, service_id: &Uuid) -> Arc<Mutex<()>> {
-        let mut locks = self.service_locks.lock().await;
-        locks
-            .entry(*service_id)
-            .or_insert_with(|| Arc::new(Mutex::new(())))
-            .clone()
+    fn entity_type() -> Entity {
+        Entity::Service
+    }
+    fn get_network_id(&self, entity: &Service) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Service) -> Option<Uuid> {
+        None
     }
 
-    pub fn set_host_service(&self, host_service: Arc<HostService>) -> Result<(), Arc<HostService>> {
-        self.host_service.set(host_service)
-    }
+    async fn create(
+        &self,
+        service: Service,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Service> {
+        let service = if service.id == Uuid::nil() {
+            Service::new(service.base)
+        } else {
+            service
+        };
 
-    pub async fn create_service(&self, service: Service) -> Result<Service> {
         let lock = self.get_service_lock(&service.id).await;
         let _guard = lock.lock().await;
 
@@ -90,10 +99,26 @@ impl ServiceService {
                     service,
                     existing_service,
                 );
-                self.upsert_service(existing_service, service).await?
+                self.upsert_service(existing_service, service, authentication)
+                    .await?
             }
             _ => {
-                self.storage.create(&service).await?;
+                let created = self.storage.create(&service).await?;
+
+                self.event_bus()
+                    .publish(EntityEvent {
+                        id: Uuid::new_v4(),
+                        entity_type: Entity::Service,
+                        entity_id: created.id,
+                        network_id: self.get_network_id(&created),
+                        organization_id: self.get_organization_id(&created),
+                        operation: EntityOperation::Created,
+                        timestamp: Utc::now(),
+                        metadata: serde_json::json!({}),
+                        authentication,
+                    })
+                    .await?;
+
                 tracing::info!(
                     service_id = %service.id,
                     service_name = %service.base.name,
@@ -109,10 +134,121 @@ impl ServiceService {
         Ok(service_from_storage)
     }
 
+    async fn update(
+        &self,
+        service: &mut Service,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Service> {
+        let lock = self.get_service_lock(&service.id).await;
+        let _guard = lock.lock().await;
+
+        tracing::trace!("Updating service: {:?}", service);
+
+        let current_service = self
+            .get_by_id(&service.id)
+            .await?
+            .ok_or_else(|| anyhow!("Could not find service"))?;
+
+        self.update_group_service_bindings(&current_service, Some(service), authentication.clone())
+            .await?;
+
+        let updated = self.storage.update(service).await?;
+
+        self.event_bus()
+            .publish(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: Entity::Service,
+                entity_id: updated.id,
+                network_id: self.get_network_id(&updated),
+                organization_id: self.get_organization_id(&updated),
+                operation: EntityOperation::Updated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({}),
+                authentication,
+            })
+            .await?;
+
+        tracing::info!(
+            service_id = %service.id,
+            service_name = %service.base.name,
+            host_id = %service.base.host_id,
+            "Service updated"
+        );
+        tracing::trace!("Result: {:?}", service);
+        Ok(updated)
+    }
+
+    async fn delete(&self, id: &Uuid, authentication: AuthenticatedEntity) -> Result<()> {
+        let lock = self.get_service_lock(id).await;
+        let _guard = lock.lock().await;
+
+        let service = self
+            .get_by_id(id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Service {} not found", id))?;
+
+        self.update_group_service_bindings(&service, None, authentication.clone())
+            .await?;
+
+        self.storage.delete(id).await?;
+
+        self.event_bus()
+            .publish(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: Entity::Service,
+                entity_id: service.id,
+                network_id: self.get_network_id(&service),
+                organization_id: self.get_organization_id(&service),
+                operation: EntityOperation::Deleted,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({}),
+                authentication,
+            })
+            .await?;
+
+        tracing::info!(
+            "Deleted service {}: {} for host {}",
+            service.base.name,
+            service.id,
+            service.base.host_id
+        );
+        Ok(())
+    }
+}
+
+impl ServiceService {
+    pub fn new(
+        storage: Arc<GenericPostgresStorage<Service>>,
+        group_service: Arc<GroupService>,
+        event_bus: Arc<EventBus>,
+    ) -> Self {
+        Self {
+            storage,
+            group_service,
+            host_service: OnceLock::new(),
+            group_update_lock: Arc::new(Mutex::new(())),
+            service_locks: Arc::new(Mutex::new(HashMap::new())),
+            event_bus,
+        }
+    }
+
+    async fn get_service_lock(&self, service_id: &Uuid) -> Arc<Mutex<()>> {
+        let mut locks = self.service_locks.lock().await;
+        locks
+            .entry(*service_id)
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone()
+    }
+
+    pub fn set_host_service(&self, host_service: Arc<HostService>) -> Result<(), Arc<HostService>> {
+        self.host_service.set(host_service)
+    }
+
     pub async fn upsert_service(
         &self,
         mut existing_service: Service,
         new_service_data: Service,
+        authentication: AuthenticatedEntity,
     ) -> Result<Service> {
         let mut binding_updates = 0;
 
@@ -200,6 +336,20 @@ impl ServiceService {
         };
 
         if !data.is_empty() {
+            self.event_bus()
+                .publish(EntityEvent {
+                    id: Uuid::new_v4(),
+                    entity_type: Entity::Service,
+                    entity_id: existing_service.id,
+                    network_id: self.get_network_id(&existing_service),
+                    organization_id: self.get_organization_id(&existing_service),
+                    operation: EntityOperation::Updated,
+                    timestamp: Utc::now(),
+                    metadata: serde_json::json!({}),
+                    authentication,
+                })
+                .await?;
+
             tracing::info!(
                 service_id = %existing_service.id,
                 service_name = %existing_service.base.name,
@@ -217,35 +367,11 @@ impl ServiceService {
         Ok(existing_service)
     }
 
-    pub async fn update_service(&self, mut service: Service) -> Result<Service> {
-        let lock = self.get_service_lock(&service.id).await;
-        let _guard = lock.lock().await;
-
-        tracing::trace!("Updating service: {:?}", service);
-
-        let current_service = self
-            .get_by_id(&service.id)
-            .await?
-            .ok_or_else(|| anyhow!("Could not find service"))?;
-
-        self.update_group_service_bindings(&current_service, Some(&service))
-            .await?;
-
-        self.storage.update(&mut service).await?;
-        tracing::info!(
-            service_id = %service.id,
-            service_name = %service.base.name,
-            host_id = %service.base.host_id,
-            "Service updated"
-        );
-        tracing::trace!("Result: {:?}", service);
-        Ok(service)
-    }
-
     async fn update_group_service_bindings(
         &self,
         current_service: &Service,
         updates: Option<&Service>,
+        authenticated: AuthenticatedEntity,
     ) -> Result<(), Error> {
         tracing::trace!(
             "Updating group bindings referencing {:?}, with changes {:?}",
@@ -297,12 +423,18 @@ impl ServiceService {
             })
             .collect();
 
-        // Execute updates sequentially
-        for mut group in groups_to_update {
-            self.group_service.update(&mut group).await?;
+        if !groups_to_update.is_empty() {
+            // Execute updates sequentially
+            for mut group in groups_to_update {
+                self.group_service
+                    .update(&mut group, authenticated.clone())
+                    .await?;
+            }
+            tracing::info!(
+                service = %current_service,
+                "Updated group bindings"
+            );
         }
-
-        tracing::info!("Updated group bindings referencing {}", current_service);
 
         Ok(())
     }
@@ -397,10 +529,10 @@ impl ServiceService {
         mutable_service.base.network_id = updated_host.base.network_id;
 
         tracing::info!(
-            "Reassigned service {} bindings for from host {} to host {}",
-            mutable_service,
-            original_host,
-            updated_host
+            service = %mutable_service,
+            origin_host = %original_host,
+            destination_host = %updated_host,
+            "Reassigned service bindings",
         );
 
         tracing::trace!(
@@ -411,26 +543,5 @@ impl ServiceService {
         );
 
         mutable_service
-    }
-
-    pub async fn delete_service(&self, id: &Uuid) -> Result<()> {
-        let lock = self.get_service_lock(id).await;
-        let _guard = lock.lock().await;
-
-        let service = self
-            .get_by_id(id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Service {} not found", id))?;
-
-        self.update_group_service_bindings(&service, None).await?;
-
-        self.storage.delete(id).await?;
-        tracing::info!(
-            "Deleted service {}: {} for host {}",
-            service.base.name,
-            service.id,
-            service.base.host_id
-        );
-        Ok(())
     }
 }

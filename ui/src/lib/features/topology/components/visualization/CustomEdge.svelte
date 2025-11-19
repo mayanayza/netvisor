@@ -8,12 +8,11 @@
 		getStraightPath,
 		type Edge
 	} from '@xyflow/svelte';
-	import { selectedEdge, selectedNode, topology, topologyOptions } from '../store';
+	import { selectedEdge, selectedNode, topology, topologyOptions } from '../../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
-	import { groups } from '$lib/features/groups/store';
 	import { createColorHelper } from '$lib/shared/utils/styling';
-	import type { TopologyEdge } from '../types/base';
-	import { getEdgeDisplayState, edgeHoverState, groupHoverState } from '../interactions';
+	import type { TopologyEdge } from '../../types/base';
+	import { getEdgeDisplayState, edgeHoverState, groupHoverState } from '../../interactions';
 
 	let {
 		id,
@@ -38,12 +37,12 @@
 	// Get group reactively - updates when groups store changes
 	let group = $derived.by(() => {
 		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
-			return $groups.find((g) => g.id == edgeData.group_id) || null;
+			return $topology.groups.find((g) => g.id == edgeData.group_id) || null;
 		}
 		return null;
 	});
 
-	let hideEdge = $derived($topologyOptions.hide_edge_types.includes(edgeData.edge_type));
+	let hideEdge = $derived($topologyOptions.local.hide_edge_types.includes(edgeData.edge_type));
 
 	// Get display state from helper - Make reactive to hover stores
 	let displayState = $derived.by(() => {
@@ -78,8 +77,8 @@
 	let useMultiColorDash = $derived(isGroupEdge && shouldShowFull);
 
 	// Calculate base edge properties
-	let baseStrokeWidth = $derived(!$topologyOptions.no_fade_edges && shouldShowFull ? 3 : 2);
-	let baseOpacity = $derived(!$topologyOptions.no_fade_edges && !shouldShowFull ? 0.4 : 1);
+	let baseStrokeWidth = $derived(!$topologyOptions.local.no_fade_edges && shouldShowFull ? 3 : 2);
+	let baseOpacity = $derived(!$topologyOptions.local.no_fade_edges && !shouldShowFull ? 0.4 : 1);
 
 	// Calculate edge style for primary layer (dashed white overlay for group edges, or normal edge)
 	let edgeStyle = $derived.by(() => {

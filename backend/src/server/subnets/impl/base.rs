@@ -42,7 +42,7 @@ impl Default for SubnetBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Subnet {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

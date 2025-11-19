@@ -1,5 +1,8 @@
 use crate::server::{
-    auth::r#impl::api::{LoginRequest, RegisterRequest},
+    auth::{
+        r#impl::api::{LoginRequest, RegisterRequest},
+        middleware::AuthenticatedEntity,
+    },
     email::service::EmailService,
     organizations::{
         r#impl::base::{Organization, OrganizationBase},
@@ -10,7 +13,10 @@ use crate::server::{
         storage::{filter::EntityFilter, traits::StorableEntity},
     },
     users::{
-        r#impl::{base::User, permissions::UserOrgPermissions},
+        r#impl::{
+            base::{User, UserBase},
+            permissions::UserOrgPermissions,
+        },
         service::UserService,
     },
 };
@@ -141,22 +147,27 @@ impl AuthService {
                 seed_user.base.oidc_linked_at = Some(chrono::Utc::now());
             }
 
-            self.user_service.update(&mut seed_user).await
+            self.user_service
+                .update(&mut seed_user, AuthenticatedEntity::System)
+                .await
         } else {
             // If being invited, use provied org ID, otherwise create a new one
-            let org_id = if let Some(org_id) = org_id {
+            let organization_id = if let Some(org_id) = org_id {
                 org_id
             } else {
                 // Create new organization for this user
                 let organization = self
                     .organization_service
-                    .create(Organization::new(OrganizationBase {
-                        stripe_customer_id: None,
-                        name: "My Organization".to_string(),
-                        plan: None,
-                        plan_status: None,
-                        is_onboarded: false,
-                    }))
+                    .create(
+                        Organization::new(OrganizationBase {
+                            stripe_customer_id: None,
+                            name: "My Organization".to_string(),
+                            plan: None,
+                            plan_status: None,
+                            is_onboarded: false,
+                        }),
+                        AuthenticatedEntity::System,
+                    )
                     .await?;
                 organization.id
             };
@@ -167,11 +178,28 @@ impl AuthService {
             // Create user based on auth method
             if let Some(hash) = password_hash {
                 self.user_service
-                    .create_user_with_password(email, hash, org_id, permissions)
+                    .create(
+                        User::new(UserBase::new_password(
+                            email,
+                            hash,
+                            organization_id,
+                            permissions,
+                        )),
+                        AuthenticatedEntity::System,
+                    )
                     .await
-            } else if let Some(subject) = oidc_subject {
+            } else if let Some(oidc_subject) = oidc_subject {
                 self.user_service
-                    .create_user_with_oidc(email, subject, oidc_provider, org_id, permissions)
+                    .create(
+                        User::new(UserBase::new_oidc(
+                            email,
+                            oidc_subject,
+                            oidc_provider,
+                            organization_id,
+                            permissions,
+                        )),
+                        AuthenticatedEntity::System,
+                    )
                     .await
             } else {
                 Err(anyhow!("Must provide either password or OIDC credentials"))
@@ -318,7 +346,9 @@ impl AuthService {
         // Update password
         let hashed_password = hash_password(new_password)?;
         user.set_password(hashed_password);
-        self.user_service.update(&mut user).await?;
+        self.user_service
+            .update(&mut user, AuthenticatedEntity::System)
+            .await?;
 
         Ok(user.clone())
     }

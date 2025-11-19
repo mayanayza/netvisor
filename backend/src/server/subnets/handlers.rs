@@ -53,7 +53,7 @@ pub async fn create_handler(
     );
 
     let service = Subnet::get_service(&state);
-    let created = service.create(request).await.map_err(|e| {
+    let created = service.create(request, entity.clone()).await.map_err(|e| {
         tracing::error!(
             error = %e,
             entity_id = %entity.entity_id(),
@@ -76,11 +76,33 @@ async fn get_all_subnets(
     State(state): State<Arc<AppState>>,
     entity: AuthenticatedEntity,
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
-    tracing::debug!(
-        entity_id = %entity.entity_id(),
-        network_count = %entity.network_ids().len(),
-        "Get all subnets request received"
-    );
+    match &entity {
+        AuthenticatedEntity::User {
+            user_id,
+            network_ids,
+            ..
+        } => {
+            tracing::debug!(
+                entity_type = "subnet",
+                user_id = %user_id,
+                network_count = %network_ids.len(),
+                "Get all request received"
+            );
+        }
+        AuthenticatedEntity::Daemon { .. } => {
+            tracing::debug!(
+                entity_type = "subnet",
+                daemon_id = %entity.entity_id(),
+                network_count = 1,
+                "Get all request received"
+            );
+        }
+        AuthenticatedEntity::System => {
+            return Err(ApiError::internal_error(
+                "System should not authenticate for requests to /subnets/",
+            ));
+        }
+    }
 
     let service = &state.services.subnet_service;
     let filter = EntityFilter::unfiltered().network_ids(&entity.network_ids());
@@ -94,11 +116,29 @@ async fn get_all_subnets(
         ApiError::internal_error(&e.to_string())
     })?;
 
-    tracing::debug!(
-        entity_id = %entity.entity_id(),
-        subnet_count = %subnets.len(),
-        "Subnets fetched successfully"
-    );
+    match &entity {
+        AuthenticatedEntity::User { user_id, .. } => {
+            tracing::debug!(
+                user_id = %user_id,
+                entity_type = "subnet",
+                subnet_count = %subnets.len(),
+                "Entities fetched successfully"
+            );
+        }
+        AuthenticatedEntity::Daemon { .. } => {
+            tracing::debug!(
+                entity_type = "subnet",
+                daemon_id = %entity.entity_id(),
+                subnet_count = %subnets.len(),
+                "Entities fetched successfully"
+            );
+        }
+        AuthenticatedEntity::System => {
+            return Err(ApiError::internal_error(
+                "System should not authenticate for requests to /subnets/",
+            ));
+        }
+    }
 
     Ok(Json(ApiResponse::success(subnets)))
 }

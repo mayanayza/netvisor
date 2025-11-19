@@ -2,7 +2,7 @@
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { getBindingFromId, getServiceForBinding } from '$lib/features/services/store';
 	import { getHostFromId } from '$lib/features/hosts/store';
-	import { getGroupById, updateGroup } from '$lib/features/groups/store';
+	import { updateGroup } from '$lib/features/groups/store';
 	import { BindingWithServiceDisplay } from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
 	import { get } from 'svelte/store';
 	import { GroupDisplay } from '$lib/shared/components/forms/selection/display/GroupDisplay.svelte';
@@ -10,6 +10,7 @@
 	import EdgeStyleForm from '$lib/features/groups/components/GroupEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Group } from '$lib/features/groups/types/base';
+	import { topology } from '$lib/features/topology/store';
 
 	let {
 		groupId,
@@ -17,15 +18,15 @@
 		targetBindingId
 	}: { groupId: string; sourceBindingId: string; targetBindingId: string } = $props();
 
-	let group = $derived(getGroupById(groupId));
+	let group = $derived($topology.groups.find((g) => g.id == groupId) || null);
 
 	// Local copy of group for editing
 	let localGroup = $state<Group | null>(null);
 
 	// Initialize from group when it loads
 	$effect(() => {
-		if ($group) {
-			localGroup = { ...$group };
+		if (group) {
+			localGroup = { ...group };
 		}
 	});
 
@@ -33,23 +34,23 @@
 	$effect(() => {
 		if (
 			localGroup &&
-			$group &&
-			(localGroup.color !== $group.color || localGroup.edge_style !== $group.edge_style)
+			group &&
+			(localGroup.color !== group.color || localGroup.edge_style !== group.edge_style)
 		) {
 			updateGroup(localGroup);
 		}
 	});
 
-	let groupColor = $derived(createColorHelper($group?.color || 'gray'));
+	let groupColor = $derived(createColorHelper(group?.color || 'gray'));
 
-	let isRequestPath = $derived($group?.group_type == 'RequestPath');
+	let isRequestPath = $derived(group?.group_type == 'RequestPath');
 </script>
 
 <div class="space-y-3">
-	{#if $group && localGroup}
+	{#if group && localGroup}
 		<span class="text-secondary mb-2 block text-sm font-medium">Group</span>
 		<div class="card">
-			<EntityDisplayWrapper context={{}} item={$group} displayComponent={GroupDisplay} />
+			<EntityDisplayWrapper context={{}} item={group} displayComponent={GroupDisplay} />
 		</div>
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Edge Style</span>
@@ -58,7 +59,7 @@
 		</div>
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>
-		{#each $group.service_bindings as binding (binding)}
+		{#each group.service_bindings as binding (binding)}
 			{@const bindingService = get(getServiceForBinding(binding))}
 			{@const bindingHost = bindingService ? getHostFromId(bindingService.id) : null}
 			{#if bindingService && bindingHost}

@@ -1,20 +1,16 @@
 use std::net::IpAddr;
 
-use async_trait::async_trait;
-use chrono::{DateTime, Utc};
-use cidr::IpCidr;
-use email_address::EmailAddress;
-use sqlx::postgres::PgRow;
-use stripe_billing::SubscriptionStatus;
-use uuid::Uuid;
-
+use crate::server::groups::r#impl::base::Group;
+use crate::server::services::r#impl::base::Service;
+use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::{
     billing::types::base::BillingPlan,
     daemons::r#impl::{api::DaemonCapabilities, base::DaemonMode},
     discovery::r#impl::types::{DiscoveryType, RunType},
     groups::r#impl::types::GroupType,
     hosts::r#impl::{
-        interfaces::Interface, ports::Port, targets::HostTarget, virtualization::HostVirtualization,
+        base::Host, interfaces::Interface, ports::Port, targets::HostTarget,
+        virtualization::HostVirtualization,
     },
     services::r#impl::{
         bindings::Binding, definitions::ServiceDefinition, virtualization::ServiceVirtualization,
@@ -22,12 +18,19 @@ use crate::server::{
     shared::{storage::filter::EntityFilter, types::entities::EntitySource},
     subnets::r#impl::types::SubnetType,
     topology::types::{
-        api::TopologyOptions,
+        base::TopologyOptions,
         edges::{Edge, EdgeStyle},
         nodes::Node,
     },
     users::r#impl::permissions::UserOrgPermissions,
 };
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use cidr::IpCidr;
+use email_address::EmailAddress;
+use sqlx::postgres::PgRow;
+use stripe_billing::SubscriptionStatus;
+use uuid::Uuid;
 
 #[async_trait]
 pub trait Storage<T: StorableEntity>: Send + Sync {
@@ -100,4 +103,8 @@ pub enum SqlValue {
     Nodes(Vec<Node>),
     Edges(Vec<Edge>),
     TopologyOptions(TopologyOptions),
+    Hosts(Vec<Host>),
+    Subnets(Vec<Subnet>),
+    Services(Vec<Service>),
+    Groups(Vec<Group>),
 }

@@ -16,6 +16,7 @@
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
 	import { get } from 'svelte/store';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getHosts, getGroups, getServices, getSubnets, getDaemons]);
 
@@ -170,16 +171,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Hosts"
-		subtitle="Manage hosts on the network"
-		buttons={[
-			{
-				onClick: handleCreateHost,
-				cta: 'Create Host'
-			}
-		]}
-	/>
+	<TabHeader title="Hosts" subtitle="Manage hosts on the network">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateHost}
+				><Plus class="h-5 w-5" />Create Host</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}

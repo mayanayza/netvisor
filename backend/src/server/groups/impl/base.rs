@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash)]
 pub struct GroupBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -26,7 +26,7 @@ pub struct GroupBase {
     pub edge_style: EdgeStyle,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Group {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

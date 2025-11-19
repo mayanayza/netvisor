@@ -1,5 +1,5 @@
 use crate::server::api_keys::r#impl::base::{ApiKey, ApiKeyBase};
-use crate::server::auth::middleware::{AuthenticatedUser, RequireOwner};
+use crate::server::auth::middleware::{AuthenticatedEntity, AuthenticatedUser, RequireOwner};
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
 use crate::server::config::PublicConfigResponse;
@@ -16,6 +16,7 @@ use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::api::{ApiError, ApiResult};
 use crate::server::shared::types::metadata::{MetadataProvider, MetadataRegistry};
 use crate::server::subnets::r#impl::types::SubnetType;
+use crate::server::topology::types::base::{Topology, TopologyBase};
 use crate::server::topology::types::edges::EdgeType;
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::{
@@ -140,18 +141,34 @@ pub async fn onboarding(
 
     org.base.name = request.organization_name;
     org.base.is_onboarded = true;
-    let updated_org = state.services.organization_service.update(&mut org).await?;
+    let updated_org = state
+        .services
+        .organization_service
+        .update(&mut org, user.clone().into())
+        .await?;
 
     let mut network = Network::new(NetworkBase::new(user.organization_id));
     network.base.name = request.network_name;
 
-    let network = state.services.network_service.create(network).await?;
+    let network = state
+        .services
+        .network_service
+        .create(network, user.clone().into())
+        .await?;
+
+    let topology = Topology::new(TopologyBase::new("My Topology".to_string(), network.id));
+
+    state
+        .services
+        .topology_service
+        .create(topology, user.clone().into())
+        .await?;
 
     if request.populate_seed_data {
         state
             .services
             .network_service
-            .seed_default_data(network.id)
+            .seed_default_data(network.id, user.into())
             .await?;
     }
 
@@ -159,14 +176,17 @@ pub async fn onboarding(
         let api_key = state
             .services
             .api_key_service
-            .create(ApiKey::new(ApiKeyBase {
-                key: "".to_string(),
-                name: "Integrated Daemon API Key".to_string(),
-                last_used: None,
-                expires_at: None,
-                network_id: network.id,
-                is_enabled: true,
-            }))
+            .create(
+                ApiKey::new(ApiKeyBase {
+                    key: "".to_string(),
+                    name: "Integrated Daemon API Key".to_string(),
+                    last_used: None,
+                    expires_at: None,
+                    network_id: network.id,
+                    is_enabled: true,
+                }),
+                AuthenticatedEntity::System,
+            )
             .await?;
 
         state

@@ -11,6 +11,7 @@
 	import { getHosts } from '$lib/features/hosts/store';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getNetworks, getDaemons, getHosts]);
 
@@ -58,16 +59,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Daemons"
-		subtitle="Manage daemons"
-		buttons={[
-			{
-				onClick: handleCreateDaemon,
-				cta: 'Create Daemon'
-			}
-		]}
-	/>
+	<TabHeader title="Daemons" subtitle="Manage daemons">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateDaemon}
+				><Plus class="h-5 w-5" />Create Daemon</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}

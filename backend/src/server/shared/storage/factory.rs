@@ -24,7 +24,7 @@ pub struct StorageFactory {
     pub services: Arc<GenericPostgresStorage<Service>>,
     pub organizations: Arc<GenericPostgresStorage<Organization>>,
     pub discovery: Arc<GenericPostgresStorage<Discovery>>,
-    pub topology: Arc<GenericPostgresStorage<Topology>>,
+    pub topologies: Arc<GenericPostgresStorage<Topology>>,
 }
 
 pub async fn create_session_store(
@@ -63,7 +63,7 @@ impl StorageFactory {
             daemons: Arc::new(GenericPostgresStorage::new(pool.clone())),
             subnets: Arc::new(GenericPostgresStorage::new(pool.clone())),
             services: Arc::new(GenericPostgresStorage::new(pool.clone())),
-            topology: Arc::new(GenericPostgresStorage::new(pool.clone())),
+            topologies: Arc::new(GenericPostgresStorage::new(pool.clone())),
         })
     }
 }
