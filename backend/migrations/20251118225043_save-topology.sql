@@ -18,6 +18,7 @@ CREATE TABLE topologies (
     removed_services UUID[],
     removed_subnets UUID[],
     removed_groups UUID[],
+    parent_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

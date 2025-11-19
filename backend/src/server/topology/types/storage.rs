@@ -78,6 +78,7 @@ impl StorableEntity for Topology {
                     removed_services,
                     removed_subnets,
                     removed_groups,
+                    parent_id,
                 },
         } = self.clone();
 
@@ -104,6 +105,7 @@ impl StorableEntity for Topology {
                 "removed_services",
                 "removed_subnets",
                 "removed_groups",
+                "parent_id",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -127,6 +129,7 @@ impl StorableEntity for Topology {
                 SqlValue::UuidArray(removed_services),
                 SqlValue::UuidArray(removed_subnets),
                 SqlValue::UuidArray(removed_groups),
+                SqlValue::OptionalUuid(parent_id),
             ],
         ))
     }
@@ -168,6 +171,7 @@ impl StorableEntity for Topology {
                 removed_hosts: row.get("removed_hosts"),
                 removed_services: row.get("removed_services"),
                 removed_subnets: row.get("removed_subnets"),
+                parent_id: row.get("parent_id"),
                 nodes,
                 edges,
                 hosts,

@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::RequireMember,
+    auth::middleware::{AuthenticatedUser, RequireMember},
     config::AppState,
     shared::{
         handlers::traits::{
@@ -14,10 +14,14 @@ use crate::server::{
 use axum::{
     Router,
     extract::State,
-    response::Json,
+    response::{
+        Json, Sse,
+        sse::{Event, KeepAlive},
+    },
     routing::{delete, get, post, put},
 };
-use std::sync::Arc;
+use futures::{Stream, stream};
+use std::{convert::Infallible, sync::Arc};
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -29,6 +33,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}/refresh", post(refresh))
         .route("/{id}/lock", post(lock))
         .route("/{id}/unlock", post(unlock))
+        .route("/stream", get(staleness_stream))
 }
 
 pub async fn create_handler(
@@ -149,4 +154,26 @@ async fn unlock(
     let updated = service.update(&mut topology, user.into()).await?;
 
     Ok(Json(ApiResponse::success(updated)))
+}
+
+async fn staleness_stream(
+    State(state): State<Arc<AppState>>,
+    _user: AuthenticatedUser,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let rx = state
+        .services
+        .topology_service
+        .subscribe_staleness_changes();
+
+    let stream = stream::unfold(rx, |mut rx| async move {
+        match rx.recv().await {
+            Ok(update) => {
+                let json = serde_json::to_string(&update).ok()?;
+                Some((Ok(Event::default().data(json)), rx))
+            }
+            Err(_) => None,
+        }
+    });
+
+    Sse::new(stream).keep_alive(KeepAlive::default())
 }

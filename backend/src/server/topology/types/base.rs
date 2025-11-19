@@ -33,6 +33,7 @@ pub struct TopologyBase {
     pub removed_subnets: Vec<Uuid>,
     pub removed_services: Vec<Uuid>,
     pub removed_groups: Vec<Uuid>,
+    pub parent_id: Option<Uuid>,
 }
 
 impl TopologyBase {
@@ -56,6 +57,7 @@ impl TopologyBase {
             removed_subnets: vec![],
             removed_services: vec![],
             removed_groups: vec![],
+            parent_id: None,
         }
     }
 }

@@ -76,6 +76,9 @@ impl EventSubscriber for TopologyService {
                     }
 
                     topology.base.is_stale = true;
+
+                    self.staleness_tx.send(topology.clone().into())?;
+
                     self.update(&mut topology, AuthenticatedEntity::System)
                         .await?;
                 }

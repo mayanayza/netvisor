@@ -70,3 +70,39 @@ export class SSEClient<T> {
 		return this.eventSource?.readyState === EventSource.OPEN;
 	}
 }
+
+/**
+ * Base SSE manager class that handles connection lifecycle
+ * Extend this for specific SSE use cases
+ */
+export abstract class BaseSSEManager<T> {
+	protected client: SSEClient<T> | null = null;
+
+	/**
+	 * Create the SSE configuration for this manager
+	 * Must be implemented by subclasses
+	 */
+	protected abstract createConfig(): SSEConfig<T>;
+
+	connect() {
+		// Don't create a new client if already connected
+		if (this.isConnected()) {
+			return;
+		}
+
+		const config = this.createConfig();
+		this.client = new SSEClient(config);
+		this.client.connect();
+	}
+
+	disconnect() {
+		if (this.client) {
+			this.client.disconnect();
+			this.client = null;
+		}
+	}
+
+	isConnected(): boolean {
+		return this.client?.isConnected() ?? false;
+	}
+}

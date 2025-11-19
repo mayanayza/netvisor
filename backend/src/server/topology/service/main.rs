@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Error;
 use async_trait::async_trait;
 use petgraph::{Graph, graph::NodeIndex};
+use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::server::{
@@ -23,6 +24,7 @@ use crate::server::{
             planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
         types::{
+            api::TopologyStalenessUpdate,
             base::{Topology, TopologyOptions},
             edges::Edge,
             nodes::Node,
@@ -37,6 +39,7 @@ pub struct TopologyService {
     group_service: Arc<GroupService>,
     service_service: Arc<ServiceService>,
     event_bus: Arc<EventBus>,
+    pub staleness_tx: broadcast::Sender<TopologyStalenessUpdate>,
 }
 
 #[async_trait]
@@ -69,6 +72,7 @@ impl TopologyService {
         storage: Arc<GenericPostgresStorage<Topology>>,
         event_bus: Arc<EventBus>,
     ) -> Self {
+        let (staleness_tx, _) = broadcast::channel(100);
         Self {
             host_service,
             subnet_service,
@@ -76,7 +80,12 @@ impl TopologyService {
             service_service,
             storage,
             event_bus,
+            staleness_tx,
         }
+    }
+
+    pub fn subscribe_staleness_changes(&self) -> broadcast::Receiver<TopologyStalenessUpdate> {
+        self.staleness_tx.subscribe()
     }
 
     pub async fn get_entity_data(

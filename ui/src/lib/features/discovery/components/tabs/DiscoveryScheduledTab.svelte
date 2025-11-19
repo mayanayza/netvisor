@@ -2,7 +2,7 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
-	import { initiateDiscovery } from '../../SSEStore';
+	import { initiateDiscovery } from '../../sse';
 	import type { Discovery } from '../../types/base';
 	import {
 		createDiscovery,

@@ -137,39 +137,57 @@ function saveExpandedToStorage(expanded: boolean): void {
 }
 
 export async function refreshTopology(data: Topology) {
-	return await api.request<Topology>(
+	const result = await api.request<Topology, Topology[]>(
 		`/topology/${data.id}/refresh`,
-		topology,
-		(topology) => topology,
+		topologies,
+		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
 		{
 			method: 'POST',
 			body: JSON.stringify(data)
 		}
 	);
+
+	if (result && result.success && result.data && get(topology)?.id === data.id) {
+		topology.set(result.data);
+	}
+
+	return result;
 }
 
 export async function lockTopology(data: Topology) {
-	return await api.request<Topology>(
+	const result = await api.request<Topology, Topology[]>(
 		`/topology/${data.id}/lock`,
-		topology,
-		(topology) => topology,
+		topologies,
+		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
 		{
 			method: 'POST',
 			body: JSON.stringify(data)
 		}
 	);
+
+	if (result && result.success && result.data && get(topology)?.id === data.id) {
+		topology.set(result.data);
+	}
+
+	return result;
 }
 
 export async function unlockTopology(data: Topology) {
-	return await api.request<Topology>(
+	const result = await api.request<Topology, Topology[]>(
 		`/topology/${data.id}/unlock`,
-		topology,
-		(topology) => topology,
+		topologies,
+		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
 		{
 			method: 'POST',
 			body: JSON.stringify(data)
 		}
 	);
+
+	if (result && result.success && result.data && get(topology)?.id === data.id) {
+		topology.set(result.data);
+	}
+
+	return result;
 }
 
 export async function getTopologies() {
@@ -249,6 +267,7 @@ export function createEmptyTopologyFormData(): Topology {
 		removed_services: [],
 		removed_subnets: [],
 		locked_at: null,
-		locked_by: null
+		locked_by: null,
+		parent_id: null
 	};
 }

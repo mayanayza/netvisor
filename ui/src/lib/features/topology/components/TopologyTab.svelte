@@ -28,6 +28,8 @@
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import RefreshConflictsModal from './RefreshConflictsModal.svelte';
+	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
+	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
 
 	let isCreateEditOpen = false;
 	let editingTopology: Topology | null = null;
@@ -55,10 +57,8 @@
 	}
 
 	// Handle topology selection
-	function handleTopologyChange(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		const selectedId = target.value;
-		const selectedTopology = $topologies.find((t) => t.id === selectedId);
+	function handleTopologyChange(value: string) {
+		const selectedTopology = $topologies.find((t) => t.id === value);
 		if (selectedTopology) {
 			topology.set(selectedTopology);
 		}
@@ -160,18 +160,20 @@
 						</div>
 					{/if}
 
-					<select
-						value={$topology?.id || ''}
-						on:change={handleTopologyChange}
-						class="input-field min-w-[200px]"
-					>
-						{#each $topologies as topologyOption (topologyOption.id)}
-							<option value={topologyOption.id}>{topologyOption.name}</option>
-						{/each}
-					</select>
+					{#if $topologies && $topology}
+						<div>
+							<RichSelect
+								label=""
+								selectedValue={$topology.id}
+								displayComponent={TopologyDisplay}
+								onSelect={handleTopologyChange}
+								options={$topologies}
+							/>
+						</div>
+					{/if}
 
 					<button class="btn-primary" on:click={handleCreateTopology}>
-						<Plus class="my-1 h-5 w-5" /> New
+						<Plus class="h-5 w-5" /> New
 					</button>
 
 					<button class="btn-danger" on:click={handleDelete}>

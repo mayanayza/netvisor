@@ -9,10 +9,11 @@
 	import { getServices, services } from '$lib/features/services/store';
 	import { watchStores } from '$lib/shared/utils/storeWatcher';
 	import { getNetworks } from '$lib/features/networks/store';
-	import { startDiscoverySSE } from '$lib/features/discovery/SSEStore';
+	import { discoverySSEManager } from '$lib/features/discovery/sse';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
 	import type { Component } from 'svelte';
 	import { getMetadata } from '$lib/shared/stores/metadata';
+	import { topologySSEManager } from '$lib/features/topology/sse';
 
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
@@ -62,7 +63,8 @@
 			})
 		].flatMap((w) => w);
 
-		startDiscoverySSE();
+		topologySSEManager.connect();
+		discoverySSEManager.connect();
 
 		appInitialized = true;
 	}
@@ -86,6 +88,9 @@
 		storeWatcherUnsubs.forEach((unsub) => {
 			unsub();
 		});
+
+		topologySSEManager.disconnect();
+		discoverySSEManager.disconnect();
 
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('hashchange', handleHashChange);

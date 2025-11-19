@@ -2,7 +2,7 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { getDaemonIsRunningDiscovery } from '$lib/features/daemons/store';
-	import { sessions } from '$lib/features/discovery/SSEStore';
+	import { sessions } from '$lib/features/discovery/sse';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
