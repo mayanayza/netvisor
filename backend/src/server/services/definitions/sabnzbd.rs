@@ -9,7 +9,7 @@ pub struct SABnzbd;
 
 impl ServiceDefinition for SABnzbd {
     fn name(&self) -> &'static str {
-        "SABnzdb"
+        "SABnzbd"
     }
     fn description(&self) -> &'static str {
         "A NZB Files Downloader."
