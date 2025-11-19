@@ -36,7 +36,7 @@ incremental = true  # Enable incremental compilation
 # === Web Server Framework ===
 axum = "0.8.6"
 tower = "0.4.13" 
-tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+tower-http = { version = "0.5", features = ["fs", "cors", "trace", "set-header"] }
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "net", "time", "fs", "signal", "process"] }
 
 # === Database ===
