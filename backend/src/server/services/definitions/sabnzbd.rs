@@ -7,7 +7,7 @@ use crate::server::services::r#impl::patterns::Pattern;
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
 pub struct SABnzbd;
 
-impl ServiceDefinition for SABnzdb {
+impl ServiceDefinition for SABnzbd {
     fn name(&self) -> &'static str {
         "SABnzdb"
     }
