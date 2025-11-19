@@ -114,9 +114,6 @@ impl StorableEntity for Host {
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         // Parse JSON fields safely
-        let services: Vec<Uuid> =
-            serde_json::from_value(row.get::<serde_json::Value, _>("services"))
-                .map_err(|e| anyhow::anyhow!("Failed to deserialize services: {}", e))?;
         let interfaces: Vec<Interface> =
             serde_json::from_value(row.get::<serde_json::Value, _>("interfaces"))
                 .map_err(|e| anyhow::anyhow!("Failed to deserialize interfaces: {}", e))?;
@@ -143,7 +140,7 @@ impl StorableEntity for Host {
                 hostname: row.get("hostname"),
                 target,
                 hidden: row.get("hidden"),
-                services,
+                services: row.get("services"),
                 ports,
                 virtualization,
                 interfaces,

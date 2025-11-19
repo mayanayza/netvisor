@@ -38,8 +38,6 @@ const defaultOptions: TopologyOptions = {
 export const topologyOptions = writable<TopologyOptions>(loadOptionsFromStorage());
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
 
-// Initialize network_ids with the first network when networks are loaded
-// let networksInitialized = false;
 let topologyInitialized = false;
 let lastTopologyId = '';
 
@@ -51,8 +49,6 @@ if (browser) {
 			topologyInitialized = true;
 		}
 	});
-
-	// let lastOptions = JSON.stringify(get(topologyOptions));
 
 	// Subscribe to options changes and save to localStorage + update topology object
 	if (typeof window !== 'undefined') {
@@ -70,14 +66,6 @@ if (browser) {
 		optionsPanelExpanded.subscribe((expanded) => {
 			saveExpandedToStorage(expanded);
 		});
-
-		// topologyOptions.subscribe(($options) => {
-		// 	const current = JSON.stringify($options.request);
-		// 	if (current !== lastOptions) {
-		// 		lastOptions = current;
-		// 		if (networksInitialized && topologyInitialized) refreshTopology(get(topology));
-		// 	}
-		// });
 	}
 }
 
@@ -185,9 +173,15 @@ export async function unlockTopology(data: Topology) {
 }
 
 export async function getTopologies() {
-	return await api.request<Topology[]>('/topology', topologies, (topologies) => topologies, {
-		method: 'GET'
-	});
+	const result = await api.request<Topology[]>(
+		'/topology',
+		topologies,
+		(topologies) => topologies,
+		{
+			method: 'GET'
+		}
+	);
+	return result;
 }
 
 export async function createTopology(data: Topology) {

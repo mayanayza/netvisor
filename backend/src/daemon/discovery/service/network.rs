@@ -314,7 +314,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             total_ips = %total_ips,
             scanned = %scanned,
             discovered = %successful_discoveries.len(),
-            "📊 Scan complete"
+            "Scan complete"
         );
 
         Ok(successful_discoveries)

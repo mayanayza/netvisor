@@ -66,11 +66,7 @@ where
             SqlValue::Bool(v) => query.bind(v),
             SqlValue::Timestamp(v) => query.bind(v),
             SqlValue::OptionTimestamp(v) => query.bind(v),
-            SqlValue::UuidArray(v) => {
-                // Create a reference that lives as long as 'q
-                let slice: &'q [Uuid] = v;
-                query.bind(slice)
-            }
+            SqlValue::UuidArray(v) => query.bind(v.clone()),
             SqlValue::OptionalString(v) => query.bind(v),
             SqlValue::EntitySource(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::IpCidr(v) => query.bind(serde_json::to_string(v)?),

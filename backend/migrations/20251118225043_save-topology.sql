@@ -23,3 +23,13 @@ CREATE TABLE topologies (
 );
 
 CREATE INDEX IF NOT EXISTS idx_topologies_network ON topologies(network_id);
+
+-- Migration to change hosts.services from JSONB to UUID[]
+-- Converts JSONB array to UUID array, handles NULL and non-array cases
+
+ALTER TABLE hosts 
+    ALTER COLUMN services TYPE UUID[] 
+    USING CASE 
+        WHEN services IS NULL THEN NULL
+        ELSE translate(services::text, '[]"', '{}')::UUID[]
+    END;

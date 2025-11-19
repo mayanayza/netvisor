@@ -19,7 +19,6 @@
 	import InterfaceNode from './InterfaceNode.svelte';
 	import CustomEdge from './CustomEdge.svelte';
 	import { type TopologyEdge } from '../../types/base';
-	import { onMount } from 'svelte';
 	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
 
 	// Define node types
@@ -41,10 +40,6 @@
 
 	// Store pending edges until nodes are ready
 	let pendingEdges: Edge[] = [];
-
-	onMount(async () => {
-		await loadTopologyData();
-	});
 
 	$effect(() => {
 		if ($topology?.edges || $topology?.nodes) {
@@ -220,6 +215,7 @@
 		<Controls
 			showZoom={true}
 			showFitView={true}
+			showLock={false}
 			position="top-right"
 			class="!rounded !border !border-gray-600 !bg-gray-800 !shadow-lg [&_button:hover]:!bg-gray-600 [&_button]:!border-gray-600 [&_button]:!bg-gray-700 [&_button]:!text-gray-100"
 		/>

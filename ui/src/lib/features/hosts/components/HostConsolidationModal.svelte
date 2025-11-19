@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { CheckCircle } from 'lucide-svelte';
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import type { Host } from '../types/base';
 	import { hosts } from '../store';
@@ -7,6 +6,7 @@
 	import EntityDisplay from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
+	import EntityList from '$lib/shared/components/data/EntityList.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 
@@ -31,6 +31,41 @@
 	$: selectedTargetHost = selectedDestinationHostId
 		? $hosts.find((host) => host.id === selectedDestinationHostId)
 		: null;
+
+	// Build consolidation actions list
+	$: consolidationActions = (() => {
+		if (!otherHost || !selectedTargetHost) return [];
+
+		const actions = [
+			{
+				id: 'delete',
+				name: `Host "${otherHost.name}" will be deleted`
+			}
+		];
+
+		if (otherHost.services?.length > 0) {
+			actions.push({
+				id: 'services',
+				name: `${otherHost.services.length} service${otherHost.services.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+			});
+		}
+
+		if (otherHost.interfaces?.length > 0) {
+			actions.push({
+				id: 'interfaces',
+				name: `${otherHost.interfaces.length} interface${otherHost.interfaces.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+			});
+		}
+
+		if (otherHost.ports?.length > 0) {
+			actions.push({
+				id: 'ports',
+				name: `${otherHost.ports.length} port${otherHost.ports.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+			});
+		}
+
+		return actions;
+	})();
 
 	// Reset when modal opens/closes
 	$: if (isOpen && otherHost) {
@@ -125,46 +160,10 @@
 				</div>
 
 				<!-- Details of what will happen -->
-				<div class="card mb-6">
-					<h4 class="text-primary mb-3 text-sm font-medium">What will happen:</h4>
-					<ul class="text-secondary space-y-2 text-sm">
-						{#if otherHost && selectedTargetHost}
-							<li class="flex items-start gap-2">
-								<CheckCircle class="mt-0.5 h-4 w-4 shrink-0 text-success" />
-								<span>Host "{otherHost.name}" will be deleted</span>
-							</li>
-							{#if otherHost.services?.length > 0}
-								<li class="flex items-start gap-2">
-									<CheckCircle class="mt-0.5 h-4 w-4 shrink-0 text-success" />
-									<span
-										>{otherHost.services.length} services from "{otherHost.name}" will be migrated
-										to "{selectedTargetHost.name}".</span
-									>
-								</li>
-							{/if}
-							{#if otherHost.interfaces?.length > 0}
-								<li class="flex items-start gap-2">
-									<CheckCircle class="mt-0.5 h-4 w-4 shrink-0 text-success" />
-									<span
-										>{otherHost.interfaces.length} interfaces from "{otherHost.name}" will be
-										migrated to "{selectedTargetHost.name}".</span
-									>
-								</li>
-							{/if}
-							{#if otherHost.ports?.length > 0}
-								<li class="flex items-start gap-2">
-									<CheckCircle class="mt-0.5 h-4 w-4 shrink-0 text-success" />
-									<span
-										>{otherHost.ports.length} ports from "{otherHost.name}" will be migrated to "{selectedTargetHost.name}".</span
-									>
-								</li>
-							{/if}
-						{/if}
-					</ul>
-				</div>
+				<EntityList title="" items={consolidationActions} />
 
 				<!-- Warning -->
-				<div>
+				<div class="mt-4">
 					<InlineWarning
 						title="This action cannot be undone"
 						body="The source host will be permanently deleted and converted to an interface. Make sure this is what you want before proceeding."
