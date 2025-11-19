@@ -221,6 +221,7 @@ pub mod vault;
 pub mod vaultwarden;
 
 // Dashboard
+pub mod glance_app;
 pub mod homarr;
 pub mod homepage;
 pub mod jump;
@@ -290,9 +291,11 @@ pub mod cleanuparr;
 pub mod freshrss;
 pub mod grocy;
 pub mod huntarr;
+pub mod jotty;
 pub mod karakeep;
 pub mod lidarr;
 pub mod lubelogger;
+pub mod me_tube;
 pub mod mealie;
 pub mod memos;
 pub mod netbootxyz;
