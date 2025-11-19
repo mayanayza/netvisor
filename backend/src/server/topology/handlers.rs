@@ -2,7 +2,7 @@ use crate::server::{
     auth::middleware::AuthenticatedUser,
     config::AppState,
     shared::types::api::{ApiResponse, ApiResult},
-    topology::types::api::TopologyRequestOptions,
+    topology::types::api::TopologyOptions,
 };
 use axum::{Router, extract::State, response::Json, routing::post};
 use std::sync::Arc;
@@ -14,7 +14,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 async fn get_topology(
     State(state): State<Arc<AppState>>,
     _user: AuthenticatedUser,
-    Json(request): Json<TopologyRequestOptions>,
+    Json(request): Json<TopologyOptions>,
 ) -> ApiResult<Json<ApiResponse<serde_json::Value>>> {
     let service = &state.services.topology_service;
     let graph = service.build_graph(request).await?;

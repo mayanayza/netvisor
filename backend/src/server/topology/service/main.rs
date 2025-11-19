@@ -16,7 +16,7 @@ use crate::server::{
             optimizer::main::TopologyOptimizer,
             planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
-        types::{api::TopologyRequestOptions, edges::Edge, nodes::Node},
+        types::{api::TopologyOptions, edges::Edge, nodes::Node},
     },
 };
 
@@ -42,10 +42,7 @@ impl TopologyService {
         }
     }
 
-    pub async fn build_graph(
-        &self,
-        options: TopologyRequestOptions,
-    ) -> Result<Graph<Node, Edge>, Error> {
+    pub async fn build_graph(&self, options: TopologyOptions) -> Result<Graph<Node, Edge>, Error> {
         let network_filter = EntityFilter::unfiltered().network_ids(&options.network_ids);
         // Fetch all data
         let hosts = self.host_service.get_all(network_filter.clone()).await?;

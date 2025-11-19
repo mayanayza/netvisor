@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use crate::server::services::r#impl::categories::ServiceCategory;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct TopologyRequestOptions {
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct TopologyOptions {
     pub network_ids: Vec<Uuid>,
     pub group_docker_bridges_by_host: bool,
     pub hide_vm_title_on_docker_container: bool,
