@@ -62,6 +62,10 @@ impl ApiError {
     pub fn unauthorized(message: String) -> Self {
         Self::new(StatusCode::UNAUTHORIZED, message.to_string())
     }
+
+    pub fn bad_gateway(message: String) -> Self {
+        Self::new(StatusCode::BAD_GATEWAY, message.to_string())
+    }
 }
 
 impl axum::response::IntoResponse for ApiError {

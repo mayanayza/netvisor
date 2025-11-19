@@ -47,7 +47,7 @@
 	}
 </script>
 
-{#if !loading && !error && $stars !== null}
+{#if !loading && !error && $stars != null && $stars != undefined}
 	<a
 		href="https://github.com/mayanayza/netvisor"
 		target="_blank"
