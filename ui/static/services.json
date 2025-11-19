@@ -1,11 +1,5 @@
 [
   {
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
-  },
-  {
     "description": "NetVisor Server API for network management",
     "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains netvisor",
     "logo_url": "/logos/netvisor-logo.png",
@@ -1174,5 +1168,11 @@
     "discovery_pattern": "67/udp is open",
     "logo_url": "",
     "name": "Dhcp Server"
+  },
+  {
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   }
 ]
