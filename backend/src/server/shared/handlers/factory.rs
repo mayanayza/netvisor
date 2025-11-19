@@ -31,11 +31,14 @@ use crate::server::{
 };
 use anyhow::anyhow;
 use axum::extract::State;
+use axum::http::HeaderValue;
 use axum::routing::post;
 use axum::{Json, Router, routing::get};
+use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use strum::{IntoDiscriminant, IntoEnumIterator};
+use tower_http::set_header::SetResponseHeaderLayer;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -52,10 +55,18 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .nest("/api/auth", auth_handlers::create_router())
         .nest("/api/organizations", organization_handlers::create_router())
         .route("/api/health", get(get_health))
-        .route("/api/metadata", get(get_metadata_registry))
-        .route("/api/config", get(get_public_config))
-        .route("/api/github-stars", get(get_stars))
         .route("/api/onboarding", post(onboarding))
+        // Group cacheable routes together
+        .merge(
+            Router::new()
+                .route("/api/metadata", get(get_metadata_registry))
+                .route("/api/config", get(get_public_config))
+                .route("/api/github-stars", get(get_stars))
+                .layer(SetResponseHeaderLayer::if_not_present(
+                    header::CACHE_CONTROL,
+                    HeaderValue::from_static("max-age=3600, must-revalidate"),
+                )),
+        )
 }
 
 async fn get_metadata_registry(_user: AuthenticatedUser) -> Json<ApiResponse<MetadataRegistry>> {
