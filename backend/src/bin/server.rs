@@ -21,6 +21,7 @@ use tower::ServiceBuilder;
 use tower_http::{
     cors::CorsLayer,
     services::{ServeDir, ServeFile},
+    set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -245,6 +246,11 @@ async fn main() -> anyhow::Result<()> {
         CorsLayer::permissive()
     };
 
+    let cache_headers = SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store, no-cache, must-revalidate, private"),
+    );
+
     let app_cache = Arc::new(AppCache::new());
 
     // Create main app
@@ -252,7 +258,8 @@ async fn main() -> anyhow::Result<()> {
         ServiceBuilder::new()
             .layer(TraceLayer::new_for_http())
             .layer(cors)
-            .layer(Extension(app_cache)),
+            .layer(Extension(app_cache))
+            .layer(cache_headers),
     );
 
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;

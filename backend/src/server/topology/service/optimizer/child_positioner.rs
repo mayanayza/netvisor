@@ -6,8 +6,8 @@ use crate::server::topology::{
         context::TopologyContext, optimizer::utils::OptimizerUtils, planner::utils::NODE_PADDING,
     },
     types::{
-        base::{Ixy, Uxy},
         edges::{Edge, EdgeHandle},
+        layout::{Ixy, Uxy},
         nodes::{Node, NodeType},
     },
 };

@@ -20,9 +20,9 @@
 	const loading = loadData([getConfig]);
 	let signingIn = false;
 
-	$: disableRegistration = $loading ? false : $config.disable_registration;
-	$: enableOidc = $loading ? true : $config.oidc_enabled;
-	$: enablePasswordReset = $loading ? true : $config.has_email_service;
+	$: disableRegistration = $loading || !$config ? false : $config.disable_registration;
+	$: enableOidc = $loading || !$config ? false : $config.oidc_enabled;
+	$: enablePasswordReset = $loading || !$config ? false : $config.has_email_service;
 
 	let formData: LoginRequest = {
 		email: '',

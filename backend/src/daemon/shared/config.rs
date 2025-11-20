@@ -323,7 +323,7 @@ impl ConfigStore {
         if let Some(server_port) = config.server_port
             && let Some(server_target) = &config.server_target
         {
-            Ok(format!("http://{}:{}", server_target, server_port))
+            Ok(format!("{}:{}", server_target, server_port))
         } else if let Some(server_url) = config.server_url.clone() {
             Ok(server_url)
         } else {

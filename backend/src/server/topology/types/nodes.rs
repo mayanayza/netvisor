@@ -1,11 +1,11 @@
 use crate::server::subnets::r#impl::types::SubnetType;
-use crate::server::topology::types::base::{Ixy, Uxy};
 use crate::server::topology::types::edges::Edge;
+use crate::server::topology::types::layout::{Ixy, Uxy};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Node {
     #[serde(flatten)]
     pub node_type: NodeType,

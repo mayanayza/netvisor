@@ -101,21 +101,21 @@
 					label: 'Sessions',
 					icon: entities.getIconComponent('Discovery'),
 					component: DiscoverySessionTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'discovery-scheduled',
 					label: 'Scheduled',
 					icon: Calendar as IconComponent,
 					component: DiscoveryScheduledTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'discovery-history',
 					label: 'History',
 					icon: History as IconComponent,
 					component: DiscoveryHistoryTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				}
 			]
 		},
@@ -128,56 +128,56 @@
 					label: 'Networks',
 					icon: entities.getIconComponent('Network'),
 					component: NetworksTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'subnets',
 					label: 'Subnets',
 					icon: entities.getIconComponent('Subnet'),
 					component: SubnetTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'groups',
 					label: 'Groups',
 					icon: entities.getIconComponent('Group'),
 					component: GroupTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'hosts',
 					label: 'Hosts',
 					icon: entities.getIconComponent('Host'),
 					component: HostTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'services',
 					label: 'Services',
 					icon: entities.getIconComponent('Service'),
 					component: ServiceTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'daemons',
 					label: 'Daemons',
 					icon: entities.getIconComponent('Daemon'),
 					component: DaemonTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'api-keys',
 					label: 'API Keys',
 					icon: entities.getIconComponent('ApiKey'),
 					component: ApiKeyTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				},
 				{
 					id: 'users',
 					label: 'Users',
 					icon: entities.getIconComponent('User'),
 					component: UserTab,
-					requiredPermissions: ['Member', 'Owner']
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				}
 			]
 		},

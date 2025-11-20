@@ -2,39 +2,16 @@ import type { Writable } from 'svelte/store';
 import { pushError } from '../stores/feedback';
 import { env } from '$env/dynamic/public';
 
-export function getServerTarget(): string {
-	const baseUrl = window.location.origin;
-	const parsedUrl = new URL(baseUrl);
-
-	return env.PUBLIC_SERVER_HOSTNAME && env.PUBLIC_SERVER_HOSTNAME !== 'default'
-		? env.PUBLIC_SERVER_HOSTNAME
-		: parsedUrl.hostname;
-}
-
-export function getServerPort(): string {
-	const baseUrl = window.location.origin;
-	const parsedUrl = new URL(baseUrl);
-
-	if (parsedUrl.hostname == 'localhost') return '60072';
-
-	return env.PUBLIC_SERVER_HOSTNAME === 'default'
-		? parsedUrl.port || '60072'
-		: env.PUBLIC_SERVER_PORT || parsedUrl.port || '60072';
-}
-
-export function getServerProtocol(): string {
-	const baseUrl = window.location.origin;
-	const parsedUrl = new URL(baseUrl);
-
-	return parsedUrl.protocol === 'https:' ? 'https' : 'http';
-}
-
 export function getServerUrl() {
-	return `${getServerProtocol()}://${getServerTarget()}:${getServerPort()}`;
-}
+	// If API is on a different host/port, use explicit config
+	if (env.PUBLIC_SERVER_HOSTNAME && env.PUBLIC_SERVER_HOSTNAME !== 'default') {
+		const protocol = env.PUBLIC_SERVER_PROTOCOL || 'http';
+		const port = env.PUBLIC_SERVER_PORT ? `:${env.PUBLIC_SERVER_PORT}` : '';
+		return `${protocol}://${env.PUBLIC_SERVER_HOSTNAME}${port}`;
+	}
 
-export function getUiUrl() {
-	return window.location.href;
+	// Otherwise, use the exact same origin as the browser
+	return window.location.origin;
 }
 
 interface ApiResponse<T> {

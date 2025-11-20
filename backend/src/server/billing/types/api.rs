@@ -5,4 +5,5 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateCheckoutRequest {
     pub plan: BillingPlan,
+    pub url: String,
 }

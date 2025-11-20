@@ -5,13 +5,13 @@ use crate::server::{
         types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
     },
     subnets::r#impl::base::Subnet,
-    topology::types::base::Ixy,
+    topology::types::layout::Ixy,
 };
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Edge {
     pub source: Uuid,
     pub target: Uuid,
