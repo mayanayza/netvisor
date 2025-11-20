@@ -20,7 +20,7 @@ impl ServiceDefinition for SABnzbd {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(
-            PortBase::new_tcp(7777),
+            PortBase::Http8080,
             "/Content/manifest.json",
             "SABnzbd",
             None,
