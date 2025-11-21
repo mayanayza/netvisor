@@ -4,9 +4,12 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::server::discovery::r#impl::types::{DiscoveryType, RunType};
+use crate::server::{
+    discovery::r#impl::types::{DiscoveryType, RunType},
+    shared::entities::ChangeTriggersTopologyStaleness,
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct DiscoveryBase {
     pub discovery_type: DiscoveryType,
     pub run_type: RunType,
@@ -15,7 +18,7 @@ pub struct DiscoveryBase {
     pub network_id: Uuid,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Discovery {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -39,5 +42,11 @@ impl Discovery {
 impl Display for Discovery {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Discovery {}: {}", self.base.name, self.id)
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Discovery> for Discovery {
+    fn triggers_staleness(&self, _other: Option<Discovery>) -> bool {
+        false
     }
 }

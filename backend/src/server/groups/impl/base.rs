@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::types::entities::EntitySource;
 use crate::server::topology::types::edges::EdgeStyle;
 use crate::server::{
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash)]
 pub struct GroupBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -26,7 +27,7 @@ pub struct GroupBase {
     pub edge_style: EdgeStyle,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Group {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -38,5 +39,24 @@ pub struct Group {
 impl Display for Group {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Group {}: {}", self.base.name, self.id)
+    }
+}
+
+impl Group {
+    pub fn bindings(&self) -> Vec<Uuid> {
+        match &self.base.group_type {
+            GroupType::HubAndSpoke { service_bindings } => service_bindings.to_vec(),
+            GroupType::RequestPath { service_bindings } => service_bindings.to_vec(),
+        }
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Group> for Group {
+    fn triggers_staleness(&self, other: Option<Group>) -> bool {
+        if let Some(other_group) = other {
+            self.bindings() != other_group.bindings()
+        } else {
+            true
+        }
     }
 }

@@ -86,16 +86,16 @@
 		],
 		actions: [
 			{
-				label: 'Edit Service',
-				icon: Edit,
-				class: 'btn-icon',
-				onClick: () => onEdit(service)
-			},
-			{
-				label: 'Delete Service',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(service)
+			},
+			{
+				label: 'Edit',
+				icon: Edit,
+				class: 'btn-icon',
+				onClick: () => onEdit(service)
 			}
 		]
 	};

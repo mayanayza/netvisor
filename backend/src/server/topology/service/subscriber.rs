@@ -1,0 +1,176 @@
+use std::collections::HashMap;
+
+use anyhow::Error;
+use async_trait::async_trait;
+use uuid::Uuid;
+
+use crate::server::{
+    auth::middleware::AuthenticatedEntity,
+    shared::{
+        entities::{Entity, EntityDiscriminants},
+        events::{
+            bus::{EventFilter, EventSubscriber},
+            types::{EntityOperation, Event},
+        },
+        services::traits::CrudService,
+        storage::filter::EntityFilter as StorageFilter,
+    },
+    topology::service::main::TopologyService,
+};
+
+#[derive(Default)]
+struct TopologyChanges {
+    updated_hosts: bool,
+    updated_services: bool,
+    updated_subnets: bool,
+    updated_groups: bool,
+    removed_hosts: std::collections::HashSet<Uuid>,
+    removed_services: std::collections::HashSet<Uuid>,
+    removed_subnets: std::collections::HashSet<Uuid>,
+    removed_groups: std::collections::HashSet<Uuid>,
+    should_mark_stale: bool,
+}
+
+#[async_trait]
+impl EventSubscriber for TopologyService {
+    fn event_filter(&self) -> EventFilter {
+        EventFilter::entity_only(HashMap::from([
+            (EntityDiscriminants::Host, None),
+            (EntityDiscriminants::Service, None),
+            (EntityDiscriminants::Subnet, None),
+            (EntityDiscriminants::Group, None),
+        ]))
+    }
+
+    async fn handle_events(&self, events: Vec<Event>) -> Result<(), Error> {
+        if events.is_empty() {
+            return Ok(());
+        }
+
+        // Collect all affected network IDs
+        let mut network_ids = std::collections::HashSet::new();
+
+        // Group events by network_id -> topology changes
+        let mut topology_updates: HashMap<Uuid, TopologyChanges> = HashMap::new();
+
+        for event in events {
+            if let Event::Entity(entity_event) = event
+                && let Some(network_id) = entity_event.network_id
+            {
+                network_ids.insert(network_id);
+
+                let changes = topology_updates.entry(network_id).or_default();
+
+                // Track removed entities
+                if entity_event.operation == EntityOperation::Deleted {
+                    match entity_event.entity_type {
+                        Entity::Host(_) => changes.removed_hosts.insert(entity_event.entity_id),
+                        Entity::Service(_) => {
+                            changes.removed_services.insert(entity_event.entity_id)
+                        }
+                        Entity::Subnet(_) => changes.removed_subnets.insert(entity_event.entity_id),
+                        Entity::Group(_) => changes.removed_groups.insert(entity_event.entity_id),
+                        _ => false,
+                    };
+                }
+
+                // Check if any event triggers staleness
+                let trigger_stale = entity_event
+                    .metadata
+                    .get("trigger_stale")
+                    .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
+                    .unwrap_or(false);
+
+                if trigger_stale {
+                    // User will be prompted to update entities
+                    changes.should_mark_stale = true;
+                } else {
+                    // It's safe to automatically update entities
+                    match entity_event.entity_type {
+                        Entity::Host(_) => changes.updated_hosts = true,
+                        Entity::Service(_) => changes.updated_services = true,
+                        Entity::Subnet(_) => changes.updated_subnets = true,
+                        Entity::Group(_) => changes.updated_groups = true,
+                        _ => (),
+                    };
+                }
+            }
+        }
+
+        // Apply changes to all topologies in affected networks
+        for network_id in network_ids {
+            let network_filter = StorageFilter::unfiltered().network_ids(&[network_id]);
+            let topologies = self.get_all(network_filter).await?;
+
+            if let Some(changes) = topology_updates.get(&network_id) {
+                for mut topology in topologies {
+                    // Apply removed entities
+                    for host_id in &changes.removed_hosts {
+                        if !topology.base.removed_hosts.contains(host_id) {
+                            topology.base.removed_hosts.push(*host_id);
+                        }
+                    }
+                    for service_id in &changes.removed_services {
+                        if !topology.base.removed_services.contains(service_id) {
+                            topology.base.removed_services.push(*service_id);
+                        }
+                    }
+                    for subnet_id in &changes.removed_subnets {
+                        if !topology.base.removed_subnets.contains(subnet_id) {
+                            topology.base.removed_subnets.push(*subnet_id);
+                        }
+                    }
+                    for group_id in &changes.removed_groups {
+                        if !topology.base.removed_groups.contains(group_id) {
+                            topology.base.removed_groups.push(*group_id);
+                        }
+                    }
+
+                    // Mark stale if needed
+                    if changes.should_mark_stale {
+                        topology.base.is_stale = true;
+                    }
+
+                    let (hosts, services, subnets, groups) =
+                        self.get_entity_data(topology.base.network_id).await?;
+
+                    if changes.updated_hosts {
+                        topology.base.hosts = hosts
+                    }
+
+                    if changes.updated_services {
+                        topology.base.services = services
+                    }
+
+                    if changes.updated_subnets {
+                        topology.base.subnets = subnets
+                    }
+
+                    if changes.updated_groups {
+                        topology.base.groups = groups;
+                    }
+
+                    // Update topology in database
+                    let updated = self
+                        .update(&mut topology, AuthenticatedEntity::System)
+                        .await?;
+
+                    // Send the UPDATED topology to SSE
+                    let _ = self.staleness_tx.send(updated).inspect_err(|e| {
+                        tracing::debug!("Staleness notification skipped (no receivers): {}", e)
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn debounce_window_ms(&self) -> u64 {
+        200 // Batch events within 200ms window
+    }
+
+    fn name(&self) -> &str {
+        "topology_validation"
+    }
+}

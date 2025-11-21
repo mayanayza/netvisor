@@ -1,8 +1,10 @@
 use crate::server::{
+    auth::middleware::AuthenticatedEntity,
     hosts::service::HostService,
     networks::r#impl::Network,
     shared::{
-        services::traits::CrudService,
+        events::bus::EventBus,
+        services::traits::{CrudService, EventBusService},
         storage::{
             generic::GenericPostgresStorage,
             seed_data::{
@@ -22,6 +24,20 @@ pub struct NetworkService {
     network_storage: Arc<GenericPostgresStorage<Network>>,
     host_service: Arc<HostService>,
     subnet_service: Arc<SubnetService>,
+    event_bus: Arc<EventBus>,
+}
+
+impl EventBusService<Network> for NetworkService {
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn get_network_id(&self, _entity: &Network) -> Option<Uuid> {
+        None
+    }
+    fn get_organization_id(&self, entity: &Network) -> Option<Uuid> {
+        Some(entity.id)
+    }
 }
 
 #[async_trait]
@@ -36,15 +52,21 @@ impl NetworkService {
         network_storage: Arc<GenericPostgresStorage<Network>>,
         host_service: Arc<HostService>,
         subnet_service: Arc<SubnetService>,
+        event_bus: Arc<EventBus>,
     ) -> Self {
         Self {
             network_storage,
             host_service,
             subnet_service,
+            event_bus,
         }
     }
 
-    pub async fn seed_default_data(&self, network_id: Uuid) -> Result<()> {
+    pub async fn seed_default_data(
+        &self,
+        network_id: Uuid,
+        authenticated: AuthenticatedEntity,
+    ) -> Result<()> {
         tracing::info!("Seeding default data...");
 
         let wan_subnet = create_wan_subnet(network_id);
@@ -53,16 +75,20 @@ impl NetworkService {
         let (web_host, web_service) = create_internet_connectivity_host(&wan_subnet, network_id);
         let (remote_host, client_service) = create_remote_host(&remote_subnet, network_id);
 
-        self.subnet_service.create(wan_subnet).await?;
-        self.subnet_service.create(remote_subnet).await?;
-        self.host_service
-            .create_host_with_services(dns_host, vec![dns_service])
+        self.subnet_service
+            .create(wan_subnet, authenticated.clone())
+            .await?;
+        self.subnet_service
+            .create(remote_subnet, authenticated.clone())
             .await?;
         self.host_service
-            .create_host_with_services(web_host, vec![web_service])
+            .create_host_with_services(dns_host, vec![dns_service], authenticated.clone())
             .await?;
         self.host_service
-            .create_host_with_services(remote_host, vec![client_service])
+            .create_host_with_services(web_host, vec![web_service], authenticated.clone())
+            .await?;
+        self.host_service
+            .create_host_with_services(remote_host, vec![client_service], authenticated.clone())
             .await?;
 
         tracing::info!("Default data seeded successfully");

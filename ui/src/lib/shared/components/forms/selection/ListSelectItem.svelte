@@ -26,7 +26,7 @@
 
 	<!-- Label and description -->
 	<div class="min-w-0 flex-1 text-left">
-		<div class="flex min-w-0 items-start gap-2">
+		<div class="flex min-w-0 items-center gap-2">
 			<span class="text-secondary flex-shrink-0 truncate"
 				>{displayComponent.getLabel(item, context)}</span
 			>

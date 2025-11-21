@@ -1,10 +1,11 @@
+use crate::server::auth::middleware::AuthenticatedEntity;
 use crate::server::auth::middleware::{
     AuthenticatedUser, InviteUsersFeature, RequireFeature, RequireMember,
 };
 use crate::server::config::AppState;
 use crate::server::organizations::r#impl::api::CreateInviteRequest;
 use crate::server::organizations::r#impl::base::Organization;
-use crate::server::organizations::r#impl::invites::OrganizationInvite;
+use crate::server::organizations::r#impl::invites::Invite;
 use crate::server::shared::handlers::traits::{CrudHandlers, update_handler};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::types::api::ApiError;
@@ -55,7 +56,7 @@ async fn create_invite(
     RequireMember(user): RequireMember,
     RequireFeature { plan, .. }: RequireFeature<InviteUsersFeature>,
     Json(request): Json<CreateInviteRequest>,
-) -> ApiResult<Json<ApiResponse<OrganizationInvite>>> {
+) -> ApiResult<Json<ApiResponse<Invite>>> {
     // We know they have either team_members or share_views enabled
     if !plan.features().team_members && request.permissions > UserOrgPermissions::Visualizer {
         return Err(ApiError::forbidden(
@@ -77,6 +78,7 @@ async fn create_invite(
             user.organization_id,
             user.user_id,
             state.config.public_url.clone(),
+            user.into(),
         )
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
@@ -88,12 +90,12 @@ async fn create_invite(
 async fn get_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(_user): RequireMember,
-    Path(token): Path<String>,
-) -> ApiResult<Json<ApiResponse<OrganizationInvite>>> {
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<Invite>>> {
     let invite = state
         .services
         .organization_service
-        .get_invite(&token)
+        .get_invite(id)
         .await
         .map_err(|e| ApiError::bad_request(&e.to_string()))?;
 
@@ -104,7 +106,7 @@ async fn get_invite(
 async fn get_invites(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-) -> ApiResult<Json<ApiResponse<Vec<OrganizationInvite>>>> {
+) -> ApiResult<Json<ApiResponse<Vec<Invite>>>> {
     // Show user invites that they created or created for users with permissions lower than them
     let invites = state
         .services
@@ -122,13 +124,13 @@ async fn get_invites(
 async fn revoke_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Path(token): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     // Get the invite to verify ownership
     let invite = state
         .services
         .organization_service
-        .get_invite(&token)
+        .get_invite(id)
         .await
         .map_err(|e| ApiError::bad_request(&e.to_string()))?;
 
@@ -148,7 +150,7 @@ async fn revoke_invite(
     state
         .services
         .organization_service
-        .revoke_invite(&token)
+        .revoke_invite(id, user.into())
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 
@@ -159,10 +161,10 @@ async fn revoke_invite(
 async fn accept_invite_link(
     State(state): State<Arc<AppState>>,
     session: Session,
-    Path(token): Path<String>,
+    Path(id): Path<Uuid>,
 ) -> Result<Redirect, Redirect> {
     // Validate the invite and get organization_id
-    let invite = match state.services.organization_service.get_invite(&token).await {
+    let invite = match state.services.organization_service.get_invite(id).await {
         Ok(invite) => invite,
         Err(e) => {
             tracing::warn!("Invalid invite token: {}", e);
@@ -202,7 +204,7 @@ async fn accept_invite_link(
         )));
     }
 
-    if let Err(e) = session.insert("pending_invite_token", token.clone()).await {
+    if let Err(e) = session.insert("pending_invite_id", id).await {
         tracing::error!("Failed to save invite token to session: {}", e);
         return Err(Redirect::to(&format!(
             "/?error={}",
@@ -261,7 +263,7 @@ async fn accept_invite_link(
             state
                 .services
                 .user_service
-                .update(&mut user)
+                .update(&mut user, AuthenticatedEntity::System)
                 .await
                 .map_err(|_| {
                     Redirect::to(&format!(
@@ -295,7 +297,7 @@ pub async fn process_pending_invite(
         _ => return Ok(None), // No pending invite
     };
 
-    let invite_token = match session.get::<String>("pending_invite_token").await {
+    let invite_id = match session.get::<Uuid>("pending_invite_id").await {
         Ok(Some(token)) => token,
         _ => return Ok(None), // No token stored
     };
@@ -317,7 +319,7 @@ pub async fn process_pending_invite(
     if let Err(e) = state
         .services
         .organization_service
-        .use_invite(&invite_token)
+        .use_invite(invite_id)
         .await
     {
         tracing::error!("Failed to mark invite as used: {}", e);
@@ -325,7 +327,7 @@ pub async fn process_pending_invite(
 
     // Clear session data
     let _ = session.remove::<Uuid>("pending_org_invite").await;
-    let _ = session.remove::<String>("pending_invite_token").await;
+    let _ = session.remove::<String>("pending_invite_id").await;
     let _ = session.remove::<String>("pending_invite_permissions").await;
 
     Ok(Some((pending_org_id, permissions)))

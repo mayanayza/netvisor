@@ -59,7 +59,7 @@ async fn receive_discovery_update(
 /// Endpoint to start a discovery session
 async fn start_session(
     State(state): State<Arc<AppState>>,
-    RequireMember(_user): RequireMember,
+    RequireMember(user): RequireMember,
     Json(discovery_id): Json<Uuid>,
 ) -> ApiResult<Json<ApiResponse<DiscoveryUpdatePayload>>> {
     let mut discovery = state
@@ -85,13 +85,13 @@ async fn start_session(
     let update = state
         .services
         .discovery_service
-        .start_session(discovery.clone())
+        .start_session(discovery.clone(), user.clone().into())
         .await?;
 
     state
         .services
         .discovery_service
-        .update_discovery(discovery)
+        .update_discovery(discovery, user.into())
         .await?;
 
     Ok(Json(ApiResponse::success(update)))
@@ -139,13 +139,13 @@ async fn get_active_sessions(
 /// Cancel an active discovery session
 async fn cancel_discovery(
     State(state): State<Arc<AppState>>,
-    RequireMember(_user): RequireMember,
+    RequireMember(user): RequireMember,
     Path(session_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     state
         .services
         .discovery_service
-        .cancel_session(session_id)
+        .cancel_session(session_id, user.into())
         .await?;
 
     tracing::info!("Discovery session was {} cancelled", session_id);

@@ -1,23 +1,24 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use stripe_billing::SubscriptionStatus;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::server::billing::types::base::BillingPlan;
+use crate::server::{
+    billing::types::base::BillingPlan, shared::entities::ChangeTriggersTopologyStaleness,
+};
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, Default, PartialEq, Eq, Hash)]
 pub struct OrganizationBase {
     pub stripe_customer_id: Option<String>,
     #[validate(length(min = 0, max = 100))]
     pub name: String,
     pub plan: Option<BillingPlan>,
-    pub plan_status: Option<SubscriptionStatus>,
+    pub plan_status: Option<String>,
     pub is_onboarded: bool,
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Organization {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -30,5 +31,11 @@ pub struct Organization {
 impl Display for Organization {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}: {:?}", self.base.name, self.id)
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Organization> for Organization {
+    fn triggers_staleness(&self, _other: Option<Organization>) -> bool {
+        false
     }
 }

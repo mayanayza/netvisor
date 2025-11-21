@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedDaemon,
+    auth::middleware::{AuthenticatedDaemon, AuthenticatedEntity},
     config::AppState,
     daemons::r#impl::{
         api::{
@@ -50,7 +50,7 @@ const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
 /// Register a new daemon
 async fn register_daemon(
     State(state): State<Arc<AppState>>,
-    _daemon: AuthenticatedDaemon,
+    auth_daemon: AuthenticatedDaemon,
     Json(request): Json<DaemonRegistrationRequest>,
 ) -> ApiResult<Json<ApiResponse<DaemonRegistrationResponse>>> {
     let service = &state.services.daemon_service;
@@ -63,7 +63,7 @@ async fn register_daemon(
     let (host, _) = state
         .services
         .host_service
-        .create_host_with_services(dummy_host, Vec::new())
+        .create_host_with_services(dummy_host, Vec::new(), auth_daemon.clone().into())
         .await?;
 
     let mut daemon = Daemon::new(DaemonBase {
@@ -79,69 +79,82 @@ async fn register_daemon(
     daemon.id = request.daemon_id;
 
     let registered_daemon = service
-        .create(daemon)
+        .create(daemon, auth_daemon.into())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to register daemon: {}", e)))?;
 
     let discovery_service = state.services.discovery_service.clone();
 
     let self_report_discovery = discovery_service
-        .create_discovery(Discovery::new(DiscoveryBase {
-            run_type: RunType::Scheduled {
-                cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
-                last_run: None,
-                enabled: true,
-            },
-            discovery_type: DiscoveryType::SelfReport { host_id: host.id },
-            name: format!("Self Report @ {}", request.daemon_ip),
-            daemon_id: request.daemon_id,
-            network_id: request.network_id,
-        }))
-        .await?;
-
-    discovery_service
-        .start_session(self_report_discovery)
-        .await?;
-
-    if request.capabilities.has_docker_socket {
-        let docker_discovery = discovery_service
-            .create_discovery(Discovery::new(DiscoveryBase {
+        .create_discovery(
+            Discovery::new(DiscoveryBase {
                 run_type: RunType::Scheduled {
                     cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
                     last_run: None,
                     enabled: true,
                 },
-                discovery_type: DiscoveryType::Docker {
-                    host_id: host.id,
-                    host_naming_fallback: HostNamingFallback::BestService,
-                },
-                name: format!("Docker @ {}", request.daemon_ip),
+                discovery_type: DiscoveryType::SelfReport { host_id: host.id },
+                name: format!("Self Report @ {}", request.daemon_ip),
                 daemon_id: request.daemon_id,
                 network_id: request.network_id,
-            }))
+            }),
+            AuthenticatedEntity::System,
+        )
+        .await?;
+
+    discovery_service
+        .start_session(self_report_discovery, AuthenticatedEntity::System)
+        .await?;
+
+    if request.capabilities.has_docker_socket {
+        let docker_discovery = discovery_service
+            .create_discovery(
+                Discovery::new(DiscoveryBase {
+                    run_type: RunType::Scheduled {
+                        cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
+                        last_run: None,
+                        enabled: true,
+                    },
+                    discovery_type: DiscoveryType::Docker {
+                        host_id: host.id,
+                        host_naming_fallback: HostNamingFallback::BestService,
+                    },
+                    name: format!("Docker @ {}", request.daemon_ip),
+                    daemon_id: request.daemon_id,
+                    network_id: request.network_id,
+                }),
+                AuthenticatedEntity::System,
+            )
             .await?;
 
-        discovery_service.start_session(docker_discovery).await?;
+        discovery_service
+            .start_session(docker_discovery, AuthenticatedEntity::System)
+            .await?;
     }
 
     let network_discovery = discovery_service
-        .create_discovery(Discovery::new(DiscoveryBase {
-            run_type: RunType::Scheduled {
-                cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
-                last_run: None,
-                enabled: true,
-            },
-            discovery_type: DiscoveryType::Network {
-                subnet_ids: None,
-                host_naming_fallback: HostNamingFallback::BestService,
-            },
-            name: format!("Network Scan @ {}", request.daemon_ip),
-            daemon_id: request.daemon_id,
-            network_id: request.network_id,
-        }))
+        .create_discovery(
+            Discovery::new(DiscoveryBase {
+                run_type: RunType::Scheduled {
+                    cron_schedule: DAILY_MIDNIGHT_CRON.to_string(),
+                    last_run: None,
+                    enabled: true,
+                },
+                discovery_type: DiscoveryType::Network {
+                    subnet_ids: None,
+                    host_naming_fallback: HostNamingFallback::BestService,
+                },
+                name: format!("Network Scan @ {}", request.daemon_ip),
+                daemon_id: request.daemon_id,
+                network_id: request.network_id,
+            }),
+            AuthenticatedEntity::System,
+        )
         .await?;
 
-    discovery_service.start_session(network_discovery).await?;
+    discovery_service
+        .start_session(network_discovery, AuthenticatedEntity::System)
+        .await?;
 
     Ok(Json(ApiResponse::success(DaemonRegistrationResponse {
         daemon: registered_daemon,
@@ -151,7 +164,7 @@ async fn register_daemon(
 
 async fn update_capabilities(
     State(state): State<Arc<AppState>>,
-    _daemon: AuthenticatedDaemon,
+    auth_daemon: AuthenticatedDaemon,
     Path(id): Path<Uuid>,
     Json(updated_capabilities): Json<DaemonCapabilities>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
@@ -170,7 +183,7 @@ async fn update_capabilities(
 
     daemon.base.capabilities = updated_capabilities;
 
-    service.update(&mut daemon).await?;
+    service.update(&mut daemon, auth_daemon.into()).await?;
 
     Ok(Json(ApiResponse::success(())))
 }
@@ -178,7 +191,7 @@ async fn update_capabilities(
 /// Receive heartbeat from daemon
 async fn receive_heartbeat(
     State(state): State<Arc<AppState>>,
-    _daemon: AuthenticatedDaemon,
+    auth_daemon: AuthenticatedDaemon,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.daemon_service;
@@ -192,7 +205,7 @@ async fn receive_heartbeat(
     daemon.base.last_seen = Utc::now();
 
     service
-        .update(&mut daemon)
+        .update(&mut daemon, auth_daemon.into())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to update heartbeat: {}", e)))?;
 
@@ -201,7 +214,7 @@ async fn receive_heartbeat(
 
 async fn receive_work_request(
     State(state): State<Arc<AppState>>,
-    _daemon: AuthenticatedDaemon,
+    auth_daemon: AuthenticatedDaemon,
     Path(id): Path<Uuid>,
     Json(daemon_id): Json<Uuid>,
 ) -> ApiResult<Json<ApiResponse<(Option<DiscoveryUpdatePayload>, bool)>>> {
@@ -216,7 +229,7 @@ async fn receive_work_request(
     daemon.base.last_seen = Utc::now();
 
     service
-        .update(&mut daemon)
+        .update(&mut daemon, auth_daemon.clone().into())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to update heartbeat: {}", e)))?;
 
@@ -225,14 +238,23 @@ async fn receive_work_request(
         .discovery_service
         .get_sessions_for_daemon(&daemon_id)
         .await;
-    let cancel = state
+    let (cancel, session_id_to_cancel) = state
         .services
         .discovery_service
         .pull_cancellation_for_daemon(&daemon_id)
         .await;
 
-    Ok(Json(ApiResponse::success((
-        sessions.first().cloned(),
-        cancel,
-    ))))
+    let next_session = sessions.first().cloned();
+
+    service
+        .receive_work_request(
+            daemon,
+            cancel,
+            session_id_to_cancel,
+            next_session.clone(),
+            auth_daemon.into(),
+        )
+        .await?;
+
+    Ok(Json(ApiResponse::success((next_session, cancel))))
 }

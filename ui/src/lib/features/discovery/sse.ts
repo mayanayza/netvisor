@@ -5,7 +5,7 @@ import { pushError, pushSuccess, pushWarning } from '$lib/shared/stores/feedback
 import { getHosts } from '../hosts/store';
 import { getSubnets } from '../subnets/store';
 import { getServices } from '../services/store';
-import { SSEClient, type SSEClient as SSEClientType } from '$lib/shared/utils/sse';
+import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
 import { getDaemons } from '../daemons/store';
 
 // session_id to latest update
@@ -26,17 +26,11 @@ export async function getActiveSessions() {
 // Track last known processed per session to detect changes
 const lastProcessedCount = new Map<string, number>();
 
-let sseClient: SSEClientType<DiscoveryUpdatePayload> | null = null;
-
-export function startDiscoverySSE() {
-	if (sseClient?.isConnected()) {
-		return;
-	}
-
-	sseClient = new SSEClient<DiscoveryUpdatePayload>({
-		url: '/api/discovery/stream',
-		onMessage: (update) => {
-			sessions.update((current) => {
+class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
+	protected createConfig(): SSEConfig<DiscoveryUpdatePayload> {
+		return {
+			url: '/api/discovery/stream',
+			onMessage: (update) => {
 				// Check if discovered_count increased
 				const lastCount = lastProcessedCount.get(update.session_id) || 0;
 				const currentCount = update.processed || 0;
@@ -64,59 +58,52 @@ export function startDiscoverySSE() {
 					pushError(`Discovery error: ${update.error}`, -1);
 				}
 
-				// Cleanup for terminal phases
-				if (
-					update.phase === 'Complete' ||
-					update.phase === 'Cancelled' ||
-					update.phase === 'Failed'
-				) {
-					cancelling.update((c) => {
-						const m = new Map(c);
-						m.delete(update.session_id);
-						return m;
-					});
+				// Update sessions store
+				sessions.update((current) => {
+					// Cleanup for terminal phases
+					if (
+						update.phase === 'Complete' ||
+						update.phase === 'Cancelled' ||
+						update.phase === 'Failed'
+					) {
+						cancelling.update((c) => {
+							const m = new Map(c);
+							m.delete(update.session_id);
+							return m;
+						});
 
-					lastProcessedCount.delete(update.session_id);
+						lastProcessedCount.delete(update.session_id);
 
-					// Remove completed/cancelled/failed sessions
-					const updated = current.filter((session) => session.session_id !== update.session_id);
-					return updated;
-				}
+						// Remove completed/cancelled/failed sessions
+						return current.filter((session) => session.session_id !== update.session_id);
+					}
 
-				// For non-terminal phases, update or add the session
-				const existingIndex = current.findIndex((s) => s.session_id === update.session_id);
+					// For non-terminal phases, update or add the session
+					const existingIndex = current.findIndex((s) => s.session_id === update.session_id);
 
-				let updated: DiscoveryUpdatePayload[];
-				if (existingIndex >= 0) {
-					// Update existing session
-					updated = [...current];
-					updated[existingIndex] = update;
-				} else {
-					// Add new session
-					updated = [...current, update];
-				}
-
-				return updated;
-			});
-		},
-		onError: (error) => {
-			console.error('Discovery SSE error:', error);
-			pushError('Lost connection to discovery updates');
-		},
-		onOpen: () => {
-			console.log('Connected to discovery updates');
-		}
-	});
-
-	sseClient.connect();
-}
-
-export function stopDiscoverySSE() {
-	if (sseClient) {
-		sseClient.disconnect();
-		sseClient = null;
+					if (existingIndex >= 0) {
+						// Update existing session
+						const updated = [...current];
+						updated[existingIndex] = update;
+						return updated;
+					} else {
+						// Add new session
+						return [...current, update];
+					}
+				});
+			},
+			onError: (error) => {
+				console.error('Discovery SSE error:', error);
+				pushError('Lost connection to discovery updates');
+			},
+			onOpen: () => {
+				console.log('Connected to discovery updates');
+			}
+		};
 	}
 }
+
+export const discoverySSEManager = new DiscoverySSEManager();
 
 export async function initiateDiscovery(discovery_id: string) {
 	const result = await api.request<DiscoveryUpdatePayload, DiscoveryUpdatePayload[]>(
@@ -132,20 +119,18 @@ export async function initiateDiscovery(discovery_id: string) {
 			// Check if session already exists
 			const existingIndex = current.findIndex((s) => s.session_id === result.data!.session_id);
 
-			let updated: DiscoveryUpdatePayload[];
 			if (existingIndex >= 0) {
 				// Update existing (shouldn't happen, but defensive)
-				updated = [...current];
+				const updated = [...current];
 				updated[existingIndex] = result.data!;
+				return updated;
 			} else {
 				// Add new session
-				updated = [...current, result.data!];
+				return [...current, result.data!];
 			}
-
-			return updated;
 		});
 
-		startDiscoverySSE(); // Start SSE to receive updates
+		discoverySSEManager.connect(); // Start SSE to receive updates
 		pushSuccess(
 			`${result.data.discovery_type.type} discovery session created with session ID ${result.data.session_id}`
 		);

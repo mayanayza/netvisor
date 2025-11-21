@@ -110,7 +110,7 @@ pub async fn update_user(
     }
 
     let updated = service
-        .update(&mut request)
+        .update(&mut request, user.into())
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 

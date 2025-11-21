@@ -78,13 +78,13 @@
 
 		actions: [
 			{
-				label: 'Delete Subnet',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(subnet)
 			},
 			{
-				label: 'Edit Subnet',
+				label: 'Edit',
 				icon: Edit,
 				onClick: () => onEdit(subnet)
 			}

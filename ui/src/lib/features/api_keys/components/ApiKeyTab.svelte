@@ -11,6 +11,7 @@
 	import type { ApiKey } from '../types/base';
 	import { apiKeys, deleteApiKey, getApiKeys, updateApiKey } from '../store';
 	import ApiKeyCard from './ApiKeyCard.svelte';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getApiKeys, getDaemons]);
 
@@ -69,17 +70,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="API Keys"
-		subtitle="Manage API Keys"
-		buttons={[
-			{
-				onClick: handleCreateApiKey,
-				cta: 'Create API Key'
-			}
-		]}
-	/>
-
+	<TabHeader title="API Keys" subtitle="Manage API Keys">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateApiKey}
+				><Plus class="h-5 w-5" />Create API Key</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 	<!-- Loading state -->
 	{#if $loading}
 		<Loading />

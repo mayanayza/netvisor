@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Daemon registration request from daemon to server
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
 pub struct DaemonCapabilities {
     #[serde(default)]
     pub has_docker_socket: bool,
@@ -73,7 +73,7 @@ pub struct DaemonDiscoveryResponse {
 }
 
 /// Progress update from daemon to server during discovery
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct DiscoveryUpdatePayload {
     pub session_id: Uuid,
     pub daemon_id: Uuid,

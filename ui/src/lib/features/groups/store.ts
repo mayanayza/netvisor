@@ -3,8 +3,8 @@ import { api } from '../../shared/utils/api';
 import type { Group } from '$lib/features/groups/types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { getServices } from '../services/store';
-import { currentNetwork } from '../networks/store';
 import { entities } from '$lib/shared/stores/metadata';
+import { networks } from '../networks/store';
 
 export const groups = writable<Group[]>([]);
 
@@ -69,7 +69,7 @@ export function createEmptyGroupFormData(): Group {
 		source: {
 			type: 'Manual'
 		},
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		color: entities.getColorHelper('Group').string,
 		edge_style: 'Straight'
 	};

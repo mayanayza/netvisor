@@ -6,10 +6,8 @@ use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::server::shared::{
-    entities::Entity,
-    types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
-};
+use crate::server::shared::entities::EntityDiscriminants;
+use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 
 #[derive(
     Copy,
@@ -472,10 +470,10 @@ impl HasId for PortBase {
 
 impl EntityMetadataProvider for PortBase {
     fn color(&self) -> &'static str {
-        Entity::Port.color()
+        EntityDiscriminants::Port.color()
     }
     fn icon(&self) -> &'static str {
-        Entity::Port.icon()
+        EntityDiscriminants::Port.icon()
     }
 }
 

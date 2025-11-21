@@ -9,7 +9,7 @@ use crate::server::{
     discovery::r#impl::base::Discovery, groups::r#impl::base::Group, hosts::r#impl::base::Host,
     networks::r#impl::Network, organizations::r#impl::base::Organization,
     services::r#impl::base::Service, shared::storage::generic::GenericPostgresStorage,
-    subnets::r#impl::base::Subnet, users::r#impl::base::User,
+    subnets::r#impl::base::Subnet, topology::types::base::Topology, users::r#impl::base::User,
 };
 
 pub struct StorageFactory {
@@ -24,6 +24,7 @@ pub struct StorageFactory {
     pub services: Arc<GenericPostgresStorage<Service>>,
     pub organizations: Arc<GenericPostgresStorage<Organization>>,
     pub discovery: Arc<GenericPostgresStorage<Discovery>>,
+    pub topologies: Arc<GenericPostgresStorage<Topology>>,
 }
 
 pub async fn create_session_store(
@@ -62,6 +63,7 @@ impl StorageFactory {
             daemons: Arc::new(GenericPostgresStorage::new(pool.clone())),
             subnets: Arc::new(GenericPostgresStorage::new(pool.clone())),
             services: Arc::new(GenericPostgresStorage::new(pool.clone())),
+            topologies: Arc::new(GenericPostgresStorage::new(pool.clone())),
         })
     }
 }

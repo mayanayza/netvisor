@@ -43,22 +43,11 @@
 		showInviteModal = false;
 	}
 
-	// Make headerButtons reactive
-	let headerButtons = $derived.by(() => {
-		if (!$organization || !$organization.plan) return [];
-
+	// Check if user can invite
+	let canInviteUsers = $derived.by(() => {
+		if (!$organization || !$organization.plan) return false;
 		let features = billingPlans.getMetadata($organization.plan.type).features;
-		let canInviteUsers = features.share_views || features.team_members;
-
-		return canInviteUsers
-			? [
-					{
-						cta: 'Invite User',
-						onClick: handleCreateInvite,
-						IconComponent: UserPlus
-					}
-				]
-			: [];
+		return features.share_views || features.team_members;
 	});
 
 	// Only define fields for users (invites won't be filtered/sorted)
@@ -101,7 +90,16 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Users" subtitle="Manage users in your organization" buttons={headerButtons} />
+	<TabHeader title="Users" subtitle="Manage users in your organization">
+		<svelte:fragment slot="actions">
+			{#if canInviteUsers}
+				<button class="btn-primary flex items-center" onclick={handleCreateInvite}>
+					<UserPlus class="mr-2 h-5 w-5" />
+					Invite User
+				</button>
+			{/if}
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}

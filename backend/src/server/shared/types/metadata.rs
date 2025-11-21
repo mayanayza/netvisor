@@ -12,6 +12,7 @@ pub struct MetadataRegistry {
     pub billing_plans: Vec<TypeMetadata>,
     pub features: Vec<TypeMetadata>,
     pub permissions: Vec<TypeMetadata>,
+    pub concepts: Vec<EntityMetadata>,
 }
 
 #[derive(Serialize, Debug, Clone)]

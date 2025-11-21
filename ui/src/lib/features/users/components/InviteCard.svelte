@@ -48,7 +48,7 @@
 			...(canManage
 				? [
 						{
-							label: 'Revoke Invite',
+							label: 'Revoke',
 							icon: UserX,
 							class: 'btn-icon-danger',
 							onClick: () => handleRevokeInvite()

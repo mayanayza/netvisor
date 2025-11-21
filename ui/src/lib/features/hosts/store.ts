@@ -5,7 +5,7 @@ import { pushSuccess } from '$lib/shared/stores/feedback';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { isContainerSubnet } from '../subnets/store';
 import { getBindingFromId, getBindingDisplayName } from '../services/store';
-import { currentNetwork } from '../networks/store';
+import { networks } from '../networks/store';
 
 export const hosts = writable<Host[]>([]);
 export const polling = writable(false);
@@ -78,7 +78,7 @@ export function createEmptyHostFormData(): Host {
 			type: 'Manual'
 		},
 		virtualization: null,
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		hidden: false
 	};
 }

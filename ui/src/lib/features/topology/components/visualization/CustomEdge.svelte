@@ -6,14 +6,14 @@
 		EdgeLabel,
 		getBezierPath,
 		getStraightPath,
-		type Edge
+		type Edge,
+		EdgeReconnectAnchor
 	} from '@xyflow/svelte';
-	import { selectedEdge, selectedNode, topology, topologyOptions } from '../store';
+	import { selectedEdge, selectedNode, topology, topologyOptions } from '../../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
-	import { groups } from '$lib/features/groups/store';
 	import { createColorHelper } from '$lib/shared/utils/styling';
-	import type { TopologyEdge } from '../types/base';
-	import { getEdgeDisplayState, edgeHoverState, groupHoverState } from '../interactions';
+	import type { TopologyEdge } from '../../types/base';
+	import { getEdgeDisplayState, edgeHoverState, groupHoverState } from '../../interactions';
 
 	let {
 		id,
@@ -38,12 +38,12 @@
 	// Get group reactively - updates when groups store changes
 	let group = $derived.by(() => {
 		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
-			return $groups.find((g) => g.id == edgeData.group_id) || null;
+			return $topology.groups.find((g) => g.id == edgeData.group_id) || null;
 		}
 		return null;
 	});
 
-	let hideEdge = $derived($topologyOptions.hide_edge_types.includes(edgeData.edge_type));
+	let hideEdge = $derived($topologyOptions.local.hide_edge_types.includes(edgeData.edge_type));
 
 	// Get display state from helper - Make reactive to hover stores
 	let displayState = $derived.by(() => {
@@ -78,8 +78,8 @@
 	let useMultiColorDash = $derived(isGroupEdge && shouldShowFull);
 
 	// Calculate base edge properties
-	let baseStrokeWidth = $derived(!$topologyOptions.no_fade_edges && shouldShowFull ? 3 : 2);
-	let baseOpacity = $derived(!$topologyOptions.no_fade_edges && !shouldShowFull ? 0.4 : 1);
+	let baseStrokeWidth = $derived(!$topologyOptions.local.no_fade_edges && shouldShowFull ? 3 : 2);
+	let baseOpacity = $derived(!$topologyOptions.local.no_fade_edges && !shouldShowFull ? 0.4 : 1);
 
 	// Calculate edge style for primary layer (dashed white overlay for group edges, or normal edge)
 	let edgeStyle = $derived.by(() => {
@@ -229,9 +229,31 @@
 	function onDragEnd() {
 		isDragging = false;
 	}
+
+	let reconnecting = $state(false);
 </script>
 
-{#if !hideEdge}
+{#if isSelected}
+	<EdgeReconnectAnchor
+		bind:reconnecting
+		type="source"
+		position={{ x: sourceX, y: sourceY }}
+		class={{}}
+		style={!reconnecting
+			? `background: ${edgeColorHelper.rgb}; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;`
+			: 'background: transparent; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;'}
+	/>
+	<EdgeReconnectAnchor
+		bind:reconnecting
+		type="target"
+		position={{ x: targetX, y: targetY }}
+		style={!reconnecting
+			? `background: ${edgeColorHelper.rgb}; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;`
+			: 'background: transparent; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;'}
+	/>
+{/if}
+
+{#if !hideEdge && !reconnecting}
 	<!-- Solid base layer for group edges when shown full (rendered first, behind) -->
 	{#if useMultiColorDash}
 		<BaseEdge path={edgePath} style={solidBaseStyle} {id} interactionWidth={0} class="solid-base" />

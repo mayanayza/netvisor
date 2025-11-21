@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
 use crate::server::shared::{
-    entities::Entity,
+    concepts::Concept,
+    entities::EntityDiscriminants,
     types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
 };
 
@@ -131,20 +132,20 @@ impl EntityMetadataProvider for SubnetType {
     fn color(&self) -> &'static str {
         match self {
             SubnetType::Internet => "blue",
-            SubnetType::Remote => Entity::Subnet.color(),
+            SubnetType::Remote => EntityDiscriminants::Subnet.color(),
 
-            SubnetType::Gateway => Entity::Gateway.color(),
-            SubnetType::VpnTunnel => Entity::Vpn.color(),
+            SubnetType::Gateway => Concept::Gateway.color(),
+            SubnetType::VpnTunnel => Concept::Vpn.color(),
             SubnetType::Dmz => "rose",
 
-            SubnetType::Lan => Entity::Subnet.color(),
-            SubnetType::IoT => Entity::IoT.color(),
+            SubnetType::Lan => EntityDiscriminants::Subnet.color(),
+            SubnetType::IoT => Concept::IoT.color(),
             SubnetType::Guest => "green",
             SubnetType::WiFi => "teal",
 
             SubnetType::Management => "gray",
-            SubnetType::DockerBridge => Entity::Virtualization.color(),
-            SubnetType::Storage => Entity::Storage.color(),
+            SubnetType::DockerBridge => Concept::Virtualization.color(),
+            SubnetType::Storage => Concept::Storage.color(),
 
             SubnetType::Unknown => "gray",
             SubnetType::None => "gray",
@@ -153,23 +154,23 @@ impl EntityMetadataProvider for SubnetType {
     fn icon(&self) -> &'static str {
         match self {
             SubnetType::Internet => "Globe",
-            SubnetType::Remote => Entity::Subnet.icon(),
+            SubnetType::Remote => EntityDiscriminants::Subnet.icon(),
 
-            SubnetType::Gateway => Entity::Gateway.icon(),
-            SubnetType::VpnTunnel => Entity::Vpn.icon(),
-            SubnetType::Dmz => Entity::Subnet.icon(),
+            SubnetType::Gateway => Concept::Gateway.icon(),
+            SubnetType::VpnTunnel => Concept::Vpn.icon(),
+            SubnetType::Dmz => EntityDiscriminants::Subnet.icon(),
 
-            SubnetType::Lan => Entity::Subnet.icon(),
-            SubnetType::IoT => Entity::IoT.icon(),
+            SubnetType::Lan => EntityDiscriminants::Subnet.icon(),
+            SubnetType::IoT => Concept::IoT.icon(),
             SubnetType::Guest => "User",
             SubnetType::WiFi => "WiFi",
 
             SubnetType::Management => "ServerCog",
             SubnetType::DockerBridge => "Box",
-            SubnetType::Storage => Entity::Storage.icon(),
+            SubnetType::Storage => Concept::Storage.icon(),
 
-            SubnetType::Unknown => Entity::Subnet.icon(),
-            SubnetType::None => Entity::Subnet.icon(),
+            SubnetType::Unknown => EntityDiscriminants::Subnet.icon(),
+            SubnetType::None => EntityDiscriminants::Subnet.icon(),
         }
     }
 }

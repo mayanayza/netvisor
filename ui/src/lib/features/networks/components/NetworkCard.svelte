@@ -68,13 +68,13 @@
 
 		actions: [
 			{
-				label: 'Delete Network',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(network)
 			},
 			{
-				label: 'Edit Network',
+				label: 'Edit',
 				icon: Edit,
 				onClick: () => onEdit(network)
 			}

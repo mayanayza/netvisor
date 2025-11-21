@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::net::Ipv4Addr;
 
 use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::api::deserialize_empty_string_as_none;
 use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
@@ -42,7 +43,7 @@ impl Default for SubnetBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Subnet {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -135,5 +136,11 @@ impl Hash for Subnet {
 impl Display for Subnet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Subnet {}: {}", self.base.name, self.id)
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Subnet> for Subnet {
+    fn triggers_staleness(&self, _other: Option<Subnet>) -> bool {
+        false
     }
 }

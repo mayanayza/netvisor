@@ -226,22 +226,20 @@ pub trait DaemonUtils {
         } else {
             // Use automatic
             tracing::info!(
-                "Using automatic concurrent_scans={} with port_batch={} per host \
-                 (FD limit: {}, available: {}, FDs per host: {})",
-                optimal_concurrent,
-                port_batch_bounded,
-                fd_limit,
-                available,
-                fds_per_host
+                concurrent_scans = %optimal_concurrent,
+                port_batch = %port_batch_bounded,
+                fd_limit = %fd_limit,
+                fd_available = %available,
+                fds_per_host = %fds_per_host,
+                "Using automatic concurrent_scans",
             );
             optimal_concurrent
         };
 
-        if result == 1 {
+        if result < 5 {
             tracing::warn!(
-                "Very low concurrency (1 host). File descriptor limit is {}. \
-                 Consider increasing for better performance.",
-                fd_limit
+                fd_limit = %fd_limit,
+                "Very low concurrency. Consider increasing for better performance.",
             );
         }
 

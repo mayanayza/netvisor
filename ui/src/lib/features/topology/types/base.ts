@@ -1,6 +1,34 @@
+import type { Group } from '$lib/features/groups/types/base';
+import type { Host } from '$lib/features/hosts/types/base';
 import type { Service } from '$lib/features/services/types/base';
+import type { Subnet } from '$lib/features/subnets/types/base';
 import type { ColorStyle } from '$lib/shared/utils/styling';
 import type { IconComponent } from '$lib/shared/utils/types';
+
+export interface Topology {
+	edges: TopologyEdge[];
+	nodes: TopologyNode[];
+	options: TopologyOptions;
+	name: string;
+	id: string;
+	created_at: string;
+	updated_at: string;
+	network_id: string;
+	hosts: Host[];
+	subnets: Subnet[];
+	groups: Group[];
+	services: Service[];
+	is_stale: boolean;
+	last_refreshed: string;
+	is_locked: boolean;
+	locked_at: string | null;
+	locked_by: string | null;
+	removed_hosts: string[];
+	removed_services: string[];
+	removed_subnets: string[];
+	removed_groups: string[];
+	parent_id: string | null;
+}
 
 export interface NodeBase {
 	id: string;
@@ -10,17 +38,22 @@ export interface NodeBase {
 	header: string | null;
 }
 
-type NodeType =
-	| {
-			node_type: 'InterfaceNode';
-			subnet_id: string;
-			host_id: string;
-			interface_id: string;
-			is_infra: boolean;
-	  }
-	| { node_type: 'SubnetNode'; infra_width: number };
+type NodeType = InterfaceNode | SubnetNode;
 
-type TopologyNode = NodeBase & NodeType & Record<string, unknown>;
+export interface InterfaceNode extends Record<string, unknown> {
+	node_type: 'InterfaceNode';
+	subnet_id: string;
+	host_id: string;
+	interface_id: string;
+	is_infra: boolean;
+}
+
+export interface SubnetNode extends Record<string, unknown> {
+	node_type: 'SubnetNode';
+	infra_width: number;
+}
+
+export type TopologyNode = NodeBase & NodeType & Record<string, unknown>;
 
 export interface NodeRenderData {
 	headerText: string | null;
@@ -39,7 +72,8 @@ export interface SubnetRenderData {
 	colorHelper: ColorStyle;
 }
 
-interface TopologyEdgeBase extends Record<string, unknown> {
+interface EdgeBase extends Record<string, unknown> {
+	id: string;
 	source: string;
 	label: string;
 	target: string;
@@ -49,11 +83,11 @@ interface TopologyEdgeBase extends Record<string, unknown> {
 }
 
 export type TopologyEdge =
-	| (TopologyEdgeBase & RequestPathEdge)
-	| (TopologyEdgeBase & HubAndSpokeEdge)
-	| (TopologyEdgeBase & InterfaceEdge)
-	| (TopologyEdgeBase & ServiceVirtualizationEdge)
-	| (TopologyEdgeBase & HostVirtualizationEdge);
+	| (EdgeBase & RequestPathEdge)
+	| (EdgeBase & HubAndSpokeEdge)
+	| (EdgeBase & InterfaceEdge)
+	| (EdgeBase & ServiceVirtualizationEdge)
+	| (EdgeBase & HostVirtualizationEdge);
 
 export interface RequestPathEdge {
 	edge_type: 'RequestPath';
@@ -85,13 +119,6 @@ export interface HostVirtualizationEdge {
 	vm_service_id: string;
 }
 
-export interface TopologyResponse {
-	edge_property: string;
-	edges: Array<[number, number, TopologyEdge]>;
-	node_holes: unknown[];
-	nodes: TopologyNode[];
-}
-
 export enum EdgeHandle {
 	Top = 'Top',
 	Right = 'Right',
@@ -99,20 +126,23 @@ export enum EdgeHandle {
 	Left = 'Left'
 }
 
-export interface TopologyRequestOptions {
-	group_docker_bridges_by_host: boolean;
-	hide_vm_title_on_docker_container: boolean;
-	hide_ports: boolean;
-	network_ids: string[];
-	show_gateway_in_left_zone: boolean;
-	left_zone_service_categories: string[];
-	hide_service_categories: string[];
+export interface TopologyOptions {
+	local: TopologyLocalOptions;
+	request: TopologyRequestOptions;
 }
 
-export interface TopologyOptions {
+export interface TopologyLocalOptions {
 	left_zone_title: string;
 	no_fade_edges: boolean;
 	hide_resize_handles: boolean;
 	hide_edge_types: string[];
-	request_options: TopologyRequestOptions;
+}
+
+export interface TopologyRequestOptions {
+	group_docker_bridges_by_host: boolean;
+	hide_vm_title_on_docker_container: boolean;
+	hide_ports: boolean;
+	show_gateway_in_left_zone: boolean;
+	left_zone_service_categories: string[];
+	hide_service_categories: string[];
 }

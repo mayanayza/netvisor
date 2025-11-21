@@ -191,7 +191,6 @@
 	}
 </script>
 
-<button class="btn-primary" on:click={handleClick}>
-	<Download class="h-4 w-4" />
-	Export
+<button class="btn-secondary" on:click={handleClick}>
+	<Download class="h-5 w-5" /> Export
 </button>

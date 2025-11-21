@@ -2,7 +2,7 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
-	import { initiateDiscovery } from '../../SSEStore';
+	import { initiateDiscovery } from '../../sse';
 	import type { Discovery } from '../../types/base';
 	import {
 		createDiscovery,
@@ -20,6 +20,7 @@
 	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import DiscoveryRunCard from '../cards/DiscoveryScheduledCard.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
 
@@ -85,16 +86,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Scheduled Discovery"
-		subtitle="Schedule discovery sessions"
-		buttons={[
-			{
-				onClick: handleCreateDiscovery,
-				cta: 'Schedule Discovery'
-			}
-		]}
-	/>
+	<TabHeader title="Scheduled Discovery" subtitle="Schedule discovery sessions">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateDiscovery}
+				><Plus class="h-5 w-5" />Schedule Discovery</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	{#if $loading}
 		<Loading />

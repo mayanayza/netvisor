@@ -2,9 +2,9 @@ import { derived, get, writable, type Readable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import type { Subnet } from './types/base';
-import { currentNetwork } from '../networks/store';
 import type { Interface } from '../hosts/types/base';
 import { hosts } from '../hosts/store';
+import { networks } from '../networks/store';
 
 export const subnets = writable<Subnet[]>([]);
 
@@ -57,7 +57,7 @@ export function createEmptySubnetFormData(): Subnet {
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		name: '',
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		cidr: '',
 		description: '',
 		subnet_type: 'Unknown',

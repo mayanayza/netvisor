@@ -6,7 +6,7 @@
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import InterfacesForm from './Interfaces/InterfacesForm.svelte';
 	import ServicesForm from './Services/ServicesForm.svelte';
-	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Service } from '$lib/features/services/types/base';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { getServicesForHost } from '$lib/features/services/store';
@@ -90,7 +90,7 @@
 					{
 						id: 'virtualization',
 						label: 'Virtualization',
-						icon: entities.getIconComponent('Virtualization'),
+						icon: concepts.getIconComponent('Virtualization'),
 						description: 'VMs and containers managed by services on this host'
 					}
 				]

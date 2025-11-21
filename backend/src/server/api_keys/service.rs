@@ -1,12 +1,19 @@
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
+use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::server::{
     api_keys::r#impl::base::{ApiKey, ApiKeyBase},
+    auth::middleware::AuthenticatedEntity,
     shared::{
-        services::traits::CrudService,
+        entities::ChangeTriggersTopologyStaleness,
+        events::{
+            bus::EventBus,
+            types::{EntityEvent, EntityOperation},
+        },
+        services::traits::{CrudService, EventBusService},
         storage::{
             generic::GenericPostgresStorage,
             traits::{StorableEntity, Storage},
@@ -16,6 +23,20 @@ use crate::server::{
 
 pub struct ApiKeyService {
     storage: Arc<GenericPostgresStorage<ApiKey>>,
+    event_bus: Arc<EventBus>,
+}
+
+impl EventBusService<ApiKey> for ApiKeyService {
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn get_network_id(&self, entity: &ApiKey) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &ApiKey) -> Option<Uuid> {
+        None
+    }
 }
 
 #[async_trait]
@@ -23,18 +44,8 @@ impl CrudService<ApiKey> for ApiKeyService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<ApiKey>> {
         &self.storage
     }
-}
 
-impl ApiKeyService {
-    pub fn new(storage: Arc<GenericPostgresStorage<ApiKey>>) -> Self {
-        Self { storage }
-    }
-
-    pub fn generate_api_key(&self) -> String {
-        Uuid::new_v4().simple().to_string()
-    }
-
-    pub async fn create(&self, api_key: ApiKey) -> Result<ApiKey> {
+    async fn create(&self, api_key: ApiKey, authentication: AuthenticatedEntity) -> Result<ApiKey> {
         let key = self.generate_api_key();
 
         tracing::debug!(
@@ -53,18 +64,42 @@ impl ApiKeyService {
         });
 
         let created = self.storage.create(&api_key).await?;
+        let trigger_stale = created.triggers_staleness(None);
 
-        tracing::info!(
-            api_key_id = %created.id,
-            api_key_name = %created.base.name,
-            network_id = %created.base.network_id,
-            "API key created"
-        );
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_type: created.clone().into(),
+                entity_id: created.id(),
+                network_id: self.get_network_id(&created),
+                organization_id: self.get_organization_id(&created),
+                operation: EntityOperation::Created,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
+                authentication,
+            })
+            .await?;
 
         Ok(created)
     }
+}
 
-    pub async fn rotate_key(&self, api_key_id: Uuid) -> Result<String> {
+impl ApiKeyService {
+    pub fn new(storage: Arc<GenericPostgresStorage<ApiKey>>, event_bus: Arc<EventBus>) -> Self {
+        Self { storage, event_bus }
+    }
+
+    pub fn generate_api_key(&self) -> String {
+        Uuid::new_v4().simple().to_string()
+    }
+
+    pub async fn rotate_key(
+        &self,
+        api_key_id: Uuid,
+        authentication: AuthenticatedEntity,
+    ) -> Result<String> {
         tracing::info!(
             api_key_id = %api_key_id,
             "Rotating API key"
@@ -75,13 +110,7 @@ impl ApiKeyService {
 
             api_key.base.key = new_key.clone();
 
-            self.update(&mut api_key).await?;
-
-            tracing::info!(
-                api_key_id = %api_key_id,
-                api_key_name = %api_key.base.name,
-                "API key rotated successfully"
-            );
+            let _updated = self.update(&mut api_key, authentication).await?;
 
             Ok(new_key)
         } else {

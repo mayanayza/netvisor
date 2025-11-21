@@ -17,11 +17,14 @@
 		items = $bindable([]),
 		fields = $bindable([]),
 		storageKey = null,
+		getItemKey = (item: T) => item,
 		children
 	}: {
 		items: T[];
 		fields: FieldConfig<T>[];
 		storageKey?: string | null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		getItemKey?: (item: T) => any;
 		children: Snippet<[T, 'card' | 'list']>; // Snippet that takes two arguments (the item and viewMode)
 	} = $props();
 
@@ -644,7 +647,7 @@
 							? 'space-y-2'
 							: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
 					>
-						{#each groupItems as item (item)}
+						{#each groupItems as item (getItemKey(item))}
 							{@render children(item, viewMode)}
 						{/each}
 					</div>
@@ -658,7 +661,7 @@
 				? 'space-y-2'
 				: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
 		>
-			{#each processedItems as item (item)}
+			{#each processedItems as item (getItemKey(item))}
 				{@render children(item, viewMode)}
 			{/each}
 		</div>

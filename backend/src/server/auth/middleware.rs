@@ -3,7 +3,7 @@ use crate::server::{
     config::AppState,
     organizations::r#impl::base::Organization,
     shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
-    users::r#impl::permissions::UserOrgPermissions,
+    users::r#impl::{base::User, permissions::UserOrgPermissions},
 };
 use axum::{
     extract::FromRequestParts,
@@ -11,6 +11,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::Utc;
+use serde::Deserialize;
+use serde::Serialize;
 use tower_sessions::Session;
 use uuid::Uuid;
 
@@ -23,7 +25,7 @@ impl IntoResponse for AuthError {
 }
 
 /// Represents either an authenticated user or daemon
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AuthenticatedEntity {
     User {
         user_id: Uuid,
@@ -31,7 +33,12 @@ pub enum AuthenticatedEntity {
         permissions: UserOrgPermissions,
         network_ids: Vec<Uuid>,
     },
-    Daemon(Uuid), // network_id
+    Daemon {
+        network_id: Uuid,
+        api_key_id: Uuid,
+    }, // network_id
+    System,
+    Anonymous,
 }
 
 impl AuthenticatedEntity {
@@ -46,15 +53,25 @@ impl AuthenticatedEntity {
     pub fn entity_id(&self) -> String {
         match self {
             AuthenticatedEntity::User { user_id, .. } => user_id.to_string(),
-            AuthenticatedEntity::Daemon(network_id) => format!("Daemon for network {}", network_id),
+            AuthenticatedEntity::Daemon {
+                network_id,
+                api_key_id,
+            } => format!(
+                "Daemon for network {} using API key {}",
+                network_id, api_key_id
+            ),
+            AuthenticatedEntity::System => "System".to_string(),
+            AuthenticatedEntity::Anonymous => "Anonymous".to_string(),
         }
     }
 
     /// Get network_ids that daemon / user have access to
     pub fn network_ids(&self) -> Vec<Uuid> {
         match self {
-            AuthenticatedEntity::Daemon(id) => vec![*id],
+            AuthenticatedEntity::Daemon { network_id, .. } => vec![*network_id],
             AuthenticatedEntity::User { network_ids, .. } => network_ids.clone(),
+            AuthenticatedEntity::System => vec![],
+            AuthenticatedEntity::Anonymous => vec![],
         }
     }
 
@@ -65,7 +82,18 @@ impl AuthenticatedEntity {
 
     /// Check if this is a daemon
     pub fn is_daemon(&self) -> bool {
-        matches!(self, AuthenticatedEntity::Daemon(_))
+        matches!(self, AuthenticatedEntity::Daemon { .. })
+    }
+}
+
+impl From<User> for AuthenticatedEntity {
+    fn from(value: User) -> Self {
+        AuthenticatedEntity::User {
+            user_id: value.id,
+            organization_id: value.base.organization_id,
+            permissions: value.base.permissions,
+            network_ids: vec![],
+        }
     }
 }
 
@@ -94,7 +122,7 @@ where
             {
                 let network_id = api_key.base.network_id;
                 let service = app_state.services.api_key_service.clone();
-
+                let api_key_id = api_key.id;
                 // Check expiration
                 if let Some(expires_at) = api_key.base.expires_at
                     && chrono::Utc::now() > expires_at
@@ -102,7 +130,9 @@ where
                     // Update enabled asynchronously (don't block auth)
                     api_key.base.is_enabled = false;
                     tokio::spawn(async move {
-                        let _ = service.update(&mut api_key).await;
+                        let _ = service
+                            .update(&mut api_key, AuthenticatedEntity::System)
+                            .await;
                     });
                     return Err(AuthError(ApiError::unauthorized(
                         "API key has expired".to_string(),
@@ -118,10 +148,15 @@ where
                 // Update last used asynchronously (don't block auth)
                 api_key.base.last_used = Some(Utc::now());
                 tokio::spawn(async move {
-                    let _ = service.update(&mut api_key).await;
+                    let _ = service
+                        .update(&mut api_key, AuthenticatedEntity::System)
+                        .await;
                 });
 
-                return Ok(AuthenticatedEntity::Daemon(network_id));
+                return Ok(AuthenticatedEntity::Daemon {
+                    network_id,
+                    api_key_id,
+                });
             }
             // Invalid API key
             return Err(AuthError(ApiError::unauthorized(
@@ -169,6 +204,7 @@ where
 }
 
 /// Extractor that only accepts authenticated users (rejects daemons)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AuthenticatedUser {
     pub user_id: Uuid,
     pub organization_id: Uuid,
@@ -208,7 +244,7 @@ where
                 permissions,
                 network_ids,
             }),
-            AuthenticatedEntity::Daemon(_) => Err(AuthError(ApiError::unauthorized(
+            _ => Err(AuthError(ApiError::unauthorized(
                 "User authentication required".to_string(),
             ))),
         }
@@ -216,11 +252,18 @@ where
 }
 
 /// Extractor that only accepts authenticated daemons (rejects users)
-pub struct AuthenticatedDaemon(pub Uuid);
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AuthenticatedDaemon {
+    pub network_id: Uuid,
+    pub api_key_id: Uuid,
+}
 
 impl From<AuthenticatedDaemon> for AuthenticatedEntity {
     fn from(value: AuthenticatedDaemon) -> Self {
-        AuthenticatedEntity::Daemon(value.0)
+        AuthenticatedEntity::Daemon {
+            network_id: value.network_id,
+            api_key_id: value.api_key_id,
+        }
     }
 }
 
@@ -234,8 +277,14 @@ where
         let entity = AuthenticatedEntity::from_request_parts(parts, state).await?;
 
         match entity {
-            AuthenticatedEntity::Daemon(network_id) => Ok(AuthenticatedDaemon(network_id)),
-            AuthenticatedEntity::User { .. } => Err(AuthError(ApiError::unauthorized(
+            AuthenticatedEntity::Daemon {
+                network_id,
+                api_key_id,
+            } => Ok(AuthenticatedDaemon {
+                network_id,
+                api_key_id,
+            }),
+            _ => Err(AuthError(ApiError::unauthorized(
                 "Daemon authentication required".to_string(),
             ))),
         }
@@ -270,13 +319,16 @@ where
                     entity: user.into(),
                 })
             }
-            AuthenticatedEntity::Daemon(network_id) => {
+            AuthenticatedEntity::Daemon { network_id, .. } => {
                 // Daemons only have access to their single network
                 Ok(MemberOrDaemon {
                     network_ids: vec![network_id],
                     entity,
                 })
             }
+            _ => Err(AuthError(ApiError::forbidden(
+                "Member or Daemon permission required",
+            ))),
         }
     }
 }

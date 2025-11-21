@@ -19,6 +19,7 @@
 	import NetworkEditModal from './NetworkEditModal.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
@@ -81,16 +82,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Networks"
-		subtitle="Manage networks"
-		buttons={[
-			{
-				onClick: handleCreateNetwork,
-				cta: 'Create Network'
-			}
-		]}
-	/>
+	<TabHeader title="Networks" subtitle="Manage networks">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
+				><Plus class="h-5 w-5" />Create Network</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}
