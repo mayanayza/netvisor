@@ -49,6 +49,17 @@ export async function deleteNetwork(id: string) {
 	return result;
 }
 
+export async function bulkDeleteNetworks(ids: string[]) {
+	const result = await api.request<void, Network[]>(
+		`/networks/bulk-delete`,
+		networks,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export function createEmptyNetworkFormData(): Network {
 	return {
 		id: uuidv4Sentinel,

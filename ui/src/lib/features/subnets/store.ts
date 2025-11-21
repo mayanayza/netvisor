@@ -26,6 +26,17 @@ export async function createSubnet(subnet: Subnet) {
 	return result;
 }
 
+export async function bulkDeleteSubnets(ids: string[]) {
+	const result = await api.request<void, Subnet[]>(
+		`/subnets/bulk-delete`,
+		subnets,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export async function updateSubnet(subnet: Subnet) {
 	const result = await api.request<Subnet, Subnet[]>(
 		`/subnets/${subnet.id}`,

@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { createSubnet, deleteSubnet, getSubnets, subnets, updateSubnet } from '../store';
+	import {
+		bulkDeleteSubnets,
+		createSubnet,
+		deleteSubnet,
+		getSubnets,
+		subnets,
+		updateSubnet
+	} from '../store';
 	import SubnetCard from './SubnetCard.svelte';
 	import SubnetEditModal from './SubnetEditModal/SubnetEditModal.svelte';
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
@@ -54,6 +61,12 @@
 	function handleCloseSubnetEditor() {
 		showSubnetEditor = false;
 		editingSubnet = null;
+	}
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Subnets?`)) {
+			await bulkDeleteSubnets(ids);
+		}
 	}
 
 	// Define field configuration for the DataTableControls
@@ -126,10 +139,23 @@
 			cta="Create your first subnet"
 		/>
 	{:else}
-		<DataControls items={$subnets} fields={subnetFields} storageKey="netvisor-subnets-table-state">
-			{#snippet children(item: Subnet, viewMode: 'card' | 'list')}
+		<DataControls
+			items={$subnets}
+			fields={subnetFields}
+			storageKey="netvisor-subnets-table-state"
+			onBulkDelete={handleBulkDelete}
+			getItemId={(item) => item.id}
+		>
+			{#snippet children(
+				item: Subnet,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<SubnetCard
 					subnet={item}
+					selected={isSelected}
+					{onSelectionChange}
 					{viewMode}
 					onEdit={handleEditSubnet}
 					onDelete={handleDeleteSubnet}

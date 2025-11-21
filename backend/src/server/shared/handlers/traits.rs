@@ -53,6 +53,7 @@ where
         .route("/{id}", put(update_handler::<T>))
         .route("/{id}", delete(delete_handler::<T>))
         .route("/{id}", get(get_by_id_handler::<T>))
+        .route("/bulk-delete", post(bulk_delete_handler::<T>))
 }
 
 pub async fn create_handler<T>(
@@ -286,4 +287,50 @@ where
     })?;
 
     Ok(Json(ApiResponse::success(())))
+}
+
+pub async fn bulk_delete_handler<T>(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(ids): Json<Vec<Uuid>>,
+) -> ApiResult<Json<ApiResponse<BulkDeleteResponse>>>
+where
+    T: CrudHandlers + 'static,
+    Entity: From<T>,
+{
+    if ids.is_empty() {
+        return Err(ApiError::bad_request("No IDs provided for bulk delete"));
+    }
+
+    tracing::debug!(
+        entity_type = T::table_name(),
+        user_id = %user.user_id,
+        count = ids.len(),
+        "Bulk delete request received"
+    );
+
+    let service = T::get_service(&state);
+    let deleted_count = service
+        .delete_many(&ids, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                entity_type = T::table_name(),
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to bulk delete entities"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
+
+    Ok(Json(ApiResponse::success(BulkDeleteResponse {
+        deleted_count,
+        requested_count: ids.len(),
+    })))
+}
+
+#[derive(Serialize)]
+pub struct BulkDeleteResponse {
+    pub deleted_count: usize,
+    pub requested_count: usize,
 }

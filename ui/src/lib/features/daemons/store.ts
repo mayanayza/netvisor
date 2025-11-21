@@ -18,6 +18,17 @@ export async function deleteDaemon(id: string) {
 	);
 }
 
+export async function bulkDeleteDaemons(ids: string[]) {
+	const result = await api.request<void, Daemon[]>(
+		`/daemons/bulk-delete`,
+		daemons,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export function getDaemonIsRunningDiscovery(
 	daemon_id: string | null,
 	sessions: DiscoveryUpdatePayload[]

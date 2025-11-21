@@ -1,5 +1,7 @@
 use crate::server::auth::middleware::{AuthenticatedUser, RequireAdmin, RequireMember};
-use crate::server::shared::handlers::traits::{CrudHandlers, delete_handler, get_by_id_handler};
+use crate::server::shared::handlers::traits::{
+    CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
+};
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::ApiError;
 use crate::server::users::r#impl::base::User;
@@ -13,7 +15,7 @@ use crate::server::{
 };
 use anyhow::anyhow;
 use axum::extract::Path;
-use axum::routing::{delete, get, put};
+use axum::routing::{delete, get, post, put};
 use axum::{Router, extract::State, response::Json};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -24,6 +26,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_user))
         .route("/{id}", delete(delete_user))
         .route("/{id}", get(get_by_id_handler::<User>))
+        .route("/bulk-delete", post(bulk_delete_handler::<User>))
 }
 
 pub async fn get_all_users(

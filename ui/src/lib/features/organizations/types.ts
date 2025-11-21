@@ -63,6 +63,7 @@ export interface CreateInviteRequest {
 }
 
 export interface OrganizationInvite {
+	id: string;
 	token: string;
 	permissions: UserOrgPermissions;
 	url: string;

@@ -5,7 +5,8 @@ use crate::server::{
     discovery::r#impl::{base::Discovery, types::RunType},
     shared::{
         handlers::traits::{
-            create_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
+            bulk_delete_handler, create_handler, delete_handler, get_all_handler,
+            get_by_id_handler, update_handler,
         },
         services::traits::CrudService,
         types::api::{ApiError, ApiResponse, ApiResult},
@@ -32,6 +33,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/", get(get_all_handler::<Discovery>))
         .route("/{id}", put(update_handler::<Discovery>))
         .route("/{id}", delete(delete_handler::<Discovery>))
+        .route("/bulk-delete", post(bulk_delete_handler::<Discovery>))
         .route("/{id}", get(get_by_id_handler::<Discovery>))
         .route("/start-session", post(start_session))
         .route("/active-sessions", get(get_active_sessions))

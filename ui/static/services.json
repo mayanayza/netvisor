@@ -684,10 +684,10 @@
     "name": "MongoDB"
   },
   {
-    "description": "MySQL-compatible relational database",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mariadb.svg",
-    "name": "MariaDB"
+    "description": "ESP device management",
+    "discovery_pattern": "6052/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/esphome.svg",
+    "name": "ESPHome"
   },
   {
     "description": "NoSQL document database",
@@ -720,10 +720,10 @@
     "name": "Portainer"
   },
   {
-    "description": "Enterprise Kubernetes",
-    "discovery_pattern": "Endpoint response body from <ip>:6443/healthz contains openshift",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openshift.svg",
-    "name": "OpenShift"
+    "description": "A modern client-server application for the Soulseek file-sharing network",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:5030/ contains slskd, Endpoint response body from <ip>:5030/api/v0/session/enabled contains true)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/slskd.svg",
+    "name": "Slskd"
   },
   {
     "description": "Workload orchestration",
@@ -846,10 +846,10 @@
     "name": "Immich"
   },
   {
-    "description": "Personal media server with streaming capabilities",
-    "discovery_pattern": "Endpoint response body from <ip>:8096/emby/System/Info/Public contains Emby",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/emby.svg",
-    "name": "Emby"
+    "description": "Synology DiskStation Manager NAS system",
+    "discovery_pattern": "All of: (Endpoint response body from <ip>:80/ contains synology, 21/tcp is open)",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/synology.svg",
+    "name": "Synology DSM"
   },
   {
     "description": "Self-hosted audiobook and podcast server.",

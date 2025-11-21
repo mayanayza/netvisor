@@ -9,6 +9,8 @@
 	export let onEdit: (group: Group) => void = () => {};
 	export let onDelete: (group: Group) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: groupServicesStore = getServicesForGroup(group.id);
 	$: groupServices = $groupServicesStore;
@@ -87,4 +89,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

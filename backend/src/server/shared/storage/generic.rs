@@ -188,4 +188,29 @@ where
 
         Ok(())
     }
+
+    async fn delete_many(&self, ids: &[Uuid]) -> Result<usize, anyhow::Error> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let query_str = format!("DELETE FROM {} WHERE id = ANY($1)", T::table_name());
+
+        let result = sqlx::query(&query_str)
+            .bind(ids)
+            .execute(&self.pool)
+            .await?;
+
+        let deleted_count = result.rows_affected() as usize;
+
+        tracing::debug!(
+            "Bulk deleted {} {}s (requested: {}, deleted: {})",
+            deleted_count,
+            T::table_name(),
+            ids.len(),
+            deleted_count
+        );
+
+        Ok(deleted_count)
+    }
 }

@@ -156,4 +156,41 @@ where
 
         Ok(updated)
     }
+
+    async fn delete_many(
+        &self,
+        ids: &[Uuid],
+        authentication: AuthenticatedEntity,
+    ) -> Result<usize, anyhow::Error> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        // Log which entities are being deleted
+        for id in ids {
+            if let Some(entity) = self.get_by_id(id).await? {
+                let trigger_stale = entity.triggers_staleness(None);
+
+                self.event_bus()
+                    .publish_entity(EntityEvent {
+                        id: Uuid::new_v4(),
+                        entity_id: *id,
+                        network_id: self.get_network_id(&entity),
+                        organization_id: self.get_organization_id(&entity),
+                        entity_type: entity.into(),
+                        operation: EntityOperation::Deleted,
+                        timestamp: Utc::now(),
+                        metadata: serde_json::json!({
+                            "trigger_stale": trigger_stale
+                        }),
+                        authentication: authentication.clone(),
+                    })
+                    .await?;
+            }
+        }
+
+        let deleted_count = self.storage().delete_many(ids).await?;
+
+        Ok(deleted_count)
+    }
 }

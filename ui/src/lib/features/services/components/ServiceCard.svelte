@@ -15,6 +15,8 @@
 	export let onDelete: (service: Service) => void = () => {};
 	export let onEdit: (service: Service) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: ports = host.ports.filter((p) =>
 		service.bindings
@@ -101,4 +103,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

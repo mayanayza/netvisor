@@ -96,6 +96,7 @@
 			items={sessionsList}
 			fields={discoveryFields}
 			storageKey="netvisor-discovery-session-table-state"
+			getItemId={(item) => item.session_id}
 		>
 			{#snippet children(item: DiscoveryUpdatePayload, viewMode: 'card' | 'list')}
 				<DiscoverySessionCard session={item} {viewMode} />

@@ -23,6 +23,17 @@ export async function deleteApiKey(id: string) {
 	return result;
 }
 
+export async function bulkDeleteApiKeys(ids: string[]) {
+	const result = await api.request<void, ApiKey[]>(
+		`/auth/keys/bulk-delete`,
+		apiKeys,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export async function updateApiKey(apiKey: ApiKey) {
 	const result = await api.request<ApiKey, ApiKey[]>(
 		`/auth/keys/${apiKey.id}`,

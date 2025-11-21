@@ -7,7 +7,17 @@
 	import { currentUser } from '$lib/features/auth/store';
 	import { deleteUser } from '../store';
 
-	let { user, viewMode }: { user: User; viewMode: 'card' | 'list' } = $props();
+	let {
+		user,
+		viewMode,
+		selected,
+		onSelectionChange
+	}: {
+		user: User;
+		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange: (selected: boolean) => void;
+	} = $props();
 
 	// Force Svelte to track metadata reactivity
 	$effect(() => {
@@ -72,4 +82,4 @@
 	});
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

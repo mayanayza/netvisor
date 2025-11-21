@@ -12,6 +12,8 @@
 	export let onDelete: (network: Network) => void = () => {};
 	export let onEdit: (network: Network) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: networkHosts = $hosts.filter((h) => h.network_id == network.id);
 	$: networkDaemons = $daemons.filter((d) => d.network_id == network.id);
@@ -82,4 +84,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

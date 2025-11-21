@@ -27,6 +27,17 @@ export async function deleteService(id: string) {
 	);
 }
 
+export async function bulkDeleteServices(ids: string[]) {
+	const result = await api.request<void, Service[]>(
+		`/services/bulk-delete`,
+		services,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 // Update a service
 export async function updateService(data: Service) {
 	console.log(1);
