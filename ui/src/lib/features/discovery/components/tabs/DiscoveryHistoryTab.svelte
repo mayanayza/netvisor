@@ -4,6 +4,7 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { Discovery } from '../../types/base';
 	import {
+		bulkDeleteDiscoveries,
 		createDiscovery,
 		discoveries,
 		discoveryFields,
@@ -49,6 +50,12 @@
 	function handleCloseEditor() {
 		showDiscoveryModal = false;
 		editingDiscovery = null;
+	}
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Historical Discoveries?`)) {
+			await bulkDeleteDiscoveries(ids);
+		}
 	}
 
 	let fields: FieldConfig<Discovery>[];
@@ -110,10 +117,23 @@
 		<DataControls
 			items={$discoveries.filter((d) => d.run_type.type == 'Historical')}
 			{fields}
+			onBulkDelete={handleBulkDelete}
 			storageKey="netvisor-discovery-historical-table-state"
+			getItemId={(item) => item.id}
 		>
-			{#snippet children(item: Discovery, viewMode: 'card' | 'list')}
-				<DiscoveryHistoryCard discovery={item} onView={handleEditDiscovery} {viewMode} />
+			{#snippet children(
+				item: Discovery,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
+				<DiscoveryHistoryCard
+					discovery={item}
+					onView={handleEditDiscovery}
+					{viewMode}
+					selected={isSelected}
+					{onSelectionChange}
+				/>
 			{/snippet}
 		</DataControls>
 	{/if}

@@ -9,7 +9,7 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import CreateApiKeyModal from './ApiKeyModal.svelte';
 	import type { ApiKey } from '../types/base';
-	import { apiKeys, deleteApiKey, getApiKeys, updateApiKey } from '../store';
+	import { apiKeys, bulkDeleteApiKeys, deleteApiKey, getApiKeys, updateApiKey } from '../store';
 	import ApiKeyCard from './ApiKeyCard.svelte';
 	import { Plus } from 'lucide-svelte';
 
@@ -43,6 +43,12 @@
 	function handleEditApiKey(apiKey: ApiKey) {
 		showCreateApiKeyModal = true;
 		editingApiKey = apiKey;
+	}
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Api Keys?`)) {
+			await bulkDeleteApiKeys(ids);
+		}
 	}
 
 	const apiKeyFields: FieldConfig<ApiKey>[] = [
@@ -89,11 +95,24 @@
 			cta="Create your first API Key"
 		/>
 	{:else}
-		<DataControls items={$apiKeys} fields={apiKeyFields} storageKey="netvisor-api-keys-table-state">
-			{#snippet children(item: ApiKey, viewMode: 'card' | 'list')}
+		<DataControls
+			items={$apiKeys}
+			fields={apiKeyFields}
+			onBulkDelete={handleBulkDelete}
+			storageKey="netvisor-api-keys-table-state"
+			getItemId={(item) => item.id}
+		>
+			{#snippet children(
+				item: ApiKey,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<ApiKeyCard
 					apiKey={item}
 					{viewMode}
+					selected={isSelected}
+					{onSelectionChange}
 					onDelete={handleDeleteApiKey}
 					onEdit={handleEditApiKey}
 				/>

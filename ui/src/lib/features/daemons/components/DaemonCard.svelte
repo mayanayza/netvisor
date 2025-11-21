@@ -13,6 +13,8 @@
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: hostStore = getHostFromId(daemon.host_id);
 	$: host = $hostStore;
@@ -96,4 +98,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

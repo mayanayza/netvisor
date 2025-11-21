@@ -3,7 +3,9 @@ use crate::server::{
     auth::middleware::RequireMember,
     config::AppState,
     shared::{
-        handlers::traits::{CrudHandlers, delete_handler, get_all_handler, get_by_id_handler},
+        handlers::traits::{
+            CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
+        },
         services::traits::CrudService,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
@@ -24,6 +26,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler))
         .route("/{id}", delete(delete_handler::<ApiKey>))
         .route("/{id}", get(get_by_id_handler::<ApiKey>))
+        .route("/bulk-delete", post(bulk_delete_handler::<ApiKey>))
 }
 
 pub async fn create_handler(

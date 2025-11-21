@@ -1,5 +1,7 @@
 use crate::server::auth::middleware::{MemberOrDaemon, RequireMember};
-use crate::server::shared::handlers::traits::{CrudHandlers, get_all_handler, get_by_id_handler};
+use crate::server::shared::handlers::traits::{
+    CrudHandlers, bulk_delete_handler, get_all_handler, get_by_id_handler,
+};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::storage::traits::StorableEntity;
@@ -28,6 +30,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", get(get_by_id_handler::<Host>))
         .route("/", post(create_host))
         .route("/{id}", put(update_host))
+        .route("/bulk-delete", post(bulk_delete_handler::<Host>))
         .route(
             "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),

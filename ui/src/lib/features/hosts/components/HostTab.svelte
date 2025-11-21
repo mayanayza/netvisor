@@ -7,7 +7,15 @@
 	import { getDaemons } from '$lib/features/daemons/store';
 	import HostEditor from './HostEditModal/HostEditor.svelte';
 	import HostConsolidationModal from './HostConsolidationModal.svelte';
-	import { consolidateHosts, createHost, deleteHost, getHosts, hosts, updateHost } from '../store';
+	import {
+		bulkDeleteHosts,
+		consolidateHosts,
+		createHost,
+		deleteHost,
+		getHosts,
+		hosts,
+		updateHost
+	} from '../store';
 	import { getGroups, groups } from '$lib/features/groups/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getServiceById, getServices, services } from '$lib/features/services/store';
@@ -157,6 +165,12 @@
 		}
 	}
 
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Hosts?`)) {
+			await bulkDeleteHosts(ids);
+		}
+	}
+
 	async function handleHostHide(host: Host) {
 		host.hidden = !host.hidden;
 		await updateHost({ host, services: null });
@@ -193,21 +207,27 @@
 		<DataControls
 			items={$hosts}
 			fields={hostFields}
-			getItemKey={(host) => host.id}
 			storageKey="netvisor-hosts-table-state"
+			onBulkDelete={handleBulkDelete}
+			getItemId={(item) => item.id}
 		>
-			{#snippet children(item: Host, viewMode: 'card' | 'list')}
-				{#key item.id}
-					<HostCard
-						host={item}
-						hostGroups={hostGroups.get(item.id)}
-						{viewMode}
-						onEdit={handleEditHost}
-						onDelete={handleDeleteHost}
-						onConsolidate={handleStartConsolidate}
-						onHide={handleHostHide}
-					/>
-				{/key}
+			{#snippet children(
+				item: Host,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
+				<HostCard
+					host={item}
+					hostGroups={hostGroups.get(item.id)}
+					{viewMode}
+					selected={isSelected}
+					{onSelectionChange}
+					onEdit={handleEditHost}
+					onDelete={handleDeleteHost}
+					onConsolidate={handleStartConsolidate}
+					onHide={handleHostHide}
+				/>
 			{/snippet}
 		</DataControls>
 	{/if}

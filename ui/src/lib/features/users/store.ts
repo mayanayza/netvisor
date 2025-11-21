@@ -19,3 +19,14 @@ export async function deleteUser(id: string) {
 		{ method: 'DELETE' }
 	);
 }
+
+export async function bulkDeleteUsers(ids: string[]) {
+	const result = await api.request<void, User[]>(
+		`/users/bulk-delete`,
+		users,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}

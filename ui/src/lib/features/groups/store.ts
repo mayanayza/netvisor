@@ -57,6 +57,17 @@ export async function deleteGroup(id: string) {
 	return result;
 }
 
+export async function bulkDeleteGroups(ids: string[]) {
+	const result = await api.request<void, Group[]>(
+		`/groups/bulk-delete`,
+		groups,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export function createEmptyGroupFormData(): Group {
 	return {
 		id: uuidv4Sentinel,

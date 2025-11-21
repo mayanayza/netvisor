@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { users, getUsers } from '../store';
+	import { users, getUsers, bulkDeleteUsers } from '../store';
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
@@ -31,8 +31,8 @@
 
 	// Combine users and invites into single array
 	let combinedItems = $derived([
-		...$users.map((user) => ({ type: 'user' as const, data: user })),
-		...$invites.map((invite) => ({ type: 'invite' as const, data: invite }))
+		...$users.map((user) => ({ type: 'user' as const, data: user, id: user.id })),
+		...$invites.map((invite) => ({ type: 'invite' as const, data: invite, id: invite.id }))
 	] as UserOrInvite[]);
 
 	async function handleCreateInvite() {
@@ -45,10 +45,17 @@
 
 	// Check if user can invite
 	let canInviteUsers = $derived.by(() => {
-		if (!$organization || !$organization.plan) return false;
+		if (!$organization || !$organization.plan) return [];
+
 		let features = billingPlans.getMetadata($organization.plan.type).features;
 		return features.share_views || features.team_members;
 	});
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Users?`)) {
+			await bulkDeleteUsers(ids);
+		}
+	}
 
 	// Only define fields for users (invites won't be filtered/sorted)
 	const userFields: FieldConfig<UserOrInvite>[] = [
@@ -108,10 +115,21 @@
 		<!-- Empty state -->
 		<EmptyState title="No users found" subtitle="Users will appear here once added" />
 	{:else}
-		<DataControls items={combinedItems} fields={userFields} storageKey="netvisor-users-table-state">
-			{#snippet children(item: UserOrInvite, viewMode: 'card' | 'list')}
+		<DataControls
+			items={combinedItems}
+			fields={userFields}
+			storageKey="netvisor-users-table-state"
+			onBulkDelete={handleBulkDelete}
+			getItemId={(item) => item.id}
+		>
+			{#snippet children(
+				item: UserOrInvite,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				{#if isUser(item)}
-					<UserCard user={item.data} {viewMode} />
+					<UserCard user={item.data} {viewMode} selected={isSelected} {onSelectionChange} />
 				{:else}
 					<InviteCard invite={item.data} {viewMode} />
 				{/if}

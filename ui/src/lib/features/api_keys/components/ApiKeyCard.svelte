@@ -10,6 +10,8 @@
 	export let onDelete: (apiKey: ApiKey) => void = () => {};
 	export let onEdit: (apiKey: ApiKey) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	// Build card data
 	$: cardData = {
@@ -59,4 +61,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

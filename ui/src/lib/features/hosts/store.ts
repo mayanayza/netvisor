@@ -45,6 +45,17 @@ export async function deleteHost(id: string) {
 	);
 }
 
+export async function bulkDeleteHosts(ids: string[]) {
+	const result = await api.request<void, Host[]>(
+		`/hosts/bulk-delete`,
+		hosts,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export async function consolidateHosts(destination_host_id: string, other_host_id: string) {
 	const other_host_name = get(getHostFromId(other_host_id))?.name;
 

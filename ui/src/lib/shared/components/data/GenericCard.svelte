@@ -13,8 +13,11 @@
 		iconColor?: string;
 		actions?: CardAction[];
 		fields?: CardField[];
-		children?: Snippet; // Optional additional content
+		children?: Snippet;
 		viewMode?: 'card' | 'list';
+		selected?: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+		selectable?: boolean;
 	}
 
 	let {
@@ -27,7 +30,10 @@
 		actions = [],
 		fields = [],
 		children,
-		viewMode = 'card'
+		viewMode = 'card',
+		selected = false,
+		selectable = true,
+		onSelectionChange = () => {}
 	}: Props = $props();
 
 	// Configuration for list view
@@ -38,52 +44,77 @@
 	function isArrayValue(value: string | any[]): value is any[] {
 		return Array.isArray(value);
 	}
+
+	function handleCheckboxChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		onSelectionChange(target.checked);
+	}
 </script>
 
 <div
 	class="card flex {viewMode === 'list' ? 'flex-row items-center gap-4 p-4' : 'h-full flex-col'}"
+	class:ring-2={selected}
+	class:ring-blue-500={selected}
 >
+	<!-- Checkbox (shown when selectable) -->
+	{#if selectable}
+		<div class="flex-shrink-0 {viewMode === 'list' ? '' : 'absolute right-4 top-4'}">
+			<input
+				type="checkbox"
+				checked={selected}
+				onchange={handleCheckboxChange}
+				onclick={(e) => e.stopPropagation()}
+				class="h-5 w-5 cursor-pointer rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500"
+			/>
+		</div>
+	{/if}
+
 	<!-- Header - Fixed width in list view -->
 	<div
 		class={viewMode === 'list'
 			? 'flex w-64 flex-shrink-0 items-center space-x-3'
-			: 'mb-4 flex items-start justify-between'}
+			: 'mb-4 flex items-start'}
 	>
 		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
 			{#if Icon}
 				<Icon size={viewMode === 'list' ? 20 : 28} class={iconColor} />
 			{/if}
-			<div>
-				{#if link}
-					<a
-						href={link}
-						class="text-primary hover:text-info {viewMode === 'list'
-							? 'text-base'
-							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block' : ''}"
-						target="_blank"
-					>
-						{title}
-					</a>
-				{:else}
-					<h3 class="text-primary {viewMode === 'list' ? 'text-base' : 'text-lg'} font-semibold">
-						{title}
-					</h3>
-				{/if}
+			<div class="min-w-0 flex-1">
+				<div class="flex items-center gap-2">
+					<div class="min-w-0 {viewMode === 'list' ? 'flex-1' : ''}">
+						{#if link}
+							<a
+								href={link}
+								class="text-primary hover:text-info {viewMode === 'list'
+									? 'block truncate text-base'
+									: 'text-lg'} font-semibold"
+								target="_blank"
+							>
+								{title}
+							</a>
+						{:else}
+							<h3
+								class="text-primary {viewMode === 'list'
+									? 'truncate text-base'
+									: 'text-lg'} font-semibold"
+							>
+								{title}
+							</h3>
+						{/if}
+					</div>
+					{#if status}
+						<div class="flex-shrink-0">
+							<Tag {...status} />
+						</div>
+					{/if}
+				</div>
 				{#if subtitle}
 					<p class="text-secondary {viewMode === 'list' ? 'truncate text-xs' : 'text-sm'}">
 						{subtitle}
 					</p>
 				{/if}
-				{#if status && viewMode == 'list'}
-					<div class="mr-4 flex-shrink-0">
-						<Tag {...status} />
-					</div>
-				{/if}
 			</div>
 		</div>
-		{#if status && viewMode === 'card'}
-			<Tag {...status} />
-		{/if}
 	</div>
 
 	<!-- Content - grows to fill available space -->

@@ -15,7 +15,8 @@ use crate::server::{
     hosts::r#impl::base::{Host, HostBase},
     shared::{
         handlers::traits::{
-            create_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
+            bulk_delete_handler, create_handler, delete_handler, get_all_handler,
+            get_by_id_handler, update_handler,
         },
         services::traits::CrudService,
         storage::traits::StorableEntity,
@@ -39,6 +40,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler::<Daemon>))
         .route("/{id}", delete(delete_handler::<Daemon>))
         .route("/{id}", get(get_by_id_handler::<Daemon>))
+        .route("/bulk-delete", post(bulk_delete_handler::<Daemon>))
         .route("/register", post(register_daemon))
         .route("/{id}/heartbeat", post(receive_heartbeat))
         .route("/{id}/update-capabilities", post(update_capabilities))

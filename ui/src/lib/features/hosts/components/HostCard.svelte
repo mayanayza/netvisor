@@ -15,7 +15,9 @@
 		onDelete = () => {},
 		onHide = () => {},
 		onConsolidate = () => {},
-		viewMode
+		viewMode,
+		selected,
+		onSelectionChange = () => {}
 	}: {
 		host: Host;
 		hostGroups?: Group[];
@@ -24,6 +26,8 @@
 		onHide?: (host: Host) => void;
 		onConsolidate?: (host: Host) => void;
 		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
 	} = $props();
 
 	let hasDaemon = $derived($daemons.some((d) => d.host_id == host.id));
@@ -178,4 +182,4 @@
 	});
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
