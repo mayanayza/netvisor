@@ -49,7 +49,7 @@
 	let pendingEdges: Edge[] = [];
 
 	$effect(() => {
-		if ($topology?.edges || $topology?.nodes) {
+		if ($topology && ($topology.edges || $topology.nodes)) {
 			void loadTopologyData();
 		}
 	});
@@ -59,7 +59,7 @@
 		void $selectedNode;
 		void $selectedEdge;
 
-		if ($topology.edges || $topology.nodes) {
+		if ($topology && ($topology.edges || $topology.nodes)) {
 			const currentEdges = get(edges);
 			const currentNodes = get(nodes);
 			updateConnectedNodes($selectedNode, $selectedEdge, currentEdges, currentNodes);
@@ -89,7 +89,7 @@
 
 	async function loadTopologyData() {
 		try {
-			if ($topology?.nodes && $topology?.edges) {
+			if ($topology && ($topology.edges || $topology.nodes)) {
 				// Create nodes FIRST
 				const allNodes: Node[] = $topology.nodes.map((node) => ({
 					id: node.id,

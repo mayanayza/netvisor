@@ -7,8 +7,10 @@
 
 	let { edge, vmServiceId }: { edge: Edge; vmServiceId: string } = $props();
 
-	let vmService = $derived($topology.services.find((s) => s.id == vmServiceId) || null);
-	let hypervisorHost = $derived($topology.hosts.find((h) => h.id == edge.target) || null);
+	let vmService = $derived($topology ? $topology.services.find((s) => s.id == vmServiceId) : null);
+	let hypervisorHost = $derived(
+		$topology ? $topology.hosts.find((h) => h.id == edge.target) : null
+	);
 </script>
 
 <div class="space-y-3">

@@ -16,9 +16,13 @@
 	height = height ? height : 0;
 	width = width ? width : 0;
 
-	let host = $derived($topology.hosts.find((h) => h.id == nodeData.host_id));
+	let host = $derived(
+		$topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : undefined
+	);
 
-	let servicesForHost = $derived($topology.services.filter((s) => s.host_id == nodeData.host_id));
+	let servicesForHost = $derived(
+		$topology ? $topology.services.filter((s) => s.host_id == nodeData.host_id) : []
+	);
 
 	// Compute nodeRenderData reactively
 	let nodeRenderData: NodeRenderData | null = $derived(
@@ -27,14 +31,10 @@
 					const iface = host.interfaces.find((i) => i.id === data.interface_id);
 
 					const servicesOnInterface = servicesForHost
-						? servicesForHost.filter(
-								(s) =>
-									s.bindings.some(
-										(b) => b.interface_id == null || (iface && b.interface_id == iface.id)
-									) &&
-									!$topologyOptions.request.hide_service_categories.includes(
-										serviceDefinitions.getCategory(s.service_definition)
-									)
+						? servicesForHost.filter((s) =>
+								s.bindings.some(
+									(b) => b.interface_id == null || (iface && b.interface_id == iface.id)
+								)
 							)
 						: [];
 

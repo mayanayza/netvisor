@@ -6,7 +6,7 @@
 
 	let { node }: { node: Node } = $props();
 
-	let subnet = $derived($topology.subnets.find((s) => s.id == node.id));
+	let subnet = $derived($topology ? $topology.subnets.find((s) => s.id == node.id) : null);
 </script>
 
 <div class="space-y-4">

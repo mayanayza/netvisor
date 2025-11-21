@@ -5,7 +5,7 @@ use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::edges::Edge;
-use crate::server::topology::types::edges::EdgeType;
+use crate::server::topology::types::edges::EdgeTypeDiscriminants;
 use crate::server::topology::types::nodes::Node;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -95,7 +95,7 @@ impl Topology {
         self.base.locked_by = None;
     }
 
-    pub fn refresh(&mut self) {
+    pub fn clear_stale(&mut self) {
         self.base.removed_groups = vec![];
         self.base.removed_hosts = vec![];
         self.base.removed_services = vec![];
@@ -126,7 +126,7 @@ pub struct TopologyLocalOptions {
     pub left_zone_title: String,
     pub no_fade_edges: bool,
     pub hide_resize_handles: bool,
-    pub hide_edge_types: Vec<EdgeType>,
+    pub hide_edge_types: Vec<EdgeTypeDiscriminants>,
 }
 
 impl Default for TopologyLocalOptions {

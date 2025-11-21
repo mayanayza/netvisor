@@ -14,12 +14,14 @@
 	let { edge, containerizingServiceId }: { edge: Edge; containerizingServiceId: string } = $props();
 
 	let containerizingService = $derived(
-		$topology.services.find((s) => s.id == containerizingServiceId) || null
+		$topology ? $topology.services.find((s) => s.id == containerizingServiceId) : null
 	);
 
 	let containerizingHost = $derived(
 		containerizingService
-			? $topology.hosts.find((h) => h.id == containerizingService.host_id)
+			? $topology
+				? $topology.hosts.find((h) => h.id == containerizingService.host_id)
+				: null
 			: null
 	);
 

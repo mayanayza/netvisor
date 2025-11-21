@@ -1,11 +1,15 @@
 import { get, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import { type Edge, type Node } from '@xyflow/svelte';
-import { EdgeHandle, type Topology, type TopologyOptions } from './types/base';
+import { type Topology, type TopologyOptions } from './types/base';
 import { networks } from '../networks/store';
 import deepmerge from 'deepmerge';
 import { browser } from '$app/environment';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
+
+let initialized = false;
+let topologyInitialized = false;
+let lastTopologyId = '';
 
 export const topologies = writable<Topology[]>([]);
 export const topology = writable<Topology>();
@@ -38,36 +42,64 @@ const defaultOptions: TopologyOptions = {
 export const topologyOptions = writable<TopologyOptions>(loadOptionsFromStorage());
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
 
-let topologyInitialized = false;
-let lastTopologyId = '';
+function initializeSubscriptions() {
+	if (initialized) {
+		return;
+	}
 
-if (browser) {
-	topologies.subscribe(($topologies) => {
-		if (!topologyInitialized && $topologies.length > 0) {
-			topology.set($topologies[0]);
-			lastTopologyId = $topologies[0].id;
-			topologyInitialized = true;
-		}
-	});
+	initialized = true;
 
-	// Subscribe to options changes and save to localStorage + update topology object
-	if (typeof window !== 'undefined') {
-		topologyOptions.subscribe((options) => {
-			saveOptionsToStorage(options);
-		});
-
-		topology.subscribe((topology) => {
-			if (topology && lastTopologyId != topology.id) {
-				lastTopologyId = topology.id;
-				topologyOptions.set(topology.options);
+	if (browser) {
+		topologies.subscribe(($topologies) => {
+			if (!topologyInitialized && $topologies.length > 0) {
+				const currentTopology = $topologies[0];
+				topology.set(currentTopology);
+				topologyOptions.set(currentTopology.options);
+				lastTopologyId = currentTopology.id;
+				topologyInitialized = true;
 			}
 		});
 
-		optionsPanelExpanded.subscribe((expanded) => {
-			saveExpandedToStorage(expanded);
-		});
+		if (typeof window !== 'undefined') {
+			let optionsUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
+
+			topologyOptions.subscribe(async (options) => {
+				saveOptionsToStorage(options);
+
+				// Clear any pending timeout
+				if (optionsUpdateTimeout) {
+					clearTimeout(optionsUpdateTimeout);
+				}
+
+				// Debounce the API call
+				optionsUpdateTimeout = setTimeout(async () => {
+					const currentTopology = get(topology);
+					if (currentTopology) {
+						const updatedTopology = {
+							...currentTopology,
+							options: options
+						};
+						await updateTopology(updatedTopology);
+					}
+				}, 500);
+			});
+
+			topology.subscribe((topology) => {
+				if (topology && lastTopologyId != topology.id) {
+					lastTopologyId = topology.id;
+					topologyOptions.set(topology.options);
+				}
+			});
+
+			optionsPanelExpanded.subscribe((expanded) => {
+				saveExpandedToStorage(expanded);
+			});
+		}
 	}
 }
+
+// Initialize immediately
+initializeSubscriptions();
 
 export function resetTopologyOptions(): void {
 	// networksInitialized = false;
@@ -137,7 +169,8 @@ function saveExpandedToStorage(expanded: boolean): void {
 }
 
 export async function refreshTopology(data: Topology) {
-	const result = await api.request<Topology, Topology[]>(
+	// Updated topology returns through SSE
+	await api.request<Topology, Topology[]>(
 		`/topology/${data.id}/refresh`,
 		topologies,
 		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
@@ -146,38 +179,6 @@ export async function refreshTopology(data: Topology) {
 			body: JSON.stringify(data)
 		}
 	);
-
-	if (result && result.success && result.data) {
-		if (get(topology)?.id === data.id) {
-			topology.set(result.data);
-		}
-	}
-
-	return result;
-}
-
-export async function rebuildTopology(data: Topology) {
-	const result = await api.request<Topology, Topology[]>(
-		`/topology/${data.id}/rebuild`,
-		topologies,
-		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
-		{
-			method: 'POST',
-			body: JSON.stringify(data)
-		}
-	);
-
-	if (result && result.success && result.data) {
-		// Cancel any pending staleness updates since we just refreshed
-		const { topologySSEManager } = await import('./sse');
-		topologySSEManager.cancelPendingStaleness(data.id);
-
-		if (get(topology)?.id === data.id) {
-			topology.set(result.data);
-		}
-	}
-
-	return result;
 }
 
 export async function lockTopology(data: Topology) {
@@ -217,15 +218,25 @@ export async function unlockTopology(data: Topology) {
 }
 
 export async function getTopologies() {
-	const result = await api.request<Topology[]>(
-		'/topology',
-		topologies,
-		(topologies) => topologies,
-		{
-			method: 'GET'
-		}
-	);
-	return result;
+	await api.request<Topology[]>('/topology', topologies, (topologies) => topologies, {
+		method: 'GET'
+	});
+}
+
+export async function rebuildTopology(data: Topology) {
+	// Updated topology returns through SSE
+	await api.request<Topology, Topology[]>(`/topology/${data.id}/rebuild`, null, null, {
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+}
+
+export async function updateTopology(data: Topology) {
+	// Updated topology returns through SSE
+	await api.request<Topology, Topology[]>(`/topology/${data.id}`, null, null, {
+		method: 'PUT',
+		body: JSON.stringify(data)
+	});
 }
 
 export async function createTopology(data: Topology) {
@@ -244,31 +255,16 @@ export async function createTopology(data: Topology) {
 }
 
 export async function deleteTopology(id: string) {
-	await api.request<void, Topology[]>(
+	const result = await api.request<void, Topology[]>(
 		`/topology/${id}`,
 		topologies,
 		(_, current) => current.filter((t) => t.id != id),
 		{ method: 'DELETE' }
 	);
-}
 
-export async function updateTopology(data: Topology) {
-	const result = await api.request<Topology, Topology[]>(
-		`/topology/${data.id}`,
-		topologies,
-		(updatedTopology, current) => current.map((t) => (t.id === data.id ? updatedTopology : t)),
-		{ method: 'PUT', body: JSON.stringify(data) }
-	);
-
-	return result;
-}
-
-// Cycle through anchor positions in logical order
-export function getNextHandle(currentHandle: EdgeHandle): EdgeHandle {
-	const cycle = [EdgeHandle.Top, EdgeHandle.Right, EdgeHandle.Bottom, EdgeHandle.Left];
-	const currentIndex = cycle.indexOf(currentHandle);
-	const nextIndex = (currentIndex + 1) % cycle.length;
-	return cycle[nextIndex];
+	if (result && result.data && result.success && get(topologies).length > 0) {
+		topology.set(get(topologies)[0]);
+	}
 }
 
 export function createEmptyTopologyFormData(): Topology {

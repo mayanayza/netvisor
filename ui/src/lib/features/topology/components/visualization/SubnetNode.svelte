@@ -22,7 +22,7 @@
 	let nodeStyle = $derived(`width: ${width}px; height: ${height}px;`);
 	let hasInfra = $derived(infra_width > 0);
 
-	let subnet = $derived($topology.subnets.find((s) => s.id == id));
+	let subnet = $derived($topology ? $topology.subnets.find((s) => s.id == id) : undefined);
 
 	const viewport = useViewport();
 	let resizeHandleZoomLevel = $derived(viewport.current.zoom > 0.5);

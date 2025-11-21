@@ -20,7 +20,7 @@
 		targetBindingId
 	}: { groupId: string; sourceBindingId: string; targetBindingId: string } = $props();
 
-	let group = $derived($topology.groups.find((g) => g.id == groupId) || null);
+	let group = $derived($topology ? $topology.groups.find((g) => g.id == groupId) : null);
 
 	// Local copy of group for editing
 	let localGroup = $state<Group | null>(null);

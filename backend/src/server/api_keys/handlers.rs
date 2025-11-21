@@ -54,13 +54,6 @@ pub async fn create_handler(
             ApiError::internal_error(&e.to_string())
         })?;
 
-    tracing::info!(
-        api_key_id = %api_key.id,
-        api_key_name = %api_key.base.name,
-        user_id = %user.user_id,
-        "API key created via API (key shown to user)"
-    );
-
     Ok(Json(ApiResponse::success(ApiKeyResponse {
         key: api_key.base.key.clone(),
         api_key,
@@ -72,7 +65,7 @@ pub async fn rotate_key_handler(
     RequireMember(user): RequireMember,
     Path(api_key_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
-    tracing::info!(
+    tracing::debug!(
         api_key_id = %api_key_id,
         user_id = %user.user_id,
         "API key rotation request received"
@@ -91,12 +84,6 @@ pub async fn rotate_key_handler(
             );
             ApiError::internal_error(&e.to_string())
         })?;
-
-    tracing::info!(
-        api_key_id = %api_key_id,
-        user_id = %user.user_id,
-        "API key rotated via API (new key shown to user)"
-    );
 
     Ok(Json(ApiResponse::success(key)))
 }
@@ -152,13 +139,6 @@ pub async fn update_handler(
             );
             ApiError::internal_error(&e.to_string())
         })?;
-
-    tracing::info!(
-        api_key_id = %id,
-        api_key_name = %updated.base.name,
-        user_id = %user.user_id,
-        "API key updated via API"
-    );
 
     Ok(Json(ApiResponse::success(updated)))
 }

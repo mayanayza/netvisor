@@ -31,11 +31,12 @@
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
+	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
-	let isCreateEditOpen = false;
-	let editingTopology: Topology | null = null;
+	let isCreateEditOpen = $state(false);
+	let editingTopology: Topology | null = $state(null);
 
-	let isRefreshConflictsOpen = false;
+	let isRefreshConflictsOpen = $state(false);
 
 	function handleCreateTopology() {
 		isCreateEditOpen = true;
@@ -119,16 +120,20 @@
 		await unlockTopology($topology);
 	}
 
-	$: stateConfig = $topology
-		? getTopologyState($topology, {
-				onRefresh: handleRefresh,
-				onUnlock: handleUnlock,
-				onReset: handleReset,
-				onLock: handleLock
-			})
-		: null;
+	let stateConfig = $derived(
+		$topology
+			? getTopologyState($topology, {
+					onRefresh: handleRefresh,
+					onUnlock: handleUnlock,
+					onReset: handleReset,
+					onLock: handleLock
+				})
+			: null
+	);
 
-	$: lockedByUser = $topology?.locked_by ? $users.find((u) => u.id === $topology.locked_by) : null;
+	let lockedByUser = $derived(
+		$topology?.locked_by ? $users.find((u) => u.id === $topology.locked_by) : null
+	);
 
 	const loading = loadData([getHosts, getServices, getSubnets, getGroups, getTopologies]);
 </script>
@@ -138,24 +143,46 @@
 		<!-- Header -->
 		<TabHeader title="Topology" subtitle="Generate and view network topology">
 			<svelte:fragment slot="actions">
-				<div class="flex items-center gap-4">
-					<ExportButton />
+				<div class="flex items-start gap-4">
+					{#if $topology}
+						<ExportButton />
+					{/if}
 
 					{#if $topology && !$topology.is_locked}
-						<button class="btn-secondary" on:click={handleLock}>
-							<Lock class="h-5 w-5" /> Lock
-						</button>
+						<div class="flex flex-col items-center gap-2">
+							<div class="flex items-center">
+								<button class="btn-secondary" onclick={handleLock}>
+									<Lock class="h-5 w-5" /> Lock
+								</button>
+							</div>
+						</div>
 					{/if}
 
 					<!-- State Badge / Action Button -->
 					{#if $topology && stateConfig}
-						<div class="flex-shrink-0">
-							<StateBadge
-								Icon={stateConfig.icon}
-								label={stateConfig.buttonText}
-								cls={stateConfig.class}
-								onClick={stateConfig.action}
-							/>
+						<div class="flex flex-col items-center gap-2">
+							<div class="flex items-center">
+								<StateBadge
+									Icon={stateConfig.icon}
+									label={stateConfig.buttonText}
+									cls={stateConfig.class}
+									onClick={stateConfig.action}
+								/>
+							</div>
+							{#if $topology.is_locked && $topology.locked_at}
+								<div class="flex flex-col items-center">
+									<span class="text-tertiary whitespace-nowrap text-[10px]"
+										>{formatTimestamp($topology.locked_at)}</span
+									>
+									<span class="text-tertiary whitespace-nowrap text-[10px]"
+										>by {$users.find((u) => u.id == $topology.locked_by)?.email}</span
+									>
+								</div>
+							{:else}
+								<span class="text-tertiary whitespace-nowrap text-[10px]"
+									>{formatTimestamp($topology.last_refreshed)}</span
+								>
+							{/if}
 						</div>
 					{/if}
 
@@ -171,17 +198,21 @@
 						</div>
 					{/if}
 
-					<button class="btn-primary" on:click={handleEditTopology}>
-						<Edit class="mr-2 h-5 w-5" /> Edit
-					</button>
+					{#if $topology}
+						<button class="btn-primary" onclick={handleEditTopology}>
+							<Edit class="mr-2 h-5 w-5" /> Edit
+						</button>
+					{/if}
 
-					<button class="btn-primary" on:click={handleCreateTopology}>
+					<button class="btn-primary" onclick={handleCreateTopology}>
 						<Plus class="h-5 w-5" /> New
 					</button>
 
-					<button class="btn-danger" on:click={handleDelete}>
-						<Trash2 class="my-1 h-5 w-5" />
-					</button>
+					{#if $topology}
+						<button class="btn-danger" onclick={handleDelete}>
+							<Trash2 class="my-1 h-5 w-5" />
+						</button>
+					{/if}
 				</div>
 			</svelte:fragment>
 		</TabHeader>
@@ -218,7 +249,9 @@
 				<TopologyViewer />
 			</div>
 		{:else}
-			<div class="card card-static">No topology selected. Create one to get started.</div>
+			<div class="card card-static text-secondary">
+				No topology selected. Create one to get started.
+			</div>
 		{/if}
 	</div>
 </SvelteFlowProvider>

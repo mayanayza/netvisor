@@ -2,6 +2,7 @@ use crate::server::{auth::middleware::AuthenticatedEntity, shared::entities::Ent
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::{fmt::Display, net::IpAddr};
+use strum::IntoDiscriminant;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
@@ -63,6 +64,47 @@ impl Event {
                     "Auth Event Logged"
                 );
             }
+        }
+    }
+}
+
+impl Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Event::Auth(a) => write!(
+                f,
+                "{{ id: {}, user_id: {}, organization_id: {}, operation: {}, timestamp: {}, ip_address: {}, user_agent: {}, metadata: {}, authentication: {} }}",
+                a.id,
+                a.user_id
+                    .map(|u| u.to_string())
+                    .unwrap_or("None".to_string()),
+                a.organization_id
+                    .map(|u| u.to_string())
+                    .unwrap_or("None".to_string()),
+                a.operation,
+                a.timestamp,
+                a.ip_address,
+                a.user_agent.clone().unwrap_or("Unknown".to_string()),
+                a.metadata,
+                a.authentication
+            ),
+            Event::Entity(e) => write!(
+                f,
+                "{{ id: {}, entity_type: {}, entity_id: {}, network_id: {}, organization_id: {}, operation: {}, timestamp: {}, metadata: {}, authentication: {} }}",
+                e.id,
+                e.entity_type.discriminant(),
+                e.entity_id,
+                e.network_id
+                    .map(|u| u.to_string())
+                    .unwrap_or("None".to_string()),
+                e.organization_id
+                    .map(|u| u.to_string())
+                    .unwrap_or("None".to_string()),
+                e.operation,
+                e.timestamp,
+                e.metadata,
+                e.authentication
+            ),
         }
     }
 }

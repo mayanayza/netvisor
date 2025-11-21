@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::server::{
     billing::types::base::BillingPlan,
     config::AppState,
@@ -39,6 +41,17 @@ pub enum AuthenticatedEntity {
     }, // network_id
     System,
     Anonymous,
+}
+
+impl Display for AuthenticatedEntity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthenticatedEntity::Anonymous => write!(f, "Anonymous"),
+            AuthenticatedEntity::System => write!(f, "System"),
+            AuthenticatedEntity::Daemon { .. } => write!(f, "Daemon"),
+            AuthenticatedEntity::User { .. } => write!(f, "User"),
+        }
+    }
 }
 
 impl AuthenticatedEntity {

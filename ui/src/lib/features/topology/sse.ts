@@ -7,23 +7,13 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 	private stalenessTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 	private readonly DEBOUNCE_MS = 300;
 
-	// Call this when a refresh completes to cancel pending staleness updates
-	public cancelPendingStaleness(topologyId: string) {
-		const existingTimer = this.stalenessTimers.get(topologyId);
-		if (existingTimer) {
-			clearTimeout(existingTimer);
-			this.stalenessTimers.delete(topologyId);
-		}
-	}
-
 	protected createConfig(): SSEConfig<Topology> {
 		return {
 			url: '/api/topology/stream',
 			onMessage: (update) => {
-				// If the update says it's NOT stale, apply immediately (it's a refresh)
+				// If the update says it's NOT stale, apply immediately (it's a full refresh)
 				if (!update.is_stale) {
-					this.cancelPendingStaleness(update.id);
-					this.applyUpdate(update);
+					this.applyFullUpdate(update);
 					return;
 				}
 
@@ -34,7 +24,14 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 				}
 
 				const timer = setTimeout(() => {
-					this.applyUpdate(update);
+					this.applyPartialUpdate(update.id, {
+						removed_groups: update.removed_groups,
+						removed_hosts: update.removed_hosts,
+						removed_services: update.removed_services,
+						removed_subnets: update.removed_subnets,
+						is_stale: update.is_stale,
+						options: update.options
+					});
 					this.stalenessTimers.delete(update.id);
 				}, this.DEBOUNCE_MS);
 
@@ -49,23 +46,43 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 		};
 	}
 
-	private applyUpdate(update: Topology) {
-		// Update the topologies array
+	private applyFullUpdate(update: Topology) {
 		topologies.update((topos) => {
 			return topos.map((topo) => {
 				if (topo.id === update.id) {
+					return update;
+				}
+				return topo;
+			});
+		});
+
+		const currentTopology = get(topology);
+		if (currentTopology && currentTopology.id === update.id) {
+			topology.set(update);
+		}
+	}
+
+	private applyPartialUpdate(topologyId: string, updates: Partial<Topology>) {
+		topologies.update((topos) => {
+			return topos.map((topo) => {
+				if (topo.id === topologyId) {
 					return {
-						...update
+						...topo,
+						...updates
 					};
 				}
 				return topo;
 			});
 		});
 
-		// ALSO update the currently selected topology if it matches
 		const currentTopology = get(topology);
-		if (currentTopology && currentTopology.id === update.id) {
-			topology.set(update);
+		if (currentTopology && currentTopology.id === topologyId) {
+			topology.update((topo) => {
+				return {
+					...topo,
+					...updates
+				};
+			});
 		}
 	}
 }

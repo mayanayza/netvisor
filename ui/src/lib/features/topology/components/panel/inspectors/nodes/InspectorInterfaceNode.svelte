@@ -11,7 +11,7 @@
 
 	let nodeData = node.data as InterfaceNode;
 
-	let host = $derived($topology.hosts.find((h) => h.id == nodeData.host_id));
+	let host = $derived($topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : null);
 
 	// Get the interface for this node
 	let thisInterface = $derived(
