@@ -229,7 +229,7 @@ async fn receive_work_request(
     daemon.base.last_seen = Utc::now();
 
     service
-        .update(&mut daemon, auth_daemon.into())
+        .update(&mut daemon, auth_daemon.clone().into())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to update heartbeat: {}", e)))?;
 
@@ -238,14 +238,23 @@ async fn receive_work_request(
         .discovery_service
         .get_sessions_for_daemon(&daemon_id)
         .await;
-    let cancel = state
+    let (cancel, session_id_to_cancel) = state
         .services
         .discovery_service
         .pull_cancellation_for_daemon(&daemon_id)
         .await;
 
-    Ok(Json(ApiResponse::success((
-        sessions.first().cloned(),
-        cancel,
-    ))))
+    let next_session = sessions.first().cloned();
+
+    service
+        .receive_work_request(
+            daemon,
+            cancel,
+            session_id_to_cancel,
+            next_session.clone(),
+            auth_daemon.into(),
+        )
+        .await?;
+
+    Ok(Json(ApiResponse::success((next_session, cancel))))
 }

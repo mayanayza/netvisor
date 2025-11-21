@@ -9,7 +9,7 @@ use crate::server::{
         storage::traits::StorableEntity,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
-    topology::types::base::Topology,
+    topology::{service::main::BuildGraphParams, types::base::Topology},
 };
 use axum::{
     Router,
@@ -31,6 +31,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", delete(delete_handler::<Topology>))
         .route("/{id}", get(get_by_id_handler::<Topology>))
         .route("/{id}/refresh", post(refresh))
+        .route("/{id}/rebuild", post(rebuild))
         .route("/{id}/lock", post(lock))
         .route("/{id}/unlock", post(unlock))
         .route("/stream", get(staleness_stream))
@@ -63,12 +64,18 @@ pub async fn create_handler(
 
     let service = Topology::get_service(&state);
 
-    let (hosts, services, subnets, groups) = service
-        .get_entity_data(topology.base.network_id, topology.base.options.clone())
-        .await?;
+    let (hosts, services, subnets, groups) =
+        service.get_entity_data(topology.base.network_id).await?;
 
-    let (nodes, edges) =
-        service.build_graph(&topology.base.options, &hosts, &subnets, &services, &groups);
+    let (nodes, edges) = service.build_graph(BuildGraphParams {
+        options: &topology.base.options,
+        hosts: &hosts,
+        subnets: &subnets,
+        services: &services,
+        groups: &groups,
+        old_edges: &[],
+        old_nodes: &[],
+    });
 
     topology.base.hosts = hosts;
     topology.base.services = services;
@@ -101,6 +108,7 @@ pub async fn create_handler(
     Ok(Json(ApiResponse::success(created)))
 }
 
+/// Refresh entity data. Only used when cosmetic properties (ie group color/line routing, entity names) are changed
 async fn refresh(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -108,12 +116,39 @@ async fn refresh(
 ) -> ApiResult<Json<ApiResponse<Topology>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, services, subnets, groups) = service
-        .get_entity_data(topology.base.network_id, topology.base.options.clone())
-        .await?;
+    let (hosts, services, subnets, groups) =
+        service.get_entity_data(topology.base.network_id).await?;
 
-    let (nodes, edges) =
-        service.build_graph(&topology.base.options, &hosts, &subnets, &services, &groups);
+    topology.base.hosts = hosts;
+    topology.base.services = services;
+    topology.base.subnets = subnets;
+    topology.base.groups = groups;
+
+    let updated = service.update(&mut topology, user.into()).await?;
+
+    Ok(Json(ApiResponse::success(updated)))
+}
+
+/// Recalculate node and edges and refresh entity data
+async fn rebuild(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(mut topology): Json<Topology>,
+) -> ApiResult<Json<ApiResponse<Topology>>> {
+    let service = Topology::get_service(&state);
+
+    let (hosts, services, subnets, groups) =
+        service.get_entity_data(topology.base.network_id).await?;
+
+    let (nodes, edges) = service.build_graph(BuildGraphParams {
+        options: &topology.base.options,
+        hosts: &hosts,
+        subnets: &subnets,
+        services: &services,
+        groups: &groups,
+        old_nodes: &topology.base.nodes,
+        old_edges: &topology.base.edges,
+    });
 
     topology.base.hosts = hosts;
     topology.base.services = services;

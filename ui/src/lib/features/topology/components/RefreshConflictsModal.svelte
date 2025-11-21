@@ -77,7 +77,7 @@
 		<!-- Warning header -->
 		<InlineDanger
 			title={`${totalRemoved} ${totalRemoved === 1 ? 'entity' : 'entities'} will be removed`}
-			body="These entities no longer exist in the network and will be removed from this diagram if you refresh."
+			body="These entities no longer exist in the network and will be removed from this diagram if you rebuild."
 		/>
 
 		<!-- List removed entities -->
@@ -86,7 +86,7 @@
 		<!-- Info box -->
 		<InlineInfo
 			title="Tip:"
-			body="If you want to preserve this network state as a historical record, click 'Lock Instead' to freeze this topology without refreshing."
+			body="If you want to preserve this network state as a historical record, click 'Lock' to freeze this topology without refreshing."
 		/>
 	</div>
 
@@ -96,11 +96,11 @@
 			<div class="flex gap-3">
 				<button class="btn-primary flex items-center gap-2" on:click={onLock}>
 					<Lock class="h-4 w-4" />
-					Lock Instead
+					Lock
 				</button>
 				<button class="btn-danger flex items-center gap-2" on:click={onConfirm}>
 					<RefreshCcw class="h-4 w-4" />
-					Refresh Anyway
+					Rebulid
 				</button>
 			</div>
 		</div>

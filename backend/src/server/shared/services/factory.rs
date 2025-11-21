@@ -8,6 +8,7 @@ use crate::server::{
     email::service::EmailService,
     groups::service::GroupService,
     hosts::service::HostService,
+    logging::service::LoggingService,
     networks::service::NetworkService,
     organizations::service::OrganizationService,
     services::service::ServiceService,
@@ -36,11 +37,14 @@ pub struct ServiceFactory {
     pub billing_service: Option<Arc<BillingService>>,
     pub email_service: Option<Arc<EmailService>>,
     pub event_bus: Arc<EventBus>,
+    pub logging_service: Arc<LoggingService>,
 }
 
 impl ServiceFactory {
     pub async fn new(storage: &StorageFactory, config: Option<ServerConfig>) -> Result<Self> {
         let event_bus = Arc::new(EventBus::new());
+
+        let logging_service = Arc::new(LoggingService::new());
 
         let api_key_service = Arc::new(ApiKeyService::new(
             storage.api_keys.clone(),
@@ -79,7 +83,6 @@ impl ServiceFactory {
 
         let subnet_service = Arc::new(SubnetService::new(
             storage.subnets.clone(),
-            host_service.clone(),
             event_bus.clone(),
         ));
 
@@ -133,6 +136,7 @@ impl ServiceFactory {
             user_service.clone(),
             organization_service.clone(),
             email_service.clone(),
+            event_bus.clone(),
         ));
 
         let oidc_service = config.and_then(|c| {
@@ -149,14 +153,16 @@ impl ServiceFactory {
                 &c.oidc_client_secret,
                 &c.oidc_provider_name,
             ) {
-                return Some(Arc::new(OidcService::new(
-                    issuer_url.to_owned(),
-                    client_id.to_owned(),
-                    client_secret.to_owned(),
-                    redirect_url.to_owned(),
-                    provider_name.to_owned(),
-                    auth_service.clone(),
-                )));
+                return Some(Arc::new(OidcService::new(OidcService {
+                    issuer_url: issuer_url.to_owned(),
+                    client_id: client_id.to_owned(),
+                    client_secret: client_secret.to_owned(),
+                    redirect_url: redirect_url.to_owned(),
+                    provider_name: provider_name.to_owned(),
+                    auth_service: auth_service.clone(),
+                    user_service: user_service.clone(),
+                    event_bus: event_bus.clone(),
+                })));
             }
             None
         });
@@ -164,6 +170,10 @@ impl ServiceFactory {
         event_bus
             .register_subscriber(topology_service.clone())
             .await;
+
+        event_bus.register_subscriber(logging_service.clone()).await;
+
+        event_bus.register_subscriber(host_service.clone()).await;
 
         Ok(Self {
             user_service,
@@ -182,6 +192,7 @@ impl ServiceFactory {
             billing_service,
             email_service,
             event_bus,
+            logging_service,
         })
     }
 }

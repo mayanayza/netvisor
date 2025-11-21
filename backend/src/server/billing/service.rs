@@ -411,7 +411,7 @@ impl BillingService {
             BillingPlan::Community { .. } => {}
         }
 
-        organization.base.plan_status = Some(sub.status);
+        organization.base.plan_status = Some(sub.status.to_string());
         organization.base.plan = Some(plan);
 
         self.organization_service
@@ -443,7 +443,7 @@ impl BillingService {
             .revoke_org_invites(&organization.id)
             .await?;
 
-        organization.base.plan_status = Some(SubscriptionStatus::Canceled);
+        organization.base.plan_status = Some(SubscriptionStatus::Canceled.to_string());
 
         self.organization_service
             .update(&mut organization, AuthenticatedEntity::System)

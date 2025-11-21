@@ -10,6 +10,7 @@ use crate::server::services::r#impl::patterns::{MatchConfidence, MatchReason, Ma
 use crate::server::services::r#impl::virtualization::{
     DockerVirtualization, ServiceVirtualization,
 };
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
 use crate::server::subnets::r#impl::base::Subnet;
@@ -43,6 +44,18 @@ impl Default for ServiceBase {
             bindings: Vec::new(),
             virtualization: None,
             source: EntitySource::Unknown,
+        }
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Service> for Service {
+    fn triggers_staleness(&self, other: Option<Service>) -> bool {
+        if let Some(other_service) = other {
+            self.base.bindings != other_service.base.bindings
+                || self.base.host_id != other_service.base.host_id
+                || self.base.virtualization != other_service.base.virtualization
+        } else {
+            true
         }
     }
 }

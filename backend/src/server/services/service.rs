@@ -10,12 +10,12 @@ use crate::server::{
     },
     services::r#impl::{base::Service, bindings::Binding, patterns::MatchDetails},
     shared::{
-        entities::Entity,
+        entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
             types::{EntityEvent, EntityOperation},
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{
             filter::EntityFilter,
             generic::GenericPostgresStorage,
@@ -45,24 +45,23 @@ pub struct ServiceService {
     event_bus: Arc<EventBus>,
 }
 
-#[async_trait]
-impl CrudService<Service> for ServiceService {
-    fn storage(&self) -> &Arc<GenericPostgresStorage<Service>> {
-        &self.storage
-    }
-
+impl EventBusService<Service> for ServiceService {
     fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
 
-    fn entity_type() -> Entity {
-        Entity::Service
-    }
     fn get_network_id(&self, entity: &Service) -> Option<Uuid> {
         Some(entity.base.network_id)
     }
     fn get_organization_id(&self, _entity: &Service) -> Option<Uuid> {
         None
+    }
+}
+
+#[async_trait]
+impl CrudService<Service> for ServiceService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Service>> {
+        &self.storage
     }
 
     async fn create(
@@ -105,28 +104,24 @@ impl CrudService<Service> for ServiceService {
             _ => {
                 let created = self.storage.create(&service).await?;
 
+                let trigger_stale = created.triggers_staleness(None);
+
                 self.event_bus()
-                    .publish(EntityEvent {
+                    .publish_entity(EntityEvent {
                         id: Uuid::new_v4(),
-                        entity_type: Entity::Service,
                         entity_id: created.id,
                         network_id: self.get_network_id(&created),
                         organization_id: self.get_organization_id(&created),
+                        entity_type: created.into(),
                         operation: EntityOperation::Created,
                         timestamp: Utc::now(),
-                        metadata: serde_json::json!({}),
+                        metadata: serde_json::json!({
+                            "trigger_stale": trigger_stale
+                        }),
                         authentication,
                     })
                     .await?;
 
-                tracing::info!(
-                    service_id = %service.id,
-                    service_name = %service.base.name,
-                    host_id = %service.base.host_id,
-                    binding_count = %service.base.bindings.len(),
-                    "Service created"
-                );
-                tracing::trace!("Result: {:?}", service);
                 service
             }
         };
@@ -153,28 +148,24 @@ impl CrudService<Service> for ServiceService {
             .await?;
 
         let updated = self.storage.update(service).await?;
+        let trigger_stale = updated.triggers_staleness(Some(current_service));
 
         self.event_bus()
-            .publish(EntityEvent {
+            .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: Entity::Service,
                 entity_id: updated.id,
                 network_id: self.get_network_id(&updated),
                 organization_id: self.get_organization_id(&updated),
+                entity_type: updated.clone().into(),
                 operation: EntityOperation::Updated,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
                 authentication,
             })
             .await?;
 
-        tracing::info!(
-            service_id = %service.id,
-            service_name = %service.base.name,
-            host_id = %service.base.host_id,
-            "Service updated"
-        );
-        tracing::trace!("Result: {:?}", service);
         Ok(updated)
     }
 
@@ -192,26 +183,23 @@ impl CrudService<Service> for ServiceService {
 
         self.storage.delete(id).await?;
 
+        let trigger_stale = service.triggers_staleness(None);
+
         self.event_bus()
-            .publish(EntityEvent {
+            .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: Entity::Service,
                 entity_id: service.id,
                 network_id: self.get_network_id(&service),
                 organization_id: self.get_organization_id(&service),
+                entity_type: service.into(),
                 operation: EntityOperation::Deleted,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
                 authentication,
             })
             .await?;
-
-        tracing::info!(
-            "Deleted service {}: {} for host {}",
-            service.base.name,
-            service.id,
-            service.base.host_id
-        );
         Ok(())
     }
 }
@@ -251,6 +239,8 @@ impl ServiceService {
         authentication: AuthenticatedEntity,
     ) -> Result<Service> {
         let mut binding_updates = 0;
+
+        let service_before_updates = existing_service.clone();
 
         let lock = self.get_service_lock(&existing_service.id).await;
         let _guard = lock.lock().await;
@@ -336,27 +326,23 @@ impl ServiceService {
         };
 
         if !data.is_empty() {
+            let trigger_stale = existing_service.triggers_staleness(Some(service_before_updates));
+
             self.event_bus()
-                .publish(EntityEvent {
+                .publish_entity(EntityEvent {
                     id: Uuid::new_v4(),
-                    entity_type: Entity::Service,
                     entity_id: existing_service.id,
                     network_id: self.get_network_id(&existing_service),
                     organization_id: self.get_organization_id(&existing_service),
+                    entity_type: existing_service.clone().into(),
                     operation: EntityOperation::Updated,
                     timestamp: Utc::now(),
-                    metadata: serde_json::json!({}),
+                    metadata: serde_json::json!({
+                        "trigger_stale": trigger_stale
+                    }),
                     authentication,
                 })
                 .await?;
-
-            tracing::info!(
-                service_id = %existing_service.id,
-                service_name = %existing_service.base.name,
-                updates = %data.join(", "),
-                "Upserted service with new data"
-            );
-            tracing::debug!("Result {:?}", existing_service);
         } else {
             tracing::debug!(
                 "Service upsert - no changes needed for {}",

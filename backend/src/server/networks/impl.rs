@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
-use crate::server::{networks::service::NetworkService, shared::handlers::traits::CrudHandlers};
+use crate::server::{
+    networks::service::NetworkService,
+    shared::{entities::ChangeTriggersTopologyStaleness, handlers::traits::CrudHandlers},
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
@@ -10,7 +13,7 @@ use validator::Validate;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash)]
 pub struct NetworkBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -28,7 +31,7 @@ impl NetworkBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Network {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -48,6 +51,12 @@ impl CrudHandlers for Network {
 
     fn get_service(state: &crate::server::config::AppState) -> &Self::Service {
         &state.services.network_service
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Network> for Network {
+    fn triggers_staleness(&self, _other: Option<Network>) -> bool {
+        false
     }
 }
 

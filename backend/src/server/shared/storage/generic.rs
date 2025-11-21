@@ -117,7 +117,7 @@ where
         }
 
         query.execute(&self.pool).await?;
-        tracing::info!("Created {}: {}", T::table_name(), entity);
+        tracing::debug!("Created {}: {}", T::table_name(), entity);
         Ok(entity.clone())
     }
 
@@ -173,7 +173,7 @@ where
             query = Self::bind_value(query, value)?;
         }
 
-        tracing::info!("Updated {}", entity);
+        tracing::debug!("Updated {}", entity);
 
         query.execute(&self.pool).await?;
         Ok(entity.clone())
@@ -184,7 +184,7 @@ where
 
         sqlx::query(&query_str).bind(id).execute(&self.pool).await?;
 
-        tracing::info!("Deleted {} with id: {}", T::table_name(), id);
+        tracing::debug!("Deleted {} with id: {}", T::table_name(), id);
 
         Ok(())
     }

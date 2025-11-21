@@ -8,12 +8,12 @@ use crate::server::{
     api_keys::r#impl::base::{ApiKey, ApiKeyBase},
     auth::middleware::AuthenticatedEntity,
     shared::{
-        entities::Entity,
+        entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
             types::{EntityEvent, EntityOperation},
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{
             generic::GenericPostgresStorage,
             traits::{StorableEntity, Storage},
@@ -26,24 +26,23 @@ pub struct ApiKeyService {
     event_bus: Arc<EventBus>,
 }
 
-#[async_trait]
-impl CrudService<ApiKey> for ApiKeyService {
-    fn storage(&self) -> &Arc<GenericPostgresStorage<ApiKey>> {
-        &self.storage
-    }
-
+impl EventBusService<ApiKey> for ApiKeyService {
     fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
 
-    fn entity_type() -> Entity {
-        Entity::ApiKey
-    }
     fn get_network_id(&self, entity: &ApiKey) -> Option<Uuid> {
         Some(entity.base.network_id)
     }
     fn get_organization_id(&self, _entity: &ApiKey) -> Option<Uuid> {
         None
+    }
+}
+
+#[async_trait]
+impl CrudService<ApiKey> for ApiKeyService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<ApiKey>> {
+        &self.storage
     }
 
     async fn create(&self, api_key: ApiKey, authentication: AuthenticatedEntity) -> Result<ApiKey> {
@@ -65,27 +64,23 @@ impl CrudService<ApiKey> for ApiKeyService {
         });
 
         let created = self.storage.create(&api_key).await?;
+        let trigger_stale = created.triggers_staleness(None);
 
         self.event_bus()
-            .publish(EntityEvent {
+            .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: Self::entity_type(),
+                entity_type: created.clone().into(),
                 entity_id: created.id(),
                 network_id: self.get_network_id(&created),
                 organization_id: self.get_organization_id(&created),
                 operation: EntityOperation::Created,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
                 authentication,
             })
             .await?;
-
-        tracing::info!(
-            api_key_id = %created.id,
-            api_key_name = %created.base.name,
-            network_id = %created.base.network_id,
-            "API key created"
-        );
 
         Ok(created)
     }
@@ -116,12 +111,6 @@ impl ApiKeyService {
             api_key.base.key = new_key.clone();
 
             let _updated = self.update(&mut api_key, authentication).await?;
-
-            tracing::info!(
-                api_key_id = %api_key_id,
-                api_key_name = %api_key.base.name,
-                "API key rotated successfully"
-            );
 
             Ok(new_key)
         } else {

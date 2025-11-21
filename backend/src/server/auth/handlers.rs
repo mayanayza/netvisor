@@ -7,7 +7,6 @@ use crate::server::{
         },
         middleware::AuthenticatedUser,
         oidc::OidcPendingAuth,
-        service::hash_password,
     },
     config::AppState,
     organizations::handlers::process_pending_invite,
@@ -19,11 +18,12 @@ use crate::server::{
 };
 use axum::{
     Router,
-    extract::{Query, State},
+    extract::{ConnectInfo, Query, State},
     response::{Json, Redirect},
     routing::{get, post},
 };
-use std::sync::Arc;
+use axum_extra::{TypedHeader, headers::UserAgent};
+use std::{net::SocketAddr, sync::Arc};
 use tower_sessions::Session;
 use url::Url;
 use uuid::Uuid;
@@ -45,12 +45,17 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn register(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
     session: Session,
     Json(request): Json<RegisterRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     if state.config.disable_registration {
         return Err(ApiError::forbidden("User registration is disabled"));
     }
+
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
 
     let (org_id, permissions) = match process_pending_invite(&state, &session).await {
         Ok(Some((org_id, permissions))) => (Some(org_id), Some(permissions)),
@@ -66,7 +71,7 @@ async fn register(
     let user = state
         .services
         .auth_service
-        .register(request, org_id, permissions)
+        .register(request, org_id, permissions, ip, user_agent)
         .await?;
 
     session
@@ -79,10 +84,19 @@ async fn register(
 
 async fn login(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
     session: Session,
     Json(request): Json<LoginRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
-    let user = state.services.auth_service.login(request).await?;
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
+
+    let user = state
+        .services
+        .auth_service
+        .login(request, ip, user_agent)
+        .await?;
 
     session
         .insert("user_id", user.id)
@@ -92,7 +106,23 @@ async fn login(
     Ok(Json(ApiResponse::success(user)))
 }
 
-async fn logout(session: Session) -> ApiResult<Json<ApiResponse<()>>> {
+async fn logout(
+    State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
+    session: Session,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    if let Ok(Some(user_id)) = session.get::<Uuid>("user_id").await {
+        let ip = addr.ip();
+        let user_agent = user_agent.map(|u| u.to_string());
+
+        state
+            .services
+            .auth_service
+            .logout(user_id, ip, user_agent)
+            .await?;
+    }
+
     session
         .delete()
         .await
@@ -124,6 +154,8 @@ async fn get_current_user(
 async fn update_password_auth(
     State(state): State<Arc<AppState>>,
     session: Session,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
     auth_user: AuthenticatedUser,
     Json(request): Json<UpdateEmailPasswordRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
@@ -133,25 +165,20 @@ async fn update_password_auth(
         .map_err(|e| ApiError::internal_error(&format!("Failed to read session: {}", e)))?
         .ok_or_else(|| ApiError::unauthorized("Not authenticated".to_string()))?;
 
-    let mut user = state
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
+
+    let user = state
         .services
-        .user_service
-        .get_by_id(&user_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("User not found".to_string()))?;
-
-    if let Some(password) = request.password {
-        user.set_password(hash_password(&password)?);
-    }
-
-    if let Some(email) = request.email {
-        user.base.email = email
-    }
-
-    state
-        .services
-        .user_service
-        .update(&mut user, auth_user.into())
+        .auth_service
+        .update_password(
+            user_id,
+            request.password,
+            request.email,
+            ip,
+            user_agent,
+            auth_user,
+        )
         .await?;
 
     Ok(Json(ApiResponse::success(user)))
@@ -159,12 +186,22 @@ async fn update_password_auth(
 
 async fn forgot_password(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
     Json(request): Json<ForgotPasswordRequest>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
+
     state
         .services
         .auth_service
-        .initiate_password_reset(&request.email, state.config.public_url.clone())
+        .initiate_password_reset(
+            &request.email,
+            state.config.public_url.clone(),
+            ip,
+            user_agent,
+        )
         .await?;
 
     Ok(Json(ApiResponse::success(())))
@@ -172,13 +209,18 @@ async fn forgot_password(
 
 async fn reset_password(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
     session: Session,
     Json(request): Json<ResetPasswordRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
+
     let user = state
         .services
         .auth_service
-        .complete_password_reset(&request.token, &request.password)
+        .complete_password_reset(&request.token, &request.password, ip, user_agent)
         .await?;
 
     session
@@ -230,8 +272,13 @@ async fn oidc_authorize(
 async fn oidc_callback(
     State(state): State<Arc<AppState>>,
     session: Session,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
     Query(params): Query<OidcCallbackParams>,
 ) -> Result<Redirect, Redirect> {
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
+
     let oidc_service = match state.services.oidc_service.as_ref() {
         Some(service) => service,
         None => {
@@ -304,7 +351,7 @@ async fn oidc_callback(
         })?;
 
         match oidc_service
-            .link_to_user(&user_id, &params.code, pending_auth)
+            .link_to_user(&user_id, &params.code, pending_auth, ip, user_agent)
             .await
         {
             Ok(_) => {
@@ -341,7 +388,14 @@ async fn oidc_callback(
         };
 
         match oidc_service
-            .login_or_register(&params.code, pending_auth, org_id, permissions)
+            .login_or_register(
+                &params.code,
+                pending_auth,
+                org_id,
+                permissions,
+                ip,
+                user_agent,
+            )
             .await
         {
             Ok(user) => {
@@ -376,7 +430,12 @@ async fn oidc_callback(
 async fn unlink_oidc_account(
     State(state): State<Arc<AppState>>,
     session: Session,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    user_agent: Option<TypedHeader<UserAgent>>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
+    let ip = addr.ip();
+    let user_agent = user_agent.map(|u| u.to_string());
+
     let oidc_service = state
         .services
         .oidc_service
@@ -390,7 +449,7 @@ async fn unlink_oidc_account(
         .ok_or_else(|| ApiError::unauthorized("Not authenticated".to_string()))?;
 
     let updated_user = oidc_service
-        .unlink_from_user(&user_id)
+        .unlink_from_user(&user_id, ip, user_agent)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to unlink OIDC: {}", e)))?;
 

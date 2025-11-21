@@ -147,8 +147,34 @@ export async function refreshTopology(data: Topology) {
 		}
 	);
 
-	if (result && result.success && result.data && get(topology)?.id === data.id) {
-		topology.set(result.data);
+	if (result && result.success && result.data) {
+		if (get(topology)?.id === data.id) {
+			topology.set(result.data);
+		}
+	}
+
+	return result;
+}
+
+export async function rebuildTopology(data: Topology) {
+	const result = await api.request<Topology, Topology[]>(
+		`/topology/${data.id}/rebuild`,
+		topologies,
+		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
+		{
+			method: 'POST',
+			body: JSON.stringify(data)
+		}
+	);
+
+	if (result && result.success && result.data) {
+		// Cancel any pending staleness updates since we just refreshed
+		const { topologySSEManager } = await import('./sse');
+		topologySSEManager.cancelPendingStaleness(data.id);
+
+		if (get(topology)?.id === data.id) {
+			topology.set(result.data);
+		}
 	}
 
 	return result;

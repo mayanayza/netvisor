@@ -77,15 +77,10 @@ async fn get_all_subnets(
     entity: AuthenticatedEntity,
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
     match &entity {
-        AuthenticatedEntity::User {
-            user_id,
-            network_ids,
-            ..
-        } => {
+        AuthenticatedEntity::User { user_id, .. } => {
             tracing::debug!(
                 entity_type = "subnet",
                 user_id = %user_id,
-                network_count = %network_ids.len(),
                 "Get all request received"
             );
         }
@@ -93,13 +88,12 @@ async fn get_all_subnets(
             tracing::debug!(
                 entity_type = "subnet",
                 daemon_id = %entity.entity_id(),
-                network_count = 1,
                 "Get all request received"
             );
         }
-        AuthenticatedEntity::System => {
+        _ => {
             return Err(ApiError::internal_error(
-                "System should not authenticate for requests to /subnets/",
+                "Invalid authentication for request to /subnets/",
             ));
         }
     }
@@ -133,9 +127,9 @@ async fn get_all_subnets(
                 "Entities fetched successfully"
             );
         }
-        AuthenticatedEntity::System => {
+        _ => {
             return Err(ApiError::internal_error(
-                "System should not authenticate for requests to /subnets/",
+                "Invalid authentication for request to /subnets/",
             ));
         }
     }

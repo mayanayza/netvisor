@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
 use crate::server::shared::{
-    entities::Entity,
+    concepts::Concept,
     types::metadata::{EntityMetadataProvider, HasId},
 };
 
@@ -81,21 +81,21 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Storage => "HardDrive",
             ServiceCategory::Media => "PlayCircle",
             ServiceCategory::HomeAutomation => "Home",
-            ServiceCategory::Virtualization => Entity::Virtualization.icon(),
+            ServiceCategory::Virtualization => Concept::Virtualization.icon(),
             ServiceCategory::FileSharing => "Folder",
 
             // Network Services
-            ServiceCategory::DNS => Entity::Dns.icon(),
-            ServiceCategory::VPN => Entity::Vpn.icon(),
+            ServiceCategory::DNS => Concept::Dns.icon(),
+            ServiceCategory::VPN => Concept::Vpn.icon(),
             ServiceCategory::Monitoring => "Activity",
             ServiceCategory::AdBlock => "ShieldCheck",
             ServiceCategory::Backup => "DatabaseBackup",
-            ServiceCategory::ReverseProxy => Entity::ReverseProxy.icon(),
+            ServiceCategory::ReverseProxy => Concept::ReverseProxy.icon(),
 
             // End devices
             ServiceCategory::Workstation => "Monitor",
             ServiceCategory::Mobile => "Smartphone",
-            ServiceCategory::IoT => Entity::IoT.icon(),
+            ServiceCategory::IoT => Concept::IoT.icon(),
             ServiceCategory::Printer => "Printer",
 
             // Application
@@ -126,21 +126,21 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Storage => "green",
             ServiceCategory::Media => "blue",
             ServiceCategory::HomeAutomation => "blue",
-            ServiceCategory::Virtualization => Entity::Virtualization.color(),
+            ServiceCategory::Virtualization => Concept::Virtualization.color(),
             ServiceCategory::Backup => "gray",
             ServiceCategory::FileSharing => "blue",
 
             // Network Services
-            ServiceCategory::DNS => Entity::Dns.color(),
-            ServiceCategory::VPN => Entity::Vpn.color(),
+            ServiceCategory::DNS => Concept::Dns.color(),
+            ServiceCategory::VPN => Concept::Vpn.color(),
             ServiceCategory::Monitoring => "orange",
-            ServiceCategory::AdBlock => Entity::Dns.color(),
-            ServiceCategory::ReverseProxy => Entity::ReverseProxy.color(),
+            ServiceCategory::AdBlock => Concept::Dns.color(),
+            ServiceCategory::ReverseProxy => Concept::ReverseProxy.color(),
 
             // End devices
             ServiceCategory::Workstation => "green",
             ServiceCategory::Mobile => "blue",
-            ServiceCategory::IoT => Entity::IoT.color(),
+            ServiceCategory::IoT => Concept::IoT.color(),
             ServiceCategory::Printer => "gray",
 
             // Application

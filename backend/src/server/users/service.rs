@@ -1,12 +1,12 @@
 use crate::server::{
     auth::middleware::AuthenticatedEntity,
     shared::{
-        entities::Entity,
+        entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
             types::{EntityEvent, EntityOperation},
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{
             filter::EntityFilter,
             generic::GenericPostgresStorage,
@@ -27,24 +27,23 @@ pub struct UserService {
     event_bus: Arc<EventBus>,
 }
 
-#[async_trait]
-impl CrudService<User> for UserService {
-    fn storage(&self) -> &Arc<GenericPostgresStorage<User>> {
-        &self.user_storage
-    }
-
+impl EventBusService<User> for UserService {
     fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
 
-    fn entity_type() -> Entity {
-        Entity::User
-    }
     fn get_network_id(&self, _entity: &User) -> Option<Uuid> {
         None
     }
     fn get_organization_id(&self, entity: &User) -> Option<Uuid> {
         Some(entity.base.organization_id)
+    }
+}
+
+#[async_trait]
+impl CrudService<User> for UserService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<User>> {
+        &self.user_storage
     }
 
     /// Create a new user
@@ -61,17 +60,20 @@ impl CrudService<User> for UserService {
         }
 
         let created = self.user_storage.create(&User::new(user.base)).await?;
+        let trigger_stale = created.triggers_staleness(None);
 
         self.event_bus()
-            .publish(EntityEvent {
+            .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: Entity::User,
                 entity_id: created.id,
                 network_id: self.get_network_id(&created),
                 organization_id: self.get_organization_id(&created),
+                entity_type: created.clone().into(),
                 operation: EntityOperation::Created,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
                 authentication,
             })
             .await?;
@@ -99,48 +101,5 @@ impl UserService {
             .user_permissions(&UserOrgPermissions::Owner);
 
         self.user_storage.get_all(filter).await
-    }
-
-    /// Link OIDC to existing user
-    pub async fn link_oidc(
-        &self,
-        user_id: &Uuid,
-        oidc_subject: String,
-        oidc_provider: String,
-    ) -> Result<User> {
-        let mut user = self
-            .get_by_id(user_id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("User not found"))?;
-
-        user.base.oidc_provider = Some(oidc_provider);
-        user.base.oidc_subject = Some(oidc_subject);
-        user.base.oidc_linked_at = Some(chrono::Utc::now());
-
-        self.user_storage.update(&mut user).await?;
-        Ok(user)
-    }
-
-    /// Unlink OIDC from user (requires password to be set)
-    pub async fn unlink_oidc(&self, user_id: &Uuid) -> Result<User> {
-        let mut user = self
-            .get_by_id(user_id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("User not found"))?;
-
-        // Require password before unlinking
-        if user.base.password_hash.is_none() {
-            return Err(anyhow::anyhow!(
-                "Cannot unlink OIDC - no password set. Set a password first."
-            ));
-        }
-
-        user.base.oidc_provider = None;
-        user.base.oidc_subject = None;
-        user.base.oidc_linked_at = None;
-        user.updated_at = chrono::Utc::now();
-
-        self.user_storage.update(&mut user).await?;
-        Ok(user)
     }
 }

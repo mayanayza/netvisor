@@ -2,7 +2,10 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use crate::server::{
-    shared::storage::traits::{SqlValue, StorableEntity},
+    shared::{
+        entities::ChangeTriggersTopologyStaleness,
+        storage::traits::{SqlValue, StorableEntity},
+    },
     users::r#impl::permissions::UserOrgPermissions,
 };
 use anyhow::{Error, Result};
@@ -14,7 +17,7 @@ use sqlx::postgres::PgRow;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash)]
 pub struct UserBase {
     pub email: EmailAddress,
     pub organization_id: Uuid,
@@ -93,7 +96,7 @@ impl UserBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct User {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -112,6 +115,12 @@ impl User {
 impl Display for User {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.base.email, self.id)
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<User> for User {
+    fn triggers_staleness(&self, _other: Option<User>) -> bool {
+        false
     }
 }
 

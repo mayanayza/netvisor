@@ -11,6 +11,8 @@
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Group } from '$lib/features/groups/types/base';
 	import { topology } from '$lib/features/topology/store';
+	import { getTopologyStateInfo } from '$lib/features/topology/state';
+	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 
 	let {
 		groupId,
@@ -29,6 +31,8 @@
 			localGroup = { ...group };
 		}
 	});
+
+	let liveEditsEnabled = $derived(getTopologyStateInfo($topology).type == 'fresh');
 
 	// Auto-save when styling changes
 	$effect(() => {
@@ -54,8 +58,14 @@
 		</div>
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Edge Style</span>
-		<div class="card p-4">
-			<EdgeStyleForm bind:formData={localGroup} collapsed={true} />
+		{#if getTopologyStateInfo($topology).type != 'fresh'}
+			<InlineWarning
+				title="Editing disabled"
+				body="Editing is only available when topology is unlocked and up-to-date."
+			/>
+		{/if}
+		<div class={`card p-4 ${liveEditsEnabled ? '' : 'card-static'}`}>
+			<EdgeStyleForm bind:formData={localGroup} collapsed={true} editable={liveEditsEnabled} />
 		</div>
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>

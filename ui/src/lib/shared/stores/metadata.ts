@@ -30,6 +30,7 @@ export interface MetadataRegistry {
 	edge_types: TypeMetadata<EdgeTypeMetadata>[];
 	group_types: TypeMetadata<GroupTypeMetadata>[];
 	entities: EntityMetadata[];
+	concepts: EntityMetadata[];
 	ports: TypeMetadata<PortTypeMetadata>[];
 	discovery_types: TypeMetadata<DiscoveryTypeMetadata>[];
 	billing_plans: TypeMetadata<BillingPlanMetadata>[];
@@ -266,6 +267,7 @@ export const discoveryTypes = createTypeMetadataHelpers('discovery_types');
 export const billingPlans = createTypeMetadataHelpers('billing_plans');
 export const features = createTypeMetadataHelpers('features');
 export const permissions = createTypeMetadataHelpers('permissions');
+export const concepts = createEntityMetadataHelpers('concepts');
 
 export async function getMetadata() {
 	await api.request<MetadataRegistry>('/metadata', metadata, (metadata) => metadata, {

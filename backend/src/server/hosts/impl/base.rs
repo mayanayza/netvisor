@@ -1,4 +1,5 @@
 use crate::server::hosts::r#impl::virtualization::HostVirtualization;
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::types::api::deserialize_empty_string_as_none;
 use crate::server::shared::types::entities::EntitySource;
 use crate::server::subnets::r#impl::base::Subnet;
@@ -167,5 +168,19 @@ impl Host {
 
     pub fn add_service(&mut self, service_id: Uuid) {
         self.base.services.push(service_id);
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<Host> for Host {
+    fn triggers_staleness(&self, other: Option<Host>) -> bool {
+        if let Some(other_host) = other {
+            self.base.services != other_host.base.services
+                || self.base.hostname != other_host.base.hostname
+                || self.base.interfaces != other_host.base.interfaces
+                || self.base.virtualization != other_host.base.virtualization
+                || self.base.hidden != other_host.base.hidden
+        } else {
+            true
+        }
     }
 }

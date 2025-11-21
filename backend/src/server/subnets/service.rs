@@ -1,14 +1,13 @@
 use crate::server::{
     auth::middleware::AuthenticatedEntity,
     discovery::r#impl::types::DiscoveryType,
-    hosts::service::HostService,
     shared::{
-        entities::Entity,
+        entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
             types::{EntityEvent, EntityOperation},
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{
             filter::EntityFilter,
             generic::GenericPostgresStorage,
@@ -26,28 +25,26 @@ use uuid::Uuid;
 
 pub struct SubnetService {
     storage: Arc<GenericPostgresStorage<Subnet>>,
-    host_service: Arc<HostService>,
     event_bus: Arc<EventBus>,
+}
+
+impl EventBusService<Subnet> for SubnetService {
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn get_network_id(&self, entity: &Subnet) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Subnet) -> Option<Uuid> {
+        None
+    }
 }
 
 #[async_trait]
 impl CrudService<Subnet> for SubnetService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Subnet>> {
         &self.storage
-    }
-
-    fn event_bus(&self) -> &Arc<EventBus> {
-        &self.event_bus
-    }
-
-    fn entity_type() -> Entity {
-        Entity::Subnet
-    }
-    fn get_network_id(&self, entity: &Subnet) -> Option<Uuid> {
-        Some(entity.base.network_id)
-    }
-    fn get_organization_id(&self, _entity: &Subnet) -> Option<Uuid> {
-        None
     }
 
     async fn create(
@@ -129,109 +126,33 @@ impl CrudService<Subnet> for SubnetService {
             _ => {
                 let created = self.storage.create(&subnet).await?;
 
+                let trigger_stale = created.triggers_staleness(None);
+
                 self.event_bus()
-                    .publish(EntityEvent {
+                    .publish_entity(EntityEvent {
                         id: Uuid::new_v4(),
-                        entity_type: Entity::Subnet,
                         entity_id: created.id,
                         network_id: self.get_network_id(&created),
                         organization_id: self.get_organization_id(&created),
+                        entity_type: created.into(),
                         operation: EntityOperation::Created,
                         timestamp: Utc::now(),
-                        metadata: serde_json::json!({}),
+                        metadata: serde_json::json!({
+                            "trigger_stale": trigger_stale
+                        }),
                         authentication,
                     })
                     .await?;
 
-                tracing::info!(
-                    subnet_id = %subnet.id,
-                    subnet_name = %subnet.base.name,
-                    subnet_cidr = %subnet.base.cidr,
-                    network_id = %subnet.base.network_id,
-                    "Subnet created"
-                );
                 subnet
             }
         };
         Ok(subnet_from_storage)
     }
-
-    async fn delete(&self, id: &Uuid, authentication: AuthenticatedEntity) -> Result<()> {
-        let subnet = self
-            .get_by_id(id)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("Subnet not found"))?;
-
-        tracing::info!(
-            subnet_id = %subnet.id,
-            subnet_name = %subnet.base.name,
-            subnet_cidr = %subnet.base.cidr,
-            "Deleting subnet"
-        );
-
-        let filter = EntityFilter::unfiltered().network_ids(&[subnet.base.network_id]);
-
-        let hosts = self.host_service.get_all(filter).await?;
-        let mut updated_count = 0;
-        for mut host in hosts {
-            let has_subnet = host.base.interfaces.iter().any(|i| &i.base.subnet_id == id);
-            if has_subnet {
-                host.base.interfaces = host
-                    .base
-                    .interfaces
-                    .iter()
-                    .filter(|i| &i.base.subnet_id != id)
-                    .cloned()
-                    .collect();
-                self.host_service
-                    .update(&mut host, authentication.clone())
-                    .await?;
-                updated_count += 1;
-            }
-        }
-
-        tracing::debug!(
-            subnet_id = %subnet.id,
-            affected_hosts = %updated_count,
-            "Cleaned up host interfaces referencing subnet"
-        );
-
-        self.storage.delete(id).await?;
-
-        self.event_bus()
-            .publish(EntityEvent {
-                id: Uuid::new_v4(),
-                entity_type: Entity::Subnet,
-                entity_id: subnet.id,
-                network_id: self.get_network_id(&subnet),
-                organization_id: self.get_organization_id(&subnet),
-                operation: EntityOperation::Deleted,
-                timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
-                authentication,
-            })
-            .await?;
-
-        tracing::info!(
-            subnet_id = %subnet.id,
-            subnet_name = %subnet.base.name,
-            affected_hosts = %updated_count,
-            "Subnet deleted"
-        );
-        Ok(())
-    }
 }
 
 impl SubnetService {
-    pub fn new(
-        storage: Arc<GenericPostgresStorage<Subnet>>,
-        host_service: Arc<HostService>,
-        event_bus: Arc<EventBus>,
-    ) -> Self {
-        Self {
-            storage,
-            host_service,
-            event_bus,
-        }
+    pub fn new(storage: Arc<GenericPostgresStorage<Subnet>>, event_bus: Arc<EventBus>) -> Self {
+        Self { storage, event_bus }
     }
 }

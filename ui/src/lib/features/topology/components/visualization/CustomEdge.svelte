@@ -6,7 +6,8 @@
 		EdgeLabel,
 		getBezierPath,
 		getStraightPath,
-		type Edge
+		type Edge,
+		EdgeReconnectAnchor
 	} from '@xyflow/svelte';
 	import { selectedEdge, selectedNode, topology, topologyOptions } from '../../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
@@ -228,9 +229,31 @@
 	function onDragEnd() {
 		isDragging = false;
 	}
+
+	let reconnecting = $state(false);
 </script>
 
-{#if !hideEdge}
+{#if isSelected}
+	<EdgeReconnectAnchor
+		bind:reconnecting
+		type="source"
+		position={{ x: sourceX, y: sourceY }}
+		class={{}}
+		style={!reconnecting
+			? `background: ${edgeColorHelper.rgb}; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;`
+			: 'background: transparent; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;'}
+	/>
+	<EdgeReconnectAnchor
+		bind:reconnecting
+		type="target"
+		position={{ x: targetX, y: targetY }}
+		style={!reconnecting
+			? `background: ${edgeColorHelper.rgb}; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;`
+			: 'background: transparent; border: 2px solid #374151; border-radius: 100%; width: 12px; height: 12px;'}
+	/>
+{/if}
+
+{#if !hideEdge && !reconnecting}
 	<!-- Solid base layer for group edges when shown full (rendered first, behind) -->
 	{#if useMultiColorDash}
 		<BaseEdge path={edgePath} style={solidBaseStyle} {id} interactionWidth={0} class="solid-base" />

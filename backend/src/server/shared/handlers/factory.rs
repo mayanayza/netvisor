@@ -10,7 +10,8 @@ use crate::server::hosts::r#impl::ports::PortBase;
 use crate::server::networks::r#impl::{Network, NetworkBase};
 use crate::server::organizations::r#impl::base::Organization;
 use crate::server::services::definitions::ServiceDefinitionRegistry;
-use crate::server::shared::entities::Entity;
+use crate::server::shared::concepts::Concept;
+use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::api::{ApiError, ApiResult};
@@ -68,7 +69,10 @@ async fn get_metadata_registry(_user: AuthenticatedUser) -> Json<ApiResponse<Met
             .map(|t| t.discriminant().to_metadata())
             .collect(),
         edge_types: EdgeType::iter().map(|t| t.to_metadata()).collect(),
-        entities: Entity::iter().map(|e| e.to_metadata()).collect(),
+        entities: EntityDiscriminants::iter()
+            .map(|e| e.to_metadata())
+            .collect(),
+        concepts: Concept::iter().map(|e| e.to_metadata()).collect(),
         ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
         discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
         billing_plans: BillingPlan::iter().map(|p| p.to_metadata()).collect(),

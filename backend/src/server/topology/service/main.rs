@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Error;
 use async_trait::async_trait;
-use petgraph::{Graph, graph::NodeIndex};
+use petgraph::{Graph, graph::NodeIndex, visit::EdgeRef};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
@@ -11,9 +11,8 @@ use crate::server::{
     hosts::{r#impl::base::Host, service::HostService},
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
-        entities::Entity,
         events::bus::EventBus,
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{filter::EntityFilter, generic::GenericPostgresStorage},
     },
     subnets::{r#impl::base::Subnet, service::SubnetService},
@@ -24,9 +23,8 @@ use crate::server::{
             planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
         types::{
-            api::TopologyStalenessUpdate,
             base::{Topology, TopologyOptions},
-            edges::Edge,
+            edges::{Edge, EdgeHandle},
             nodes::Node,
         },
     },
@@ -39,7 +37,20 @@ pub struct TopologyService {
     group_service: Arc<GroupService>,
     service_service: Arc<ServiceService>,
     event_bus: Arc<EventBus>,
-    pub staleness_tx: broadcast::Sender<TopologyStalenessUpdate>,
+    pub staleness_tx: broadcast::Sender<Topology>,
+}
+
+impl EventBusService<Topology> for TopologyService {
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn get_network_id(&self, entity: &Topology) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Topology) -> Option<Uuid> {
+        None
+    }
 }
 
 #[async_trait]
@@ -47,20 +58,16 @@ impl CrudService<Topology> for TopologyService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Topology>> {
         &self.storage
     }
+}
 
-    fn event_bus(&self) -> &Arc<EventBus> {
-        &self.event_bus
-    }
-
-    fn entity_type() -> Entity {
-        Entity::Topology
-    }
-    fn get_network_id(&self, entity: &Topology) -> Option<Uuid> {
-        Some(entity.base.network_id)
-    }
-    fn get_organization_id(&self, _entity: &Topology) -> Option<Uuid> {
-        None
-    }
+pub struct BuildGraphParams<'a> {
+    pub options: &'a TopologyOptions,
+    pub hosts: &'a [Host],
+    pub subnets: &'a [Subnet],
+    pub services: &'a [Service],
+    pub groups: &'a [Group],
+    pub old_nodes: &'a [Node],
+    pub old_edges: &'a [Edge],
 }
 
 impl TopologyService {
@@ -84,44 +91,35 @@ impl TopologyService {
         }
     }
 
-    pub fn subscribe_staleness_changes(&self) -> broadcast::Receiver<TopologyStalenessUpdate> {
+    pub fn subscribe_staleness_changes(&self) -> broadcast::Receiver<Topology> {
         self.staleness_tx.subscribe()
     }
 
     pub async fn get_entity_data(
         &self,
         network_id: Uuid,
-        options: TopologyOptions,
     ) -> Result<(Vec<Host>, Vec<Service>, Vec<Subnet>, Vec<Group>), Error> {
         let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
         // Fetch all data
         let hosts = self.host_service.get_all(network_filter.clone()).await?;
         let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
         let groups = self.group_service.get_all(network_filter.clone()).await?;
-        let services: Vec<Service> = self
-            .service_service
-            .get_all(network_filter.clone())
-            .await?
-            .into_iter()
-            .filter(|s| {
-                !options
-                    .request
-                    .hide_service_categories
-                    .contains(&s.base.service_definition.category())
-            })
-            .collect();
+        let services = self.service_service.get_all(network_filter.clone()).await?;
 
         Ok((hosts, services, subnets, groups))
     }
 
-    pub fn build_graph(
-        &self,
-        options: &TopologyOptions,
-        hosts: &[Host],
-        subnets: &[Subnet],
-        services: &[Service],
-        groups: &[Group],
-    ) -> (Vec<Node>, Vec<Edge>) {
+    pub fn build_graph(&self, params: BuildGraphParams) -> (Vec<Node>, Vec<Edge>) {
+        let BuildGraphParams {
+            hosts,
+            subnets,
+            services,
+            groups,
+            old_edges,
+            old_nodes,
+            options,
+        } = params;
+
         // Create context to avoid parameter passing
         let ctx = TopologyContext::new(hosts, subnets, services, groups, options);
 
@@ -170,6 +168,65 @@ impl TopologyService {
 
         // Add edges to graph
         EdgeBuilder::add_edges_to_graph(&mut graph, &node_indices, optimized_edges);
+
+        // Build previous graph to compare and deterine if user edits should be persisted
+        // If nodes have changed edges, assume they have moved and user edits are no longer applicable
+        let mut old_graph: Graph<Node, Edge> = Graph::new();
+        let old_node_indices: HashMap<Uuid, NodeIndex> = old_nodes
+            .iter()
+            .map(|node| {
+                let node_id = node.id;
+                let node_idx = old_graph.add_node(node.clone());
+                (node_id, node_idx)
+            })
+            .collect();
+
+        EdgeBuilder::add_edges_to_graph(&mut old_graph, &old_node_indices, old_edges.to_vec());
+
+        // Create a map of old edges by their source/target for quick lookup
+        let mut old_edges_map: HashMap<(Uuid, Uuid), &Edge> = HashMap::new();
+        for edge_ref in old_graph.edge_references() {
+            let edge = edge_ref.weight();
+            old_edges_map.insert((edge.source, edge.target), edge);
+        }
+
+        // Preserve handles for nodes with unchanged edge count
+        // First, collect all the edges that need updating
+        let mut edges_to_update: Vec<(petgraph::prelude::EdgeIndex, EdgeHandle, EdgeHandle)> =
+            Vec::new();
+
+        for node in graph.node_weights() {
+            if let Some(old_idx) = old_node_indices.get(&node.id)
+                && let Some(new_idx) = node_indices.get(&node.id)
+            {
+                let old_edge_count = old_graph.edges(*old_idx).count();
+                let new_edge_count = graph.edges(*new_idx).count();
+
+                if old_edge_count == new_edge_count {
+                    // Collect edges that match
+                    for edge_ref in graph.edges(*new_idx) {
+                        let new_edge = edge_ref.weight();
+                        if let Some(old_edge) =
+                            old_edges_map.get(&(new_edge.source, new_edge.target))
+                        {
+                            edges_to_update.push((
+                                edge_ref.id(),
+                                old_edge.source_handle,
+                                old_edge.target_handle,
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now apply the updates
+        for (edge_idx, source_handle, target_handle) in edges_to_update {
+            if let Some(edge) = graph.edge_weight_mut(edge_idx) {
+                edge.source_handle = source_handle;
+                edge.target_handle = target_handle;
+            }
+        }
 
         (
             graph.node_weights().cloned().collect(),

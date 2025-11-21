@@ -3,7 +3,7 @@ use crate::server::{
     config::AppState,
     organizations::r#impl::base::Organization,
     shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
-    users::r#impl::permissions::UserOrgPermissions,
+    users::r#impl::{base::User, permissions::UserOrgPermissions},
 };
 use axum::{
     extract::FromRequestParts,
@@ -38,6 +38,7 @@ pub enum AuthenticatedEntity {
         api_key_id: Uuid,
     }, // network_id
     System,
+    Anonymous,
 }
 
 impl AuthenticatedEntity {
@@ -60,6 +61,7 @@ impl AuthenticatedEntity {
                 network_id, api_key_id
             ),
             AuthenticatedEntity::System => "System".to_string(),
+            AuthenticatedEntity::Anonymous => "Anonymous".to_string(),
         }
     }
 
@@ -69,6 +71,7 @@ impl AuthenticatedEntity {
             AuthenticatedEntity::Daemon { network_id, .. } => vec![*network_id],
             AuthenticatedEntity::User { network_ids, .. } => network_ids.clone(),
             AuthenticatedEntity::System => vec![],
+            AuthenticatedEntity::Anonymous => vec![],
         }
     }
 
@@ -80,6 +83,17 @@ impl AuthenticatedEntity {
     /// Check if this is a daemon
     pub fn is_daemon(&self) -> bool {
         matches!(self, AuthenticatedEntity::Daemon { .. })
+    }
+}
+
+impl From<User> for AuthenticatedEntity {
+    fn from(value: User) -> Self {
+        AuthenticatedEntity::User {
+            user_id: value.id,
+            organization_id: value.base.organization_id,
+            permissions: value.base.permissions,
+            network_ids: vec![],
+        }
     }
 }
 

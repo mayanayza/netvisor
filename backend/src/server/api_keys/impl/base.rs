@@ -4,7 +4,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize, Serializer};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ApiKeyBase {
     #[serde(serialize_with = "serialize_api_key_status")]
     pub key: String,
@@ -22,7 +24,7 @@ where
     serializer.serialize_str("***REDACTED***")
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ApiKey {
     pub id: Uuid,
     pub updated_at: DateTime<Utc>,
@@ -34,5 +36,11 @@ pub struct ApiKey {
 impl Display for ApiKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.base.name, self.id)
+    }
+}
+
+impl ChangeTriggersTopologyStaleness<ApiKey> for ApiKey {
+    fn triggers_staleness(&self, _other: Option<ApiKey>) -> bool {
+        false
     }
 }

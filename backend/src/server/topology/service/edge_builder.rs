@@ -65,7 +65,7 @@ impl EdgeBuilder {
         let mut docker_service_to_containerized_service_ids: HashMap<Uuid, Vec<Uuid>> =
             HashMap::new();
 
-        ctx.services.iter().for_each(|s| {
+        ctx.services().iter().for_each(|s| {
             if let Some(ServiceVirtualization::Docker(docker_virtualization)) =
                 &s.base.virtualization
             {
@@ -79,7 +79,7 @@ impl EdgeBuilder {
         });
 
         let edges = ctx
-            .services
+            .services()
             .iter()
             .filter(|s| {
                 docker_service_to_containerized_service_ids
@@ -140,6 +140,7 @@ impl EdgeBuilder {
 
                             if ctx.interface_will_have_node(&origin_interface.id) {
                                 return vec![Edge {
+                                    id: Uuid::new_v4(),
                                     source: origin_interface.id,
                                     target: *first_subnet_id,
                                     edge_type: EdgeType::ServiceVirtualization {
@@ -186,6 +187,7 @@ impl EdgeBuilder {
                                 && ctx.interface_will_have_node(&container_binding_interface_id)
                             {
                                 return Some(Edge {
+                                    id: Uuid::new_v4(),
                                     source: origin_interface.id,
                                     target: container_binding_interface_id,
                                     edge_type: EdgeType::ServiceVirtualization {
@@ -277,6 +279,7 @@ impl EdgeBuilder {
                                     )?;
 
                                 return Some(Edge {
+                                    id: Uuid::new_v4(),
                                     source: *proxmox_service_interface_id,
                                     target: i.id,
                                     edge_type: EdgeType::HostVirtualization {
@@ -342,6 +345,7 @@ impl EdgeBuilder {
                                 )?;
 
                             Some(Edge {
+                                id: Uuid::new_v4(),
                                 source: origin_interface.id,
                                 target: interface.id,
                                 edge_type: EdgeType::Interface { host_id: host.id },
@@ -411,14 +415,14 @@ impl EdgeBuilder {
         target_binding_id: Uuid,
         group: &Group,
     ) -> Option<Edge> {
-        let source_interface = ctx.services.iter().find_map(|s| {
+        let source_interface = ctx.services().iter().find_map(|s| {
             if let Some(source_binding) = s.get_binding(source_binding_id) {
                 return Some(source_binding.interface_id());
             }
             None
         });
 
-        let target_interface = ctx.services.iter().find_map(|s| {
+        let target_interface = ctx.services().iter().find_map(|s| {
             if let Some(target_binding) = s.get_binding(target_binding_id) {
                 return Some(target_binding.interface_id());
             }
@@ -453,6 +457,7 @@ impl EdgeBuilder {
             };
 
             return Some(Edge {
+                id: Uuid::new_v4(),
                 source: source_interface,
                 target: target_interface,
                 edge_type: match group.base.group_type {

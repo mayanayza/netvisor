@@ -1,7 +1,8 @@
 use crate::server::{
     groups::r#impl::types::GroupTypeDiscriminants,
     shared::{
-        entities::Entity,
+        concepts::Concept,
+        entities::EntityDiscriminants,
         types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
     },
     subnets::r#impl::base::Subnet,
@@ -13,6 +14,7 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Edge {
+    pub id: Uuid,
     pub source: Uuid,
     pub target: Uuid,
     #[serde(flatten)]
@@ -263,11 +265,11 @@ impl HasId for EdgeType {
 impl EntityMetadataProvider for EdgeType {
     fn color(&self) -> &'static str {
         match self {
-            EdgeType::RequestPath { .. } => Entity::Group.color(),
-            EdgeType::HubAndSpoke { .. } => Entity::Group.color(),
-            EdgeType::Interface { .. } => Entity::Host.color(),
-            EdgeType::HostVirtualization { .. } => Entity::Virtualization.color(),
-            EdgeType::ServiceVirtualization { .. } => Entity::Virtualization.color(),
+            EdgeType::RequestPath { .. } => EntityDiscriminants::Group.color(),
+            EdgeType::HubAndSpoke { .. } => EntityDiscriminants::Group.color(),
+            EdgeType::Interface { .. } => EntityDiscriminants::Host.color(),
+            EdgeType::HostVirtualization { .. } => Concept::Virtualization.color(),
+            EdgeType::ServiceVirtualization { .. } => Concept::Virtualization.color(),
         }
     }
 
@@ -275,9 +277,9 @@ impl EntityMetadataProvider for EdgeType {
         match self {
             EdgeType::RequestPath { .. } => GroupTypeDiscriminants::RequestPath.icon(),
             EdgeType::HubAndSpoke { .. } => GroupTypeDiscriminants::HubAndSpoke.icon(),
-            EdgeType::Interface { .. } => Entity::Host.icon(),
-            EdgeType::HostVirtualization { .. } => Entity::Virtualization.icon(),
-            EdgeType::ServiceVirtualization { .. } => Entity::Virtualization.icon(),
+            EdgeType::Interface { .. } => EntityDiscriminants::Host.icon(),
+            EdgeType::HostVirtualization { .. } => Concept::Virtualization.icon(),
+            EdgeType::ServiceVirtualization { .. } => Concept::Virtualization.icon(),
         }
     }
 }

@@ -2,6 +2,7 @@ use crate::server::groups::r#impl::base::Group;
 use crate::server::hosts::r#impl::base::Host;
 use crate::server::services::r#impl::base::Service;
 use crate::server::services::r#impl::categories::ServiceCategory;
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::edges::Edge;
 use crate::server::topology::types::edges::EdgeType;
@@ -12,7 +13,16 @@ use std::{fmt::Display, hash::Hash};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct Topology {
+    pub id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    #[serde(flatten)]
+    pub base: TopologyBase,
+}
+
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct TopologyBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -48,7 +58,7 @@ impl TopologyBase {
             subnets: vec![],
             services: vec![],
             groups: vec![],
-            is_stale: false,
+            is_stale: true,
             last_refreshed: Utc::now(),
             is_locked: false,
             locked_at: None,
@@ -62,13 +72,14 @@ impl TopologyBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Topology {
-    pub id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    #[serde(flatten)]
-    pub base: TopologyBase,
+impl ChangeTriggersTopologyStaleness<Topology> for Topology {
+    fn triggers_staleness(&self, other: Option<Topology>) -> bool {
+        if let Some(other_topology) = other {
+            self.base.options.request != other_topology.base.options.request
+        } else {
+            false
+        }
+    }
 }
 
 impl Topology {

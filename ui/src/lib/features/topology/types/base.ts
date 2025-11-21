@@ -7,7 +7,7 @@ import type { IconComponent } from '$lib/shared/utils/types';
 
 export interface Topology {
 	edges: TopologyEdge[];
-	nodes: Node[];
+	nodes: TopologyNode[];
 	options: TopologyOptions;
 	name: string;
 	id: string;
@@ -53,7 +53,7 @@ export interface SubnetNode extends Record<string, unknown> {
 	infra_width: number;
 }
 
-type Node = NodeBase & NodeType & Record<string, unknown>;
+export type TopologyNode = NodeBase & NodeType & Record<string, unknown>;
 
 export interface NodeRenderData {
 	headerText: string | null;
@@ -73,6 +73,7 @@ export interface SubnetRenderData {
 }
 
 interface EdgeBase extends Record<string, unknown> {
+	id: string;
 	source: string;
 	label: string;
 	target: string;

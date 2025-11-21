@@ -5,7 +5,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::shared::{
-    entities::Entity,
+    concepts::Concept,
     types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
 };
 
@@ -30,10 +30,10 @@ impl HasId for HostVirtualization {
 
 impl EntityMetadataProvider for HostVirtualization {
     fn color(&self) -> &'static str {
-        Entity::Virtualization.color()
+        Concept::Virtualization.color()
     }
     fn icon(&self) -> &'static str {
-        Entity::Virtualization.icon()
+        Concept::Virtualization.icon()
     }
 }
 

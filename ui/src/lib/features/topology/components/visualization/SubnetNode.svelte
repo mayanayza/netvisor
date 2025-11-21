@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { Handle, NodeResizeControl, Position, useViewport, type NodeProps } from '@xyflow/svelte';
+	import {
+		Handle,
+		NodeResizeControl,
+		Position,
+		useViewport,
+		type NodeProps,
+		type ResizeDragEvent,
+		type ResizeParams
+	} from '@xyflow/svelte';
 	import { createColorHelper, twColorToRgba } from '$lib/shared/utils/styling';
 	import { subnetTypes } from '$lib/shared/stores/metadata';
 	import { isContainerSubnet } from '$lib/features/subnets/store';
-	import { topology, topologyOptions } from '../../store';
+	import { topology, topologyOptions, updateTopology } from '../../store';
 	import type { SubnetRenderData } from '../../types/base';
 	import { get } from 'svelte/store';
 
@@ -42,6 +50,23 @@
 				})()
 			: null
 	);
+	async function onResize(event: ResizeDragEvent, params: ResizeParams) {
+		let node = $topology.nodes.find((n) => n.id == id);
+		if (node && params.width && params.height) {
+			// Round to grid
+			let roundedWidth = Math.round(params.width / 25) * 25;
+			let roundedHeight = Math.round(params.height / 25) * 25;
+			let roundedX = Math.round(params.x / 25) * 25;
+			let roundedY = Math.round(params.y / 25) * 25;
+
+			node.size.x = roundedWidth;
+			node.size.y = roundedHeight;
+			node.position.x = roundedX;
+			node.position.y = roundedY;
+
+			await updateTopology($topology);
+		}
+	}
 </script>
 
 {#if subnetRenderData}
@@ -91,6 +116,7 @@
 		{#if resizeHandleZoomLevel && !$topologyOptions.local.hide_resize_handles}
 			<NodeResizeControl
 				position="bottom-right"
+				onResizeEnd={onResize}
 				style="z-index: 100; border: none; width: 20px; height: 20px;"
 			>
 				<svg
@@ -112,6 +138,7 @@
 
 			<NodeResizeControl
 				position="top-left"
+				onResizeEnd={onResize}
 				style="z-index: 100; border: none; width: 20px; height: 20px;"
 			>
 				<svg
@@ -133,6 +160,7 @@
 
 			<NodeResizeControl
 				position="top-right"
+				onResizeEnd={onResize}
 				style="z-index: 100; border: none; width: 20px; height: 20px;"
 			>
 				<svg
@@ -154,6 +182,7 @@
 
 			<NodeResizeControl
 				position="bottom-left"
+				onResizeEnd={onResize}
 				style="z-index: 100; border: none; width: 20px; height: 20px;"
 			>
 				<svg

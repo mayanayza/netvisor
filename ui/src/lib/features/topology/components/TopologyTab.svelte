@@ -16,7 +16,7 @@
 		topology,
 		getTopologies,
 		deleteTopology,
-		refreshTopology,
+		rebuildTopology,
 		lockTopology,
 		unlockTopology
 	} from '../store';
@@ -30,6 +30,7 @@
 	import RefreshConflictsModal from './RefreshConflictsModal.svelte';
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
+	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 
 	let isCreateEditOpen = false;
 	let editingTopology: Topology | null = null;
@@ -86,12 +87,20 @@
 			isRefreshConflictsOpen = true;
 		} else {
 			// Safe to refresh directly
-			await refreshTopology($topology);
+			await rebuildTopology($topology);
 		}
 	}
 
+	async function handleReset() {
+		if (!$topology) return;
+		let resetTopology = { ...$topology };
+		resetTopology.nodes = [];
+		resetTopology.edges = [];
+		await rebuildTopology(resetTopology);
+	}
+
 	async function handleConfirmRefresh() {
-		await refreshTopology($topology);
+		await rebuildTopology($topology);
 		isRefreshConflictsOpen = false;
 	}
 
@@ -110,20 +119,16 @@
 		await unlockTopology($topology);
 	}
 
-	// Compute topology state
-	$: stateConfig = $topology ? getTopologyState($topology) : null;
+	$: stateConfig = $topology
+		? getTopologyState($topology, {
+				onRefresh: handleRefresh,
+				onUnlock: handleUnlock,
+				onReset: handleReset,
+				onLock: handleLock
+			})
+		: null;
+
 	$: lockedByUser = $topology?.locked_by ? $users.find((u) => u.id === $topology.locked_by) : null;
-
-	// Determine primary action handler
-	function handlePrimaryAction() {
-		if (!stateConfig || !stateConfig.primaryAction) return;
-
-		if (stateConfig.primaryAction === 'refresh') {
-			handleRefresh();
-		} else if (stateConfig.primaryAction === 'unlock') {
-			handleUnlock();
-		}
-	}
 
 	const loading = loadData([getHosts, getServices, getSubnets, getGroups, getTopologies]);
 </script>
@@ -136,16 +141,10 @@
 				<div class="flex items-center gap-4">
 					<ExportButton />
 
-					<button class="btn-icon-primary" on:click={handleEditTopology}>
-						<Edit class="mr-2 h-5 w-5" /> Edit
-					</button>
-
-					{#if $topology && stateConfig}
-						{#if stateConfig.secondaryAction === 'lock'}
-							<button class="btn-icon-primary" on:click={handleLock}>
-								<Lock class="mr-2 h-5 w-5" /> Lock
-							</button>
-						{/if}
+					{#if $topology && !$topology.is_locked}
+						<button class="btn-secondary" on:click={handleLock}>
+							<Lock class="h-5 w-5" /> Lock
+						</button>
 					{/if}
 
 					<!-- State Badge / Action Button -->
@@ -153,15 +152,15 @@
 						<div class="flex-shrink-0">
 							<StateBadge
 								Icon={stateConfig.icon}
-								label={stateConfig.getLabel($topology)}
-								color={stateConfig.color}
-								onClick={stateConfig.primaryAction ? handlePrimaryAction : null}
+								label={stateConfig.buttonText}
+								cls={stateConfig.class}
+								onClick={stateConfig.action}
 							/>
 						</div>
 					{/if}
 
 					{#if $topologies && $topology}
-						<div>
+						<div class="min-w-[300px]">
 							<RichSelect
 								label=""
 								selectedValue={$topology.id}
@@ -171,6 +170,10 @@
 							/>
 						</div>
 					{/if}
+
+					<button class="btn-primary" on:click={handleEditTopology}>
+						<Edit class="mr-2 h-5 w-5" /> Edit
+					</button>
 
 					<button class="btn-primary" on:click={handleCreateTopology}>
 						<Plus class="h-5 w-5" /> New
@@ -187,14 +190,22 @@
 		{#if $topology && stateConfig}
 			{#if stateConfig.type === 'locked'}
 				<InlineInfo
+					dismissableKey="topology-locked-info"
 					title={`Topology Locked ${lockedByUser ? `by ${lockedByUser.email}` : ''}`}
-					body="Data can't be refreshed while this topology is locked. Click the badge above to unlock and enable data refresh."
+					body="Data can't be refreshed while this topology is locked. Click the badge above to unlock and enable data refresh. You can still move and resize nodes and edges, but you won't be able to make any other changes."
 				/>
 			{:else if stateConfig.type === 'stale_conflicts'}
 				<InlineDanger
+					dismissableKey="topology-conflict-info"
 					title="Conflicts Detected"
 					body="Some entities in this diagram no longer exist. Click the badge above to review
 								changes before updating."
+				/>
+			{:else if stateConfig.type === 'stale_safe'}
+				<InlineWarning
+					dismissableKey="topology-refresh-info"
+					title="Stale Data"
+					body="Entities have been updated, and the diagram layout may need to change to fit them."
 				/>
 			{/if}
 		{/if}

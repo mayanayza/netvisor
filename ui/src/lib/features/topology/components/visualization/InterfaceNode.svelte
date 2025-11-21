@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import { getPortFromId } from '$lib/features/hosts/store';
-	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { isContainerSubnet } from '$lib/features/subnets/store';
 	import { selectedEdge, selectedNode, topology, topologyOptions } from '../../store';
 	import type { InterfaceNode, NodeRenderData } from '../../types/base';
@@ -9,7 +9,7 @@
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { connectedNodeIds } from '../../interactions';
 
-	let { data, width, height }: NodeProps = $props();
+	let { id, data, width, height }: NodeProps = $props();
 
 	let nodeData = data as InterfaceNode;
 
@@ -78,11 +78,30 @@
 	let nodeOpacity = $derived(shouldFadeOut ? 0.3 : 1);
 
 	const hostColorHelper = entities.getColorHelper('Host');
-	const virtualizationColorHelper = entities.getColorHelper('Virtualization');
+	const virtualizationColorHelper = concepts.getColorHelper('Virtualization');
 
 	let cardClass = $derived(
 		`card ${isNodeSelected ? 'ring-2 ring-blue-500 hover:ring-2 hover:ring-blue-500' : ''} ${nodeRenderData?.isVirtualized ? `border-color: ${virtualizationColorHelper.border}` : ''}`
 	);
+
+	let handleStyle = $derived.by(() => {
+		const baseSize = 8;
+		const baseOpacity = $selectedEdge?.source == id || $selectedEdge?.target == id ? 1 : 0;
+
+		// Use host color or virtualization color
+		const fillColor = nodeRenderData?.isVirtualized
+			? virtualizationColorHelper.rgb
+			: hostColorHelper.rgb;
+
+		return `
+			width: ${baseSize}px;
+			height: ${baseSize}px;
+			border: 2px solid #374151;
+			background-color: ${fillColor};
+			opacity: ${baseOpacity};
+			transition: opacity 0.2s ease-in-out;
+		`;
+	});
 </script>
 
 {#if nodeRenderData}
@@ -174,12 +193,12 @@
 	</div>
 {/if}
 
-<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
-<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
-<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
+<Handle type="target" id="Top" position={Position.Top} style={handleStyle} />
+<Handle type="target" id="Right" position={Position.Right} style={handleStyle} />
+<Handle type="target" id="Bottom" position={Position.Bottom} style={handleStyle} />
+<Handle type="target" id="Left" position={Position.Left} style={handleStyle} />
 
-<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
-<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
-<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
+<Handle type="source" id="Top" position={Position.Top} style={handleStyle} />
+<Handle type="source" id="Right" position={Position.Right} style={handleStyle} />
+<Handle type="source" id="Bottom" position={Position.Bottom} style={handleStyle} />
+<Handle type="source" id="Left" position={Position.Left} style={handleStyle} />

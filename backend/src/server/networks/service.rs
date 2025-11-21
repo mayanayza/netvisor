@@ -3,9 +3,8 @@ use crate::server::{
     hosts::service::HostService,
     networks::r#impl::Network,
     shared::{
-        entities::Entity,
         events::bus::EventBus,
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{
             generic::GenericPostgresStorage,
             seed_data::{
@@ -28,24 +27,23 @@ pub struct NetworkService {
     event_bus: Arc<EventBus>,
 }
 
-#[async_trait]
-impl CrudService<Network> for NetworkService {
-    fn storage(&self) -> &Arc<GenericPostgresStorage<Network>> {
-        &self.network_storage
-    }
-
+impl EventBusService<Network> for NetworkService {
     fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
 
-    fn entity_type() -> Entity {
-        Entity::Network
-    }
     fn get_network_id(&self, _entity: &Network) -> Option<Uuid> {
         None
     }
     fn get_organization_id(&self, entity: &Network) -> Option<Uuid> {
         Some(entity.id)
+    }
+}
+
+#[async_trait]
+impl CrudService<Network> for NetworkService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Network>> {
+        &self.network_storage
     }
 }
 

@@ -1,3 +1,4 @@
+pub mod concepts;
 pub mod entities;
 pub mod events;
 pub mod handlers;

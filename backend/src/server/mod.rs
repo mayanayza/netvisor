@@ -8,6 +8,7 @@ pub mod email;
 pub mod github;
 pub mod groups;
 pub mod hosts;
+pub mod logging;
 pub mod networks;
 pub mod organizations;
 pub mod services;

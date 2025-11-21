@@ -1,19 +1,29 @@
-import { Lock, RefreshCcw, AlertTriangle } from 'lucide-svelte';
+import { Lock, RefreshCcw } from 'lucide-svelte';
 import type { Topology } from './types/base';
 import type { IconComponent } from '$lib/shared/utils/types';
 
 export type TopologyStateType = 'locked' | 'fresh' | 'stale_safe' | 'stale_conflicts';
 
-export interface TopologyStateConfig {
+export interface TopologyStateInfo {
 	type: TopologyStateType;
 	icon: IconComponent;
+	hoverIcon?: IconComponent;
 	color: 'blue' | 'green' | 'yellow' | 'red';
-	getLabel: (topology: Topology) => string;
-	primaryAction: 'refresh' | 'unlock' | null;
-	secondaryAction: 'lock' | null;
+	class: string;
+	label: string;
+	buttonText: string;
+	hoverLabel?: string;
 }
 
-export function getTopologyState(topology: Topology): TopologyStateConfig {
+export interface TopologyStateConfig extends TopologyStateInfo {
+	action: (() => void) | null;
+}
+
+/**
+ * Determine the state info for a topology (without actions)
+ * This can be used in displays, lists, etc.
+ */
+export function getTopologyStateInfo(topology: Topology): TopologyStateInfo {
 	// Locked state
 	if (topology.is_locked) {
 		const lockedDate = topology.locked_at ? new Date(topology.locked_at).toLocaleDateString() : '';
@@ -21,9 +31,9 @@ export function getTopologyState(topology: Topology): TopologyStateConfig {
 			type: 'locked',
 			icon: Lock,
 			color: 'blue',
-			getLabel: () => `Locked ${lockedDate}`.trim(),
-			primaryAction: 'unlock',
-			secondaryAction: null
+			class: 'btn-info',
+			buttonText: `Locked ${lockedDate}`.trim(),
+			label: 'Locked'
 		};
 	}
 
@@ -32,10 +42,10 @@ export function getTopologyState(topology: Topology): TopologyStateConfig {
 		return {
 			type: 'fresh',
 			icon: RefreshCcw,
+			class: 'btn-secondary',
 			color: 'green',
-			getLabel: () => 'Up to date',
-			primaryAction: null,
-			secondaryAction: 'lock'
+			buttonText: 'Rebuild',
+			label: 'Up to date'
 		};
 	}
 
@@ -50,11 +60,11 @@ export function getTopologyState(topology: Topology): TopologyStateConfig {
 	if (hasConflicts) {
 		return {
 			type: 'stale_conflicts',
-			icon: AlertTriangle,
+			icon: RefreshCcw,
 			color: 'red',
-			getLabel: () => 'Conflicts detected',
-			primaryAction: 'refresh',
-			secondaryAction: 'lock'
+			class: 'btn-danger',
+			buttonText: 'Rebuild',
+			label: 'Conflicts'
 		};
 	}
 
@@ -63,8 +73,37 @@ export function getTopologyState(topology: Topology): TopologyStateConfig {
 		type: 'stale_safe',
 		icon: RefreshCcw,
 		color: 'yellow',
-		getLabel: () => 'Refresh available',
-		primaryAction: 'refresh',
-		secondaryAction: 'lock'
+		class: 'btn-warning',
+		buttonText: 'Rebuild',
+		label: 'Stale'
+	};
+}
+
+/**
+ * Get full topology state config with actions
+ * This is used in the main topology page where actions are needed
+ */
+export function getTopologyState(
+	topology: Topology,
+	handlers: {
+		onRefresh: () => void;
+		onUnlock: () => void;
+		onReset: () => void;
+		onLock: () => void;
+	}
+): TopologyStateConfig {
+	const stateInfo = getTopologyStateInfo(topology);
+
+	// Map state types to actions
+	const actionMap: Record<TopologyStateType, (() => void) | null> = {
+		locked: handlers.onUnlock,
+		fresh: handlers.onReset,
+		stale_safe: handlers.onRefresh,
+		stale_conflicts: handlers.onRefresh
+	};
+
+	return {
+		...stateInfo,
+		action: actionMap[stateInfo.type]
 	};
 }

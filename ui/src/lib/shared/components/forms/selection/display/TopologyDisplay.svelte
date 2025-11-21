@@ -8,11 +8,20 @@
 		getIcon: () => entities.getIconComponent('Topology'),
 		getIconColor: () => entities.getColorHelper('Topology').icon,
 		getTags: (topology: Topology) => {
-			let state = getTopologyState(topology);
+			let state = getTopologyStateInfo(topology);
+
+			if (state.type == 'fresh') {
+				return [
+					{
+						label: 'Up to date',
+						color: state.color
+					}
+				];
+			}
 
 			return [
 				{
-					label: state.getLabel(topology),
+					label: state.label,
 					color: state.color
 				}
 			];
@@ -24,7 +33,7 @@
 	import type { EntityDisplayComponent } from '../types';
 	import ListSelectItem from '../ListSelectItem.svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
-	import { getTopologyState } from '$lib/features/topology/state';
+	import { getTopologyStateInfo } from '$lib/features/topology/state';
 
 	export let item: Topology;
 	export let context = {};

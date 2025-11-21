@@ -1,7 +1,7 @@
 use crate::server::{
     auth::{
         r#impl::api::{LoginRequest, RegisterRequest},
-        middleware::AuthenticatedEntity,
+        middleware::{AuthenticatedEntity, AuthenticatedUser},
     },
     email::service::EmailService,
     organizations::{
@@ -9,6 +9,10 @@ use crate::server::{
         service::OrganizationService,
     },
     shared::{
+        events::{
+            bus::EventBus,
+            types::{AuthEvent, AuthOperation},
+        },
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
     },
@@ -25,8 +29,9 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
+use chrono::Utc;
 use email_address::EmailAddress;
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, net::IpAddr, sync::Arc, time::Instant};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 use validator::Validate;
@@ -37,6 +42,7 @@ pub struct AuthService {
     email_service: Option<Arc<EmailService>>,
     login_attempts: Arc<RwLock<HashMap<EmailAddress, (u32, Instant)>>>,
     password_reset_tokens: Arc<RwLock<HashMap<String, (Uuid, Instant)>>>,
+    event_bus: Arc<EventBus>,
 }
 
 impl AuthService {
@@ -47,6 +53,7 @@ impl AuthService {
         user_service: Arc<UserService>,
         organization_service: Arc<OrganizationService>,
         email_service: Option<Arc<EmailService>>,
+        event_bus: Arc<EventBus>,
     ) -> Self {
         Self {
             user_service,
@@ -54,6 +61,7 @@ impl AuthService {
             email_service,
             login_attempts: Arc::new(RwLock::new(HashMap::new())),
             password_reset_tokens: Arc::new(RwLock::new(HashMap::new())),
+            event_bus,
         }
     }
 
@@ -63,6 +71,8 @@ impl AuthService {
         request: RegisterRequest,
         org_id: Option<Uuid>,
         permissions: Option<UserOrgPermissions>,
+        ip: IpAddr,
+        user_agent: Option<String>,
     ) -> Result<User> {
         request
             .validate()
@@ -79,40 +89,38 @@ impl AuthService {
         }
 
         // Provision user with password
-        self.provision_user(
-            request.email,
-            Some(hash_password(&request.password)?),
-            None,
-            None,
-            org_id,
-            permissions,
-        )
-        .await
-    }
+        let user = self
+            .provision_user(
+                request.email,
+                Some(hash_password(&request.password)?),
+                None,
+                None,
+                org_id,
+                permissions,
+            )
+            .await?;
 
-    /// Register a new user with OIDC
-    pub async fn register_with_oidc(
-        &self,
-        email: EmailAddress,
-        oidc_subject: String,
-        oidc_provider: String,
-        org_id: Option<Uuid>,
-        permissions: Option<UserOrgPermissions>,
-    ) -> Result<User> {
-        // Provision user with OIDC
-        self.provision_user(
-            email,
-            None,
-            Some(oidc_subject),
-            Some(oidc_provider),
-            org_id,
-            permissions,
-        )
-        .await
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::Register,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({
+                    "method": "password",
+                }),
+                authentication: user.clone().into(),
+            })
+            .await?;
+
+        Ok(user)
     }
 
     /// Core user provisioning logic - handles both password and OIDC registration
-    async fn provision_user(
+    pub async fn provision_user(
         &self,
         email: EmailAddress,
         password_hash: Option<String>,
@@ -208,7 +216,12 @@ impl AuthService {
     }
 
     /// Login with username and password
-    pub async fn login(&self, request: LoginRequest) -> Result<User> {
+    pub async fn login(
+        &self,
+        request: LoginRequest,
+        ip: IpAddr,
+        user_agent: Option<String>,
+    ) -> Result<User> {
         request
             .validate()
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
@@ -224,11 +237,45 @@ impl AuthService {
             Ok(user) => {
                 // Success - clear attempts
                 self.login_attempts.write().await.remove(&request.email);
-                tracing::info!("User {} logged in successfully", user.id);
+
+                self.event_bus
+                    .publish_auth(AuthEvent {
+                        id: Uuid::new_v4(),
+                        user_id: Some(user.id),
+                        organization_id: Some(user.base.organization_id),
+                        timestamp: Utc::now(),
+                        operation: AuthOperation::LoginSuccess,
+                        ip_address: ip,
+                        user_agent,
+                        metadata: serde_json::json!({
+                            "method": "password",
+                        }),
+                        authentication: user.clone().into(),
+                    })
+                    .await?;
+
                 Ok(user)
             }
             Err(e) => {
                 // Failure - increment attempts
+
+                self.event_bus
+                    .publish_auth(AuthEvent {
+                        id: Uuid::new_v4(),
+                        user_id: None,
+                        organization_id: None,
+                        timestamp: Utc::now(),
+                        operation: AuthOperation::LoginFailed,
+                        ip_address: ip,
+                        user_agent,
+                        metadata: serde_json::json!({
+                            "method": "password",
+                            "email": request.email
+                        }),
+                        authentication: AuthenticatedEntity::Anonymous,
+                    })
+                    .await?;
+
                 let mut attempts = self.login_attempts.write().await;
                 let entry = attempts
                     .entry(request.email.clone())
@@ -265,6 +312,7 @@ impl AuthService {
             .user_service
             .get_all(EntityFilter::unfiltered())
             .await?;
+
         let user = all_users
             .iter()
             .find(|u| u.base.email == request.email)
@@ -283,8 +331,56 @@ impl AuthService {
         Ok(user.clone())
     }
 
+    pub async fn update_password(
+        &self,
+        user_id: Uuid,
+        password: Option<String>,
+        email: Option<EmailAddress>,
+        ip: IpAddr,
+        user_agent: Option<String>,
+        authentication: AuthenticatedUser,
+    ) -> Result<User> {
+        let mut user = self
+            .user_service
+            .get_by_id(&user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("User not found".to_string()))?;
+
+        if let Some(password) = password {
+            user.set_password(hash_password(&password)?);
+        }
+
+        if let Some(email) = email {
+            user.base.email = email
+        }
+
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::PasswordChanged,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({}),
+                authentication: authentication.clone().into(),
+            })
+            .await?;
+
+        self.user_service
+            .update(&mut user, authentication.into())
+            .await
+    }
+
     /// Initiate password reset process - generates a token
-    pub async fn initiate_password_reset(&self, email: &EmailAddress, url: String) -> Result<()> {
+    pub async fn initiate_password_reset(
+        &self,
+        email: &EmailAddress,
+        url: String,
+        ip: IpAddr,
+        user_agent: Option<String>,
+    ) -> Result<()> {
         let email_service = self
             .email_service
             .as_ref()
@@ -306,6 +402,20 @@ impl AuthService {
             }
         };
 
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::PasswordResetRequested,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({}),
+                authentication: AuthenticatedEntity::Anonymous,
+            })
+            .await?;
+
         let token = Uuid::new_v4().to_string();
         let mut tokens = self.password_reset_tokens.write().await;
         tokens.insert(token.clone(), (user.id, Instant::now()));
@@ -325,7 +435,13 @@ impl AuthService {
     }
 
     /// Reset password using token
-    pub async fn complete_password_reset(&self, token: &str, new_password: &str) -> Result<User> {
+    pub async fn complete_password_reset(
+        &self,
+        token: &str,
+        new_password: &str,
+        ip: IpAddr,
+        user_agent: Option<String>,
+    ) -> Result<User> {
         let mut tokens = self.password_reset_tokens.write().await;
         let (user_id, created_at) = tokens
             .remove(token)
@@ -343,6 +459,20 @@ impl AuthService {
             .await?
             .ok_or_else(|| anyhow!("User not found"))?;
 
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::PasswordResetCompleted,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({}),
+                authentication: user.clone().into(),
+            })
+            .await?;
+
         // Update password
         let hashed_password = hash_password(new_password)?;
         user.set_password(hashed_password);
@@ -351,6 +481,31 @@ impl AuthService {
             .await?;
 
         Ok(user.clone())
+    }
+
+    pub async fn logout(
+        &self,
+        user_id: Uuid,
+        ip: IpAddr,
+        user_agent: Option<String>,
+    ) -> Result<()> {
+        if let Ok(Some(user)) = self.user_service.get_by_id(&user_id).await {
+            self.event_bus
+                .publish_auth(AuthEvent {
+                    id: Uuid::new_v4(),
+                    user_id: Some(user.id),
+                    organization_id: Some(user.base.organization_id),
+                    timestamp: Utc::now(),
+                    operation: AuthOperation::LoggedOut,
+                    ip_address: ip,
+                    user_agent,
+                    metadata: serde_json::json!({}),
+                    authentication: user.into(),
+                })
+                .await?;
+        }
+
+        Ok(())
     }
 
     /// Cleanup old login attempts (called periodically from background task)

@@ -44,15 +44,15 @@
 		],
 		actions: [
 			{
-				label: 'Delete Api Key',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(apiKey)
 			},
 			{
-				label: 'Edit Api Key',
+				label: 'Edit',
 				icon: Edit,
-				class: 'btn-icon-danger',
+				class: 'btn-icon',
 				onClick: () => onEdit(apiKey)
 			}
 		]

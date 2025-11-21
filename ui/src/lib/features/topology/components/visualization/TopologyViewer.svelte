@@ -6,11 +6,18 @@
 		Background,
 		BackgroundVariant,
 		type EdgeMarkerType,
-		useNodesInitialized
+		useNodesInitialized,
+		type Connection
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
-	import { optionsPanelExpanded, selectedEdge, selectedNode, topology } from '../../store';
+	import {
+		optionsPanelExpanded,
+		selectedEdge,
+		selectedNode,
+		topology,
+		updateTopology
+	} from '../../store';
 	import { edgeTypes } from '$lib/shared/stores/metadata';
 	import { pushError } from '$lib/shared/stores/feedback';
 
@@ -18,7 +25,7 @@
 	import SubnetNode from './SubnetNode.svelte';
 	import InterfaceNode from './InterfaceNode.svelte';
 	import CustomEdge from './CustomEdge.svelte';
-	import { type TopologyEdge } from '../../types/base';
+	import { EdgeHandle, type TopologyEdge } from '../../types/base';
 	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
 
 	// Define node types
@@ -52,9 +59,10 @@
 		void $selectedNode;
 		void $selectedEdge;
 
-		if ($topology?.edges) {
+		if ($topology.edges || $topology.nodes) {
 			const currentEdges = get(edges);
-			updateConnectedNodes($selectedNode, $selectedEdge, currentEdges);
+			const currentNodes = get(nodes);
+			updateConnectedNodes($selectedNode, $selectedEdge, currentEdges, currentNodes);
 
 			// Update edge animated state based on selection
 			const updatedEdges = currentEdges.map((edge) => {
@@ -83,20 +91,22 @@
 		try {
 			if ($topology?.nodes && $topology?.edges) {
 				// Create nodes FIRST
-				const allNodes: Node[] = $topology.nodes.map((node): Node => {
-					return {
-						id: node.id,
-						type: node.node_type,
-						position: { x: node.position.x, y: node.position.y },
-						width: node.size.x,
-						height: node.size.y,
-						expandParent: true,
-						deletable: false,
-						parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
-						extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
-						data: node
-					};
-				});
+				const allNodes: Node[] = $topology.nodes.map((node) => ({
+					id: node.id,
+					type: node.node_type,
+					position: { x: node.position.x, y: node.position.y },
+					width: node.size.x,
+					height: node.size.y,
+					expandParent: true,
+					deletable: false,
+					parentId: node.node_type == 'InterfaceNode' ? node.subnet_id : undefined,
+					extent: node.node_type == 'InterfaceNode' ? 'parent' : undefined,
+					data: node
+				}));
+
+				// Save current edge animated states before clearing
+				const currentEdges = get(edges);
+				const animatedStates = new Map(currentEdges.map((edge) => [edge.id, edge.animated]));
 
 				// Clear edges FIRST
 				edges.set([]);
@@ -132,6 +142,8 @@
 									color: edgeColorHelper.rgb
 								} as EdgeMarkerType);
 
+						const edgeId = `edge-${index}`;
+
 						return {
 							id: `edge-${index}`,
 							source: edge.source,
@@ -143,7 +155,7 @@
 							type: 'custom',
 							label: edge.label,
 							data: { ...edge, edgeIndex: index },
-							animated: false,
+							animated: animatedStates.get(edgeId) ?? false,
 							interactionWidth: 50
 						};
 					});
@@ -152,6 +164,44 @@
 			}
 		} catch (err) {
 			pushError(`Failed to parse topology data ${err}`);
+		}
+	}
+
+	async function onNodeDragEnd({
+		targetNode
+	}: {
+		targetNode: Node | null;
+		nodes: Node[];
+		event: MouseEvent | TouchEvent;
+	}) {
+		let movedNode = $topology.nodes.find((node) => node.id == targetNode?.id);
+		if (movedNode && targetNode && targetNode.position) {
+			movedNode.position.x = targetNode?.position.x;
+			movedNode.position.y = targetNode?.position.y;
+			await updateTopology($topology);
+		}
+	}
+
+	async function onReconnect(edge: Edge, newConnection: Connection) {
+		const edgeData = edge.data as TopologyEdge;
+
+		if ($selectedEdge && edge.id === $selectedEdge.id) {
+			let topologyEdge = $topology.edges.find((e) => e.id == edgeData.id);
+			if (
+				topologyEdge &&
+				newConnection.source == topologyEdge.source &&
+				newConnection.target == topologyEdge.target &&
+				newConnection.sourceHandle &&
+				newConnection.targetHandle
+			) {
+				topologyEdge.source_handle = newConnection.sourceHandle as EdgeHandle;
+				topologyEdge.target_handle = newConnection.targetHandle as EdgeHandle;
+				$topology = {
+					...$topology,
+					edges: [...$topology.edges]
+				};
+				await updateTopology($topology);
+			}
 		}
 	}
 
@@ -202,12 +252,14 @@
 		onnodeclick={onNodeClick}
 		onedgepointerenter={hoveredEdge}
 		onedgepointerleave={hoveredEdge}
-		fitView
+		onnodedragstop={onNodeDragEnd}
+		onreconnect={onReconnect}
+		fitView={true}
 		minZoom={0.1}
 		noPanClass="nopan"
 		snapGrid={[25, 25]}
 		nodesDraggable={true}
-		nodesConnectable={false}
+		nodesConnectable={true}
 		elementsSelectable={true}
 	>
 		<Background variant={BackgroundVariant.Dots} bgColor="#15131e" gap={50} size={1} />

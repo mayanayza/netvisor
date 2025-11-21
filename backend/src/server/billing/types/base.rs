@@ -1,12 +1,21 @@
+use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::hash::Hash;
 use stripe_product::price::CreatePriceRecurringInterval;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
-use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
-
 #[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, Display, IntoStaticStr, EnumIter, EnumDiscriminants,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    Display,
+    IntoStaticStr,
+    EnumIter,
+    EnumDiscriminants,
+    Eq,
 )]
 #[serde(tag = "type")]
 pub enum BillingPlan {
@@ -22,6 +31,13 @@ impl PartialEq for BillingPlan {
     }
 }
 
+impl Hash for BillingPlan {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.price().hash(state);
+        self.trial_days().hash(state);
+    }
+}
+
 impl Default for BillingPlan {
     fn default() -> Self {
         BillingPlan::Community {
@@ -34,10 +50,17 @@ impl Default for BillingPlan {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Copy, Eq)]
 pub struct Price {
     pub cents: i64,
     pub rate: BillingRate,
+}
+
+impl Hash for Price {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.cents.hash(state);
+        self.rate.hash(state);
+    }
 }
 
 impl PartialEq for Price {
@@ -61,7 +84,7 @@ impl Display for Price {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash)]
 pub enum BillingRate {
     #[default]
     Month,

@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import type { Edge } from '@xyflow/svelte';
 import type { Node } from '@xyflow/svelte';
 import { edgeTypes, subnetTypes } from '$lib/shared/stores/metadata';
-import type { TopologyEdge } from './types/base';
+import type { TopologyEdge, TopologyNode } from './types/base';
 import { getInterfacesOnSubnet, getSubnetFromId } from '../subnets/store';
 import { getHostFromInterfaceId } from '../hosts/store';
 
@@ -43,13 +43,24 @@ function getVirtualizedContainerNodes(dockerHostInterfaceId: string): Set<string
 export function updateConnectedNodes(
 	selectedNode: Node | null,
 	selectedEdge: Edge | null,
-	allEdges: Edge[]
+	allEdges: Edge[],
+	allNodes: Node[]
 ) {
 	const connected = new Set<string>();
 
 	// If a node is selected
 	if (selectedNode) {
 		connected.add(selectedNode.id);
+		const nodeData = selectedNode.data as TopologyNode;
+
+		if (nodeData.node_type == 'SubnetNode') {
+			allNodes.forEach((n) => {
+				const nd = n.data as TopologyNode;
+				if (nd.node_type == 'InterfaceNode' && nd.subnet_id == nodeData.id) {
+					connected.add(nd.id);
+				}
+			});
+		}
 
 		for (const edge of allEdges) {
 			const edgeData = edge.data as TopologyEdge;

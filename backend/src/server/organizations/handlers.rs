@@ -5,7 +5,7 @@ use crate::server::auth::middleware::{
 use crate::server::config::AppState;
 use crate::server::organizations::r#impl::api::CreateInviteRequest;
 use crate::server::organizations::r#impl::base::Organization;
-use crate::server::organizations::r#impl::invites::OrganizationInvite;
+use crate::server::organizations::r#impl::invites::Invite;
 use crate::server::shared::handlers::traits::{CrudHandlers, update_handler};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::types::api::ApiError;
@@ -56,7 +56,7 @@ async fn create_invite(
     RequireMember(user): RequireMember,
     RequireFeature { plan, .. }: RequireFeature<InviteUsersFeature>,
     Json(request): Json<CreateInviteRequest>,
-) -> ApiResult<Json<ApiResponse<OrganizationInvite>>> {
+) -> ApiResult<Json<ApiResponse<Invite>>> {
     // We know they have either team_members or share_views enabled
     if !plan.features().team_members && request.permissions > UserOrgPermissions::Visualizer {
         return Err(ApiError::forbidden(
@@ -91,7 +91,7 @@ async fn get_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(_user): RequireMember,
     Path(id): Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<OrganizationInvite>>> {
+) -> ApiResult<Json<ApiResponse<Invite>>> {
     let invite = state
         .services
         .organization_service
@@ -106,7 +106,7 @@ async fn get_invite(
 async fn get_invites(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-) -> ApiResult<Json<ApiResponse<Vec<OrganizationInvite>>>> {
+) -> ApiResult<Json<ApiResponse<Vec<Invite>>>> {
     // Show user invites that they created or created for users with permissions lower than them
     let invites = state
         .services

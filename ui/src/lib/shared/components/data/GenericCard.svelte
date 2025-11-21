@@ -186,20 +186,42 @@
 	{/if}
 
 	<!-- Action Buttons - Fixed width in list view -->
+	<!-- Action Buttons - Fixed width in list view -->
+	<!-- Action Buttons - Fixed width in list view -->
 	{#if actions.length > 0}
 		<div
 			class={viewMode === 'list'
 				? 'flex w-32 flex-shrink-0 items-center justify-end gap-1'
 				: 'card-divider-h mt-4 flex items-center justify-between pt-4'}
 		>
-			{#each actions as action (action.label)}
+			{#each actions as action, index (action.label)}
+				{@const isLeftEdge = index === 0}
+				{@const isRightEdge = index === actions.length - 1}
 				<button
 					onclick={action.onClick}
 					disabled={action.disabled}
-					class={(action.class ? action.class : 'btn-icon') + ' ' + action.animation || ''}
+					class="group relative overflow-visible transition-all duration-200 ease-in-out {action.animation ||
+						''}"
 					title={action.label}
 				>
-					<action.icon size={16} />
+					<div
+						class="flex items-center justify-center transition-opacity duration-200 group-hover:opacity-0 {action.class
+							? action.class
+							: 'btn-icon'}"
+					>
+						<action.icon size={16} class="flex-shrink-0" />
+					</div>
+
+					<div
+						class="absolute top-1/2 flex -translate-y-1/2 items-center justify-center whitespace-nowrap opacity-0 transition-all duration-200 ease-in-out group-hover:opacity-100 {isLeftEdge
+							? 'left-0'
+							: isRightEdge
+								? 'right-0'
+								: 'left-1/2 -translate-x-1/2'} {action.class ? action.class : 'btn-icon'}"
+					>
+						<action.icon size={16} class="flex-shrink-0" />
+						<span class="ml-2">{action.label}</span>
+					</div>
 				</button>
 			{/each}
 		</div>

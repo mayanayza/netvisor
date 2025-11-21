@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
-use stripe_billing::SubscriptionStatus;
 use uuid::Uuid;
 
 use crate::server::{
@@ -81,7 +80,7 @@ impl StorableEntity for Organization {
                 SqlValue::String(name),
                 SqlValue::OptionalString(stripe_customer_id),
                 SqlValue::OptionBillingPlan(plan),
-                SqlValue::OptionBillingPlanStatus(plan_status),
+                SqlValue::OptionalString(plan_status),
                 SqlValue::Bool(is_onboarded),
             ],
         ))
@@ -93,11 +92,6 @@ impl StorableEntity for Organization {
             .unwrap_or(None)
             .and_then(|v| serde_json::from_value(v).ok());
 
-        let plan_status: Option<SubscriptionStatus> = row
-            .try_get::<Option<String>, _>("plan")
-            .unwrap_or(None)
-            .and_then(|v| serde_json::from_str(&v).ok());
-
         Ok(Organization {
             id: row.get("id"),
             created_at: row.get("created_at"),
@@ -106,7 +100,7 @@ impl StorableEntity for Organization {
                 name: row.get("name"),
                 stripe_customer_id: row.get("stripe_customer_id"),
                 plan,
-                plan_status,
+                plan_status: row.get("plan_status"),
                 is_onboarded: row.get("is_onboarded"),
             },
         })

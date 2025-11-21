@@ -11,14 +11,13 @@
 	import { getGroups, groups } from '$lib/features/groups/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getServiceById, getServices, services } from '$lib/features/services/store';
-	import { getSubnets } from '$lib/features/subnets/store';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
 	import { get } from 'svelte/store';
 	import { Plus } from 'lucide-svelte';
 
-	const loading = loadData([getHosts, getGroups, getServices, getSubnets, getDaemons]);
+	const loading = loadData([getHosts, getGroups, getServices, getDaemons]);
 
 	let showHostEditor = false;
 	let editingHost: Host | null = null;
@@ -191,17 +190,24 @@
 			cta="Create your first host"
 		/>
 	{:else}
-		<DataControls items={$hosts} fields={hostFields} storageKey="netvisor-hosts-table-state">
+		<DataControls
+			items={$hosts}
+			fields={hostFields}
+			getItemKey={(host) => host.id}
+			storageKey="netvisor-hosts-table-state"
+		>
 			{#snippet children(item: Host, viewMode: 'card' | 'list')}
-				<HostCard
-					host={item}
-					hostGroups={hostGroups.get(item.id)}
-					{viewMode}
-					onEdit={handleEditHost}
-					onDelete={handleDeleteHost}
-					onConsolidate={handleStartConsolidate}
-					onHide={handleHostHide}
-				/>
+				{#key item.id}
+					<HostCard
+						host={item}
+						hostGroups={hostGroups.get(item.id)}
+						{viewMode}
+						onEdit={handleEditHost}
+						onDelete={handleDeleteHost}
+						onConsolidate={handleStartConsolidate}
+						onHide={handleHostHide}
+					/>
+				{/key}
 			{/snippet}
 		</DataControls>
 	{/if}

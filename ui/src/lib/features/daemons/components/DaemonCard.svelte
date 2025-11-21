@@ -3,7 +3,7 @@
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { getDaemonIsRunningDiscovery } from '$lib/features/daemons/store';
 	import { sessions } from '$lib/features/discovery/sse';
-	import { entities } from '$lib/shared/stores/metadata';
+	import { concepts, entities } from '$lib/shared/stores/metadata';
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
@@ -52,7 +52,7 @@
 						? {
 								id: daemon.id,
 								label: 'True',
-								color: entities.getColorHelper('Virtualization').string
+								color: concepts.getColorHelper('Virtualization').string
 							}
 						: {
 								id: daemon.id,
@@ -86,7 +86,7 @@
 		],
 		actions: [
 			{
-				label: 'Delete Daemon',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(daemon),

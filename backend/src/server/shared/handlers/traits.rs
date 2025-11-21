@@ -2,6 +2,7 @@ use crate::server::{
     auth::middleware::{AuthenticatedUser, RequireMember},
     config::AppState,
     shared::{
+        entities::{ChangeTriggersTopologyStaleness, Entity},
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
@@ -22,7 +23,8 @@ use uuid::Uuid;
 #[async_trait]
 pub trait CrudHandlers: StorableEntity + Serialize + for<'de> Deserialize<'de>
 where
-    Self: Display,
+    Self: Display + ChangeTriggersTopologyStaleness<Self>,
+    Entity: From<Self>,
 {
     /// Get the service from AppState (must implement CrudService)
     type Service: CrudService<Self> + Send + Sync;
@@ -42,7 +44,8 @@ where
 /// Create a standard CRUD router
 pub fn create_crud_router<T>() -> Router<Arc<AppState>>
 where
-    T: CrudHandlers + 'static,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    Entity: From<T>,
 {
     Router::new()
         .route("/", post(create_handler::<T>))
@@ -58,7 +61,8 @@ pub async fn create_handler<T>(
     Json(request): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
-    T: CrudHandlers + 'static,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    Entity: From<T>,
 {
     if let Err(err) = request.validate() {
         tracing::warn!(
@@ -94,13 +98,6 @@ where
             ApiError::internal_error(&e.to_string())
         })?;
 
-    tracing::info!(
-        entity_type = T::table_name(),
-        entity_id = %created.id(),
-        user_id = %user.user_id,
-        "Entity created via API"
-    );
-
     Ok(Json(ApiResponse::success(created)))
 }
 
@@ -109,7 +106,8 @@ pub async fn get_all_handler<T>(
     user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<T>>>>
 where
-    T: CrudHandlers + 'static,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    Entity: From<T>,
 {
     tracing::debug!(
         entity_type = T::table_name(),
@@ -131,13 +129,6 @@ where
         ApiError::internal_error(&e.to_string())
     })?;
 
-    tracing::debug!(
-        entity_type = T::table_name(),
-        user_id = %user.user_id,
-        count = %entities.len(),
-        "Entities fetched successfully"
-    );
-
     Ok(Json(ApiResponse::success(entities)))
 }
 
@@ -147,7 +138,8 @@ pub async fn get_by_id_handler<T>(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
-    T: CrudHandlers + 'static,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    Entity: From<T>,
 {
     tracing::debug!(
         entity_type = T::table_name(),
@@ -180,13 +172,6 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
-    tracing::debug!(
-        entity_type = T::table_name(),
-        entity_id = %id,
-        user_id = %user.user_id,
-        "Entity fetched successfully"
-    );
-
     Ok(Json(ApiResponse::success(entity)))
 }
 
@@ -197,7 +182,8 @@ pub async fn update_handler<T>(
     Json(mut request): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
-    T: CrudHandlers + 'static,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    Entity: From<T>,
 {
     tracing::debug!(
         entity_type = T::table_name(),
@@ -246,13 +232,6 @@ where
             ApiError::internal_error(&e.to_string())
         })?;
 
-    tracing::info!(
-        entity_type = T::table_name(),
-        entity_id = %id,
-        user_id = %user.user_id,
-        "Entity updated via API"
-    );
-
     Ok(Json(ApiResponse::success(updated)))
 }
 
@@ -262,7 +241,8 @@ pub async fn delete_handler<T>(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>>
 where
-    T: CrudHandlers + 'static,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    Entity: From<T>,
 {
     let service = T::get_service(&state);
 
@@ -288,7 +268,7 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
-    tracing::info!(
+    tracing::debug!(
         entity_type = T::table_name(),
         entity_id = %id,
         entity_name = %entity,

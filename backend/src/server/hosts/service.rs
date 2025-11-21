@@ -4,12 +4,12 @@ use crate::server::{
     hosts::r#impl::base::Host,
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
-        entities::Entity,
+        entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
             types::{EntityEvent, EntityOperation},
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{
             filter::EntityFilter,
             generic::GenericPostgresStorage,
@@ -35,24 +35,23 @@ pub struct HostService {
     event_bus: Arc<EventBus>,
 }
 
-#[async_trait]
-impl CrudService<Host> for HostService {
-    fn storage(&self) -> &Arc<GenericPostgresStorage<Host>> {
-        &self.storage
-    }
-
+impl EventBusService<Host> for HostService {
     fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
 
-    fn entity_type() -> Entity {
-        Entity::Host
-    }
     fn get_network_id(&self, entity: &Host) -> Option<Uuid> {
         Some(entity.base.network_id)
     }
     fn get_organization_id(&self, _entity: &Host) -> Option<Uuid> {
         None
+    }
+}
+
+#[async_trait]
+impl CrudService<Host> for HostService {
+    fn storage(&self) -> &Arc<GenericPostgresStorage<Host>> {
+        &self.storage
     }
 
     /// Create a new host
@@ -93,27 +92,24 @@ impl CrudService<Host> for HostService {
             }
             _ => {
                 let created = self.storage.create(&host).await?;
+                let trigger_stale = created.triggers_staleness(None);
 
                 self.event_bus()
-                    .publish(EntityEvent {
+                    .publish_entity(EntityEvent {
                         id: Uuid::new_v4(),
-                        entity_type: Self::entity_type(),
                         entity_id: created.id(),
                         network_id: self.get_network_id(&created),
                         organization_id: self.get_organization_id(&created),
+                        entity_type: created.into(),
                         operation: EntityOperation::Created,
                         timestamp: Utc::now(),
-                        metadata: serde_json::json!({}),
+                        metadata: serde_json::json!({
+                            "trigger_stale": trigger_stale
+                        }),
                         authentication,
                     })
                     .await?;
 
-                tracing::info!(
-                    name = %host.base.name,
-                    id = %host.id,
-                    "Created host"
-                );
-                tracing::trace!("Result: {:?}", host);
                 host
             }
         };
@@ -123,43 +119,38 @@ impl CrudService<Host> for HostService {
 
     async fn update(
         &self,
-        host: &mut Host,
+        updates: &mut Host,
         authentication: AuthenticatedEntity,
     ) -> Result<Host, Error> {
-        let lock = self.get_host_lock(&host.id).await;
+        let lock = self.get_host_lock(&updates.id).await;
         let _guard = lock.lock().await;
 
-        tracing::trace!("Updating host {:?}", host);
-
         let current_host = self
-            .get_by_id(&host.id)
+            .get_by_id(&updates.id)
             .await?
-            .ok_or_else(|| anyhow!("Host '{}' not found", host.id))?;
+            .ok_or_else(|| anyhow!("Host '{}' not found", updates.id))?;
 
-        self.update_host_services(&current_host, host, authentication.clone())
+        self.update_host_services(&current_host, updates, authentication.clone())
             .await?;
 
-        let updated = self.storage.update(host).await?;
+        let updated = self.storage.update(updates).await?;
+        let trigger_stale = updated.triggers_staleness(Some(current_host));
 
         self.event_bus()
-            .publish(EntityEvent {
+            .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: Self::entity_type(),
                 entity_id: updated.id(),
                 network_id: self.get_network_id(&updated),
                 organization_id: self.get_organization_id(&updated),
+                entity_type: updated.clone().into(),
                 operation: EntityOperation::Updated,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
                 authentication,
             })
             .await?;
-
-        tracing::info!(
-            id = %host.id,
-            "Updated host"
-        );
-        tracing::trace!("Result: {:?}", host);
 
         Ok(updated)
     }
@@ -247,6 +238,8 @@ impl HostService {
         let mut port_updates = 0;
         let mut hostname_update = false;
         let mut description_update = false;
+
+        let host_before_updates = existing_host.clone();
 
         tracing::trace!(
             "Upserting new host data {:?} to host {:?}",
@@ -337,27 +330,23 @@ impl HostService {
         }
 
         if !data.is_empty() {
+            let trigger_stale = existing_host.triggers_staleness(Some(host_before_updates));
+
             self.event_bus()
-                .publish(EntityEvent {
+                .publish_entity(EntityEvent {
                     id: Uuid::new_v4(),
-                    entity_type: Self::entity_type(),
                     entity_id: existing_host.id(),
                     network_id: self.get_network_id(&existing_host),
                     organization_id: self.get_organization_id(&existing_host),
+                    entity_type: existing_host.clone().into(),
                     operation: EntityOperation::Updated,
                     timestamp: Utc::now(),
-                    metadata: serde_json::json!({}),
+                    metadata: serde_json::json!({
+                        "trigger_stale": trigger_stale
+                    }),
                     authentication,
                 })
                 .await?;
-
-            tracing::info!(
-                host_id = %existing_host.id,
-                host_name = %existing_host.base.name,
-                updates = %data.join(", "),
-                "Upserted discovery data to host"
-            );
-            tracing::trace!("Result: {:?}", existing_host);
         } else {
             tracing::debug!(
                 "No new data to upsert from host {} to {}",
@@ -579,27 +568,24 @@ impl HostService {
 
         self.storage.delete(id).await?;
 
+        let trigger_stale = host.triggers_staleness(None);
+
         self.event_bus()
-            .publish(EntityEvent {
+            .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: Self::entity_type(),
                 entity_id: host.id(),
                 network_id: self.get_network_id(&host),
                 organization_id: self.get_organization_id(&host),
+                entity_type: host.into(),
                 operation: EntityOperation::Deleted,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({}),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
                 authentication,
             })
             .await?;
 
-        tracing::info!(
-            host_id = %host.id,
-            host_name = %host.base.name,
-            service_count = %host.base.services.len(),
-            deleted_services = %delete_services,
-            "Host deleted"
-        );
         Ok(())
     }
 }
