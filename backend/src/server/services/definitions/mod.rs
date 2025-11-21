@@ -136,6 +136,7 @@ pub mod jellystat;
 pub mod komga;
 pub mod overseerr;
 pub mod plex;
+pub mod sabnzbd;
 pub mod slskd;
 pub mod tautulli;
 
