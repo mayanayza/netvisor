@@ -6,4 +6,6 @@ pub mod endpoints;
 pub mod handlers;
 pub mod patterns;
 pub mod storage;
+#[cfg(test)]
+pub mod tests;
 pub mod virtualization;
