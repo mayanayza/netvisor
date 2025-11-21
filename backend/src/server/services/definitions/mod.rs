@@ -67,6 +67,7 @@ pub mod google_nest_repeater;
 pub mod google_nest_router;
 pub mod tp_link_eap;
 pub mod unifi_access_point;
+pub mod unifi_controller;
 
 // NetworkSecurity
 pub mod crowdsec;
@@ -128,6 +129,7 @@ pub mod veeam;
 
 // Media
 pub mod audiobookshelf;
+pub mod bazarr;
 pub mod emby;
 pub mod immich;
 pub mod jellyfin;
@@ -136,6 +138,7 @@ pub mod jellystat;
 pub mod komga;
 pub mod overseerr;
 pub mod plex;
+pub mod sabnzbd;
 pub mod slskd;
 pub mod tautulli;
 
@@ -164,7 +167,6 @@ pub mod rancher;
 // Database
 pub mod cassandra;
 pub mod couchdb;
-pub mod elasticsearch;
 pub mod influxdb;
 pub mod mariadb;
 pub mod mongodb;
@@ -229,6 +231,7 @@ pub mod linkstack;
 pub mod proxmox_datacenter_manager;
 
 // Monitoring
+pub mod apc;
 pub mod coolercontrol;
 pub mod elastic_apm;
 pub mod gatus;

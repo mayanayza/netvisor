@@ -1,4 +1,5 @@
 use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
@@ -17,7 +18,7 @@ impl ServiceDefinition for InfluxDB {
         ServiceCategory::Database
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(8086), "/ping", "", None)
+        Pattern::Port(PortBase::InfluxDb)
     }
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/influxdb.svg"
@@ -25,4 +26,9 @@ impl ServiceDefinition for InfluxDB {
     fn logo_needs_white_background(&self) -> bool {
         true
     }
+    fn is_generic(&self) -> bool {
+        true
+    }
 }
+
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<InfluxDB>));

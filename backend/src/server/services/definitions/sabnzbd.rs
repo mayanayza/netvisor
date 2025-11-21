@@ -5,28 +5,31 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct UnifiController;
+pub struct SABnzbd;
 
-impl ServiceDefinition for UnifiController {
+impl ServiceDefinition for SABnzbd {
     fn name(&self) -> &'static str {
-        "UniFi Controller"
+        "SABnzbd"
     }
     fn description(&self) -> &'static str {
-        "Ubiquiti UniFi network controller"
+        "A NZB Files Downloader."
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::NetworkAccess
+        ServiceCategory::Media
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Https8443, "/manage", "UniFi", None)
+        Pattern::Endpoint(
+            PortBase::Http8080,
+            "/Content/manifest.json",
+            "SABnzbd",
+            None,
+        )
     }
 
     fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unifi.svg"
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sabnzbd.svg"
     }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(
-    create_service::<UnifiController>
-));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<SABnzbd>));
