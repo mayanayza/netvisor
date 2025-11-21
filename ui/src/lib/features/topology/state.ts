@@ -26,13 +26,12 @@ export interface TopologyStateConfig extends TopologyStateInfo {
 export function getTopologyStateInfo(topology: Topology): TopologyStateInfo {
 	// Locked state
 	if (topology.is_locked) {
-		const lockedDate = topology.locked_at ? new Date(topology.locked_at).toLocaleDateString() : '';
 		return {
 			type: 'locked',
 			icon: Lock,
 			color: 'blue',
 			class: 'btn-info',
-			buttonText: `Locked ${lockedDate}`.trim(),
+			buttonText: 'Locked',
 			label: 'Locked'
 		};
 	}

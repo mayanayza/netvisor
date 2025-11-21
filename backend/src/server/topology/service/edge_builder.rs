@@ -65,7 +65,7 @@ impl EdgeBuilder {
         let mut docker_service_to_containerized_service_ids: HashMap<Uuid, Vec<Uuid>> =
             HashMap::new();
 
-        ctx.services().iter().for_each(|s| {
+        ctx.services.iter().for_each(|s| {
             if let Some(ServiceVirtualization::Docker(docker_virtualization)) =
                 &s.base.virtualization
             {
@@ -79,7 +79,7 @@ impl EdgeBuilder {
         });
 
         let edges = ctx
-            .services()
+            .services
             .iter()
             .filter(|s| {
                 docker_service_to_containerized_service_ids
@@ -415,14 +415,14 @@ impl EdgeBuilder {
         target_binding_id: Uuid,
         group: &Group,
     ) -> Option<Edge> {
-        let source_interface = ctx.services().iter().find_map(|s| {
+        let source_interface = ctx.services.iter().find_map(|s| {
             if let Some(source_binding) = s.get_binding(source_binding_id) {
                 return Some(source_binding.interface_id());
             }
             None
         });
 
-        let target_interface = ctx.services().iter().find_map(|s| {
+        let target_interface = ctx.services.iter().find_map(|s| {
             if let Some(target_binding) = s.get_binding(target_binding_id) {
                 return Some(target_binding.interface_id());
             }

@@ -37,6 +37,7 @@
 
 	// Get group reactively - updates when groups store changes
 	let group = $derived.by(() => {
+		if (!$topology?.groups) return null;
 		if (edgeTypeMetadata.is_group_edge && 'group_id' in edgeData) {
 			return $topology.groups.find((g) => g.id == edgeData.group_id) || null;
 		}

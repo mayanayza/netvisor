@@ -64,8 +64,11 @@ pub async fn create_handler(
 
     let service = Topology::get_service(&state);
 
-    let (hosts, services, subnets, groups) =
-        service.get_entity_data(topology.base.network_id).await?;
+    let (hosts, subnets, groups) = service.get_entity_data(topology.base.network_id).await?;
+
+    let services = service
+        .get_service_data(topology.base.network_id, &topology.base.options)
+        .await?;
 
     let (nodes, edges) = service.build_graph(BuildGraphParams {
         options: &topology.base.options,
@@ -83,7 +86,7 @@ pub async fn create_handler(
     topology.base.groups = groups;
     topology.base.edges = edges;
     topology.base.nodes = nodes;
-    topology.refresh();
+    topology.clear_stale();
 
     let created = service
         .create(topology, user.clone().into())
@@ -113,20 +116,25 @@ async fn refresh(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     Json(mut topology): Json<Topology>,
-) -> ApiResult<Json<ApiResponse<Topology>>> {
+) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, services, subnets, groups) =
-        service.get_entity_data(topology.base.network_id).await?;
+    let (hosts, subnets, groups) = service.get_entity_data(topology.base.network_id).await?;
+
+    let services = service
+        .get_service_data(topology.base.network_id, &topology.base.options)
+        .await?;
 
     topology.base.hosts = hosts;
     topology.base.services = services;
     topology.base.subnets = subnets;
     topology.base.groups = groups;
 
-    let updated = service.update(&mut topology, user.into()).await?;
+    service.update(&mut topology, user.into()).await?;
 
-    Ok(Json(ApiResponse::success(updated)))
+    // Return will be handled through event subscriber which triggers SSE
+
+    Ok(Json(ApiResponse::success(())))
 }
 
 /// Recalculate node and edges and refresh entity data
@@ -134,11 +142,14 @@ async fn rebuild(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     Json(mut topology): Json<Topology>,
-) -> ApiResult<Json<ApiResponse<Topology>>> {
+) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, services, subnets, groups) =
-        service.get_entity_data(topology.base.network_id).await?;
+    let (hosts, subnets, groups) = service.get_entity_data(topology.base.network_id).await?;
+
+    let services = service
+        .get_service_data(topology.base.network_id, &topology.base.options)
+        .await?;
 
     let (nodes, edges) = service.build_graph(BuildGraphParams {
         options: &topology.base.options,
@@ -156,11 +167,13 @@ async fn rebuild(
     topology.base.groups = groups;
     topology.base.edges = edges;
     topology.base.nodes = nodes;
-    topology.refresh();
+    topology.clear_stale();
 
-    let updated = service.update(&mut topology, user.into()).await?;
+    service.update(&mut topology, user.into()).await?;
 
-    Ok(Json(ApiResponse::success(updated)))
+    // Return will be handled through event subscriber which triggers SSE
+
+    Ok(Json(ApiResponse::success(())))
 }
 
 async fn lock(

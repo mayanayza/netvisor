@@ -19,6 +19,7 @@ impl EventSubscriber for LoggingService {
         // Log each event individually
         for event in events {
             event.log();
+            tracing::debug!("{}", event);
         }
 
         Ok(())

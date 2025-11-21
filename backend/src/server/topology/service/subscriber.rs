@@ -39,6 +39,10 @@ impl EventSubscriber for TopologyService {
             (EntityDiscriminants::Service, None),
             (EntityDiscriminants::Subnet, None),
             (EntityDiscriminants::Group, None),
+            (
+                EntityDiscriminants::Topology,
+                Some(vec![EntityOperation::Updated]),
+            ),
         ]))
     }
 
@@ -57,6 +61,31 @@ impl EventSubscriber for TopologyService {
             if let Event::Entity(entity_event) = event
                 && let Some(network_id) = entity_event.network_id
             {
+                // Check if any event triggers staleness
+                let trigger_stale = entity_event
+                    .metadata
+                    .get("trigger_stale")
+                    .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
+                    .unwrap_or(false);
+
+                // Topology updates from changes to options should be applied immediately and not processed alongside
+                // other changes, otherwise another call to topology_service.update will be made which will trigger
+                // an infinite loop
+                if let Entity::Topology(mut topology) = entity_event.entity_type {
+                    if trigger_stale {
+                        topology.base.is_stale = true;
+                    }
+
+                    topology.base.services = self
+                        .get_service_data(network_id, &topology.base.options)
+                        .await?;
+
+                    let _ = self.staleness_tx.send(topology).inspect_err(|e| {
+                        tracing::debug!("Staleness notification skipped (no receivers): {}", e)
+                    });
+                    continue;
+                }
+
                 network_ids.insert(network_id);
 
                 let changes = topology_updates.entry(network_id).or_default();
@@ -73,13 +102,6 @@ impl EventSubscriber for TopologyService {
                         _ => false,
                     };
                 }
-
-                // Check if any event triggers staleness
-                let trigger_stale = entity_event
-                    .metadata
-                    .get("trigger_stale")
-                    .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
-                    .unwrap_or(false);
 
                 if trigger_stale {
                     // User will be prompted to update entities
@@ -102,8 +124,14 @@ impl EventSubscriber for TopologyService {
             let network_filter = StorageFilter::unfiltered().network_ids(&[network_id]);
             let topologies = self.get_all(network_filter).await?;
 
+            let (hosts, subnets, groups) = self.get_entity_data(network_id).await?;
+
             if let Some(changes) = topology_updates.get(&network_id) {
                 for mut topology in topologies {
+                    let services = self
+                        .get_service_data(network_id, &topology.base.options)
+                        .await?;
+
                     // Apply removed entities
                     for host_id in &changes.removed_hosts {
                         if !topology.base.removed_hosts.contains(host_id) {
@@ -131,11 +159,8 @@ impl EventSubscriber for TopologyService {
                         topology.base.is_stale = true;
                     }
 
-                    let (hosts, services, subnets, groups) =
-                        self.get_entity_data(topology.base.network_id).await?;
-
                     if changes.updated_hosts {
-                        topology.base.hosts = hosts
+                        topology.base.hosts = hosts.clone()
                     }
 
                     if changes.updated_services {
@@ -143,11 +168,11 @@ impl EventSubscriber for TopologyService {
                     }
 
                     if changes.updated_subnets {
-                        topology.base.subnets = subnets
+                        topology.base.subnets = subnets.clone()
                     }
 
                     if changes.updated_groups {
-                        topology.base.groups = groups;
+                        topology.base.groups = groups.clone();
                     }
 
                     // Update topology in database

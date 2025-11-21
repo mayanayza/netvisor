@@ -29,6 +29,11 @@
 	// Track network_id separately to force reactivity
 	let selectedNetworkId = formData.network_id;
 	$: formData.network_id = selectedNetworkId;
+
+	// Make options reactive to store changes using reactive statement
+	$: topologyOptions = $topologies.filter(
+		(t) => t.id !== formData.id && t.network_id == selectedNetworkId
+	);
 </script>
 
 <div class="space-y-4">
@@ -42,7 +47,7 @@
 			disabled={isEditing}
 			selectedValue={$parentId.value}
 			onSelect={onParentSelect}
-			options={$topologies}
+			options={topologyOptions}
 		/>
 	</div>
 

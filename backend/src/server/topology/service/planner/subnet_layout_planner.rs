@@ -230,7 +230,7 @@ impl SubnetLayoutPlanner {
             for interface in &host.base.interfaces {
                 let subnet = ctx.get_subnet_by_id(interface.base.subnet_id);
                 let subnet_type = subnet.map(|s| s.base.subnet_type).unwrap_or_default();
-                let services = ctx.services();
+                let services = ctx.services;
 
                 let interface_bound_services: Vec<&Service> = services
                     .iter()

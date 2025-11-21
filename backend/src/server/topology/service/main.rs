@@ -98,15 +98,36 @@ impl TopologyService {
     pub async fn get_entity_data(
         &self,
         network_id: Uuid,
-    ) -> Result<(Vec<Host>, Vec<Service>, Vec<Subnet>, Vec<Group>), Error> {
+    ) -> Result<(Vec<Host>, Vec<Subnet>, Vec<Group>), Error> {
         let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
         // Fetch all data
         let hosts = self.host_service.get_all(network_filter.clone()).await?;
         let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
         let groups = self.group_service.get_all(network_filter.clone()).await?;
-        let services = self.service_service.get_all(network_filter.clone()).await?;
 
-        Ok((hosts, services, subnets, groups))
+        Ok((hosts, subnets, groups))
+    }
+
+    pub async fn get_service_data(
+        &self,
+        network_id: Uuid,
+        options: &TopologyOptions,
+    ) -> Result<Vec<Service>, Error> {
+        let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
+
+        Ok(self
+            .service_service
+            .get_all(network_filter.clone())
+            .await?
+            .iter()
+            .filter(|s| {
+                !options
+                    .request
+                    .hide_service_categories
+                    .contains(&s.base.service_definition.category())
+            })
+            .cloned()
+            .collect())
     }
 
     pub fn build_graph(&self, params: BuildGraphParams) -> (Vec<Node>, Vec<Edge>) {

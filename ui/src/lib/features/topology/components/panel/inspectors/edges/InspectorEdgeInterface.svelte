@@ -7,7 +7,7 @@
 
 	let { edge, hostId }: { edge: Edge; hostId: string } = $props();
 
-	let host = $derived($topology.hosts.find((h) => h.id == hostId));
+	let host = $derived($topology ? $topology.hosts.find((h) => h.id == hostId) : null);
 
 	let sourceInterface = $derived(host?.interfaces.find((i) => i.id == edge.source));
 	let targetInterface = $derived(host?.interfaces.find((i) => i.id == edge.target));
