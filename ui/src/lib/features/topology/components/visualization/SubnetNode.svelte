@@ -22,6 +22,10 @@
 	let nodeStyle = $derived(`width: ${width}px; height: ${height}px;`);
 	let hasInfra = $derived(infra_width > 0);
 
+	$effect(() => {
+		void $topology;
+	});
+
 	let subnet = $derived($topology ? $topology.subnets.find((s) => s.id == id) : undefined);
 
 	const viewport = useViewport();

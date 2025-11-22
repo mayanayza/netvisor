@@ -15,6 +15,7 @@
 		optionsPanelExpanded,
 		selectedEdge,
 		selectedNode,
+		topologies,
 		topology,
 		updateTopology
 	} from '../../store';
@@ -47,6 +48,11 @@
 
 	// Store pending edges until nodes are ready
 	let pendingEdges: Edge[] = [];
+
+	$effect(() => {
+		void $topology;
+		void $topologies;
+	});
 
 	$effect(() => {
 		if ($topology && ($topology.edges || $topology.nodes)) {

@@ -16,6 +16,10 @@
 	height = height ? height : 0;
 	width = width ? width : 0;
 
+	$effect(() => {
+		void $topology;
+	});
+
 	let host = $derived(
 		$topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : undefined
 	);
