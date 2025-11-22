@@ -274,7 +274,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Spawn server in background
     tokio::spawn(async move {
-        axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .unwrap();
     });
 
     // Start cron for discovery scheduler
