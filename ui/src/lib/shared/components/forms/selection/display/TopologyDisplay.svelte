@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { entities } from '$lib/shared/stores/metadata';
 
 	export const TopologyDisplay: EntityDisplayComponent<Topology, object> = {
@@ -35,8 +35,17 @@
 	import type { Topology } from '$lib/features/topology/types/base';
 	import { getTopologyStateInfo } from '$lib/features/topology/state';
 
-	export let item: Topology;
-	export let context = {};
+	let {
+		item,
+		context = {}
+	}: {
+		item: Topology;
+		context: object;
+	} = $props();
+
+	$effect(() => {
+		void entities;
+	});
 </script>
 
 <ListSelectItem {item} {context} displayComponent={TopologyDisplay} />

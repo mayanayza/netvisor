@@ -4,6 +4,8 @@
 	import {
 		createEmptyTopologyFormData,
 		createTopology,
+		topologies,
+		topology,
 		topologyOptions,
 		updateTopology
 	} from '../store';
@@ -11,21 +13,33 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import TopologyDetailsForm from './TopologyDetailsForm.svelte';
 
-	export let isOpen = false;
-	export let onSubmit: () => Promise<void> | void;
-	export let onClose: () => void;
-	export let topo: Topology | null = null;
+	let {
+		isOpen = $bindable(false),
+		onSubmit,
+		onClose,
+		topo = null
+	}: {
+		isOpen: boolean;
+		onSubmit: () => Promise<void> | void;
+		onClose: () => void;
+		topo: Topology | null;
+	} = $props();
 
-	$: isEditing = topo != null;
-	$: title = isEditing ? `Edit ${topo?.name}` : 'Create Topology';
+	let isEditing = $derived(topo != null);
+	let title = $derived(isEditing ? `Edit ${topo?.name}` : 'Create Topology');
 
-	let loading = false;
-	let formData: Topology = createEmptyTopologyFormData();
+	let loading = $state(false);
+	let formData: Topology = $derived(topo ? { ...topo } : createEmptyTopologyFormData());
+
+	$effect(() => {
+		void $topology;
+		void $topologies;
+	});
 
 	// Reset form when modal opens
-	$: if (isOpen) {
-		resetForm();
-	}
+	$effect(() => {
+		if (isOpen) resetForm();
+	});
 
 	function resetForm() {
 		formData = topo ? { ...topo } : createEmptyTopologyFormData();
@@ -52,7 +66,8 @@
 		}
 	}
 
-	let colorHelper = entities.getColorHelper('Subnet');
+	let colorHelper = $state(entities.getColorHelper('Topology'));
+	let Icon = $state(entities.getIconComponent('Topology'));
 </script>
 
 <EditModal
@@ -67,7 +82,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Topology')} color={colorHelper.string} />
+		<ModalHeaderIcon {Icon} color={colorHelper.string} />
 	</svelte:fragment>
 
 	<div class="space-y-6">

@@ -33,10 +33,17 @@
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
+	const loading = loadData([getHosts, getServices, getSubnets, getGroups, getTopologies]);
+
 	let isCreateEditOpen = $state(false);
 	let editingTopology: Topology | null = $state(null);
 
 	let isRefreshConflictsOpen = $state(false);
+
+	$effect(() => {
+		void $topology;
+		void $topologies;
+	});
 
 	function handleCreateTopology() {
 		isCreateEditOpen = true;
@@ -134,8 +141,6 @@
 	let lockedByUser = $derived(
 		$topology?.locked_by ? $users.find((u) => u.id === $topology.locked_by) : null
 	);
-
-	const loading = loadData([getHosts, getServices, getSubnets, getGroups, getTopologies]);
 </script>
 
 <SvelteFlowProvider>

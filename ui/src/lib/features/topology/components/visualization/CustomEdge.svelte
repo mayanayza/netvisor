@@ -35,6 +35,10 @@
 	const edgeData = data as TopologyEdge;
 	const edgeTypeMetadata = edgeTypes.getMetadata(edgeData.edge_type);
 
+	$effect(() => {
+		void $topology;
+	});
+
 	// Get group reactively - updates when groups store changes
 	let group = $derived.by(() => {
 		if (!$topology?.groups) return null;
