@@ -689,36 +689,45 @@ The topology view generates an interactive diagram of your network structure.
 Topology will display different states depending on if the underlying data has changed since it was last built. Pressing Rebuild will have different effects depending on topology state.
 
 Rebuilding the graph will reset some user-provided changes, such as node positions and subnet sizes. Edge handles will be preserved when possible, but may also be overwritten as the layout of the graph may need to change depending on entities being added or removed.
+<br>
 
-**Up to date**
+### Up to date
+
 <p align="center">
   <img src="../media/topology_fresh.png" width="800" alt="Discovery Sessions">
 </p>
-- All data is up to date
-- There is usually no reason to rebuild the graph in this state
+- All data is up to date<br>
+- There is usually no reason to rebuild the graph in this state<br>
+<br>
 
-**Stale**
+### Stale
+
 <p align="center">
   <img src="../media/topology_stale.png" width="800" alt="Discovery Sessions">
 </p>
-- One or more entities have been added or updated since the visualization was last rebuilt
-- Rebuilding the graph will add those entities
+- One or more entities have been added or updated since the visualization was last rebuilt<br>
+- Rebuilding the graph will add those entities<br>
+<br>
 
-**Conflict**
+### Conflict
+
 <p align="center">
   <img src="../media/topology_conflict.png" width="800" alt="Discovery Sessions">
 </p>
-- One or more entities on the graph have been deleted since it was last rebuilt
-- Rebuilding the graph will remove those entities
-- The specific entities that will be removed will be displayed in a modal so you can confirm before they are removed.
+- One or more entities on the graph have been deleted since it was last rebuilt<br>
+- Rebuilding the graph will remove those entities<br>
+- The specific entities that will be removed will be displayed in a modal so you can confirm before they are removed.<br>
+<br>
 
-**Locked**
+### Locked
+
 <p align="center">
   <img src="../media/topology_locked.png" width="800" alt="Discovery Sessions">
 </p>
-- Other states will not be displayed
-- Topology cannot be rebuilt
-- Press Lock to enter the locked state
+- Other states will not be displayed<br>
+- Topology cannot be rebuilt<br>
+- Press Lock to enter the locked state<br>
+<br>
 
 ### Visual Elements
 
