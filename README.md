@@ -105,6 +105,19 @@ The server-daemon architecture allows you to scan networks from multiple vantage
 
 ## 📦 Installation
 
+### Choose Your Installation Method
+
+**🐳 Docker (Recommended for most users)**
+- Easy setup with docker-compose
+- Isolated environment
+- Quick updates
+
+**🐧 Native Ubuntu Installation**
+- No Docker required
+- Direct system integration
+- Better performance for large networks
+- **[See Ubuntu Installation Guide →](UBUNTU_INSTALLATION.md)**
+
 Refer to [Configuration](#️-configuration) for more setup options.
 
 ### 0. ✅ Install Requirements
@@ -112,6 +125,11 @@ Refer to [Configuration](#️-configuration) for more setup options.
 #### Server (Docker - Recommended)
 - Docker
 - Docker Compose
+
+#### Server (Ubuntu Native Installation)
+- **One-command install**: `sudo ./install-ubuntu.sh`
+- **Manual requirements**: Rust 1.90+, Node.js 20+, PostgreSQL 14+
+- **[Full Ubuntu Guide →](UBUNTU_INSTALLATION.md)**
 
 #### Server (Building from source)
 - Rust 1.90 or later
