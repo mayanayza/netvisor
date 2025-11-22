@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
-	import InspectorInterfaceNode from './edges/nodes/InspectorInterfaceNode.svelte';
-	import InspectorSubnetNode from './edges/nodes/InspectorSubnetNode.svelte';
+	import InspectorInterfaceNode from './nodes/InspectorInterfaceNode.svelte';
+	import InspectorSubnetNode from './nodes/InspectorSubnetNode.svelte';
 
 	let { node }: { node: Node } = $props();
 

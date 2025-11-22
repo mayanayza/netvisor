@@ -10,6 +10,8 @@
 	export let onDelete: (apiKey: ApiKey) => void = () => {};
 	export let onEdit: (apiKey: ApiKey) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	// Build card data
 	$: cardData = {
@@ -44,19 +46,19 @@
 		],
 		actions: [
 			{
-				label: 'Delete Api Key',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(apiKey)
 			},
 			{
-				label: 'Edit Api Key',
+				label: 'Edit',
 				icon: Edit,
-				class: 'btn-icon-danger',
+				class: 'btn-icon',
 				onClick: () => onEdit(apiKey)
 			}
 		]
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

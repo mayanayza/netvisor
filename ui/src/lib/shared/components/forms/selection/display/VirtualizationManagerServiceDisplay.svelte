@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { concepts, serviceDefinitions } from '$lib/shared/stores/metadata';
 
 	export const VirtualizationManagerServiceDisplay: EntityDisplayComponent<Service, object> = {
 		getId: (service: Service) => service.id,
@@ -24,7 +24,7 @@
 			if (service.virtualization) {
 				const tag: TagProps = {
 					label: service.virtualization.type,
-					color: entities.getColorHelper('Virtualization').string
+					color: concepts.getColorHelper('Virtualization').string
 				};
 
 				tags.push(tag);

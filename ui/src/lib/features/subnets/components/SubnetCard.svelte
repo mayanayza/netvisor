@@ -11,6 +11,8 @@
 	export let onEdit: (subnet: Subnet) => void = () => {};
 	export let onDelete: (subnet: Subnet) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: allServices = getServicesForSubnet(subnet);
 	$: serviceLabelsStore = formatServiceLabels($allServices.map((s) => s.id));
@@ -78,13 +80,13 @@
 
 		actions: [
 			{
-				label: 'Delete Subnet',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(subnet)
 			},
 			{
-				label: 'Edit Subnet',
+				label: 'Edit',
 				icon: Edit,
 				onClick: () => onEdit(subnet)
 			}
@@ -92,4 +94,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

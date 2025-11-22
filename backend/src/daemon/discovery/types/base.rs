@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Hash)]
 pub enum DiscoveryPhase {
     Pending, // Initial state, set by server; all subsequent states until Finished are set by Daemon
     Starting,

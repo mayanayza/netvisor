@@ -40,11 +40,13 @@
 	let {
 		activeTab = $bindable('topology'),
 		collapsed = $bindable(false),
-		activeComponent = $bindable<Component | null>(null)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		allTabs = $bindable<Array<{ id: string; component: any }>>([])
 	}: {
 		activeTab?: string;
 		collapsed?: boolean;
-		activeComponent?: Component | null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		allTabs?: Array<{ id: string; component: any }>;
 	} = $props();
 
 	// Derived values from stores
@@ -225,6 +227,30 @@
 		}
 	];
 
+	// Extract all tabs with components from the nav config and expose to parent
+	$effect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const tabs: Array<{ id: string; component: any }> = [];
+
+		for (const configItem of baseNavConfig) {
+			if (isSection(configItem)) {
+				// Get tabs from section items
+				for (const item of configItem.items) {
+					if (item.component) {
+						tabs.push({ id: item.id, component: item.component });
+					}
+				}
+			} else {
+				// Standalone item
+				if (configItem.component) {
+					tabs.push({ id: configItem.id, component: configItem.component });
+				}
+			}
+		}
+
+		allTabs = tabs;
+	});
+
 	// Helper to check if user has required permissions
 	function hasRequiredPermissions(item: NavItem): boolean {
 		// If no permissions specified, everyone can see it
@@ -297,24 +323,6 @@
 			return itemPosition === position || (position === 'main' && !itemPosition);
 		});
 	}
-
-	// Find component for a given tab ID
-	function findComponentForTab(tabId: string): Component | null {
-		for (const item of navConfig) {
-			if (isSection(item)) {
-				const found = item.items.find((i) => i.id === tabId);
-				if (found?.component) return found.component;
-			} else if (item.id === tabId && 'component' in item) {
-				return item.component || null;
-			}
-		}
-		return null;
-	}
-
-	// Update active component when activeTab changes
-	$effect(() => {
-		activeComponent = findComponentForTab(activeTab);
-	});
 
 	let mainNavItems = $derived(filterByPosition(navConfig, 'main'));
 	let bottomNavItems = $derived(filterByPosition(navConfig, 'bottom'));

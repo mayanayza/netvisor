@@ -15,13 +15,15 @@ export interface User {
 export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Visualizer' | 'None';
 
 export type UserOrInvite =
-	| { type: 'user'; data: User }
-	| { type: 'invite'; data: OrganizationInvite };
+	| { type: 'user'; data: User; id: string }
+	| { type: 'invite'; data: OrganizationInvite; id: string };
 
-export function isUser(item: UserOrInvite): item is { type: 'user'; data: User } {
+export function isUser(item: UserOrInvite): item is { type: 'user'; data: User; id: string } {
 	return item.type === 'user';
 }
 
-export function isInvite(item: UserOrInvite): item is { type: 'invite'; data: OrganizationInvite } {
+export function isInvite(
+	item: UserOrInvite
+): item is { type: 'invite'; data: OrganizationInvite; id: string } {
 	return item.type === 'invite';
 }

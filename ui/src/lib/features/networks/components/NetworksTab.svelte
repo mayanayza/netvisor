@@ -4,6 +4,7 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import {
+		bulkDeleteNetworks,
 		createNetwork,
 		deleteNetwork,
 		getNetworks,
@@ -19,6 +20,7 @@
 	import NetworkEditModal from './NetworkEditModal.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
@@ -43,6 +45,12 @@
 	function handleEditNetwork(network: Network) {
 		editingNetwork = network;
 		showCreateNetworkModal = true;
+	}
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Networks?`)) {
+			await bulkDeleteNetworks(ids);
+		}
 	}
 
 	async function handleNetworkCreate(data: Network) {
@@ -81,16 +89,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Networks"
-		subtitle="Manage networks"
-		buttons={[
-			{
-				onClick: handleCreateNetwork,
-				cta: 'Create Network'
-			}
-		]}
-	/>
+	<TabHeader title="Networks" subtitle="Manage networks">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
+				><Plus class="h-5 w-5" />Create Network</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}
@@ -107,12 +112,21 @@
 		<DataControls
 			items={$networks}
 			fields={networkFields}
+			onBulkDelete={handleBulkDelete}
 			storageKey="netvisor-networks-table-state"
+			getItemId={(item) => item.id}
 		>
-			{#snippet children(item: Network, viewMode: 'card' | 'list')}
+			{#snippet children(
+				item: Network,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<NetworkCard
 					network={item}
 					{viewMode}
+					selected={isSelected}
+					{onSelectionChange}
 					onDelete={handleDeleteNetwork}
 					onEdit={handleEditNetwork}
 				/>

@@ -1,6 +1,6 @@
 use crate::server::auth::middleware::{AuthenticatedEntity, MemberOrDaemon};
 use crate::server::shared::handlers::traits::{
-    CrudHandlers, delete_handler, get_by_id_handler, update_handler,
+    CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler, update_handler,
 };
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
@@ -23,6 +23,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler::<Subnet>))
         .route("/{id}", delete(delete_handler::<Subnet>))
         .route("/{id}", get(get_by_id_handler::<Subnet>))
+        .route("/bulk-delete", post(bulk_delete_handler::<Subnet>))
 }
 
 pub async fn create_handler(
@@ -53,7 +54,7 @@ pub async fn create_handler(
     );
 
     let service = Subnet::get_service(&state);
-    let created = service.create(request).await.map_err(|e| {
+    let created = service.create(request, entity.clone()).await.map_err(|e| {
         tracing::error!(
             error = %e,
             entity_id = %entity.entity_id(),
@@ -76,11 +77,27 @@ async fn get_all_subnets(
     State(state): State<Arc<AppState>>,
     entity: AuthenticatedEntity,
 ) -> ApiResult<Json<ApiResponse<Vec<Subnet>>>> {
-    tracing::debug!(
-        entity_id = %entity.entity_id(),
-        network_count = %entity.network_ids().len(),
-        "Get all subnets request received"
-    );
+    match &entity {
+        AuthenticatedEntity::User { user_id, .. } => {
+            tracing::debug!(
+                entity_type = "subnet",
+                user_id = %user_id,
+                "Get all request received"
+            );
+        }
+        AuthenticatedEntity::Daemon { .. } => {
+            tracing::debug!(
+                entity_type = "subnet",
+                daemon_id = %entity.entity_id(),
+                "Get all request received"
+            );
+        }
+        _ => {
+            return Err(ApiError::internal_error(
+                "Invalid authentication for request to /subnets/",
+            ));
+        }
+    }
 
     let service = &state.services.subnet_service;
     let filter = EntityFilter::unfiltered().network_ids(&entity.network_ids());
@@ -94,11 +111,29 @@ async fn get_all_subnets(
         ApiError::internal_error(&e.to_string())
     })?;
 
-    tracing::debug!(
-        entity_id = %entity.entity_id(),
-        subnet_count = %subnets.len(),
-        "Subnets fetched successfully"
-    );
+    match &entity {
+        AuthenticatedEntity::User { user_id, .. } => {
+            tracing::debug!(
+                user_id = %user_id,
+                entity_type = "subnet",
+                subnet_count = %subnets.len(),
+                "Entities fetched successfully"
+            );
+        }
+        AuthenticatedEntity::Daemon { .. } => {
+            tracing::debug!(
+                entity_type = "subnet",
+                daemon_id = %entity.entity_id(),
+                subnet_count = %subnets.len(),
+                "Entities fetched successfully"
+            );
+        }
+        _ => {
+            return Err(ApiError::internal_error(
+                "Invalid authentication for request to /subnets/",
+            ));
+        }
+    }
 
     Ok(Json(ApiResponse::success(subnets)))
 }

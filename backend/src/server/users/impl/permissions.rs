@@ -3,12 +3,22 @@ use std::{cmp::Ordering, str::FromStr};
 use strum::{Display, EnumIter, IntoEnumIterator, IntoStaticStr};
 
 use crate::server::shared::{
-    entities::Entity,
+    entities::EntityDiscriminants,
     types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
 };
 
 #[derive(
-    Debug, Clone, Copy, Serialize, Deserialize, Display, PartialEq, Eq, EnumIter, IntoStaticStr,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    Display,
+    PartialEq,
+    Eq,
+    EnumIter,
+    IntoStaticStr,
+    Hash,
 )]
 pub enum UserOrgPermissions {
     Owner,
@@ -75,11 +85,11 @@ impl HasId for UserOrgPermissions {
 
 impl EntityMetadataProvider for UserOrgPermissions {
     fn color(&self) -> &'static str {
-        Entity::User.color()
+        EntityDiscriminants::User.color()
     }
 
     fn icon(&self) -> &'static str {
-        Entity::User.icon()
+        EntityDiscriminants::User.icon()
     }
 }
 

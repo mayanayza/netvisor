@@ -58,6 +58,26 @@
 		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-green-800/50 disabled:hover:bg-green-950/40 disabled:hover:text-green-400;
 	}
 
+	/* Warning action button - mirrors btn-danger pattern for yellow/warning states */
+	.btn-warning {
+		@apply bg-yellow-950/40 hover:bg-yellow-950/60;
+		@apply border border-yellow-800/50 hover:border-yellow-700;
+		@apply rounded-md px-4 py-2 font-medium text-yellow-400 hover:text-yellow-300;
+		@apply transition-colors duration-150;
+		@apply inline-flex items-center justify-center gap-2;
+		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-yellow-800/50 disabled:hover:bg-yellow-950/40 disabled:hover:text-yellow-400;
+	}
+
+	/* Info action button - mirrors btn-primary pattern for blue/info states */
+	.btn-info {
+		@apply bg-blue-950/40 hover:bg-blue-950/60;
+		@apply border border-blue-800/50 hover:border-blue-700;
+		@apply rounded-md px-4 py-2 font-medium text-blue-400 hover:text-blue-300;
+		@apply transition-colors duration-150;
+		@apply inline-flex items-center justify-center gap-2;
+		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-blue-800/50 disabled:hover:bg-blue-950/40 disabled:hover:text-blue-400;
+	}
+
 	/* Icon buttons - minimal style for icon-only actions */
 	.btn-icon {
 		@apply rounded p-2 text-gray-500 hover:bg-gray-800 hover:text-gray-200;
@@ -84,7 +104,7 @@
 
 	/* Icon button - primary variant (for emphasized icon actions) */
 	.btn-icon-primary {
-		@apply rounded p-2 text-gray-500 hover:bg-purple-950/30 hover:text-purple-400;
+		@apply rounded p-2 text-gray-500 hover:bg-blue-950/30 hover:text-blue-400;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center;
 		@apply disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500;

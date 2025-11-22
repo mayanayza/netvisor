@@ -6,12 +6,6 @@
     "name": "NetVisor Server API"
   },
   {
-    "description": "NetVisor Daemon API for network scanning",
-    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
-    "logo_url": "/logos/netvisor-logo.png",
-    "name": "NetVisor Daemon API"
-  },
-  {
     "description": "User invitation and management system for Jellyfin, Plex, Emby etc",
     "discovery_pattern": "Endpoint response body from <ip>:5690/static/manifest.json contains Wizarr",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wizarr.svg",
@@ -55,7 +49,7 @@
   },
   {
     "description": "Community-supported document management system",
-    "discovery_pattern": "Endpoint response body from <ip>:8000/ contains Paperless-ngx project",
+    "discovery_pattern": "Endpoint response body from <ip>:8000/static/frontend/en-US/manifest.webmanifest contains Paperless-ngx",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/paperless-ngx.svg",
     "name": "Paperless-NGX"
   },
@@ -408,6 +402,12 @@
     "name": "CoolerControl"
   },
   {
+    "description": "APC Network-Connected UPS",
+    "discovery_pattern": "Endpoint response body from <ip>:80/ contains Schneider Electric",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/apc.svg",
+    "name": "APC"
+  },
+  {
     "description": "A single pane of glass for managing clustered & non-clustered Proxmox nodes",
     "discovery_pattern": "Endpoint response body from <ip>:8443/ contains pdm-ui_bundle.js",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/proxmox.svg",
@@ -690,6 +690,12 @@
     "name": "MariaDB"
   },
   {
+    "description": "Time series database",
+    "discovery_pattern": "8086/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/influxdb.svg",
+    "name": "InfluxDB"
+  },
+  {
     "description": "NoSQL document database",
     "discovery_pattern": "Endpoint response body from <ip>:5984/ contains couchdb",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/couchdb.svg",
@@ -742,6 +748,12 @@
     "discovery_pattern": "All of: (2377/tcp is open, 7946/tcp is open)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
     "name": "Docker Swarm"
+  },
+  {
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   },
   {
     "description": "A generic docker container",
@@ -804,6 +816,12 @@
     "name": "Slskd"
   },
   {
+    "description": "A NZB Files Downloader.",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/Content/manifest.json contains SABnzbd",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/sabnzbd.svg",
+    "name": "SABnzbd"
+  },
+  {
     "description": "Media server for streaming personal content",
     "discovery_pattern": "Any of: (Endpoint response body from <ip>:32400/web/index.html contains Plex, Endpoint response status is between 401 and 401, and response from <ip>:32400 has header X-Plex-Protocol with value 1.0)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/plex.svg",
@@ -850,6 +868,12 @@
     "discovery_pattern": "Endpoint response body from <ip>:8096/emby/System/Info/Public contains Emby",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/emby.svg",
     "name": "Emby"
+  },
+  {
+    "description": "A companion application to Sonarr and Radarr that manages and downloads subtitles",
+    "discovery_pattern": "6767/tcp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/bazarr.svg",
+    "name": "Bazarr"
   },
   {
     "description": "Self-hosted audiobook and podcast server.",
@@ -943,7 +967,7 @@
   },
   {
     "description": "Self-hosted cloud storage and collaboration platform",
-    "discovery_pattern": "Any of: (Endpoint response body from <ip>:80/core/css/server.css contains Nextcloud GmbH, Endpoint response body from <ip>:443/core/css/server.css contains Nextcloud GmbH)",
+    "discovery_pattern": "Endpoint response body from <ip>:80/core/css/server.css contains Nextcloud GmbH",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nextcloud.svg",
     "name": "NextCloud"
   },
@@ -1098,6 +1122,12 @@
     "name": "CrowdSec"
   },
   {
+    "description": "Ubiquiti UniFi network controller",
+    "discovery_pattern": "Endpoint response body from <ip>:8443/manage contains UniFi",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unifi.svg",
+    "name": "UniFi Controller"
+  },
+  {
     "description": "Ubiquiti UniFi wireless access point",
     "discovery_pattern": "All of: (MAC Address belongs to Ubiquiti Networks Inc, Endpoint response body from <ip>:80/ contains Unifi)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/unifi.svg",
@@ -1170,9 +1200,9 @@
     "name": "Dhcp Server"
   },
   {
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
+    "description": "NetVisor Daemon API for network scanning",
+    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
+    "logo_url": "/logos/netvisor-logo.png",
+    "name": "NetVisor Daemon API"
   }
 ]

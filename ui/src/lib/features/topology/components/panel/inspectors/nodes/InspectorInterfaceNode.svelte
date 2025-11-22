@@ -1,36 +1,36 @@
 <script lang="ts">
 	import type { Node } from '@xyflow/svelte';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
-	import { getHostFromId } from '$lib/features/hosts/store';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
-	import { getServicesForHost } from '$lib/features/services/store';
+	import { topology } from '$lib/features/topology/store';
+	import type { InterfaceNode } from '$lib/features/topology/types/base';
 
 	let { node }: { node: Node } = $props();
 
-	let hostStore = $derived(getHostFromId(node.data.host_id as string));
-	let host = $derived($hostStore);
+	let nodeData = node.data as InterfaceNode;
+
+	let host = $derived($topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : null);
 
 	// Get the interface for this node
 	let thisInterface = $derived(
-		host ? host.interfaces.find((i) => i.id === node.data.interface_id) : null
+		host ? host.interfaces.find((i) => i.id === nodeData.interface_id) : null
 	);
 
 	// Get all services for this host
-	let servicesForHostStore = $derived(getServicesForHost(node.data.host_id as string));
-	let servicesForHost = $derived($servicesForHostStore);
+	let servicesForHost = $derived($topology.services.filter((s) => s.host_id == nodeData.host_id));
 
 	// Filter services bound to this specific interface
 	let servicesOnThisInterface = $derived(
 		servicesForHost.filter((s) =>
-			s.bindings.some((b) => b.interface_id === node.data.interface_id || b.interface_id === null)
+			s.bindings.some((b) => b.interface_id === nodeData.interface_id || b.interface_id === null)
 		)
 	);
 
 	// Get other interfaces on this host (excluding the current one)
 	let otherInterfaces = $derived(
-		host ? host.interfaces.filter((i) => i.id !== node.data.interface_id) : []
+		host ? host.interfaces.filter((i) => i.id !== nodeData.interface_id) : []
 	);
 </script>
 

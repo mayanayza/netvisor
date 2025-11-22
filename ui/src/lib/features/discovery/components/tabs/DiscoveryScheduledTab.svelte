@@ -2,9 +2,10 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
-	import { initiateDiscovery } from '../../SSEStore';
+	import { initiateDiscovery } from '../../sse';
 	import type { Discovery } from '../../types/base';
 	import {
+		bulkDeleteDiscoveries,
 		createDiscovery,
 		deleteDiscovery,
 		discoveries,
@@ -20,6 +21,7 @@
 	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import DiscoveryRunCard from '../cards/DiscoveryScheduledCard.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
 
@@ -67,6 +69,12 @@
 		editingDiscovery = null;
 	}
 
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Scheduled Discoveries?`)) {
+			await bulkDeleteDiscoveries(ids);
+		}
+	}
+
 	let fields: FieldConfig<Discovery>[];
 
 	$: fields = [
@@ -85,16 +93,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Scheduled Discovery"
-		subtitle="Schedule discovery sessions"
-		buttons={[
-			{
-				onClick: handleCreateDiscovery,
-				cta: 'Schedule Discovery'
-			}
-		]}
-	/>
+	<TabHeader title="Scheduled Discovery" subtitle="Schedule discovery sessions">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateDiscovery}
+				><Plus class="h-5 w-5" />Schedule Discovery</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	{#if $loading}
 		<Loading />
@@ -112,11 +117,20 @@
 				(d) => d.run_type.type == 'AdHoc' || d.run_type.type == 'Scheduled'
 			)}
 			{fields}
+			onBulkDelete={handleBulkDelete}
 			storageKey="netvisor-discovery-scheduled-table-state"
+			getItemId={(item) => item.id}
 		>
-			{#snippet children(item: Discovery, viewMode: 'card' | 'list')}
+			{#snippet children(
+				item: Discovery,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<DiscoveryRunCard
 					discovery={item}
+					selected={isSelected}
+					{onSelectionChange}
 					onDelete={handleDeleteDiscovery}
 					onEdit={handleEditDiscovery}
 					onRun={handleDiscoveryRun}

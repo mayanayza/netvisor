@@ -1,20 +1,16 @@
 <script lang="ts">
 	import type { Edge } from '@xyflow/svelte';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
-	import { getHostFromId, getInterfaceFromId } from '$lib/features/hosts/store';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
+	import { topology } from '$lib/features/topology/store';
 
 	let { edge, hostId }: { edge: Edge; hostId: string } = $props();
 
-	let hostStore = $derived(getHostFromId(hostId));
-	let host = $derived($hostStore);
+	let host = $derived($topology ? $topology.hosts.find((h) => h.id == hostId) : null);
 
-	let sourceInterfaceStore = $derived(getInterfaceFromId(edge.source));
-	let sourceInterface = $derived($sourceInterfaceStore);
-
-	let targetInterfaceStore = $derived(getInterfaceFromId(edge.target));
-	let targetInterface = $derived($targetInterfaceStore);
+	let sourceInterface = $derived(host?.interfaces.find((i) => i.id == edge.source));
+	let targetInterface = $derived(host?.interfaces.find((i) => i.id == edge.target));
 </script>
 
 <div class="space-y-3">

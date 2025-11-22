@@ -5,20 +5,14 @@ import { currentUser } from '../auth/store';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 
 export const networks = writable<Network[]>([]);
-export const currentNetwork = writable<Network>();
 
 export async function getNetworks() {
 	const user = get(currentUser);
 
 	if (user) {
-		const result = await api.request<Network[]>(`/networks`, networks, (networks) => networks, {
+		await api.request<Network[]>(`/networks`, networks, (networks) => networks, {
 			method: 'GET'
 		});
-
-		if (result && result.success && result.data) {
-			const current = get(networks).find((n) => n.is_default) || get(networks)[0];
-			currentNetwork.set(current);
-		}
 	}
 }
 
@@ -50,6 +44,17 @@ export async function deleteNetwork(id: string) {
 		networks,
 		(_, current) => current.filter((n) => n.id !== id),
 		{ method: 'DELETE' }
+	);
+
+	return result;
+}
+
+export async function bulkDeleteNetworks(ids: string[]) {
+	const result = await api.request<void, Network[]>(
+		`/networks/bulk-delete`,
+		networks,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
 	);
 
 	return result;

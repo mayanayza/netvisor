@@ -64,10 +64,9 @@ where
             SqlValue::U16(v) => query.bind(Into::<i32>::into(*v)),
             SqlValue::I32(v) => query.bind(v),
             SqlValue::Bool(v) => query.bind(v),
-            SqlValue::Json(v) => query.bind(v),
             SqlValue::Timestamp(v) => query.bind(v),
             SqlValue::OptionTimestamp(v) => query.bind(v),
-            SqlValue::UuidArray(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::UuidArray(v) => query.bind(v.clone()),
             SqlValue::OptionalString(v) => query.bind(v),
             SqlValue::EntitySource(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::IpCidr(v) => query.bind(serde_json::to_string(v)?),
@@ -90,6 +89,13 @@ where
             SqlValue::OptionBillingPlan(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::OptionBillingPlanStatus(v) => query.bind(serde_json::to_string(v)?),
             SqlValue::EdgeStyle(v) => query.bind(v.to_string()),
+            SqlValue::Nodes(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Edges(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::TopologyOptions(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Hosts(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Subnets(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Services(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Groups(v) => query.bind(serde_json::to_value(v)?),
         };
 
         Ok(value)
@@ -111,7 +117,7 @@ where
         }
 
         query.execute(&self.pool).await?;
-        tracing::info!("Created {}: {}", T::table_name(), entity);
+        tracing::debug!("Created {}: {}", T::table_name(), entity);
         Ok(entity.clone())
     }
 
@@ -167,7 +173,7 @@ where
             query = Self::bind_value(query, value)?;
         }
 
-        tracing::info!("Updated {}", entity);
+        tracing::debug!("Updated {}", entity);
 
         query.execute(&self.pool).await?;
         Ok(entity.clone())
@@ -178,8 +184,33 @@ where
 
         sqlx::query(&query_str).bind(id).execute(&self.pool).await?;
 
-        tracing::info!("Deleted {} with id: {}", T::table_name(), id);
+        tracing::debug!("Deleted {} with id: {}", T::table_name(), id);
 
         Ok(())
+    }
+
+    async fn delete_many(&self, ids: &[Uuid]) -> Result<usize, anyhow::Error> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let query_str = format!("DELETE FROM {} WHERE id = ANY($1)", T::table_name());
+
+        let result = sqlx::query(&query_str)
+            .bind(ids)
+            .execute(&self.pool)
+            .await?;
+
+        let deleted_count = result.rows_affected() as usize;
+
+        tracing::debug!(
+            "Bulk deleted {} {}s (requested: {}, deleted: {})",
+            deleted_count,
+            T::table_name(),
+            ids.len(),
+            deleted_count
+        );
+
+        Ok(deleted_count)
     }
 }

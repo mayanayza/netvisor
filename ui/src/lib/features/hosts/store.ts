@@ -5,7 +5,7 @@ import { pushSuccess } from '$lib/shared/stores/feedback';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { isContainerSubnet } from '../subnets/store';
 import { getBindingFromId, getBindingDisplayName } from '../services/store';
-import { currentNetwork } from '../networks/store';
+import { networks } from '../networks/store';
 
 export const hosts = writable<Host[]>([]);
 export const polling = writable(false);
@@ -45,6 +45,17 @@ export async function deleteHost(id: string) {
 	);
 }
 
+export async function bulkDeleteHosts(ids: string[]) {
+	const result = await api.request<void, Host[]>(
+		`/hosts/bulk-delete`,
+		hosts,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export async function consolidateHosts(destination_host_id: string, other_host_id: string) {
 	const other_host_name = get(getHostFromId(other_host_id))?.name;
 
@@ -78,7 +89,7 @@ export function createEmptyHostFormData(): Host {
 			type: 'Manual'
 		},
 		virtualization: null,
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		hidden: false
 	};
 }

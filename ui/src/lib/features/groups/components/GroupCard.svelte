@@ -9,6 +9,8 @@
 	export let onEdit: (group: Group) => void = () => {};
 	export let onDelete: (group: Group) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: groupServicesStore = getServicesForGroup(group.id);
 	$: groupServices = $groupServicesStore;
@@ -37,6 +39,28 @@
 				emptyText: 'No type specified'
 			},
 			{
+				label: 'Color',
+				value: [
+					{
+						id: 'color',
+						label: group.color.charAt(0).toUpperCase() + group.color.slice(1),
+						color: group.color
+					}
+				],
+				emptyText: 'No type specified'
+			},
+			{
+				label: 'Edge Style',
+				value: [
+					{
+						id: 'type',
+						label: group.edge_style,
+						color: 'gray'
+					}
+				],
+				emptyText: 'No type specified'
+			},
+			{
 				label: 'Services',
 				value: groupServiceLabels.map(({ id, label }, i) => {
 					return {
@@ -51,13 +75,13 @@
 
 		actions: [
 			{
-				label: 'Delete Group',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(group)
 			},
 			{
-				label: 'Edit Group',
+				label: 'Edit',
 				icon: Edit,
 				onClick: () => onEdit(group)
 			}
@@ -65,4 +89,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

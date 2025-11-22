@@ -140,6 +140,7 @@ impl EdgeBuilder {
 
                             if ctx.interface_will_have_node(&origin_interface.id) {
                                 return vec![Edge {
+                                    id: Uuid::new_v4(),
                                     source: origin_interface.id,
                                     target: *first_subnet_id,
                                     edge_type: EdgeType::ServiceVirtualization {
@@ -186,6 +187,7 @@ impl EdgeBuilder {
                                 && ctx.interface_will_have_node(&container_binding_interface_id)
                             {
                                 return Some(Edge {
+                                    id: Uuid::new_v4(),
                                     source: origin_interface.id,
                                     target: container_binding_interface_id,
                                     edge_type: EdgeType::ServiceVirtualization {
@@ -277,6 +279,7 @@ impl EdgeBuilder {
                                     )?;
 
                                 return Some(Edge {
+                                    id: Uuid::new_v4(),
                                     source: *proxmox_service_interface_id,
                                     target: i.id,
                                     edge_type: EdgeType::HostVirtualization {
@@ -342,6 +345,7 @@ impl EdgeBuilder {
                                 )?;
 
                             Some(Edge {
+                                id: Uuid::new_v4(),
                                 source: origin_interface.id,
                                 target: interface.id,
                                 edge_type: EdgeType::Interface { host_id: host.id },
@@ -453,6 +457,7 @@ impl EdgeBuilder {
             };
 
             return Some(Edge {
+                id: Uuid::new_v4(),
                 source: source_interface,
                 target: target_interface,
                 edge_type: match group.base.group_type {

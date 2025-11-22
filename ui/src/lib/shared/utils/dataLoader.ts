@@ -8,7 +8,7 @@ interface LoadDataOptions {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function loadData(loaders: (() => Promise<any>)[], options: LoadDataOptions = {}) {
-	const { loadingDelay = 500 } = options;
+	const { loadingDelay = 750 } = options;
 
 	// If loadingDelay is 0, start with loading = true immediately
 	const loading = writable(loadingDelay === 0);

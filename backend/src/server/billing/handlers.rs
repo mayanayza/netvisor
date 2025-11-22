@@ -51,7 +51,13 @@ async fn create_checkout_session(
         }
 
         let session = billing_service
-            .create_checkout_session(user.organization_id, request.plan, success_url, cancel_url)
+            .create_checkout_session(
+                user.organization_id,
+                request.plan,
+                success_url,
+                cancel_url,
+                user.into(),
+            )
             .await?;
 
         Ok(Json(ApiResponse::success(session.url.unwrap())))

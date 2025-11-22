@@ -9,8 +9,9 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import CreateApiKeyModal from './ApiKeyModal.svelte';
 	import type { ApiKey } from '../types/base';
-	import { apiKeys, deleteApiKey, getApiKeys, updateApiKey } from '../store';
+	import { apiKeys, bulkDeleteApiKeys, deleteApiKey, getApiKeys, updateApiKey } from '../store';
 	import ApiKeyCard from './ApiKeyCard.svelte';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getApiKeys, getDaemons]);
 
@@ -44,6 +45,12 @@
 		editingApiKey = apiKey;
 	}
 
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Api Keys?`)) {
+			await bulkDeleteApiKeys(ids);
+		}
+	}
+
 	const apiKeyFields: FieldConfig<ApiKey>[] = [
 		{
 			key: 'name',
@@ -69,17 +76,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="API Keys"
-		subtitle="Manage API Keys"
-		buttons={[
-			{
-				onClick: handleCreateApiKey,
-				cta: 'Create API Key'
-			}
-		]}
-	/>
-
+	<TabHeader title="API Keys" subtitle="Manage API Keys">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateApiKey}
+				><Plus class="h-5 w-5" />Create API Key</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 	<!-- Loading state -->
 	{#if $loading}
 		<Loading />
@@ -92,11 +95,24 @@
 			cta="Create your first API Key"
 		/>
 	{:else}
-		<DataControls items={$apiKeys} fields={apiKeyFields} storageKey="netvisor-api-keys-table-state">
-			{#snippet children(item: ApiKey, viewMode: 'card' | 'list')}
+		<DataControls
+			items={$apiKeys}
+			fields={apiKeyFields}
+			onBulkDelete={handleBulkDelete}
+			storageKey="netvisor-api-keys-table-state"
+			getItemId={(item) => item.id}
+		>
+			{#snippet children(
+				item: ApiKey,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<ApiKeyCard
 					apiKey={item}
 					{viewMode}
+					selected={isSelected}
+					{onSelectionChange}
 					onDelete={handleDeleteApiKey}
 					onEdit={handleEditApiKey}
 				/>

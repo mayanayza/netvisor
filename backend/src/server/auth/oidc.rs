@@ -1,4 +1,5 @@
 use anyhow::{Error, Result, anyhow};
+use chrono::Utc;
 use email_address::EmailAddress;
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
@@ -7,12 +8,22 @@ use openidconnect::{
     reqwest::Client as ReqwestClient,
 };
 use serde::{Deserialize, Serialize};
-use std::{str::FromStr, sync::Arc};
+use std::{net::IpAddr, str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 use crate::server::{
-    auth::service::AuthService,
-    users::r#impl::{base::User, permissions::UserOrgPermissions},
+    auth::{middleware::AuthenticatedEntity, service::AuthService},
+    shared::{
+        events::{
+            bus::EventBus,
+            types::{AuthEvent, AuthOperation},
+        },
+        services::traits::CrudService,
+    },
+    users::{
+        r#impl::{base::User, permissions::UserOrgPermissions},
+        service::UserService,
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,31 +43,19 @@ pub struct OidcPendingAuth {
 
 #[derive(Clone)]
 pub struct OidcService {
-    issuer_url: String,
-    client_id: String,
-    client_secret: String,
-    redirect_url: String,
-    provider_name: String,
-    auth_service: Arc<AuthService>,
+    pub issuer_url: String,
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_url: String,
+    pub provider_name: String,
+    pub auth_service: Arc<AuthService>,
+    pub user_service: Arc<UserService>,
+    pub event_bus: Arc<EventBus>,
 }
 
 impl OidcService {
-    pub fn new(
-        issuer_url: String,
-        client_id: String,
-        client_secret: String,
-        redirect_url: String,
-        provider_name: String,
-        auth_service: Arc<AuthService>,
-    ) -> Self {
-        Self {
-            issuer_url,
-            client_id,
-            client_secret,
-            redirect_url,
-            provider_name,
-            auth_service,
-        }
+    pub fn new(params: OidcService) -> Self {
+        params
     }
 
     /// Generate authorization URL for user to visit
@@ -155,6 +154,8 @@ impl OidcService {
         user_id: &Uuid,
         code: &str,
         pending_auth: OidcPendingAuth,
+        ip: IpAddr,
+        user_agent: Option<String>,
     ) -> Result<User> {
         let user_info = self.exchange_code(code, pending_auth).await?;
 
@@ -174,11 +175,36 @@ impl OidcService {
             return Ok(existing_user);
         }
 
-        // Link OIDC to current user
-        self.auth_service
+        let mut user = self
             .user_service
-            .link_oidc(user_id, user_info.subject, self.provider_name.clone())
-            .await
+            .get_by_id(user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("User not found"))?;
+
+        user.base.oidc_provider = Some(self.provider_name.clone());
+        user.base.oidc_subject = Some(user_info.subject);
+        user.base.oidc_linked_at = Some(chrono::Utc::now());
+
+        let authentication: AuthenticatedEntity = user.clone().into();
+
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::OidcLinked,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({
+                    "method": "oidc",
+                    "provider": self.provider_name
+                }),
+                authentication: authentication.clone(),
+            })
+            .await?;
+
+        self.user_service.update(&mut user, authentication).await
     }
 
     /// Login or register user via OIDC
@@ -188,16 +214,35 @@ impl OidcService {
         pending_auth: OidcPendingAuth,
         org_id: Option<Uuid>,
         permissions: Option<UserOrgPermissions>,
+        ip: IpAddr,
+        user_agent: Option<String>,
     ) -> Result<User> {
         let user_info = self.exchange_code(code, pending_auth).await?;
 
-        // Check if user exists with this OIDC account
+        // Check if user exists with this OIDC account, login if so
         if let Some(user) = self
             .auth_service
             .user_service
             .get_user_by_oidc(&user_info.subject)
             .await?
         {
+            self.event_bus
+                .publish_auth(AuthEvent {
+                    id: Uuid::new_v4(),
+                    user_id: Some(user.id),
+                    organization_id: Some(user.base.organization_id),
+                    timestamp: Utc::now(),
+                    operation: AuthOperation::LoginSuccess,
+                    ip_address: ip,
+                    user_agent,
+                    metadata: serde_json::json!({
+                        "method": "oidc",
+                        "provider": self.provider_name
+                    }),
+                    authentication: user.clone().into(),
+                })
+                .await?;
+
             return Ok(user);
         }
 
@@ -212,20 +257,83 @@ impl OidcService {
             Ok::<EmailAddress, Error>(EmailAddress::new_unchecked(fallback_email_str))
         })?;
 
-        // Register new user via OIDC
-        self.auth_service
-            .register_with_oidc(
+        // Register new user
+        let user = self
+            .auth_service
+            .provision_user(
                 email,
-                user_info.subject,
-                self.provider_name.clone(),
+                None,
+                Some(user_info.subject),
+                Some(self.provider_name.clone()),
                 org_id,
                 permissions,
             )
-            .await
+            .await?;
+
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::Register,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({
+                    "method": "oidc",
+                    "provider": self.provider_name
+                }),
+                authentication: user.clone().into(),
+            })
+            .await?;
+
+        Ok(user)
     }
 
     /// Unlink OIDC from user
-    pub async fn unlink_from_user(&self, user_id: &Uuid) -> Result<User> {
-        self.auth_service.user_service.unlink_oidc(user_id).await
+    pub async fn unlink_from_user(
+        &self,
+        user_id: &Uuid,
+        ip: IpAddr,
+        user_agent: Option<String>,
+    ) -> Result<User> {
+        let mut user = self
+            .user_service
+            .get_by_id(user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("User not found"))?;
+
+        // Require password before unlinking
+        if user.base.password_hash.is_none() {
+            return Err(anyhow::anyhow!(
+                "Cannot unlink OIDC - no password set. Set a password first."
+            ));
+        }
+
+        user.base.oidc_provider = None;
+        user.base.oidc_subject = None;
+        user.base.oidc_linked_at = None;
+        user.updated_at = chrono::Utc::now();
+
+        let authentication: AuthenticatedEntity = user.clone().into();
+
+        self.event_bus
+            .publish_auth(AuthEvent {
+                id: Uuid::new_v4(),
+                user_id: Some(user.id),
+                organization_id: Some(user.base.organization_id),
+                timestamp: Utc::now(),
+                operation: AuthOperation::OidcUnlinked,
+                ip_address: ip,
+                user_agent,
+                metadata: serde_json::json!({
+                    "method": "oidc",
+                    "provider": self.provider_name
+                }),
+                authentication: authentication.clone(),
+            })
+            .await?;
+
+        self.user_service.update(&mut user, authentication).await
     }
 }

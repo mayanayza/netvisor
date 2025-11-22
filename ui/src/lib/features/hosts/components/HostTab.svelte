@@ -7,17 +7,25 @@
 	import { getDaemons } from '$lib/features/daemons/store';
 	import HostEditor from './HostEditModal/HostEditor.svelte';
 	import HostConsolidationModal from './HostConsolidationModal.svelte';
-	import { consolidateHosts, createHost, deleteHost, getHosts, hosts, updateHost } from '../store';
+	import {
+		bulkDeleteHosts,
+		consolidateHosts,
+		createHost,
+		deleteHost,
+		getHosts,
+		hosts,
+		updateHost
+	} from '../store';
 	import { getGroups, groups } from '$lib/features/groups/store';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { getServiceById, getServices, services } from '$lib/features/services/store';
-	import { getSubnets } from '$lib/features/subnets/store';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
 	import { get } from 'svelte/store';
+	import { Plus } from 'lucide-svelte';
 
-	const loading = loadData([getHosts, getGroups, getServices, getSubnets, getDaemons]);
+	const loading = loadData([getHosts, getGroups, getServices, getDaemons]);
 
 	let showHostEditor = false;
 	let editingHost: Host | null = null;
@@ -157,6 +165,12 @@
 		}
 	}
 
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Hosts?`)) {
+			await bulkDeleteHosts(ids);
+		}
+	}
+
 	async function handleHostHide(host: Host) {
 		host.hidden = !host.hidden;
 		await updateHost({ host, services: null });
@@ -170,16 +184,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader
-		title="Hosts"
-		subtitle="Manage hosts on the network"
-		buttons={[
-			{
-				onClick: handleCreateHost,
-				cta: 'Create Host'
-			}
-		]}
-	/>
+	<TabHeader title="Hosts" subtitle="Manage hosts on the network">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateHost}
+				><Plus class="h-5 w-5" />Create Host</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	<!-- Loading state -->
 	{#if $loading}
@@ -193,12 +204,25 @@
 			cta="Create your first host"
 		/>
 	{:else}
-		<DataControls items={$hosts} fields={hostFields} storageKey="netvisor-hosts-table-state">
-			{#snippet children(item: Host, viewMode: 'card' | 'list')}
+		<DataControls
+			items={$hosts}
+			fields={hostFields}
+			storageKey="netvisor-hosts-table-state"
+			onBulkDelete={handleBulkDelete}
+			getItemId={(item) => item.id}
+		>
+			{#snippet children(
+				item: Host,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<HostCard
 					host={item}
 					hostGroups={hostGroups.get(item.id)}
 					{viewMode}
+					selected={isSelected}
+					{onSelectionChange}
 					onEdit={handleEditHost}
 					onDelete={handleDeleteHost}
 					onConsolidate={handleStartConsolidate}

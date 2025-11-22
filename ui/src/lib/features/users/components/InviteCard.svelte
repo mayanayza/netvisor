@@ -48,7 +48,7 @@
 			...(canManage
 				? [
 						{
-							label: 'Revoke Invite',
+							label: 'Revoke',
 							icon: UserX,
 							class: 'btn-icon-danger',
 							onClick: () => handleRevokeInvite()
@@ -59,4 +59,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} selectable={false} />

@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{
     Extension, Router,
@@ -6,6 +6,7 @@ use axum::{
 };
 use clap::Parser;
 use netvisor::server::{
+    auth::middleware::AuthenticatedEntity,
     billing::types::base::{BillingPlan, BillingRate, Price},
     config::{AppState, CliArgs, ServerConfig},
     organizations::r#impl::base::{Organization, OrganizationBase},
@@ -273,7 +274,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Spawn server in background
     tokio::spawn(async move {
-        axum::serve(listener, app).await.unwrap();
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .unwrap();
     });
 
     // Start cron for discovery scheduler
@@ -312,17 +318,23 @@ async fn main() -> anyhow::Result<()> {
     // First load - populate user and org
     if all_users.is_empty() {
         let organization = organization_service
-            .create(Organization::new(OrganizationBase {
-                stripe_customer_id: None,
-                plan: None,
-                plan_status: None,
-                name: "My Organization".to_string(),
-                is_onboarded: false,
-            }))
+            .create(
+                Organization::new(OrganizationBase {
+                    stripe_customer_id: None,
+                    plan: None,
+                    plan_status: None,
+                    name: "My Organization".to_string(),
+                    is_onboarded: false,
+                }),
+                AuthenticatedEntity::System,
+            )
             .await?;
 
         user_service
-            .create_user(User::new(UserBase::new_seed(organization.id)))
+            .create(
+                User::new(UserBase::new_seed(organization.id)),
+                AuthenticatedEntity::System,
+            )
             .await?;
     } else {
         tracing::debug!("Server already has data, skipping seed data");

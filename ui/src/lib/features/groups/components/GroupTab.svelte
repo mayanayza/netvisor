@@ -1,6 +1,13 @@
 <script lang="ts">
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
-	import { createGroup, deleteGroup, getGroups, groups, updateGroup } from '../store';
+	import {
+		bulkDeleteGroups,
+		createGroup,
+		deleteGroup,
+		getGroups,
+		groups,
+		updateGroup
+	} from '../store';
 	import type { Group } from '../types/base';
 	import GroupCard from './GroupCard.svelte';
 	import GroupEditModal from './GroupEditModal/GroupEditModal.svelte';
@@ -11,6 +18,7 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
+	import { Plus } from 'lucide-svelte';
 
 	const loading = loadData([getServices, getGroups]);
 
@@ -52,6 +60,12 @@
 	function handleCloseGroupEditor() {
 		showGroupEditor = false;
 		editingGroup = null;
+	}
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Groups?`)) {
+			await bulkDeleteGroups(ids);
+		}
 	}
 
 	// Define field configuration for the DataTableControls
@@ -103,16 +117,13 @@
 </script>
 
 <div class="space-y-6">
-	<TabHeader
-		title="Groups"
-		subtitle="Create custom groups to improve topology visualization"
-		buttons={[
-			{
-				onClick: handleCreateGroup,
-				cta: 'Create Group'
-			}
-		]}
-	/>
+	<TabHeader title="Groups" subtitle="Create custom groups to improve topology visualization">
+		<svelte:fragment slot="actions">
+			<button class="btn-primary flex items-center" on:click={handleCreateGroup}
+				><Plus class="h-5 w-5" />Create Group</button
+			>
+		</svelte:fragment>
+	</TabHeader>
 
 	{#if $loading}
 		<Loading />
@@ -125,10 +136,23 @@
 			cta="Create your first group"
 		/>
 	{:else}
-		<DataControls items={$groups} fields={groupFields} storageKey="netvisor-groups-table-state">
-			{#snippet children(item: Group, viewMode: 'card' | 'list')}
+		<DataControls
+			items={$groups}
+			fields={groupFields}
+			storageKey="netvisor-groups-table-state"
+			onBulkDelete={handleBulkDelete}
+			getItemId={(item) => item.id}
+		>
+			{#snippet children(
+				item: Group,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				<GroupCard
 					group={item}
+					selected={isSelected}
+					{onSelectionChange}
 					{viewMode}
 					onEdit={() => handleEditGroup(item)}
 					onDelete={() => handleDeleteGroup(item)}

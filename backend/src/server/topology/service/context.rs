@@ -8,7 +8,7 @@ use crate::server::{
     },
     subnets::r#impl::base::Subnet,
     topology::types::{
-        api::TopologyOptions,
+        base::TopologyOptions,
         edges::Edge,
         nodes::{Node, NodeType},
     },
@@ -140,9 +140,10 @@ impl<'a> TopologyContext<'a> {
                 if let Some(host) = self.hosts.iter().find(|h| h.id == s.base.host_id) {
                     return (self
                         .options
+                        .request
                         .left_zone_service_categories
                         .contains(&s.base.service_definition.category())
-                        || (self.options.show_gateway_in_left_zone
+                        || (self.options.request.show_gateway_in_left_zone
                             && s.base.service_definition.is_gateway()))
                         && subnet.has_interface_with_service(host, s);
                 }

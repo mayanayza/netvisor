@@ -5,8 +5,8 @@ import { formatPort, utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/uti
 import { formatInterface, getInterfaceFromId, getPortFromId, hosts } from '../hosts/store';
 import { ALL_INTERFACES, type Host } from '../hosts/types/base';
 import { groups } from '../groups/store';
-import { currentNetwork } from '../networks/store';
 import type { Subnet } from '../subnets/types/base';
+import { networks } from '../networks/store';
 
 export const services = writable<Service[]>([]);
 
@@ -25,6 +25,17 @@ export async function deleteService(id: string) {
 		(_, current) => current.filter((g) => g.id !== id),
 		{ method: 'DELETE' }
 	);
+}
+
+export async function bulkDeleteServices(ids: string[]) {
+	const result = await api.request<void, Service[]>(
+		`/services/bulk-delete`,
+		services,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
 }
 
 // Update a service
@@ -48,7 +59,7 @@ export function createDefaultService(
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		host_id,
 		is_gateway: false,
 		service_definition: serviceType,

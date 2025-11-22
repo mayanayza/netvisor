@@ -61,9 +61,13 @@
 					<OptionsContent />
 				{:else if activeTab === 'inspector'}
 					{#if $selectedNode}
-						<InspectorNode node={$selectedNode} />
+						{#key $selectedNode.id}
+							<InspectorNode node={$selectedNode} />
+						{/key}
 					{:else if $selectedEdge}
-						<InspectorEdge edge={$selectedEdge} />
+						{#key $selectedEdge.id}
+							<InspectorEdge edge={$selectedEdge} />
+						{/key}
 					{:else}
 						<div class="text-tertiary py-8 text-center text-sm">
 							Click on a node or edge to inspect it

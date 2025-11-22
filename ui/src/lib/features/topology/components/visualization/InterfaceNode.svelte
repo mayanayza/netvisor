@@ -1,43 +1,40 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
-	import { getHostFromId, getPortFromId } from '$lib/features/hosts/store';
-	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
-	import { getServicesForHost } from '$lib/features/services/store';
+	import { getPortFromId } from '$lib/features/hosts/store';
+	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { isContainerSubnet } from '$lib/features/subnets/store';
-	import { selectedEdge, selectedNode, topologyOptions } from '../store';
-	import type { NodeRenderData } from '../types/base';
+	import { selectedEdge, selectedNode, topology, topologyOptions } from '../../store';
+	import type { InterfaceNode, NodeRenderData } from '../../types/base';
 	import { get } from 'svelte/store';
 	import { formatPort } from '$lib/shared/utils/formatting';
-	import { connectedNodeIds } from '../interactions';
+	import { connectedNodeIds } from '../../interactions';
 
-	let { data, width, height }: NodeProps = $props();
+	let { id, data, width, height }: NodeProps = $props();
+
+	let nodeData = data as InterfaceNode;
 
 	height = height ? height : 0;
 	width = width ? width : 0;
 
-	let hostStore = $derived(data.host_id ? getHostFromId(data.host_id as string) : null);
-	let host = $derived(hostStore ? $hostStore : null);
-
-	let servicesForHostStore = $derived(
-		data.host_id ? getServicesForHost(data.host_id as string) : null
+	let host = $derived(
+		$topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : undefined
 	);
-	let servicesForHost = $derived(servicesForHostStore ? $servicesForHostStore : []);
 
-	// Compute nodeData reactively
-	let nodeData: NodeRenderData | null = $derived(
+	let servicesForHost = $derived(
+		$topology ? $topology.services.filter((s) => s.host_id == nodeData.host_id) : []
+	);
+
+	// Compute nodeRenderData reactively
+	let nodeRenderData: NodeRenderData | null = $derived(
 		host && data.host_id
 			? (() => {
 					const iface = host.interfaces.find((i) => i.id === data.interface_id);
 
 					const servicesOnInterface = servicesForHost
-						? servicesForHost.filter(
-								(s) =>
-									s.bindings.some(
-										(b) => b.interface_id == null || (iface && b.interface_id == iface.id)
-									) &&
-									!$topologyOptions.request_options.hide_service_categories.includes(
-										serviceDefinitions.getCategory(s.service_definition)
-									)
+						? servicesForHost.filter((s) =>
+								s.bindings.some(
+									(b) => b.interface_id == null || (iface && b.interface_id == iface.id)
+								)
 							)
 						: [];
 
@@ -67,41 +64,59 @@
 			: null
 	);
 
-	let isNodeSelected = $derived($selectedNode?.id === nodeData?.interface_id);
+	let isNodeSelected = $derived($selectedNode?.id === nodeRenderData?.interface_id);
 
-	// Calculate if this node should fade out when another node is selected
 	// Calculate if this node should fade out when another node is selected
 	let shouldFadeOut = $derived.by(() => {
 		if (!$selectedNode && !$selectedEdge) return false;
-		if (!nodeData) return false;
+		if (!nodeRenderData) return false;
 
 		// Check if this node is in the connected set
-		return !$connectedNodeIds.has(nodeData.interface_id);
+		return !$connectedNodeIds.has(nodeRenderData.interface_id);
 	});
 
 	let nodeOpacity = $derived(shouldFadeOut ? 0.3 : 1);
 
 	const hostColorHelper = entities.getColorHelper('Host');
-	const virtualizationColorHelper = entities.getColorHelper('Virtualization');
+	const virtualizationColorHelper = concepts.getColorHelper('Virtualization');
 
 	let cardClass = $derived(
-		`card ${isNodeSelected ? 'ring-2 ring-blue-500 hover:ring-2 hover:ring-blue-500' : ''} ${nodeData?.isVirtualized ? `border-color: ${virtualizationColorHelper.border}` : ''}`
+		`card ${isNodeSelected ? 'ring-2 ring-blue-500 hover:ring-2 hover:ring-blue-500' : ''} ${nodeRenderData?.isVirtualized ? `border-color: ${virtualizationColorHelper.border}` : ''}`
 	);
+
+	let handleStyle = $derived.by(() => {
+		const baseSize = 8;
+		const baseOpacity = $selectedEdge?.source == id || $selectedEdge?.target == id ? 1 : 0;
+
+		// Use host color or virtualization color
+		const fillColor = nodeRenderData?.isVirtualized
+			? virtualizationColorHelper.rgb
+			: hostColorHelper.rgb;
+
+		return `
+			width: ${baseSize}px;
+			height: ${baseSize}px;
+			border: 2px solid #374151;
+			background-color: ${fillColor};
+			opacity: ${baseOpacity};
+			transition: opacity 0.2s ease-in-out;
+		`;
+	});
 </script>
 
-{#if nodeData}
+{#if nodeRenderData}
 	<div
 		class={cardClass}
 		style={`width: ${width}px; height: ${height}px; display: flex; flex-direction: column; padding: 0; opacity: ${nodeOpacity}; transition: opacity 0.2s ease-in-out;`}
 	>
 		<!-- Rest of component stays the same -->
 		<!-- Header section with gradient transition to body -->
-		{#if nodeData.headerText}
+		{#if nodeRenderData.headerText}
 			<div class="relative flex-shrink-0 px-2 pt-2 text-center">
 				<div
-					class={`truncate text-xs font-medium leading-none ${nodeData.isVirtualized ? virtualizationColorHelper.text : 'text-tertiary'}`}
+					class={`truncate text-xs font-medium leading-none ${nodeRenderData.isVirtualized ? virtualizationColorHelper.text : 'text-tertiary'}`}
 				>
-					{nodeData.headerText}
+					{nodeRenderData.headerText}
 				</div>
 			</div>
 		{/if}
@@ -111,13 +126,13 @@
 			class="flex flex-col items-center justify-around px-3 py-2"
 			style="flex: 1 1 0; min-height: 0;"
 		>
-			{#if nodeData.showServices}
+			{#if nodeRenderData.showServices}
 				<!-- Show services list -->
 				<div
 					class="flex w-full flex-1 flex-col items-center justify-evenly"
 					style="min-width: 0; max-width: 100%;"
 				>
-					{#each nodeData.services as service (service.id)}
+					{#each nodeRenderData.services as service (service.id)}
 						{@const ServiceIcon = serviceDefinitions.getIconComponent(service.service_definition)}
 						<div
 							class="flex flex-1 flex-col items-center justify-center"
@@ -133,12 +148,12 @@
 									{service.name}
 								</span>
 							</div>
-							{#if !$topologyOptions.request_options.hide_ports && service.bindings.filter((b) => b.type == 'Port').length > 0}
+							{#if !$topologyOptions.request.hide_ports && service.bindings.filter((b) => b.type == 'Port').length > 0}
 								<span class="text-tertiary mt-1 text-xs"
 									>{service.bindings
 										.map((b) => {
 											if (
-												(b.interface_id == nodeData.interface_id || b.interface_id == null) &&
+												(b.interface_id == nodeRenderData.interface_id || b.interface_id == null) &&
 												b.type == 'Port'
 											) {
 												const port = get(getPortFromId(b.port_id));
@@ -160,30 +175,30 @@
 				<!-- Show host name as body text -->
 				<div
 					class="text-secondary truncate text-center text-xs leading-none"
-					title={nodeData.bodyText}
+					title={nodeRenderData.bodyText}
 				>
-					{nodeData.bodyText}
+					{nodeRenderData.bodyText}
 				</div>
 			{/if}
 		</div>
 
 		<!-- Footer section -->
-		{#if nodeData.footerText}
+		{#if nodeRenderData.footerText}
 			<div class="relative flex flex-shrink-0 items-center justify-center px-2 pb-2">
 				<div class="text-tertiary truncate text-xs font-medium leading-none">
-					{nodeData.footerText}
+					{nodeRenderData.footerText}
 				</div>
 			</div>
 		{/if}
 	</div>
 {/if}
 
-<Handle type="target" id="Top" position={Position.Top} style="opacity: 0" />
-<Handle type="target" id="Right" position={Position.Right} style="opacity: 0" />
-<Handle type="target" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-<Handle type="target" id="Left" position={Position.Left} style="opacity: 0" />
+<Handle type="target" id="Top" position={Position.Top} style={handleStyle} />
+<Handle type="target" id="Right" position={Position.Right} style={handleStyle} />
+<Handle type="target" id="Bottom" position={Position.Bottom} style={handleStyle} />
+<Handle type="target" id="Left" position={Position.Left} style={handleStyle} />
 
-<Handle type="source" id="Top" position={Position.Top} style="opacity: 0" />
-<Handle type="source" id="Right" position={Position.Right} style="opacity: 0" />
-<Handle type="source" id="Bottom" position={Position.Bottom} style="opacity: 0" />
-<Handle type="source" id="Left" position={Position.Left} style="opacity: 0" />
+<Handle type="source" id="Top" position={Position.Top} style={handleStyle} />
+<Handle type="source" id="Right" position={Position.Right} style={handleStyle} />
+<Handle type="source" id="Bottom" position={Position.Bottom} style={handleStyle} />
+<Handle type="source" id="Left" position={Position.Left} style={handleStyle} />

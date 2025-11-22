@@ -2,7 +2,7 @@ import { derived, get, writable, type Readable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { ApiKey } from './types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
-import { currentNetwork } from '../networks/store';
+import { networks } from '../networks/store';
 
 export const apiKeys = writable<ApiKey[]>([]);
 
@@ -18,6 +18,17 @@ export async function deleteApiKey(id: string) {
 		apiKeys,
 		(_, current) => current.filter((k) => k.id !== id),
 		{ method: 'DELETE' }
+	);
+
+	return result;
+}
+
+export async function bulkDeleteApiKeys(ids: string[]) {
+	const result = await api.request<void, ApiKey[]>(
+		`/auth/keys/bulk-delete`,
+		apiKeys,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
 	);
 
 	return result;
@@ -70,7 +81,7 @@ export function createEmptyApiKeyFormData(): ApiKey {
 		updated_at: utcTimeZoneSentinel,
 		expires_at: null,
 		last_used: null,
-		network_id: get(currentNetwork).id,
+		network_id: get(networks)[0].id || '',
 		key: '',
 		is_enabled: true
 	};

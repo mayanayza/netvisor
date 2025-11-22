@@ -108,7 +108,7 @@ impl SubnetLayoutPlanner {
                 .collect();
 
             let hide_docker_bridge_vm_header = *subnet_type == SubnetType::DockerBridge
-                && ctx.options.hide_vm_title_on_docker_container;
+                && ctx.options.request.hide_vm_title_on_docker_container;
 
             if !hide_docker_bridge_vm_header {
                 // If they have at least one interface on a common subnet
@@ -230,9 +230,9 @@ impl SubnetLayoutPlanner {
             for interface in &host.base.interfaces {
                 let subnet = ctx.get_subnet_by_id(interface.base.subnet_id);
                 let subnet_type = subnet.map(|s| s.base.subnet_type).unwrap_or_default();
+                let services = ctx.services;
 
-                let interface_bound_services: Vec<&Service> = ctx
-                    .services
+                let interface_bound_services: Vec<&Service> = services
                     .iter()
                     .filter(|s| {
                         // Services with a binding to the interface
@@ -264,7 +264,7 @@ impl SubnetLayoutPlanner {
                         &interface_bound_services,
                         interface.id,
                         header_text.is_some(),
-                        ctx.options.hide_ports,
+                        ctx.options.request.hide_ports,
                     ),
                     header: header_text,
                     interface_id: Some(interface.id),

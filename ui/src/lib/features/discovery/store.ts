@@ -40,6 +40,17 @@ export async function deleteDiscovery(id: string) {
 	);
 }
 
+export async function bulkDeleteDiscoveries(ids: string[]) {
+	const result = await api.request<void, Discovery[]>(
+		`/discovery/bulk-delete`,
+		discoveries,
+		(_, current) => current.filter((k) => !ids.includes(k.id)),
+		{ method: 'POST', body: JSON.stringify(ids) }
+	);
+
+	return result;
+}
+
 export function createEmptyDiscoveryFormData(): Discovery {
 	return {
 		id: uuidv4Sentinel,

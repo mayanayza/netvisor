@@ -13,8 +13,11 @@
 		iconColor?: string;
 		actions?: CardAction[];
 		fields?: CardField[];
-		children?: Snippet; // Optional additional content
+		children?: Snippet;
 		viewMode?: 'card' | 'list';
+		selected?: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+		selectable?: boolean;
 	}
 
 	let {
@@ -27,7 +30,10 @@
 		actions = [],
 		fields = [],
 		children,
-		viewMode = 'card'
+		viewMode = 'card',
+		selected = false,
+		selectable = true,
+		onSelectionChange = () => {}
 	}: Props = $props();
 
 	// Configuration for list view
@@ -38,52 +44,77 @@
 	function isArrayValue(value: string | any[]): value is any[] {
 		return Array.isArray(value);
 	}
+
+	function handleCheckboxChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		onSelectionChange(target.checked);
+	}
 </script>
 
 <div
 	class="card flex {viewMode === 'list' ? 'flex-row items-center gap-4 p-4' : 'h-full flex-col'}"
+	class:ring-2={selected}
+	class:ring-blue-500={selected}
 >
+	<!-- Checkbox (shown when selectable) -->
+	{#if selectable}
+		<div class="flex-shrink-0 {viewMode === 'list' ? '' : 'absolute right-4 top-4'}">
+			<input
+				type="checkbox"
+				checked={selected}
+				onchange={handleCheckboxChange}
+				onclick={(e) => e.stopPropagation()}
+				class="h-5 w-5 cursor-pointer rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500"
+			/>
+		</div>
+	{/if}
+
 	<!-- Header - Fixed width in list view -->
 	<div
 		class={viewMode === 'list'
 			? 'flex w-64 flex-shrink-0 items-center space-x-3'
-			: 'mb-4 flex items-start justify-between'}
+			: 'mb-4 flex items-start'}
 	>
 		<div class="flex items-center space-x-3 {viewMode === 'list' ? 'min-w-0 flex-1' : ''}">
 			{#if Icon}
 				<Icon size={viewMode === 'list' ? 20 : 28} class={iconColor} />
 			{/if}
-			<div>
-				{#if link}
-					<a
-						href={link}
-						class="text-primary hover:text-info {viewMode === 'list'
-							? 'text-base'
-							: 'text-lg'} font-semibold {viewMode === 'list' ? 'block' : ''}"
-						target="_blank"
-					>
-						{title}
-					</a>
-				{:else}
-					<h3 class="text-primary {viewMode === 'list' ? 'text-base' : 'text-lg'} font-semibold">
-						{title}
-					</h3>
-				{/if}
+			<div class="min-w-0 flex-1">
+				<div class="flex items-center gap-2">
+					<div class="min-w-0 {viewMode === 'list' ? 'flex-1' : ''}">
+						{#if link}
+							<a
+								href={link}
+								class="text-primary hover:text-info {viewMode === 'list'
+									? 'block truncate text-base'
+									: 'text-lg'} font-semibold"
+								target="_blank"
+							>
+								{title}
+							</a>
+						{:else}
+							<h3
+								class="text-primary {viewMode === 'list'
+									? 'truncate text-base'
+									: 'text-lg'} font-semibold"
+							>
+								{title}
+							</h3>
+						{/if}
+					</div>
+					{#if status}
+						<div class="flex-shrink-0">
+							<Tag {...status} />
+						</div>
+					{/if}
+				</div>
 				{#if subtitle}
 					<p class="text-secondary {viewMode === 'list' ? 'truncate text-xs' : 'text-sm'}">
 						{subtitle}
 					</p>
 				{/if}
-				{#if status && viewMode == 'list'}
-					<div class="mr-4 flex-shrink-0">
-						<Tag {...status} />
-					</div>
-				{/if}
 			</div>
 		</div>
-		{#if status && viewMode === 'card'}
-			<Tag {...status} />
-		{/if}
 	</div>
 
 	<!-- Content - grows to fill available space -->
@@ -186,20 +217,42 @@
 	{/if}
 
 	<!-- Action Buttons - Fixed width in list view -->
+	<!-- Action Buttons - Fixed width in list view -->
+	<!-- Action Buttons - Fixed width in list view -->
 	{#if actions.length > 0}
 		<div
 			class={viewMode === 'list'
 				? 'flex w-32 flex-shrink-0 items-center justify-end gap-1'
 				: 'card-divider-h mt-4 flex items-center justify-between pt-4'}
 		>
-			{#each actions as action (action.label)}
+			{#each actions as action, index (action.label)}
+				{@const isLeftEdge = index === 0}
+				{@const isRightEdge = index === actions.length - 1}
 				<button
 					onclick={action.onClick}
 					disabled={action.disabled}
-					class={(action.class ? action.class : 'btn-icon') + ' ' + action.animation || ''}
+					class="group relative overflow-visible transition-all duration-200 ease-in-out {action.animation ||
+						''}"
 					title={action.label}
 				>
-					<action.icon size={16} />
+					<div
+						class="flex items-center justify-center transition-opacity duration-200 group-hover:opacity-0 {action.class
+							? action.class
+							: 'btn-icon'}"
+					>
+						<action.icon size={16} class="flex-shrink-0" />
+					</div>
+
+					<div
+						class="absolute top-1/2 flex -translate-y-1/2 items-center justify-center whitespace-nowrap opacity-0 transition-all duration-200 ease-in-out group-hover:opacity-100 {isLeftEdge
+							? 'left-0'
+							: isRightEdge
+								? 'right-0'
+								: 'left-1/2 -translate-x-1/2'} {action.class ? action.class : 'btn-icon'}"
+					>
+						<action.icon size={16} class="flex-shrink-0" />
+						<span class="ml-2">{action.label}</span>
+					</div>
 				</button>
 			{/each}
 		</div>

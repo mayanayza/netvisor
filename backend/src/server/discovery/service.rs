@@ -1,6 +1,10 @@
+use crate::server::auth::middleware::AuthenticatedEntity;
 use crate::server::daemons::r#impl::base::DaemonMode;
 use crate::server::discovery::r#impl::types::RunType;
-use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
+use crate::server::shared::events::bus::EventBus;
+use crate::server::shared::events::types::{EntityEvent, EntityOperation};
+use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
 use crate::server::shared::storage::traits::{StorableEntity, Storage};
@@ -28,9 +32,23 @@ pub struct DiscoveryService {
     daemon_service: Arc<DaemonService>,
     sessions: RwLock<HashMap<Uuid, DiscoveryUpdatePayload>>, // session_id -> session state mapping
     daemon_sessions: RwLock<HashMap<Uuid, Vec<Uuid>>>,       // daemon_id -> session_id mapping
-    daemon_pull_cancellations: RwLock<HashMap<Uuid, bool>>, // daemon_id -> boolean mapping for pull mode cancellations of current session on daemon
+    daemon_pull_cancellations: RwLock<HashMap<Uuid, (bool, Uuid)>>, // daemon_id -> (boolean, session_id) mapping for pull mode cancellations of current session on daemon
     update_tx: broadcast::Sender<DiscoveryUpdatePayload>,
     scheduler: Option<Arc<RwLock<JobScheduler>>>,
+    event_bus: Arc<EventBus>,
+}
+
+impl EventBusService<Discovery> for DiscoveryService {
+    fn event_bus(&self) -> &Arc<EventBus> {
+        &self.event_bus
+    }
+
+    fn get_network_id(&self, entity: &Discovery) -> Option<Uuid> {
+        Some(entity.base.network_id)
+    }
+    fn get_organization_id(&self, _entity: &Discovery) -> Option<Uuid> {
+        None
+    }
 }
 
 #[async_trait]
@@ -44,6 +62,7 @@ impl DiscoveryService {
     pub async fn new(
         discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
         daemon_service: Arc<DaemonService>,
+        event_bus: Arc<EventBus>,
     ) -> Result<Arc<Self>> {
         let (tx, _rx) = broadcast::channel(100); // Buffer 100 messages
         let scheduler = JobScheduler::new().await?;
@@ -56,11 +75,59 @@ impl DiscoveryService {
             daemon_pull_cancellations: RwLock::new(HashMap::new()),
             update_tx: tx,
             scheduler: Some(Arc::new(RwLock::new(scheduler))),
+            event_bus,
         }))
     }
 
+    /// Expose stream to handler
+    pub fn subscribe(&self) -> broadcast::Receiver<DiscoveryUpdatePayload> {
+        self.update_tx.subscribe()
+    }
+
+    /// Get session state
+    pub async fn get_session(&self, session_id: &Uuid) -> Option<DiscoveryUpdatePayload> {
+        self.sessions.read().await.get(session_id).cloned()
+    }
+
+    /// Get session state
+    pub async fn get_all_sessions(&self, network_ids: &[Uuid]) -> Vec<DiscoveryUpdatePayload> {
+        let all_sessions = self.sessions.read().await;
+        all_sessions
+            .values()
+            .filter(|v| network_ids.contains(&v.network_id))
+            .cloned()
+            .collect()
+    }
+
+    pub async fn get_sessions_for_daemon(&self, daemon_id: &Uuid) -> Vec<DiscoveryUpdatePayload> {
+        let daemon_session_ids = self.daemon_sessions.read().await;
+        let session_ids = daemon_session_ids
+            .get(daemon_id)
+            .cloned()
+            .unwrap_or_default();
+
+        let all_sessions = self.sessions.read().await;
+
+        all_sessions
+            .iter()
+            .filter(|(session_id, _)| session_ids.contains(session_id))
+            .map(|(_, session)| session.clone())
+            .collect()
+    }
+
+    pub async fn pull_cancellation_for_daemon(&self, daemon_id: &Uuid) -> (bool, Uuid) {
+        let mut daemon_cancellation_ids = self.daemon_pull_cancellations.write().await;
+        daemon_cancellation_ids
+            .remove(daemon_id)
+            .unwrap_or((false, Uuid::nil()))
+    }
+
     /// Create a new scheduled discovery
-    pub async fn create_discovery(self: &Arc<Self>, discovery: Discovery) -> Result<Discovery> {
+    pub async fn create_discovery(
+        self: &Arc<Self>,
+        discovery: Discovery,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Discovery> {
         let mut created_discovery = if discovery.id == Uuid::nil() {
             self.discovery_storage
                 .create(&Discovery::new(discovery.base))
@@ -89,11 +156,24 @@ impl DiscoveryService {
             return Ok(disabled_discovery);
         }
 
-        tracing::info!(
-            "Created discovery {}: {}",
-            created_discovery.base.name,
-            created_discovery.id
-        );
+        let trigger_stale = created_discovery.triggers_staleness(None);
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: created_discovery.id(),
+                network_id: self.get_network_id(&created_discovery),
+                organization_id: self.get_organization_id(&created_discovery),
+                entity_type: created_discovery.clone().into(),
+                operation: EntityOperation::Created,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
+                authentication,
+            })
+            .await?;
+
         Ok(created_discovery)
     }
 
@@ -101,11 +181,15 @@ impl DiscoveryService {
     pub async fn update_discovery(
         self: &Arc<Self>,
         mut discovery: Discovery,
+        authentication: AuthenticatedEntity,
     ) -> Result<Discovery, Error> {
-        discovery.updated_at = Utc::now();
+        let current = self
+            .get_by_id(&discovery.id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Could not find discovery {}", discovery))?;
 
         // If it's a scheduled discovery, need to reschedule
-        if matches!(discovery.base.run_type, RunType::Scheduled { .. }) {
+        let updated = if matches!(discovery.base.run_type, RunType::Scheduled { .. }) {
             // Remove old schedule first
             if let Some(scheduler) = &self.scheduler {
                 let _ = scheduler.write().await.remove(&discovery.id).await;
@@ -125,26 +209,43 @@ impl DiscoveryService {
                     disabled_discovery.id,
                     e
                 );
-
-                return Ok(disabled_discovery);
             }
 
-            tracing::info!(
-                "Updated and rescheduled discovery {}: {}",
-                updated.base.name,
-                updated.id
-            );
-            Ok(updated)
+            updated
         } else {
             // For non-scheduled, just update
             let updated = self.discovery_storage.update(&mut discovery).await?;
             tracing::info!("Updated discovery {}: {}", updated.base.name, updated.id);
-            Ok(updated)
-        }
+            updated
+        };
+
+        let trigger_stale = updated.triggers_staleness(Some(current));
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: updated.id(),
+                network_id: self.get_network_id(&updated),
+                organization_id: self.get_organization_id(&updated),
+                entity_type: updated.clone().into(),
+                operation: EntityOperation::Updated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
+                authentication,
+            })
+            .await?;
+
+        Ok(updated)
     }
 
     /// Delete group
-    pub async fn delete_discovery(self: &Arc<Self>, id: &Uuid) -> Result<(), Error> {
+    pub async fn delete_discovery(
+        self: &Arc<Self>,
+        id: &Uuid,
+        authentication: AuthenticatedEntity,
+    ) -> Result<(), Error> {
         let discovery = self
             .get_by_id(id)
             .await?
@@ -159,11 +260,24 @@ impl DiscoveryService {
         }
 
         self.discovery_storage.delete(id).await?;
-        tracing::info!(
-            "Deleted discovery {}: {}",
-            discovery.base.name,
-            discovery.id
-        );
+
+        let trigger_stale = discovery.triggers_staleness(None);
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: discovery.id(),
+                network_id: self.get_network_id(&discovery),
+                organization_id: self.get_organization_id(&discovery),
+                entity_type: discovery.into(),
+                operation: EntityOperation::Deleted,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale
+                }),
+                authentication,
+            })
+            .await?;
         Ok(())
     }
 
@@ -254,7 +368,10 @@ impl DiscoveryService {
             Box::pin(async move {
                 tracing::info!("Running scheduled discovery {}", &discovery.id);
 
-                match service.start_session(discovery.clone()).await {
+                match service
+                    .start_session(discovery.clone(), AuthenticatedEntity::System)
+                    .await
+                {
                     Ok(_) => {
                         // Update last_run
                         if let RunType::Scheduled {
@@ -285,51 +402,11 @@ impl DiscoveryService {
         Ok(job_id)
     }
 
-    /// Expose stream to handler
-    pub fn subscribe(&self) -> broadcast::Receiver<DiscoveryUpdatePayload> {
-        self.update_tx.subscribe()
-    }
-
-    /// Get session state
-    pub async fn get_session(&self, session_id: &Uuid) -> Option<DiscoveryUpdatePayload> {
-        self.sessions.read().await.get(session_id).cloned()
-    }
-
-    /// Get session state
-    pub async fn get_all_sessions(&self, network_ids: &[Uuid]) -> Vec<DiscoveryUpdatePayload> {
-        let all_sessions = self.sessions.read().await;
-        all_sessions
-            .values()
-            .filter(|v| network_ids.contains(&v.network_id))
-            .cloned()
-            .collect()
-    }
-
-    pub async fn get_sessions_for_daemon(&self, daemon_id: &Uuid) -> Vec<DiscoveryUpdatePayload> {
-        let daemon_session_ids = self.daemon_sessions.read().await;
-        let session_ids = daemon_session_ids
-            .get(daemon_id)
-            .cloned()
-            .unwrap_or_default();
-
-        let all_sessions = self.sessions.read().await;
-
-        all_sessions
-            .iter()
-            .filter(|(session_id, _)| session_ids.contains(session_id))
-            .map(|(_, session)| session.clone())
-            .collect()
-    }
-
-    pub async fn pull_cancellation_for_daemon(&self, daemon_id: &Uuid) -> bool {
-        let mut daemon_cancellation_ids = self.daemon_pull_cancellations.write().await;
-        daemon_cancellation_ids.remove(daemon_id).unwrap_or(false)
-    }
-
     /// Create a new discovery session
     pub async fn start_session(
         &self,
         discovery: Discovery,
+        authentication: AuthenticatedEntity,
     ) -> Result<DiscoveryUpdatePayload, anyhow::Error> {
         let session_id = Uuid::new_v4();
 
@@ -382,17 +459,13 @@ impl DiscoveryService {
                         discovery_type: discovery.base.discovery_type,
                         session_id,
                     },
+                    authentication,
                 )
                 .await?;
         }
 
         let _ = self.update_tx.send(session_payload.clone());
 
-        tracing::info!(
-            "Created discovery session {} for daemon {}",
-            session_id,
-            discovery.base.daemon_id
-        );
         Ok(session_payload)
     }
 
@@ -408,11 +481,11 @@ impl DiscoveryService {
 
         let daemon_id = session.daemon_id;
         tracing::debug!(
-            "Updated session {}: {} ({}/{})",
-            update.session_id,
-            update.phase,
-            update.processed,
-            update.total_to_process
+            session_id = %update.session_id,
+            phase = %update.phase,
+            processed = %update.processed,
+            total_to_process = %update.total_to_process,
+            "Updated session",
         );
 
         let _ = self.update_tx.send(update.clone());
@@ -452,11 +525,21 @@ impl DiscoveryService {
                     e
                 );
             } else {
-                tracing::debug!(
-                    "Created historical discovery record {} for session {}",
-                    historical_discovery.id,
-                    session.session_id
-                );
+                self.event_bus()
+                    .publish_entity(EntityEvent {
+                        id: Uuid::new_v4(),
+                        entity_id: historical_discovery.id(),
+                        network_id: self.get_network_id(&historical_discovery),
+                        organization_id: self.get_organization_id(&historical_discovery),
+                        entity_type: historical_discovery.into(),
+                        operation: EntityOperation::Created,
+                        timestamp: Utc::now(),
+                        metadata: serde_json::json!({
+                            "type": "historical"
+                        }),
+                        authentication: AuthenticatedEntity::System,
+                    })
+                    .await?;
             }
 
             // Get next session info BEFORE trying to send request
@@ -507,6 +590,7 @@ impl DiscoveryService {
                             discovery_type,
                             session_id,
                         },
+                        AuthenticatedEntity::System,
                     )
                     .await?;
             }
@@ -515,7 +599,11 @@ impl DiscoveryService {
         Ok(())
     }
 
-    pub async fn cancel_session(&self, session_id: Uuid) -> Result<(), Error> {
+    pub async fn cancel_session(
+        &self,
+        session_id: Uuid,
+        authentication: AuthenticatedEntity,
+    ) -> Result<(), Error> {
         // Get the session
         let session = match self.get_session(&session_id).await {
             Some(session) => session,
@@ -576,7 +664,7 @@ impl DiscoveryService {
                     match daemon.base.mode {
                         DaemonMode::Push => {
                             self.daemon_service
-                                .send_discovery_cancellation(&daemon, session_id)
+                                .send_discovery_cancellation(daemon, session_id, authentication)
                                 .await
                                 .map_err(|e| {
                                     anyhow!(
@@ -600,7 +688,7 @@ impl DiscoveryService {
                                 .write()
                                 .await
                                 .entry(daemon_id)
-                                .insert_entry(true);
+                                .insert_entry((true, session_id));
 
                             tracing::info!(
                                 "Marked session {} for cancellation on next pull by daemon {}",

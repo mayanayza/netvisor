@@ -4,12 +4,10 @@ use serde::Serialize;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;
 
+use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::{
     daemons::r#impl::api::DiscoveryUpdatePayload,
-    shared::{
-        entities::Entity,
-        types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
-    },
+    shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
 };
 
 #[derive(
@@ -50,7 +48,7 @@ pub enum HostNamingFallback {
     BestService,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(tag = "type")]
 pub enum RunType {
     Scheduled {
@@ -74,11 +72,11 @@ impl HasId for DiscoveryType {
 
 impl EntityMetadataProvider for DiscoveryType {
     fn color(&self) -> &'static str {
-        Entity::Discovery.color()
+        EntityDiscriminants::Discovery.color()
     }
 
     fn icon(&self) -> &'static str {
-        Entity::Discovery.icon()
+        EntityDiscriminants::Discovery.icon()
     }
 }
 

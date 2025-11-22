@@ -4,6 +4,7 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import {
+		bulkDeleteServices,
 		deleteService,
 		getServices,
 		services,
@@ -53,6 +54,12 @@
 		if (result?.success) {
 			showServiceEditor = false;
 			editingService = null;
+		}
+	}
+
+	async function handleBulkDelete(ids: string[]) {
+		if (confirm(`Are you sure you want to delete ${ids.length} Services?`)) {
+			await bulkDeleteServices(ids);
 		}
 	}
 
@@ -139,13 +146,22 @@
 			items={$services}
 			fields={serviceFields}
 			storageKey="netvisor-services-table-state"
+			onBulkDelete={handleBulkDelete}
+			getItemId={(item) => item.id}
 		>
-			{#snippet children(item: Service, viewMode: 'card' | 'list')}
+			{#snippet children(
+				item: Service,
+				viewMode: 'card' | 'list',
+				isSelected: boolean,
+				onSelectionChange: (selected: boolean) => void
+			)}
 				{@const host = serviceHosts.get(item.id)}
 				{#if host}
 					<ServiceCard
 						service={item}
+						selected={isSelected}
 						{host}
+						{onSelectionChange}
 						{viewMode}
 						onDelete={handleDeleteService}
 						onEdit={handleEditService}

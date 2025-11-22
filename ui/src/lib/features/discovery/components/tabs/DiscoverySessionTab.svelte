@@ -3,7 +3,7 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
-	import { getActiveSessions, sessions } from '../../SSEStore';
+	import { getActiveSessions, sessions } from '../../sse';
 	import DiscoverySessionCard from '../cards/DiscoverySessionCard.svelte';
 	import { type DiscoveryUpdatePayload } from '../../types/api';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
@@ -96,6 +96,7 @@
 			items={sessionsList}
 			fields={discoveryFields}
 			storageKey="netvisor-discovery-session-table-state"
+			getItemId={(item) => item.session_id}
 		>
 			{#snippet children(item: DiscoveryUpdatePayload, viewMode: 'card' | 'list')}
 				<DiscoverySessionCard session={item} {viewMode} />

@@ -12,6 +12,8 @@
 	export let onEdit: (discovery: Discovery) => void = () => {};
 	export let onDelete: (discovery: Discovery) => void = () => {};
 	export let onRun: (discovery: Discovery) => void = () => {};
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: cardData = {
 		title: discovery.name,
@@ -65,4 +67,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

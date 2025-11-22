@@ -6,9 +6,11 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use uuid::Uuid;
 
-use crate::server::daemons::r#impl::api::DaemonCapabilities;
+use crate::server::{
+    daemons::r#impl::api::DaemonCapabilities, shared::entities::ChangeTriggersTopologyStaleness,
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct DaemonBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
@@ -20,7 +22,7 @@ pub struct DaemonBase {
     pub mode: DaemonMode,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Daemon {
     pub id: Uuid,
     pub updated_at: DateTime<Utc>,
@@ -36,10 +38,16 @@ impl Display for Daemon {
 }
 
 #[derive(
-    Debug, Display, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ValueEnum,
+    Debug, Display, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ValueEnum, Hash,
 )]
 pub enum DaemonMode {
     #[default]
     Push,
     Pull,
+}
+
+impl ChangeTriggersTopologyStaleness<Daemon> for Daemon {
+    fn triggers_staleness(&self, _other: Option<Daemon>) -> bool {
+        false
+    }
 }

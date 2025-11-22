@@ -314,7 +314,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             total_ips = %total_ips,
             scanned = %scanned,
             discovered = %successful_discoveries.len(),
-            "📊 Scan complete"
+            "Scan complete"
         );
 
         Ok(successful_discoveries)
@@ -356,10 +356,10 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             Ok((open_ports, endpoint_responses)) => {
                 if !open_ports.is_empty() || !endpoint_responses.is_empty() {
                     tracing::info!(
-                        "Processing host {} with {} open ports and {} endpoint responses",
-                        ip,
-                        open_ports.len(),
-                        endpoint_responses.len()
+                        ip = %ip,
+                        open_port_count = %open_ports.len(),
+                        endpoint_response_count = %endpoint_responses.len(),
+                        "Processing host",
                     );
 
                     // Check cancellation before processing

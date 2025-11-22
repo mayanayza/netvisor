@@ -3,7 +3,9 @@ use crate::server::{
     auth::middleware::RequireMember,
     config::AppState,
     shared::{
-        handlers::traits::{CrudHandlers, delete_handler, get_all_handler, get_by_id_handler},
+        handlers::traits::{
+            CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
+        },
         services::traits::CrudService,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
@@ -24,6 +26,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler))
         .route("/{id}", delete(delete_handler::<ApiKey>))
         .route("/{id}", get(get_by_id_handler::<ApiKey>))
+        .route("/bulk-delete", post(bulk_delete_handler::<ApiKey>))
 }
 
 pub async fn create_handler(
@@ -39,21 +42,17 @@ pub async fn create_handler(
     );
 
     let service = ApiKey::get_service(&state);
-    let api_key = service.create(api_key).await.map_err(|e| {
-        tracing::error!(
-            error = %e,
-            user_id = %user.user_id,
-            "Failed to create API key"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
-
-    tracing::info!(
-        api_key_id = %api_key.id,
-        api_key_name = %api_key.base.name,
-        user_id = %user.user_id,
-        "API key created via API (key shown to user)"
-    );
+    let api_key = service
+        .create(api_key, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                error = %e,
+                user_id = %user.user_id,
+                "Failed to create API key"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     Ok(Json(ApiResponse::success(ApiKeyResponse {
         key: api_key.base.key.clone(),
@@ -66,28 +65,25 @@ pub async fn rotate_key_handler(
     RequireMember(user): RequireMember,
     Path(api_key_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
-    tracing::info!(
+    tracing::debug!(
         api_key_id = %api_key_id,
         user_id = %user.user_id,
         "API key rotation request received"
     );
 
     let service = ApiKey::get_service(&state);
-    let key = service.rotate_key(api_key_id).await.map_err(|e| {
-        tracing::error!(
-            api_key_id = %api_key_id,
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to rotate API key"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
-
-    tracing::info!(
-        api_key_id = %api_key_id,
-        user_id = %user.user_id,
-        "API key rotated via API (new key shown to user)"
-    );
+    let key = service
+        .rotate_key(api_key_id, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                api_key_id = %api_key_id,
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to rotate API key"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     Ok(Json(ApiResponse::success(key)))
 }
@@ -131,22 +127,18 @@ pub async fn update_handler(
     // Preserve the key - don't allow it to be changed via update
     request.base.key = existing.base.key;
 
-    let updated = service.update(&mut request).await.map_err(|e| {
-        tracing::error!(
-            api_key_id = %id,
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to update API key"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
-
-    tracing::info!(
-        api_key_id = %id,
-        api_key_name = %updated.base.name,
-        user_id = %user.user_id,
-        "API key updated via API"
-    );
+    let updated = service
+        .update(&mut request, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                api_key_id = %id,
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to update API key"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
 
     Ok(Json(ApiResponse::success(updated)))
 }

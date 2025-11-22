@@ -8,10 +8,11 @@ use crate::server::{
     email::service::EmailService,
     groups::service::GroupService,
     hosts::service::HostService,
+    logging::service::LoggingService,
     networks::service::NetworkService,
     organizations::service::OrganizationService,
     services::service::ServiceService,
-    shared::storage::factory::StorageFactory,
+    shared::{events::bus::EventBus, storage::factory::StorageFactory},
     subnets::service::SubnetService,
     topology::service::main::TopologyService,
     users::service::UserService,
@@ -35,34 +36,54 @@ pub struct ServiceFactory {
     pub oidc_service: Option<Arc<OidcService>>,
     pub billing_service: Option<Arc<BillingService>>,
     pub email_service: Option<Arc<EmailService>>,
+    pub event_bus: Arc<EventBus>,
+    pub logging_service: Arc<LoggingService>,
 }
 
 impl ServiceFactory {
     pub async fn new(storage: &StorageFactory, config: Option<ServerConfig>) -> Result<Self> {
-        let api_key_service = Arc::new(ApiKeyService::new(storage.api_keys.clone()));
-        let daemon_service = Arc::new(DaemonService::new(storage.daemons.clone()));
-        let group_service = Arc::new(GroupService::new(storage.groups.clone()));
-        let organization_service =
-            Arc::new(OrganizationService::new(storage.organizations.clone()));
+        let event_bus = Arc::new(EventBus::new());
+
+        let logging_service = Arc::new(LoggingService::new());
+
+        let api_key_service = Arc::new(ApiKeyService::new(
+            storage.api_keys.clone(),
+            event_bus.clone(),
+        ));
+        let daemon_service = Arc::new(DaemonService::new(
+            storage.daemons.clone(),
+            event_bus.clone(),
+        ));
+        let group_service = Arc::new(GroupService::new(storage.groups.clone(), event_bus.clone()));
+        let organization_service = Arc::new(OrganizationService::new(
+            storage.organizations.clone(),
+            event_bus.clone(),
+        ));
 
         // Already implements Arc internally due to scheduler + sessions
-        let discovery_service =
-            DiscoveryService::new(storage.discovery.clone(), daemon_service.clone()).await?;
+        let discovery_service = DiscoveryService::new(
+            storage.discovery.clone(),
+            daemon_service.clone(),
+            event_bus.clone(),
+        )
+        .await?;
 
         let service_service = Arc::new(ServiceService::new(
             storage.services.clone(),
             group_service.clone(),
+            event_bus.clone(),
         ));
 
         let host_service = Arc::new(HostService::new(
             storage.hosts.clone(),
             service_service.clone(),
             daemon_service.clone(),
+            event_bus.clone(),
         ));
 
         let subnet_service = Arc::new(SubnetService::new(
             storage.subnets.clone(),
-            host_service.clone(),
+            event_bus.clone(),
         ));
 
         let _ = service_service.set_host_service(host_service.clone());
@@ -72,14 +93,17 @@ impl ServiceFactory {
             subnet_service.clone(),
             group_service.clone(),
             service_service.clone(),
+            storage.topologies.clone(),
+            event_bus.clone(),
         ));
 
         let network_service = Arc::new(NetworkService::new(
             storage.networks.clone(),
             host_service.clone(),
             subnet_service.clone(),
+            event_bus.clone(),
         ));
-        let user_service = Arc::new(UserService::new(storage.users.clone()));
+        let user_service = Arc::new(UserService::new(storage.users.clone(), event_bus.clone()));
 
         let billing_service = config.clone().and_then(|c| {
             if let Some(strip_secret) = c.stripe_secret
@@ -112,6 +136,7 @@ impl ServiceFactory {
             user_service.clone(),
             organization_service.clone(),
             email_service.clone(),
+            event_bus.clone(),
         ));
 
         let oidc_service = config.and_then(|c| {
@@ -128,17 +153,27 @@ impl ServiceFactory {
                 &c.oidc_client_secret,
                 &c.oidc_provider_name,
             ) {
-                return Some(Arc::new(OidcService::new(
-                    issuer_url.to_owned(),
-                    client_id.to_owned(),
-                    client_secret.to_owned(),
-                    redirect_url.to_owned(),
-                    provider_name.to_owned(),
-                    auth_service.clone(),
-                )));
+                return Some(Arc::new(OidcService::new(OidcService {
+                    issuer_url: issuer_url.to_owned(),
+                    client_id: client_id.to_owned(),
+                    client_secret: client_secret.to_owned(),
+                    redirect_url: redirect_url.to_owned(),
+                    provider_name: provider_name.to_owned(),
+                    auth_service: auth_service.clone(),
+                    user_service: user_service.clone(),
+                    event_bus: event_bus.clone(),
+                })));
             }
             None
         });
+
+        event_bus
+            .register_subscriber(topology_service.clone())
+            .await;
+
+        event_bus.register_subscriber(logging_service.clone()).await;
+
+        event_bus.register_subscriber(host_service.clone()).await;
 
         Ok(Self {
             user_service,
@@ -156,6 +191,8 @@ impl ServiceFactory {
             oidc_service,
             billing_service,
             email_service,
+            event_bus,
+            logging_service,
         })
     }
 }

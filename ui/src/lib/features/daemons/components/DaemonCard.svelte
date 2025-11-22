@@ -2,8 +2,8 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { getDaemonIsRunningDiscovery } from '$lib/features/daemons/store';
-	import { sessions } from '$lib/features/discovery/SSEStore';
-	import { entities } from '$lib/shared/stores/metadata';
+	import { sessions } from '$lib/features/discovery/sse';
+	import { concepts, entities } from '$lib/shared/stores/metadata';
 	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { getHostFromId } from '$lib/features/hosts/store';
@@ -13,6 +13,8 @@
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
 	export let viewMode: 'card' | 'list';
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: hostStore = getHostFromId(daemon.host_id);
 	$: host = $hostStore;
@@ -52,7 +54,7 @@
 						? {
 								id: daemon.id,
 								label: 'True',
-								color: entities.getColorHelper('Virtualization').string
+								color: concepts.getColorHelper('Virtualization').string
 							}
 						: {
 								id: daemon.id,
@@ -86,7 +88,7 @@
 		],
 		actions: [
 			{
-				label: 'Delete Daemon',
+				label: 'Delete',
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(daemon),
@@ -96,4 +98,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

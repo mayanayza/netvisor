@@ -9,6 +9,8 @@
 	export let viewMode: 'card' | 'list';
 	export let discovery: Discovery;
 	export let onView: (discovery: Discovery) => void = () => {};
+	export let selected: boolean;
+	export let onSelectionChange: (selected: boolean) => void = () => {};
 
 	$: results = discovery.run_type.type == 'Historical' ? discovery.run_type.results : null;
 
@@ -57,4 +59,4 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

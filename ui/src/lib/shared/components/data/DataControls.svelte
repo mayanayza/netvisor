@@ -6,7 +6,10 @@
 		ChevronDown,
 		ChevronUp,
 		LayoutGrid,
-		List
+		List,
+		Trash2,
+		CheckSquare,
+		Square
 	} from 'lucide-svelte';
 	import type { FieldConfig } from './types';
 	import { onMount, type Snippet } from 'svelte';
@@ -17,12 +20,16 @@
 		items = $bindable([]),
 		fields = $bindable([]),
 		storageKey = null,
-		children
+		onBulkDelete = null,
+		children,
+		getItemId
 	}: {
 		items: T[];
 		fields: FieldConfig<T>[];
 		storageKey?: string | null;
-		children: Snippet<[T, 'card' | 'list']>; // Snippet that takes two arguments (the item and viewMode)
+		onBulkDelete?: ((ids: string[]) => Promise<void>) | null;
+		children: Snippet<[T, 'card' | 'list', boolean, (selected: boolean) => void]>;
+		getItemId: (item: T) => string;
 	} = $props();
 
 	// Search state
@@ -58,13 +65,16 @@
 	// View mode state
 	let viewMode = $state<'card' | 'list'>('card');
 
+	// Bulk selection state (always enabled when onBulkDelete is provided)
+	let selectedIds = new SvelteSet<string>();
+
 	// Serializable version of state for localStorage
 	interface SerializableState {
 		searchQuery: string;
 		filterState: {
 			[key: string]: {
 				type: 'string' | 'boolean';
-				values: string[]; // Convert Set to Array for JSON
+				values: string[];
 				showTrue?: boolean;
 				showFalse?: boolean;
 			};
@@ -95,7 +105,7 @@
 					const saved = state.filterState[key];
 					restoredFilterState[key] = {
 						...saved,
-						values: new SvelteSet(saved.values) // Convert Array back to Set
+						values: new SvelteSet(saved.values)
 					};
 				});
 				filterState = restoredFilterState;
@@ -135,7 +145,7 @@
 				const filter = filterState[key];
 				serializableFilterState[key] = {
 					...filter,
-					values: Array.from(filter.values) // Convert Set to Array for JSON
+					values: Array.from(filter.values)
 				};
 			});
 
@@ -185,7 +195,7 @@
 		const unsubscribe = $effect.root(() => {
 			$effect(() => {
 				if (storageKey) {
-					// Track all state that should trigger saves - void() prevents lint errors
+					// Track all state that should trigger saves
 					void searchQuery;
 					void filterState;
 					void sortState;
@@ -211,7 +221,6 @@
 		if (field.getValue) {
 			return field.getValue(item);
 		}
-		// Default: try to access the key directly
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		return (item as any)[field.key] ?? null;
 	}
@@ -423,6 +432,36 @@
 		selectedGroupField = null;
 	}
 
+	// Select all visible items
+	function selectAll() {
+		processedItems.forEach((item) => {
+			const itemId = getItemId(item);
+			if (itemId) selectedIds.add(itemId);
+		});
+	}
+
+	// Deselect all items
+	function selectNone() {
+		selectedIds.clear();
+	}
+
+	// Handle bulk delete
+	async function handleBulkDelete() {
+		if (!onBulkDelete || selectedIds.size === 0) return;
+
+		try {
+			await onBulkDelete(Array.from(selectedIds));
+			selectedIds.clear();
+		} catch (error) {
+			console.error('Bulk delete failed:', error);
+		}
+	}
+
+	// Derived states
+	let allSelected = $derived(
+		processedItems.length > 0 && selectedIds.size === processedItems.length
+	);
+
 	// Check if any filters are active
 	let hasActiveFilters = $derived(
 		fields.some((field) => {
@@ -478,6 +517,22 @@
 			</button>
 		{/if}
 
+		<!-- Select All/None Buttons (only show if onBulkDelete is provided) -->
+		{#if onBulkDelete}
+			<button
+				onclick={allSelected ? selectNone : selectAll}
+				class="btn-secondary flex items-center gap-2"
+				title={allSelected ? 'Deselect all' : 'Select all'}
+			>
+				{#if allSelected}
+					<Square class="h-4 w-4" />
+				{:else}
+					<CheckSquare class="h-4 w-4" />
+				{/if}
+				{allSelected ? 'None' : 'All'}
+			</button>
+		{/if}
+
 		<!-- View Mode Toggle -->
 		<button
 			onclick={() => (viewMode = viewMode === 'card' ? 'list' : 'card')}
@@ -485,9 +540,9 @@
 			title={viewMode === 'card' ? 'Switch to list view' : 'Switch to card view'}
 		>
 			{#if viewMode === 'card'}
-				<List class="h- w-" />
+				<List class="h-4 w-4" />
 			{:else}
-				<LayoutGrid class="h- w-" />
+				<LayoutGrid class="h-4 w-4" />
 			{/if}
 		</button>
 
@@ -540,6 +595,28 @@
 			</button>
 		{/if}
 	</div>
+
+	<!-- Bulk Action Bar (shown when items are selected) -->
+	{#if onBulkDelete && selectedIds.size > 0}
+		<div class="card flex items-center justify-between p-4">
+			<div class="flex items-center gap-4">
+				<span class="text-primary text-sm font-medium">
+					{selectedIds.size}
+					{selectedIds.size === 1 ? 'item' : 'items'} selected
+				</span>
+				<button
+					onclick={selectNone}
+					class="text-tertiary hover:text-secondary text-sm transition-colors"
+				>
+					Clear selection
+				</button>
+			</div>
+			<button onclick={handleBulkDelete} class="btn-danger flex items-center gap-2">
+				<Trash2 class="h-4 w-4" />
+				Delete Selected
+			</button>
+		</div>
+	{/if}
 
 	<!-- Filter Panel -->
 	{#if showFilters}
@@ -645,7 +722,16 @@
 							: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
 					>
 						{#each groupItems as item (item)}
-							{@render children(item, viewMode)}
+							<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+							{@const itemId = getItemId(item)}
+							{@const isSelected = selectedIds.has(itemId)}
+							{@render children(item, viewMode, isSelected, (selected) => {
+								if (selected) {
+									selectedIds.add(itemId);
+								} else {
+									selectedIds.delete(itemId);
+								}
+							})}
 						{/each}
 					</div>
 				</div>
@@ -659,7 +745,15 @@
 				: 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3'}
 		>
 			{#each processedItems as item (item)}
-				{@render children(item, viewMode)}
+				{@const itemId = getItemId(item)}
+				{@const isSelected = selectedIds.has(itemId)}
+				{@render children(item, viewMode, isSelected, (selected) => {
+					if (selected) {
+						selectedIds.add(itemId);
+					} else {
+						selectedIds.delete(itemId);
+					}
+				})}
 			{/each}
 		</div>
 	{/if}

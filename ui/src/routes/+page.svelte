@@ -9,19 +9,20 @@
 	import { getServices, services } from '$lib/features/services/store';
 	import { watchStores } from '$lib/shared/utils/storeWatcher';
 	import { getNetworks } from '$lib/features/networks/store';
-	import { startDiscoverySSE } from '$lib/features/discovery/SSEStore';
+	import { discoverySSEManager } from '$lib/features/discovery/sse';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
-	import type { Component } from 'svelte';
 	import { getMetadata } from '$lib/shared/stores/metadata';
+	import { topologySSEManager } from '$lib/features/topology/sse';
 
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
 
 	let activeTab = $state(initialHash || 'topology');
-	let activeComponent = $state<Component | null>(null);
 	let appInitialized = $state(false);
 	let sidebarCollapsed = $state(false);
 	let dataLoadingStarted = $state(false);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let allTabs = $state<Array<{ id: string; component: any }>>([]);
 
 	// Update URL hash when activeTab changes
 	$effect(() => {
@@ -62,7 +63,8 @@
 			})
 		].flatMap((w) => w);
 
-		startDiscoverySSE();
+		topologySSEManager.connect();
+		discoverySSEManager.connect();
 
 		appInitialized = true;
 	}
@@ -87,6 +89,9 @@
 			unsub();
 		});
 
+		topologySSEManager.disconnect();
+		discoverySSEManager.disconnect();
+
 		if (typeof window !== 'undefined') {
 			window.removeEventListener('hashchange', handleHashChange);
 		}
@@ -97,7 +102,7 @@
 	<div class="flex min-h-screen">
 		<!-- Sidebar -->
 		<div class="flex-shrink-0">
-			<Sidebar bind:activeTab bind:activeComponent bind:collapsed={sidebarCollapsed} />
+			<Sidebar bind:activeTab bind:collapsed={sidebarCollapsed} bind:allTabs />
 		</div>
 
 		<!-- Main Content -->
@@ -107,10 +112,12 @@
 			class:ml-64={!sidebarCollapsed}
 		>
 			<div class="p-8">
-				{#if activeComponent}
-					{@const ActiveTab = activeComponent}
-					<ActiveTab />
-				{/if}
+				<!-- Programmatically render all tabs based on sidebar config -->
+				{#each allTabs as tab (tab.id)}
+					<div class:hidden={activeTab !== tab.id}>
+						<tab.component />
+					</div>
+				{/each}
 			</div>
 
 			<Toast />

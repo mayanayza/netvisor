@@ -2,11 +2,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::server::users::r#impl::permissions::UserOrgPermissions;
+use crate::server::{
+    shared::entities::ChangeTriggersTopologyStaleness,
+    users::r#impl::permissions::UserOrgPermissions,
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrganizationInvite {
-    pub token: String,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct Invite {
+    pub id: Uuid,
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
     pub url: String,
@@ -15,7 +18,7 @@ pub struct OrganizationInvite {
     pub expires_at: DateTime<Utc>,
 }
 
-impl OrganizationInvite {
+impl Invite {
     pub fn new(
         organization_id: Uuid,
         url: String,
@@ -25,7 +28,7 @@ impl OrganizationInvite {
     ) -> Self {
         let now = Utc::now();
         Self {
-            token: Self::generate_token(),
+            id: Uuid::new_v4(),
             organization_id,
             permissions,
             created_by,
@@ -45,8 +48,10 @@ impl OrganizationInvite {
 
         true
     }
+}
 
-    fn generate_token() -> String {
-        nanoid::nanoid!(32)
+impl ChangeTriggersTopologyStaleness<Invite> for Invite {
+    fn triggers_staleness(&self, _other: Option<Invite>) -> bool {
+        false
     }
 }

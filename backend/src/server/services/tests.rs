@@ -2,6 +2,7 @@ use serial_test::serial;
 
 use crate::{
     server::{
+        auth::middleware::AuthenticatedEntity,
         groups::r#impl::types::GroupType,
         services::r#impl::{bindings::Binding, patterns::MatchDetails},
         shared::{
@@ -19,19 +20,19 @@ async fn test_service_deduplication_on_create() {
 
     let organization = services
         .organization_service
-        .create(organization())
+        .create(organization(), AuthenticatedEntity::System)
         .await
         .unwrap();
     let network = services
         .network_service
-        .create(network(&organization.id))
+        .create(network(&organization.id), AuthenticatedEntity::System)
         .await
         .unwrap();
 
     let subnet_obj = subnet(&network.id);
     services
         .subnet_service
-        .create(subnet_obj.clone())
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -53,7 +54,11 @@ async fn test_service_deduplication_on_create() {
 
     let (created_host, created1) = services
         .host_service
-        .create_host_with_services(host_obj.clone(), vec![svc1.clone()])
+        .create_host_with_services(
+            host_obj.clone(),
+            vec![svc1.clone()],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
@@ -72,7 +77,7 @@ async fn test_service_deduplication_on_create() {
 
     let created2 = services
         .service_service
-        .create_service(svc2.clone())
+        .create(svc2.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -92,19 +97,19 @@ async fn test_service_deletion_cleans_up_relationships() {
 
     let organization = services
         .organization_service
-        .create(organization())
+        .create(organization(), AuthenticatedEntity::System)
         .await
         .unwrap();
     let network = services
         .network_service
-        .create(network(&organization.id))
+        .create(network(&organization.id), AuthenticatedEntity::System)
         .await
         .unwrap();
 
     let subnet_obj = subnet(&network.id);
     let created_subnet = services
         .subnet_service
-        .create(subnet_obj.clone())
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
 
@@ -121,7 +126,11 @@ async fn test_service_deletion_cleans_up_relationships() {
 
     services
         .host_service
-        .create_host_with_services(host_obj.clone(), vec![svc.clone()])
+        .create_host_with_services(
+            host_obj.clone(),
+            vec![svc.clone()],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
@@ -136,12 +145,16 @@ async fn test_service_deletion_cleans_up_relationships() {
     group_obj.base.group_type = GroupType::RequestPath {
         service_bindings: vec![created_svc.base.bindings[0].id()],
     };
-    let created_group = services.group_service.create(group_obj).await.unwrap();
+    let created_group = services
+        .group_service
+        .create(group_obj, AuthenticatedEntity::System)
+        .await
+        .unwrap();
 
     // Delete service
     services
         .service_service
-        .delete_service(&created_svc.id)
+        .delete(&created_svc.id, AuthenticatedEntity::System)
         .await
         .unwrap();
 

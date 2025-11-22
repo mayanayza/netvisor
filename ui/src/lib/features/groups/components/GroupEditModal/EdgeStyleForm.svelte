@@ -5,6 +5,7 @@
 
 	export let formData: Group;
 	export let collapsed: boolean = false;
+	export let editable: boolean = true;
 
 	const edgeStyleOptions: Array<{
 		value: 'Straight' | 'SmoothStep' | 'Step' | 'Bezier' | 'SimpleBezier';
@@ -51,8 +52,9 @@
 		<!-- Edit button -->
 		<button
 			type="button"
-			onclick={() => (collapsed = false)}
+			onclick={() => (editable ? (collapsed = false) : {})}
 			class="btn-icon"
+			disabled={!editable}
 			aria-label="Edit edge style"
 		>
 			<Edit size={16} />

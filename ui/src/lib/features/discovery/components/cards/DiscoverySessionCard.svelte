@@ -1,6 +1,6 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
-	import { cancelDiscovery, cancelling } from '$lib/features/discovery/SSEStore';
+	import { cancelDiscovery, cancelling } from '$lib/features/discovery/sse';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { Loader2, X } from 'lucide-svelte';
 	import type { DiscoveryUpdatePayload } from '../../types/api';
@@ -88,4 +88,4 @@
 	</div>
 {/snippet}
 
-<GenericCard {...cardData} {viewMode} />
+<GenericCard {...cardData} {viewMode} selectable={false} />

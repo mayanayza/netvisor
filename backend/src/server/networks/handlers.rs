@@ -1,6 +1,6 @@
 use crate::server::auth::middleware::{AuthenticatedUser, RequireMember};
 use crate::server::shared::handlers::traits::{
-    CrudHandlers, delete_handler, get_by_id_handler, update_handler,
+    CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler, update_handler,
 };
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
@@ -28,6 +28,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler::<Network>))
         .route("/{id}", delete(delete_handler::<Network>))
         .route("/{id}", get(get_by_id_handler::<Network>))
+        .route("/bulk-delete", post(bulk_delete_handler::<Network>))
 }
 
 pub async fn create_handler(
@@ -67,7 +68,7 @@ pub async fn create_handler(
 
     let service = Network::get_service(&state);
     let created = service
-        .create(request)
+        .create(request, user.into())
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 

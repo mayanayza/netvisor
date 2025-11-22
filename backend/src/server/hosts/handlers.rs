@@ -1,5 +1,7 @@
 use crate::server::auth::middleware::{MemberOrDaemon, RequireMember};
-use crate::server::shared::handlers::traits::{CrudHandlers, get_all_handler, get_by_id_handler};
+use crate::server::shared::handlers::traits::{
+    CrudHandlers, bulk_delete_handler, get_all_handler, get_by_id_handler,
+};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::storage::traits::StorableEntity;
@@ -17,7 +19,6 @@ use axum::{
     routing::{post, put},
 };
 use futures::future::try_join_all;
-use itertools::{Either, Itertools};
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
@@ -29,6 +30,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", get(get_by_id_handler::<Host>))
         .route("/", post(create_host))
         .route("/{id}", put(update_host))
+        .route("/bulk-delete", post(bulk_delete_handler::<Host>))
         .route(
             "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),
@@ -37,7 +39,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn create_host(
     State(state): State<Arc<AppState>>,
-    MemberOrDaemon { .. }: MemberOrDaemon,
+    MemberOrDaemon { entity, .. }: MemberOrDaemon,
     Json(request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<HostWithServicesRequest>>> {
     let host_service = &state.services.host_service;
@@ -55,7 +57,7 @@ async fn create_host(
     }
 
     let (host, services) = host_service
-        .create_host_with_services(request.host, request.services.unwrap_or_default())
+        .create_host_with_services(request.host, request.services.unwrap_or_default(), entity)
         .await?;
 
     Ok(Json(ApiResponse::success(HostWithServicesRequest {
@@ -66,7 +68,7 @@ async fn create_host(
 
 async fn update_host(
     State(state): State<Arc<AppState>>,
-    RequireMember(_user): RequireMember,
+    RequireMember(user): RequireMember,
     Json(mut request): Json<HostWithServicesRequest>,
 ) -> ApiResult<Json<ApiResponse<Host>>> {
     let host_service = &state.services.host_service;
@@ -74,34 +76,40 @@ async fn update_host(
 
     // If services is None, don't update services
     if let Some(services) = request.services {
-        let (create_futures, update_futures): (Vec<_>, Vec<_>) =
-            services.into_iter().partition_map(|s| {
-                if s.id == Uuid::nil() {
-                    let service = Service::new(s.base);
-                    Either::Left(service_service.create_service(service))
-                } else {
-                    Either::Right(service_service.update_service(s))
-                }
-            });
+        let mut created_service_ids = Vec::new();
+        let mut updated_service_ids = Vec::new();
+        let mut create_futures = Vec::new();
 
+        for mut s in services {
+            let user = user.clone();
+            if s.id == Uuid::nil() {
+                let service = Service::new(s.base);
+                create_futures.push(service_service.create(service, user.into()));
+            } else {
+                // Execute updates sequentially
+                let updated = service_service.update(&mut s, user.into()).await?;
+                updated_service_ids.push(updated.id);
+            }
+        }
+
+        // Execute creates concurrently
         let created_services = try_join_all(create_futures).await?;
-        let updated_services = try_join_all(update_futures).await?;
+        created_service_ids.extend(created_services.iter().map(|s| s.id));
 
-        request.host.base.services = created_services
-            .iter()
-            .chain(updated_services.iter())
-            .map(|s| s.id)
+        request.host.base.services = created_service_ids
+            .into_iter()
+            .chain(updated_service_ids)
             .collect();
     }
 
-    let updated_host = host_service.update_host(request.host).await?;
+    let updated_host = host_service.update(&mut request.host, user.into()).await?;
 
     Ok(Json(ApiResponse::success(updated_host)))
 }
 
 async fn consolidate_hosts(
     State(state): State<Arc<AppState>>,
-    RequireMember(_user): RequireMember,
+    RequireMember(user): RequireMember,
     Path((destination_host_id, other_host_id)): Path<(Uuid, Uuid)>,
 ) -> ApiResult<Json<ApiResponse<Host>>> {
     let host_service = &state.services.host_service;
@@ -126,7 +134,7 @@ async fn consolidate_hosts(
         })?;
 
     let updated_host = host_service
-        .consolidate_hosts(destination_host, other_host)
+        .consolidate_hosts(destination_host, other_host, user.into())
         .await?;
 
     Ok(Json(ApiResponse::success(updated_host)))
@@ -134,7 +142,7 @@ async fn consolidate_hosts(
 
 pub async fn delete_handler(
     State(state): State<Arc<AppState>>,
-    RequireMember(_user): RequireMember,
+    RequireMember(user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Host::get_service(&state);
@@ -156,7 +164,7 @@ pub async fn delete_handler(
         .ok_or_else(|| ApiError::not_found(format!("Host '{}' not found", id)))?;
 
     service
-        .delete(&id)
+        .delete(&id, user.into())
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 

@@ -1,4 +1,4 @@
-use crate::server::shared::entities::Entity;
+use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumDiscriminants, EnumIter, IntoStaticStr};
@@ -37,8 +37,8 @@ impl HasId for GroupTypeDiscriminants {
 impl EntityMetadataProvider for GroupTypeDiscriminants {
     fn color(&self) -> &'static str {
         match self {
-            GroupTypeDiscriminants::RequestPath => Entity::Group.color(),
-            GroupTypeDiscriminants::HubAndSpoke => Entity::Group.color(),
+            GroupTypeDiscriminants::RequestPath => EntityDiscriminants::Group.color(),
+            GroupTypeDiscriminants::HubAndSpoke => EntityDiscriminants::Group.color(),
         }
     }
 
