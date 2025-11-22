@@ -608,8 +608,7 @@ Discovery is the process of scanning your network to find hosts and services.
 
 **Scheduled (Automatic)**
 - Runs on a cron schedule
-- Default: Hourly (`0 0 */1 * * *`)
-- Can be customized to any cron expression
+- Default: Every 24 hours (`0 0 */1 * * *`)
 - Enable/disable without deleting
 
 ### Creating a Discovery
@@ -685,6 +684,42 @@ The topology view generates an interactive diagram of your network structure.
   <img src="../media/topology_full.png" width="800" alt="Discovery Sessions">
 </p>
 
+### Topology State
+
+Topology will display different states depending on if the underlying data has changed since it was last built. Pressing Rebuild will have different effects depending on topology state.
+
+Rebuilding the graph will reset some user-provided changes, such as node positions and subnet sizes. Edge handles will be preserved when possible, but may also be overwritten as the layout of the graph may need to change depending on entities being added or removed.
+
+**Up to date**
+<p align="center">
+  <img src="../media/topology_fresh.png" width="800" alt="Discovery Sessions">
+</p>
+- All data is up to date
+- There is usually no reason to rebuild the graph in this state
+
+**Stale**
+<p align="center">
+  <img src="../media/topology_stale.png" width="800" alt="Discovery Sessions">
+</p>
+- One or more entities have been added or updated since the visualization was last rebuilt
+- Rebuilding the graph will add those entities
+
+**Conflict**
+<p align="center">
+  <img src="../media/topology_conflict.png" width="800" alt="Discovery Sessions">
+</p>
+- One or more entities on the graph have been deleted since it was last rebuilt
+- Rebuilding the graph will remove those entities
+- The specific entities that will be removed will be displayed in a modal so you can confirm before they are removed.
+
+**Locked**
+<p align="center">
+  <img src="../media/topology_locked.png" width="800" alt="Discovery Sessions">
+</p>
+- Other states will not be displayed
+- Topology cannot be rebuilt
+- Press Lock to enter the locked state
+
 ### Visual Elements
 
 **Subnet Containers**
@@ -692,15 +727,14 @@ The topology view generates an interactive diagram of your network structure.
 - Shows subnet name and CIDR
 - Can be resized manually
 
-**Host Nodes**
+**Interface Nodes**
 - Represent network interfaces
 - Show services bound to that interface
 - Display IP addresses and hostnames
 
-**Service Nodes**
+**Services**
 - Icons representing detected services
 - Show service name and ports
-- Color-coded by category
 
 **Edges**
 - Lines connecting related nodes
@@ -708,7 +742,6 @@ The topology view generates an interactive diagram of your network structure.
   - Host interfaces
   - Group relationships
   - Docker container links
-  - Gateway connections
 
 **Left Zone**
 - Optional section within each subnet
@@ -723,24 +756,12 @@ Access the options panel via the button on the right side of the topology view:
   <img src="../media/topology_options_overview.png" width="800" alt="Topology Options">
 </p>
 
-**General Options**
-
-*Network Selection*
-- Choose which networks to include in the diagram
-- Multi-select to overlay multiple networks
-- Useful for comparing environments
-
-*Service Category Filters*
-- Hide specific categories (Media, Development, etc.)
-- Reduces clutter for large networks
-- Categories remain in data, just hidden from view
-
 **Visual Options**
 
 *Don't Fade Edges*
 - Show all edges at full opacity
 - Default behavior fades unselected edges
-- Enable for clearer edge visibility
+- Enable for clearer edge visibility and screenshot appearance
 
 *Hide Resize Handles*
 - Remove subnet resize handles from corners
@@ -801,7 +822,10 @@ Access the options panel via the button on the right side of the topology view:
 
 **Node Positioning**
 - Click and drag any node to reposition
-- Reset by refreshing the topology
+
+**Edge Handle**
+- Select an edge to show handles (same-colored circle at edge ends)
+- Move handles to other locations on node
 
 **Subnet Sizing**
 - Drag subnet corners to resize
