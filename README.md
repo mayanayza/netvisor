@@ -66,6 +66,9 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 
 - [Architecture](#-architecture)
 - [Installation](#-installation)
+  - [Docker Installation](#1--start-the-server)
+  - [Ubuntu Native Installation](UBUNTU_INSTALLATION.md)
+  - [LAN Scanning with Docker](DOCKER_LAN_SCANNING.md)
 - [Getting Started](#-getting-started)
 - [User Interface](#-user-interface)
   - [Authentication](#authentication)
@@ -73,6 +76,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 - [Discovery](#-discovery)
   - [Docker Discovery](#-docker-discovery)
   - [Network Scanning](#-network-scanning)
+  - [LAN Scanning Guide](DOCKER_LAN_SCANNING.md)
 - [Network Organization](#-network-organization)
   - [Networks](#networks)
   - [Consolidating Hosts](#consolidating-hosts)
@@ -146,7 +150,12 @@ You can use this [helper script](https://community-scripts.github.io/ProxmoxVE/s
 
 ### 1. 🚀 Start the Server
 
-**Note**: The default docker compose includes a daemon which assumes your default Docker bridge network is `172.17.0.1`. If this is not the case, update the address in the `NETVISOR_INTEGRATED_DAEMON_URL` environment variable. 
+**Important Notes:**
+- The default docker-compose **already supports LAN scanning** via `network_mode: host`
+- The daemon automatically detects and scans your LAN subnet (e.g., 192.168.1.0/24)
+- **For LAN scanning help:** See [Docker LAN Scanning Guide](DOCKER_LAN_SCANNING.md) | [Quick Start](LAN_SCAN_QUICKSTART.md)
+
+**If your Docker bridge gateway is not `172.17.0.1`:** Update `NETVISOR_INTEGRATED_DAEMON_URL` in docker-compose.yml
 
 ```bash
 curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d

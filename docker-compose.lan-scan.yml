@@ -1,0 +1,236 @@
+# NetVisor Docker Compose - Optimized for LAN Scanning
+#
+# This configuration is specifically designed to scan your entire Local Area Network (LAN)
+# when running NetVisor in Docker.
+#
+# IMPORTANT: The daemon uses "network_mode: host" which is REQUIRED for LAN scanning.
+# This gives the container access to your host's network interfaces.
+#
+# Quick Start:
+#   1. docker compose -f docker-compose.lan-scan.yml up -d
+#   2. Access UI at http://localhost:60072
+#   3. Register an account
+#   4. Go to "Discover > Scheduled" and run discovery
+#   5. Wait 5-10 minutes (depending on network size)
+#   6. View results in "Manage > Hosts" and "Topology"
+#
+# What will be scanned:
+#   - All devices on your LAN subnet (e.g., 192.168.1.0/24)
+#   - Any VLANs your Docker host has interfaces on
+#   - Docker containers (if socket is mounted)
+#
+# Troubleshooting:
+#   - Check daemon logs: docker logs netvisor-daemon
+#   - Verify network detected: docker logs netvisor-daemon | grep subnet
+#   - See full guide: DOCKER_LAN_SCANNING.md
+
+x-netvisor-env: &netvisor-env
+  NETVISOR_LOG_LEVEL: ${NETVISOR_LOG_LEVEL:-info}
+  NETVISOR_SERVER_PORT: ${NETVISOR_SERVER_PORT:-60072}
+  NETVISOR_DAEMON_PORT: ${NETVISOR_DAEMON_PORT:-60073}
+
+services:
+  # ============================================================================
+  # DAEMON - Network Scanner
+  # ============================================================================
+  # This component performs the actual network scanning.
+  # It MUST use "network_mode: host" to scan your LAN.
+  daemon:
+    image: mayanayza/netvisor-daemon:latest
+    container_name: netvisor-daemon
+
+    # CRITICAL: Host network mode gives daemon access to your LAN interfaces
+    # Without this, daemon can only see Docker networks, not your LAN!
+    network_mode: host
+
+    # REQUIRED: Privileged mode or capabilities needed for raw socket access
+    # This allows the daemon to perform network scans
+    privileged: true
+    # Alternative (more secure): Use specific capabilities instead
+    # cap_add:
+    #   - NET_RAW
+    #   - NET_ADMIN
+
+    restart: unless-stopped
+
+    environment:
+      <<: *netvisor-env
+
+      # Server connection - daemon needs to reach the server
+      # When using host network mode, server is at Docker bridge gateway
+      # Default Docker bridge gateway is 172.17.0.1
+      # If your bridge gateway is different, check with: docker network inspect bridge
+      NETVISOR_SERVER_TARGET: ${NETVISOR_SERVER_TARGET:-http://127.0.0.1}
+
+      # Port daemon listens on (accessible via host network)
+      NETVISOR_DAEMON_PORT: ${NETVISOR_DAEMON_PORT:-60073}
+
+      # Bind to all interfaces
+      NETVISOR_BIND_ADDRESS: ${NETVISOR_BIND_ADDRESS:-0.0.0.0}
+
+      # Daemon name shown in UI
+      NETVISOR_NAME: ${NETVISOR_NAME:-primary-daemon}
+
+      # How often daemon reports to server (seconds)
+      NETVISOR_HEARTBEAT_INTERVAL: ${NETVISOR_HEARTBEAT_INTERVAL:-30}
+
+      # Optional: Limit concurrent host scans (reduce for low-resource systems)
+      # NETVISOR_CONCURRENT_SCANS: 10
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${NETVISOR_DAEMON_PORT:-60073}/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+    volumes:
+      # Daemon configuration persistence
+      - daemon-config:/root/.config/daemon
+
+      # OPTIONAL: Mount Docker socket for Docker container discovery
+      # Comment out if you don't want to discover Docker containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # ============================================================================
+  # DATABASE - PostgreSQL
+  # ============================================================================
+  # Stores all discovered network data
+  postgres:
+    image: postgres:17-alpine
+    container_name: netvisor-postgres
+
+    environment:
+      POSTGRES_DB: netvisor
+      POSTGRES_USER: postgres
+      # IMPORTANT: Change this password in production!
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+    # Database uses bridge network (doesn't need host network)
+    networks:
+      - netvisor
+
+  # ============================================================================
+  # SERVER - Web UI and API
+  # ============================================================================
+  # Provides the web interface and API
+  server:
+    image: mayanayza/netvisor-server:latest
+    container_name: netvisor-server
+
+    # Expose web UI port to host
+    ports:
+      - "${NETVISOR_SERVER_PORT:-60072}:${NETVISOR_SERVER_PORT:-60072}"
+
+    environment:
+      <<: *netvisor-env
+
+      # Database connection
+      NETVISOR_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/netvisor
+
+      # Path to UI static files (inside container)
+      NETVISOR_WEB_EXTERNAL_PATH: /app/static
+
+      # CRITICAL: Server needs to reach daemon
+      # Since daemon uses host network, it's accessible at Docker bridge gateway
+      # Default is 172.17.0.1 - change if your bridge gateway is different
+      # Check with: docker network inspect bridge | grep Gateway
+      NETVISOR_INTEGRATED_DAEMON_URL: http://172.17.0.1:${NETVISOR_DAEMON_PORT:-60073}
+
+      # Optional: Enable for HTTPS deployments
+      # NETVISOR_USE_SECURE_SESSION_COOKIES: true
+
+      # Optional: Disable new user registration after initial setup
+      # NETVISOR_DISABLE_REGISTRATION: false
+
+    volumes:
+      - ./data:/data
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      daemon:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    # Server uses bridge network (doesn't need host network)
+    networks:
+      - netvisor
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  daemon-config:
+    driver: local
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  netvisor:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1
+
+# ============================================================================
+# USAGE NOTES
+# ============================================================================
+#
+# Starting NetVisor:
+#   docker compose -f docker-compose.lan-scan.yml up -d
+#
+# Stopping NetVisor:
+#   docker compose -f docker-compose.lan-scan.yml down
+#
+# View logs:
+#   docker logs netvisor-daemon -f  # Daemon logs
+#   docker logs netvisor-server -f  # Server logs
+#
+# Access UI:
+#   http://localhost:60072
+#   or
+#   http://<your-host-ip>:60072
+#
+# What networks will be scanned:
+#   1. All subnets the Docker host has network interfaces on
+#   2. Docker bridge networks (if socket mounted)
+#   3. Example: If your host IP is 192.168.1.100, it will scan 192.168.1.0/24
+#
+# Verify correct network detection:
+#   1. docker logs netvisor-daemon | grep "Detected network"
+#   2. Should show your LAN subnet (e.g., 192.168.1.0/24)
+#
+# Common issues:
+#   - Only seeing Docker networks? Check network_mode: host on daemon
+#   - Daemon can't connect to server? Verify NETVISOR_INTEGRATED_DAEMON_URL
+#   - Permission errors? Ensure privileged: true or capabilities set
+#   - See full troubleshooting guide in DOCKER_LAN_SCANNING.md
+#
+# Security considerations:
+#   - Change POSTGRES_PASSWORD in production
+#   - Daemon needs privileged mode for network scanning
+#   - Consider using specific capabilities instead of privileged
+#   - Keep Docker images updated: docker compose pull
+#
+# Performance tuning for large networks:
+#   - Add NETVISOR_CONCURRENT_SCANS environment variable to daemon
+#   - Increase Docker memory/CPU limits if needed
+#   - See DOCKER_LAN_SCANNING.md for details
+#
+# ============================================================================
