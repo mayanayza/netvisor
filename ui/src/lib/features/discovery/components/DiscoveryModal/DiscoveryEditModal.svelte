@@ -35,10 +35,12 @@
 			: `Edit Discovery: ${discovery?.name}`
 		: 'Create Scheduled Discovery';
 
-	let formData: Discovery = createEmptyDiscoveryFormData();
-
 	$: daemon = daemons.find((d) => d.id === formData.daemon_id) || null;
 	$: daemonHostId = (daemon ? hosts.find((h) => h.id === daemon.host_id)?.id : null) || null;
+
+	let formData: Discovery = createEmptyDiscoveryFormData(
+		daemon ? daemon.capabilities.interfaced_subnet_ids : []
+	);
 
 	// Reset form when modal opens
 	$: if (isOpen) {
@@ -51,7 +53,9 @@
 	}
 
 	function resetForm() {
-		formData = discovery ? { ...discovery } : createEmptyDiscoveryFormData();
+		formData = discovery
+			? { ...discovery }
+			: createEmptyDiscoveryFormData(daemon ? daemon.capabilities.interfaced_subnet_ids : []);
 	}
 
 	async function handleSubmit() {
