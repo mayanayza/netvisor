@@ -2,6 +2,8 @@
 	import { Bug, AlertTriangle, Lightbulb, LifeBuoy, BookOpen } from 'lucide-svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
+	import { VERSION } from '$lib/version';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -134,5 +136,7 @@
 				</div>
 			</button>
 		</div>
+
+		<InlineInfo title={`NetVisor v${VERSION}`} />
 	</div>
 </EditModal>
