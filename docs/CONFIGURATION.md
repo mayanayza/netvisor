@@ -61,7 +61,7 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 |-----------|----------|---------------------|-----------------|---------|-------------|
 | **Server URL** | `--server-url` | `NETVISOR_SERVER_URL` | `server_url` | `http://127.0.0.1:60072` | URL where the daemon can reach the server |
 | **API Key** | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | *Required* | Authentication key for daemon (generated via UI) |
-| **Mode** | `--mode` | `NETVISOR_MODE` | `docker_proxy` | Push | Whether server will push work to daemon or daemon should poll for work from server |
+| **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Whether server will push work to daemon or daemon should poll for work from server |
 | **Network ID** | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
 | **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `daemon_port` | `60073` | Port for daemon to listen on |
 | **Bind Address** | `--bind-address` | `NETVISOR_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind daemon to |
