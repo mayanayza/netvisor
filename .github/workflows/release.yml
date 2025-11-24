@@ -135,6 +135,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pull latest changes  # Add this step
+        run: git pull origin $(git rev-parse --abbrev-ref HEAD)
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -182,6 +185,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pull latest changes  # Add this step
+        run: git pull origin $(git rev-parse --abbrev-ref HEAD)
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
