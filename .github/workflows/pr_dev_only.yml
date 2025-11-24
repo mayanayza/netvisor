@@ -4,6 +4,7 @@ on:
     types: [opened, reopened, synchronize, edited]
 jobs:
   check-branches:
+    name: pr_dev_only
     runs-on: ubuntu-latest
     steps:
       - name: Check branches
