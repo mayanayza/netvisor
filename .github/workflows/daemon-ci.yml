@@ -24,6 +24,7 @@ defaults:
 
 jobs:
   test:
+    name: daemon-lint-and-test
     runs-on: ubuntu-latest
     
     steps:

@@ -18,6 +18,7 @@ defaults:
 
 jobs:
   lint-and-test:
+    name: ui-lint-and-test
     runs-on: ubuntu-latest
     
     steps:
