@@ -88,6 +88,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage version changes
+          git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
+
+           # Stage fixture updates
           git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json
           
           if git diff --staged --quiet; then
