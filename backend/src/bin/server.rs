@@ -266,7 +266,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
     let actual_port = listener.local_addr()?.port();
 
-    tracing::info!("🚀 NetVisor server started successfully");
+    tracing::info!("🚀 NetVisor Server v{}", env!("CARGO_PKG_VERSION"));
     if web_external_path.is_some() {
         tracing::info!("📊 Web UI: http://<your-ip>:{}", actual_port);
     }

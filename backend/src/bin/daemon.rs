@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("🤖 NetVisor daemon starting");
+    tracing::info!("🤖 NetVisor Daemon v{}", env!("CARGO_PKG_VERSION"));
 
     let (_, path) = AppConfig::get_config_path()?;
     let path_str = path
