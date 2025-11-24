@@ -1,12 +1,15 @@
 use crate::server::{
     api_keys,
     auth::{
-        r#impl::api::{
-            ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
-            RegisterRequest, ResetPasswordRequest, UpdateEmailPasswordRequest,
+        r#impl::{
+            api::{
+                ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
+                RegisterRequest, ResetPasswordRequest, UpdateEmailPasswordRequest,
+            },
+            base::LoginRegisterParams,
+            oidc::OidcPendingAuth,
         },
         middleware::AuthenticatedUser,
-        oidc::OidcPendingAuth,
     },
     config::AppState,
     organizations::handlers::process_pending_invite,
@@ -57,9 +60,11 @@ async fn register(
     let ip = addr.ip();
     let user_agent = user_agent.map(|u| u.to_string());
 
-    let (org_id, permissions) = match process_pending_invite(&state, &session).await {
-        Ok(Some((org_id, permissions))) => (Some(org_id), Some(permissions)),
-        Ok(_) => (None, None),
+    let (org_id, permissions, network_ids) = match process_pending_invite(&state, &session).await {
+        Ok(Some((org_id, permissions, network_ids))) => {
+            (Some(org_id), Some(permissions), network_ids)
+        }
+        Ok(_) => (None, None, vec![]),
         Err(e) => {
             return Err(ApiError::internal_error(&format!(
                 "Failed to process invite: {}",
@@ -71,7 +76,16 @@ async fn register(
     let user = state
         .services
         .auth_service
-        .register(request, org_id, permissions, ip, user_agent)
+        .register(
+            request,
+            LoginRegisterParams {
+                org_id,
+                permissions,
+                ip,
+                user_agent,
+                network_ids,
+            },
+        )
         .await?;
 
     session
@@ -375,26 +389,32 @@ async fn oidc_callback(
             }
         }
     } else {
-        let (org_id, permissions) = match process_pending_invite(&state, &session).await {
-            Ok(Some((org_id, permissions))) => (Some(org_id), Some(permissions)),
-            Ok(_) => (None, None),
-            Err(e) => {
-                return Err(Redirect::to(&format!(
-                    "{}?error={}",
-                    return_url,
-                    urlencoding::encode(&format!("Failed to process invite: {}", e))
-                )));
-            }
-        };
+        let (org_id, permissions, network_ids) =
+            match process_pending_invite(&state, &session).await {
+                Ok(Some((org_id, permissions, network_ids))) => {
+                    (Some(org_id), Some(permissions), network_ids)
+                }
+                Ok(_) => (None, None, vec![]),
+                Err(e) => {
+                    return Err(Redirect::to(&format!(
+                        "{}?error={}",
+                        return_url,
+                        urlencoding::encode(&format!("Failed to process invite: {}", e))
+                    )));
+                }
+            };
 
         match oidc_service
             .login_or_register(
                 &params.code,
                 pending_auth,
-                org_id,
-                permissions,
-                ip,
-                user_agent,
+                LoginRegisterParams {
+                    org_id,
+                    permissions,
+                    ip,
+                    user_agent,
+                    network_ids,
+                },
             )
             .await
         {

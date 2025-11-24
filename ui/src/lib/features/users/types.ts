@@ -10,6 +10,7 @@ export interface User {
 	oidc_subject?: string;
 	oidc_linked_at?: string;
 	permissions: UserOrgPermissions;
+	network_ids: string[];
 }
 
 export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Visualizer' | 'None';

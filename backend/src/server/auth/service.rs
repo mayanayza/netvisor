@@ -1,6 +1,9 @@
 use crate::server::{
     auth::{
-        r#impl::api::{LoginRequest, RegisterRequest},
+        r#impl::{
+            api::{LoginRequest, RegisterRequest},
+            base::{LoginRegisterParams, ProvisionUserParams},
+        },
         middleware::{AuthenticatedEntity, AuthenticatedUser},
     },
     email::service::EmailService,
@@ -69,11 +72,16 @@ impl AuthService {
     pub async fn register(
         &self,
         request: RegisterRequest,
-        org_id: Option<Uuid>,
-        permissions: Option<UserOrgPermissions>,
-        ip: IpAddr,
-        user_agent: Option<String>,
+        params: LoginRegisterParams,
     ) -> Result<User> {
+        let LoginRegisterParams {
+            org_id,
+            permissions,
+            ip,
+            user_agent,
+            network_ids,
+        } = params;
+
         request
             .validate()
             .map_err(|e| anyhow!("Validation failed: {}", e))?;
@@ -90,14 +98,15 @@ impl AuthService {
 
         // Provision user with password
         let user = self
-            .provision_user(
-                request.email,
-                Some(hash_password(&request.password)?),
-                None,
-                None,
+            .provision_user(ProvisionUserParams {
+                email: request.email,
+                password_hash: Some(hash_password(&request.password)?),
+                oidc_subject: None,
+                oidc_provider: None,
                 org_id,
                 permissions,
-            )
+                network_ids,
+            })
             .await?;
 
         self.event_bus
@@ -120,15 +129,17 @@ impl AuthService {
     }
 
     /// Core user provisioning logic - handles both password and OIDC registration
-    pub async fn provision_user(
-        &self,
-        email: EmailAddress,
-        password_hash: Option<String>,
-        oidc_subject: Option<String>,
-        oidc_provider: Option<String>,
-        org_id: Option<Uuid>,
-        permissions: Option<UserOrgPermissions>,
-    ) -> Result<User> {
+    pub async fn provision_user(&self, params: ProvisionUserParams) -> Result<User> {
+        let ProvisionUserParams {
+            email,
+            password_hash,
+            oidc_subject,
+            oidc_provider,
+            org_id,
+            permissions,
+            network_ids,
+        } = params;
+
         let all_users = self
             .user_service
             .get_all(EntityFilter::unfiltered())
@@ -192,6 +203,7 @@ impl AuthService {
                             hash,
                             organization_id,
                             permissions,
+                            network_ids,
                         )),
                         AuthenticatedEntity::System,
                     )
@@ -205,6 +217,7 @@ impl AuthService {
                             oidc_provider,
                             organization_id,
                             permissions,
+                            network_ids,
                         )),
                         AuthenticatedEntity::System,
                     )

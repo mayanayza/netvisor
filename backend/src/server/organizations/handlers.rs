@@ -28,9 +28,9 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", put(update_handler::<Organization>))
         .route("/", get(get_by_id_handler))
         .route("/invites", post(create_invite))
-        .route("/invites/{token}", get(get_invite))
-        .route("/invites/{token}/revoke", delete(revoke_invite))
-        .route("/invites/{token}/accept", get(accept_invite_link))
+        .route("/invites/{id}", get(get_invite))
+        .route("/invites/{id}/revoke", delete(revoke_invite))
+        .route("/invites/{id}/accept", get(accept_invite_link))
         .route("/invites", get(get_invites))
 }
 
@@ -223,10 +223,21 @@ async fn accept_invite_link(
         )));
     };
 
+    if let Err(e) = session
+        .insert("pending_network_ids", invite.network_ids)
+        .await
+    {
+        tracing::error!("Failed to save invite network_ids to session: {}", e);
+        return Err(Redirect::to(&format!(
+            "/?error={}",
+            urlencoding::encode("Failed to process invite. Please try again.")
+        )));
+    };
+
     // Check if user is already logged in
     if let Ok(Some(user_id)) = session.get::<uuid::Uuid>("user_id").await {
         // User is logged in - add them to the organization immediately
-        if let Some((org_id, permissions)) = process_pending_invite(&state, &session)
+        if let Some((org_id, permissions, network_ids)) = process_pending_invite(&state, &session)
             .await
             .map_err(|e| {
                 tracing::error!("Failed to process invite for logged-in user: {}", e);
@@ -259,6 +270,7 @@ async fn accept_invite_link(
 
             user.base.organization_id = org_id;
             user.base.permissions = permissions;
+            user.base.network_ids = network_ids;
             // Update user's organization
             state
                 .services
@@ -290,7 +302,7 @@ async fn accept_invite_link(
 pub async fn process_pending_invite(
     state: &Arc<AppState>,
     session: &Session,
-) -> Result<Option<(Uuid, UserOrgPermissions)>, Error> {
+) -> Result<Option<(Uuid, UserOrgPermissions, Vec<Uuid>)>, Error> {
     // Check for pending invite in session
     let pending_org_id = match session.get::<Uuid>("pending_org_invite").await {
         Ok(Some(org_id)) => org_id,
@@ -310,10 +322,10 @@ pub async fn process_pending_invite(
         _ => return Ok(None), // No permissions stored
     };
 
-    tracing::info!(
-        "Processing pending invite to organization {}",
-        pending_org_id
-    );
+    let network_ids = match session.get::<Vec<Uuid>>("pending_network_ids").await {
+        Ok(Some(network_ids)) => network_ids,
+        _ => return Ok(None), // No network ids
+    };
 
     // Mark invite as used
     if let Err(e) = state
@@ -329,6 +341,7 @@ pub async fn process_pending_invite(
     let _ = session.remove::<Uuid>("pending_org_invite").await;
     let _ = session.remove::<String>("pending_invite_id").await;
     let _ = session.remove::<String>("pending_invite_permissions").await;
+    let _ = session.remove::<String>("pending_network_ids").await;
 
-    Ok(Some((pending_org_id, permissions)))
+    Ok(Some((pending_org_id, permissions, network_ids)))
 }
