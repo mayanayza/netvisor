@@ -3,7 +3,7 @@ use crate::server::{
     discovery::r#impl::base::Discovery, groups::r#impl::base::Group, hosts::r#impl::base::Host,
     networks::r#impl::Network, organizations::r#impl::base::Organization,
     services::r#impl::base::Service, shared::storage::traits::StorableEntity,
-    subnets::r#impl::base::Subnet, users::r#impl::base::User,
+    subnets::r#impl::base::Subnet, topology::types::base::Topology, users::r#impl::base::User,
 };
 use sqlx::postgres::PgRow;
 use std::collections::HashMap;
@@ -97,6 +97,14 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
         }),
     );
 
+    map.insert(
+        Topology::table_name(),
+        Box::new(|row| {
+            Topology::from_row(row)?;
+            Ok(())
+        }),
+    );
+
     map
 }
 
@@ -105,6 +113,12 @@ pub async fn test_all_tables_have_entity_mapping() {
     use crate::tests::setup_test_db;
 
     let (pool, _database_url, _container) = setup_test_db().await;
+
+    // Apply migrations to create the schema
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
 
     // Get all tables from information_schema
     let tables: Vec<String> = sqlx::query_scalar(
