@@ -54,8 +54,8 @@ impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
 impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
     fn discovery_type(&self) -> DiscoveryType {
         DiscoveryType::Network {
-            subnet_ids: None,
-            host_naming_fallback: HostNamingFallback::BestService,
+            subnet_ids: self.domain.subnet_ids.clone(),
+            host_naming_fallback: self.domain.host_naming_fallback,
         }
     }
 
