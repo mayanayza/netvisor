@@ -103,7 +103,7 @@ impl TypeMetadataProvider for UserOrgPermissions {
                 "Manage users and invites, create and modify all infrastructure, but cannot access billing"
             }
             UserOrgPermissions::Member => {
-                "Create and modify networks, hosts, services, run discovery scans, and invite Visualizers"
+                "Create and modify hosts, services, run discovery scans, and invite Visualizers to networks they have access to"
             }
             UserOrgPermissions::Visualizer => "Read-only access: view network topology",
             UserOrgPermissions::None => "No permissions assigned",
@@ -126,8 +126,11 @@ impl TypeMetadataProvider for UserOrgPermissions {
             _ => UserOrgPermissions::iter().filter(|p| p < self).collect(),
         };
 
+        let network_permissions: bool =
+            matches!(self, UserOrgPermissions::Owner | UserOrgPermissions::Admin);
         serde_json::json!({
-            "can_manage": can_manage
+            "can_manage": can_manage,
+            "network_permissions": network_permissions
         })
     }
 }

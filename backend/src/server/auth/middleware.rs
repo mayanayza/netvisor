@@ -196,16 +196,24 @@ where
             .map_err(|_| AuthError(ApiError::unauthorized("User not found".to_string())))?
             .ok_or_else(|| AuthError(ApiError::unauthorized("User not found".to_string())))?;
 
-        let org_filter = EntityFilter::unfiltered().organization_id(&user.base.organization_id);
-        let network_ids: Vec<Uuid> = app_state
-            .services
-            .network_service
-            .get_all(org_filter)
-            .await
-            .map_err(|_| AuthError(ApiError::internal_error("Failed to load networks")))?
-            .iter()
-            .map(|n| n.id)
-            .collect();
+        let network_ids: Vec<Uuid> = if matches!(
+            user.base.permissions,
+            UserOrgPermissions::Owner | UserOrgPermissions::Admin
+        ) {
+            let org_filter = EntityFilter::unfiltered().organization_id(&user.base.organization_id);
+
+            app_state
+                .services
+                .network_service
+                .get_all(org_filter)
+                .await
+                .map_err(|_| AuthError(ApiError::internal_error("Failed to load networks")))?
+                .iter()
+                .map(|n| n.id)
+                .collect()
+        } else {
+            user.base.network_ids
+        };
 
         Ok(AuthenticatedEntity::User {
             user_id: user.id,

@@ -58,6 +58,7 @@ export interface ServicedDefinitionMetadata {
 
 export interface PermissionsMetadata {
 	can_manage: string[];
+	network_permissions: boolean;
 }
 
 export interface SubnetTypeMetadata {
