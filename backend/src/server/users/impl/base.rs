@@ -31,6 +31,8 @@ pub struct UserBase {
     pub oidc_subject: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oidc_linked_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub network_ids: Vec<Uuid>,
 }
 
 impl Default for UserBase {
@@ -43,6 +45,7 @@ impl Default for UserBase {
             oidc_linked_at: None,
             oidc_provider: None,
             oidc_subject: None,
+            network_ids: vec![],
         }
     }
 }
@@ -57,6 +60,7 @@ impl UserBase {
             oidc_linked_at: None,
             oidc_provider: None,
             oidc_subject: None,
+            network_ids: vec![],
         }
     }
 
@@ -66,6 +70,7 @@ impl UserBase {
         oidc_provider: Option<String>,
         organization_id: Uuid,
         permissions: UserOrgPermissions,
+        network_ids: Vec<Uuid>,
     ) -> Self {
         Self {
             email,
@@ -75,6 +80,7 @@ impl UserBase {
             organization_id,
             oidc_provider,
             oidc_subject: Some(oidc_subject),
+            network_ids,
         }
     }
 
@@ -83,6 +89,7 @@ impl UserBase {
         password_hash: String,
         organization_id: Uuid,
         permissions: UserOrgPermissions,
+        network_ids: Vec<Uuid>,
     ) -> Self {
         Self {
             email,
@@ -92,6 +99,7 @@ impl UserBase {
             oidc_linked_at: None,
             oidc_provider: None,
             oidc_subject: None,
+            network_ids,
         }
     }
 }
@@ -176,6 +184,7 @@ impl StorableEntity for User {
                     organization_id,
                     oidc_provider,
                     oidc_subject,
+                    network_ids,
                 },
         } = self.clone();
 
@@ -191,6 +200,7 @@ impl StorableEntity for User {
                 "oidc_subject",
                 "permissions",
                 "organization_id",
+                "network_ids",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -203,6 +213,7 @@ impl StorableEntity for User {
                 SqlValue::OptionalString(oidc_subject),
                 SqlValue::UserOrgPermissions(permissions),
                 SqlValue::Uuid(organization_id),
+                SqlValue::UuidArray(network_ids),
             ],
         ))
     }
@@ -228,6 +239,7 @@ impl StorableEntity for User {
                 oidc_linked_at: row.get("oidc_linked_at"),
                 oidc_provider: row.get("oidc_provider"),
                 oidc_subject: row.get("oidc_subject"),
+                network_ids: row.get("network_ids"),
             },
         })
     }

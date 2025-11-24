@@ -6,6 +6,7 @@
 	import { entities, permissions, metadata } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
 	import { deleteUser } from '../store';
+	import { networks } from '$lib/features/networks/store';
 
 	let {
 		user,
@@ -67,6 +68,23 @@
 			{
 				label: 'Joined',
 				value: formatTimestamp(user.created_at)
+			},
+			{
+				label: 'Networks',
+				value:
+					user.permissions == 'Admin' || user.permissions == 'Owner'
+						? [
+								{
+									id: user.id,
+									label: 'All',
+									color: entities.getColorHelper('Network').string
+								}
+							]
+						: user.network_ids.map((n) => ({
+								id: n,
+								label: $networks.find((net) => net.id == n)?.name ?? 'Unknown Network',
+								color: entities.getColorHelper('Network').string
+							}))
 			}
 		],
 		actions: canManage

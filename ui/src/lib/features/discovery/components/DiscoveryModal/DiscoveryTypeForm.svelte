@@ -12,7 +12,6 @@
 	import { discoveryTypes, subnetTypes } from '$lib/shared/stores/metadata';
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { generateCronSchedule, parseCronToHours } from '../../store';
-	import { onMount } from 'svelte';
 
 	export let formApi: FormApi;
 	export let formData: Discovery;
@@ -39,22 +38,6 @@
 		{ value: 'Ip', label: 'IP Address' },
 		{ value: 'BestService', label: 'Best Service' }
 	];
-
-	// Initialize discovery type fields on mount
-	onMount(() => {
-		if (formData.discovery_type.type === 'Network') {
-			formData.discovery_type = {
-				...formData.discovery_type,
-				subnet_ids: daemon.capabilities.interfaced_subnet_ids,
-				host_naming_fallback: 'BestService'
-			};
-		} else if (formData.discovery_type.type == 'Docker') {
-			formData.discovery_type = {
-				...formData.discovery_type,
-				host_naming_fallback: 'BestService'
-			};
-		}
-	});
 
 	// Run type toggle
 	const runTypeField = field('run_type', formData.run_type.type, [required()]);

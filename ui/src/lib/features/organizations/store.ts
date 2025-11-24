@@ -43,11 +43,13 @@ export async function updateOrganization(org: Organization) {
 }
 
 export async function createInvite(
-	permissions: UserOrgPermissions
+	permissions: UserOrgPermissions,
+	network_ids: string[]
 ): Promise<OrganizationInvite | null> {
 	const request: CreateInviteRequest = {
 		expiration_hours: null,
-		permissions
+		permissions,
+		network_ids
 	};
 
 	const result = await api.request<OrganizationInvite, OrganizationInvite[]>(
@@ -82,11 +84,11 @@ export async function getInvites(): Promise<OrganizationInvite[]> {
 	return [];
 }
 
-export async function revokeInvite(token: string): Promise<void> {
+export async function revokeInvite(id: string): Promise<void> {
 	await api.request<void, OrganizationInvite[]>(
-		`/organizations/invites/${token}/revoke`,
+		`/organizations/invites/${id}/revoke`,
 		invites,
-		(_, current) => current.filter((i) => i.token != token),
+		(_, current) => current.filter((i) => i.id != id),
 		{
 			method: 'DELETE'
 		}
@@ -94,5 +96,5 @@ export async function revokeInvite(token: string): Promise<void> {
 }
 
 export function formatInviteUrl(invite: OrganizationInvite): string {
-	return `${invite.url}/api/organizations/invites/${invite.token}/accept`;
+	return `${invite.url}/api/organizations/invites/${invite.id}/accept`;
 }

@@ -7,12 +7,18 @@ use openidconnect::{
     core::{CoreClient, CoreProviderMetadata, CoreResponseType},
     reqwest::Client as ReqwestClient,
 };
-use serde::{Deserialize, Serialize};
 use std::{net::IpAddr, str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 use crate::server::{
-    auth::{middleware::AuthenticatedEntity, service::AuthService},
+    auth::{
+        r#impl::{
+            base::{LoginRegisterParams, ProvisionUserParams},
+            oidc::{OidcPendingAuth, OidcUserInfo},
+        },
+        middleware::AuthenticatedEntity,
+        service::AuthService,
+    },
     shared::{
         events::{
             bus::EventBus,
@@ -20,26 +26,8 @@ use crate::server::{
         },
         services::traits::CrudService,
     },
-    users::{
-        r#impl::{base::User, permissions::UserOrgPermissions},
-        service::UserService,
-    },
+    users::{r#impl::base::User, service::UserService},
 };
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OidcUserInfo {
-    pub subject: String,
-    pub email: Option<String>,
-    pub name: Option<String>,
-}
-
-// Store this in tower-sessions
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OidcPendingAuth {
-    pub pkce_verifier: String,
-    pub nonce: String,
-    pub csrf_token: String,
-}
 
 #[derive(Clone)]
 pub struct OidcService {
@@ -212,11 +200,16 @@ impl OidcService {
         &self,
         code: &str,
         pending_auth: OidcPendingAuth,
-        org_id: Option<Uuid>,
-        permissions: Option<UserOrgPermissions>,
-        ip: IpAddr,
-        user_agent: Option<String>,
+        params: LoginRegisterParams,
     ) -> Result<User> {
+        let LoginRegisterParams {
+            org_id,
+            permissions,
+            ip,
+            user_agent,
+            network_ids,
+        } = params;
+
         let user_info = self.exchange_code(code, pending_auth).await?;
 
         // Check if user exists with this OIDC account, login if so
@@ -260,14 +253,15 @@ impl OidcService {
         // Register new user
         let user = self
             .auth_service
-            .provision_user(
+            .provision_user(ProvisionUserParams {
                 email,
-                None,
-                Some(user_info.subject),
-                Some(self.provider_name.clone()),
+                password_hash: None,
+                oidc_subject: Some(user_info.subject),
+                oidc_provider: Some(self.provider_name.clone()),
                 org_id,
                 permissions,
-            )
+                network_ids,
+            })
             .await?;
 
         self.event_bus

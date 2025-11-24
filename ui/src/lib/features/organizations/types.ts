@@ -60,11 +60,11 @@ export interface CommunityBillingPlan {
 export interface CreateInviteRequest {
 	expiration_hours: number | null;
 	permissions: UserOrgPermissions;
+	network_ids: string[];
 }
 
 export interface OrganizationInvite {
 	id: string;
-	token: string;
 	permissions: UserOrgPermissions;
 	url: string;
 	expires_at: string;

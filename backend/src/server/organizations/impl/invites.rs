@@ -12,6 +12,7 @@ pub struct Invite {
     pub id: Uuid,
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
+    pub network_ids: Vec<Uuid>,
     pub url: String,
     pub created_by: Uuid,
     pub created_at: DateTime<Utc>,
@@ -25,12 +26,14 @@ impl Invite {
         created_by: Uuid,
         expiration_hours: i64,
         permissions: UserOrgPermissions,
+        network_ids: Vec<Uuid>,
     ) -> Self {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4(),
             organization_id,
             permissions,
+            network_ids,
             created_by,
             url,
             created_at: now,

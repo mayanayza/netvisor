@@ -13,6 +13,9 @@
 	import { required } from 'svelte-forms/validators';
 	import { permissions, metadata, entities } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
+	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
+	import { networks } from '$lib/features/networks/store';
+	import { NetworkDisplay } from '$lib/shared/components/forms/selection/display/NetworkDisplay.svelte';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
@@ -42,6 +45,45 @@
 	// Create form field with validation
 	const permissionsField = field('permissions', 'Visualizer', [required()]);
 
+	const networksNotNeeded: UserOrgPermissions[] = ['Admin', 'Owner'];
+
+	let selectedNetworks = $derived(
+		$networks.filter((n) => {
+			if ($currentUser) {
+				return networksNotNeeded.includes($currentUser.permissions)
+					? true
+					: $currentUser.network_ids.includes(n.id);
+			}
+			return false;
+		})
+	);
+
+	let networkOptions = $derived(
+		$networks
+			.filter((n) => {
+				if ($currentUser) {
+					return networksNotNeeded.includes($currentUser.permissions)
+						? true
+						: $currentUser.network_ids.includes(n.id);
+				}
+				return false;
+			})
+			.filter((n) => !selectedNetworks.map((net) => net.id).includes(n.id) && n != undefined)
+	);
+
+	function handleAddNetwork(id: string) {
+		const network = $networks.find((n) => n.id == id);
+		if (network) {
+			selectedNetworks.push(network);
+			selectedNetworks = [...selectedNetworks];
+		}
+	}
+
+	function handleRemoveNetwork(index: number) {
+		selectedNetworks.splice(index, 1);
+		selectedNetworks = [...selectedNetworks];
+	}
+
 	// Reset form when modal opens
 	$effect(() => {
 		if (isOpen && !invite) {
@@ -57,7 +99,10 @@
 	async function handleGenerateInvite() {
 		generatingInvite = true;
 		try {
-			invite = await createInvite($permissionsField.value as UserOrgPermissions);
+			invite = await createInvite(
+				$permissionsField.value as UserOrgPermissions,
+				selectedNetworks.map((n) => n.id)
+			);
 			if (invite) {
 				pushSuccess('Invite generated successfully');
 			}
@@ -135,6 +180,26 @@
 			disabled={!!invite}
 			helpText="Choose the access level for the invited user"
 		/>
+
+		{#if !networksNotNeeded.includes($permissionsField.value as UserOrgPermissions)}
+			<ListManager
+				label="Networks"
+				helpText="Select networks this user will have access to"
+				required={true}
+				allowReorder={false}
+				allowAddFromOptions={true}
+				allowCreateNew={false}
+				allowItemEdit={() => false}
+				disableCreateNewButton={false}
+				onAdd={handleAddNetwork}
+				onRemove={handleRemoveNetwork}
+				options={networkOptions}
+				optionDisplayComponent={NetworkDisplay}
+				items={selectedNetworks}
+				itemDisplayComponent={NetworkDisplay}
+				{formApi}
+			/>
+		{/if}
 
 		<!-- Generate Invite Button (shown when no invite exists) -->
 		{#if !invite}

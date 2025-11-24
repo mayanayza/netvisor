@@ -13,7 +13,7 @@
 
 	function handleRevokeInvite() {
 		if (confirm(`Are you sure you want to revoke this invite URL?`)) {
-			revokeInvite(invite.token);
+			revokeInvite(invite.id);
 		}
 	}
 

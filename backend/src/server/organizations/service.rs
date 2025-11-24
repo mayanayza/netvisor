@@ -134,6 +134,7 @@ impl OrganizationService {
             user_id,
             expiration_hours,
             request.permissions,
+            request.network_ids,
         );
 
         // Store invite
