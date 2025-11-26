@@ -1,14 +1,69 @@
 <script lang="ts">
 	import { billingPlans, features } from '$lib/shared/stores/metadata';
-	import { Check, X } from 'lucide-svelte';
+	import { Check, X, ChevronDown } from 'lucide-svelte';
 	import { checkout, currentPlans } from './store';
 	import type { BillingPlan } from './types';
 	import GithubStars from '../../shared/components/data/GithubStars.svelte';
+	import Tag from '$lib/shared/components/data/Tag.svelte';
+	import ToggleGroup from './ToggleGroup.svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	$effect(() => {
 		void $currentPlans;
 		void billingPlans;
 	});
+
+	// Track collapsed state for each category
+	let collapsedCategories = $state<Record<string, boolean>>({});
+
+	// Plan filter state
+	type PlanFilter = 'all' | 'personal' | 'commercial';
+	let planFilter = $state<PlanFilter>('all');
+
+	// Billing period filter state
+	type BillingPeriod = 'monthly' | 'yearly';
+	let billingPeriod = $state<BillingPeriod>('yearly');
+
+	// Toggle options
+	const planTypeOptions = [
+		{ value: 'all', label: 'All Plans' },
+		{ value: 'personal', label: 'Personal' },
+		{ value: 'commercial', label: 'Commercial' }
+	];
+
+	const billingPeriodOptions = [
+		{ value: 'monthly', label: 'Monthly' },
+		{ value: 'yearly', label: 'Yearly', badge: '-20%' }
+	];
+
+	// Filtered plans based on selection
+	let filteredPlans = $derived.by(() => {
+		let plans = $currentPlans;
+
+		// Filter by plan type
+		if (planFilter !== 'all') {
+			plans = plans.filter((plan) => {
+				const metadata = getPlanMetadata(plan.type);
+
+				if (planFilter === 'commercial') return metadata.is_commercial;
+				if (planFilter === 'personal') return !metadata.is_commercial;
+				return true;
+			});
+		}
+
+		// Filter by billing period
+		plans = plans.filter((plan) => {
+			if (billingPeriod === 'monthly') return plan.rate === 'Month';
+			if (billingPeriod === 'yearly') return plan.rate === 'Year';
+			return true;
+		});
+
+		return plans;
+	});
+
+	function toggleCategory(category: string) {
+		collapsedCategories[category] = !collapsedCategories[category];
+	}
 
 	async function handlePlanSelect(plan: BillingPlan) {
 		const checkoutUrl = await checkout(plan);
@@ -17,36 +72,46 @@
 		}
 	}
 
-	function formatPrice(plan: (typeof $currentPlans)[0]): string {
-		return `$${plan.price.cents / 100} per ${plan.price.rate}`;
+	function formatBasePricing(plan: BillingPlan): string {
+		return `$${plan.base_cents / 100}/${plan.rate}`;
 	}
 
-	// Get metadata for a plan type from billingPlans store
+	function formatSeatAddonPricing(plan: BillingPlan): string {
+		if (plan.seat_cents) return `+$${plan.seat_cents / 100}/seat/${plan.rate.toLowerCase()}`;
+		else return '';
+	}
+
+	function formatNetworkAddonPricing(plan: BillingPlan): string {
+		if (plan.network_cents)
+			return `+$${plan.network_cents / 100}/network/${plan.rate.toLowerCase()}`;
+		else return '';
+	}
+
 	function getPlanMetadata(planType: string) {
 		return billingPlans.getMetadata(planType);
 	}
 
-	// Extract feature keys from the first plan's metadata
+	function isComingSoon(featureKey: string): boolean {
+		return features.getMetadata(featureKey)?.is_coming_soon === true;
+	}
+
 	let featureKeys = $derived(
-		$currentPlans.length > 0
-			? Object.keys(getPlanMetadata($currentPlans[0].type)?.features || {})
+		filteredPlans.length > 0
+			? Object.keys(getPlanMetadata(filteredPlans[0].type)?.features || {})
 			: []
 	);
 
-	// Helper to get feature value for a plan type
 	function getFeatureValue(planType: string, featureKey: string): string | boolean | number | null {
 		const metadata = getPlanMetadata(planType);
 		const value = metadata?.features?.[featureKey as keyof typeof metadata.features];
 
 		if (value === undefined) return null;
 
-		// Check if this feature uses null as unlimited
 		const featureMetadata = features.getMetadata(featureKey);
 		if (featureMetadata?.use_null_as_unlimited && value === null) {
 			return 'Unlimited';
 		}
 
-		// Handle -1 as unlimited for numeric fields
 		if (value === -1) {
 			return 'Unlimited';
 		}
@@ -54,15 +119,12 @@
 		return value as string | boolean | number | null;
 	}
 
-	// Helper to check if a feature is a text field
 	function isTextField(featureKey: string): boolean {
-		if ($currentPlans.length === 0) return false;
-		const values = $currentPlans.map((p) => getFeatureValue(p.type, featureKey));
-		// Text fields have string values that aren't "Unlimited"
+		if (filteredPlans.length === 0) return false;
+		const values = filteredPlans.map((p) => getFeatureValue(p.type, featureKey));
 		return values.some((v) => typeof v === 'string' && v !== 'Unlimited');
 	}
 
-	// Helper to check if a value is "truthy" for sorting purposes
 	function isTruthyValue(value: string | boolean | number | null): boolean {
 		if (value === null || value === false) return false;
 		if (value === true) return true;
@@ -71,151 +133,241 @@
 		return false;
 	}
 
-	// Count how many plans have truthy values for each feature
 	function getTruthyCount(featureKey: string): number {
-		return $currentPlans.filter((p) => isTruthyValue(getFeatureValue(p.type, featureKey))).length;
+		return filteredPlans.filter((p) => isTruthyValue(getFeatureValue(p.type, featureKey))).length;
 	}
 
-	// Sort features: text fields go to bottom, others sorted by truthy count
 	let sortedFeatureKeys = $derived(
 		[...featureKeys].sort((a, b) => {
 			const aIsText = isTextField(a);
 			const bIsText = isTextField(b);
-
-			// Text fields always go to the bottom
 			if (aIsText && !bIsText) return 1;
 			if (!aIsText && bIsText) return -1;
-
-			// Within the same category (both text or both non-text), sort by truthy count
 			return getTruthyCount(b) - getTruthyCount(a);
 		})
 	);
 
-	// Calculate equal column width based on number of plans
-	let columnWidth = $derived(`${100 / ($currentPlans.length + 1)}%`);
+	// Group sorted features by category, with "Features" first
+	let groupedFeatures = $derived.by(() => {
+		const groups: SvelteMap<string, string[]> = new SvelteMap();
+
+		for (const featureKey of sortedFeatureKeys) {
+			const category = features.getCategory(featureKey) || 'Other';
+			if (!groups.has(category)) {
+				groups.set(category, []);
+			}
+			groups.get(category)!.push(featureKey);
+		}
+
+		// Sort categories: "Features" first, then alphabetically
+		const sortedEntries = [...groups.entries()].sort(([a], [b]) => {
+			if (a === 'Features') return -1;
+			if (b === 'Features') return 1;
+			return a.localeCompare(b);
+		});
+
+		return new Map(sortedEntries);
+	});
+
+	let columnWidth = $derived(`${100 / (filteredPlans.length + 1)}%`);
+	let footerHeight = $state(0);
 </script>
 
 <div class="space-y-6 px-10">
-	<!-- GitHub Stars Island -->
-	<div class="flex justify-center">
-		<div
-			class="inline-flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800/90 px-4 py-3 shadow-xl backdrop-blur-sm"
-		>
+	<!-- Header with GitHub Stars and Toggles -->
+	<div class="flex flex-wrap items-stretch justify-center gap-6">
+		<!-- GitHub Stars -->
+		<div class="card inline-flex items-center gap-2 px-4 shadow-xl backdrop-blur-sm">
 			<span class="text-secondary text-sm">Open source on GitHub</span>
 			<GithubStars />
 		</div>
+
+		<!-- Plan Type Filter -->
+		<ToggleGroup
+			options={planTypeOptions}
+			selected={planFilter}
+			onchange={(value) => (planFilter = value as PlanFilter)}
+		/>
+
+		<!-- Billing Period Filter -->
+		<ToggleGroup
+			options={billingPeriodOptions}
+			selected={billingPeriod}
+			onchange={(value) => (billingPeriod = value as BillingPeriod)}
+		/>
 	</div>
 
 	<!-- Pricing Table Card -->
-	<div class="card overflow-hidden p-0">
-		<div class="overflow-x-auto">
-			<table class="w-full table-fixed">
-				<!-- Header Row: Plan Names and Prices -->
-				<thead>
-					<tr class="border-b border-gray-700">
-						<!-- Feature labels column -->
-						<th class="border-r border-gray-700 p-4" style="width: {columnWidth}"></th>
+	<div
+		class="card overflow-hidden rounded-b-none border-b-0 p-0"
+		style="margin-bottom: {footerHeight}px"
+	>
+		<!-- Scrollable content -->
+		<table class="w-full table-fixed">
+			<!-- Header Row: Plan Names and Prices -->
+			<thead class="sticky top-0 z-10">
+				<tr class="border-b border-gray-700">
+					<th class="border-r border-gray-700 p-4" style="width: {columnWidth}"></th>
 
-						<!-- Plan headers with equal width -->
-						{#each $currentPlans as plan (plan.type)}
-							{@const description = billingPlans.getDescription(plan.type)}
-							{@const IconComponent = billingPlans.getIconComponent(plan.type)}
-							{@const colorHelper = billingPlans.getColorHelper(plan.type)}
-							<th class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
-								<div class="flex h-full min-h-[200px] flex-col justify-between space-y-3">
-									<!-- Top: Icon and Name -->
-									<div class="flex flex-col items-center space-y-2">
-										<div class="flex justify-center">
-											<IconComponent class="{colorHelper.icon} h-8 w-8" />
-										</div>
-										<div class="text-primary text-lg font-semibold">
+					{#each filteredPlans as plan (plan.type)}
+						{@const description = billingPlans.getDescription(plan.type)}
+						{@const IconComponent = billingPlans.getIconComponent(plan.type)}
+						{@const colorHelper = billingPlans.getColorHelper(plan.type)}
+						<th class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
+							<div class="flex h-full min-h-[200px] flex-col justify-between space-y-3">
+								<!-- Top: Icon, Name -->
+								<div class="flex flex-col items-center space-y-2">
+									<div class="flex justify-center">
+										<IconComponent class="{colorHelper.icon} h-8 w-8" />
+									</div>
+									<div class="flex items-center gap-2">
+										<span class="text-primary text-lg font-semibold">
 											{billingPlans.getName(plan.type)}
+										</span>
+									</div>
+								</div>
+
+								<!-- Center: Price and Add-ons -->
+								<div class="flex flex-col items-center space-y-1">
+									<div class="text-primary text-2xl font-bold">{formatBasePricing(plan)}</div>
+									{#if plan.trial_days > 0}
+										<div class="text-xs font-medium text-success">
+											{plan.trial_days}-day free trial
 										</div>
-									</div>
-
-									<!-- Center: Price and Trial -->
-									<div class="flex flex-col items-center space-y-1">
-										<div class="text-primary text-2xl font-bold">{formatPrice(plan)}</div>
-										{#if plan.trial_days > 0}
-											<div class="text-xs font-medium text-success">
-												{plan.trial_days}-day free trial
-											</div>
-										{/if}
-									</div>
-
-									<!-- Bottom: Description -->
-									<div class="flex items-end justify-center">
-										{#if description}
-											<div class="text-tertiary text-center text-xs leading-tight">
-												{description}
-											</div>
-										{/if}
-									</div>
+									{/if}
 								</div>
-							</th>
-						{/each}
-					</tr>
-				</thead>
 
-				<!-- Feature Rows -->
-				<tbody>
-					{#each sortedFeatureKeys as featureKey (featureKey)}
-						{@const featureDescription = features.getDescription(featureKey)}
-						<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
-							<!-- Feature label -->
-							<td class="text-secondary border-r border-gray-700 p-4">
-								<div class="text-sm font-medium">
-									{features.getName(featureKey)}
+								<!-- Bottom: Description -->
+								<div class="flex items-end justify-center">
+									{#if description}
+										<div class="text-tertiary text-center text-xs leading-tight">
+											{description}
+										</div>
+									{/if}
 								</div>
-								{#if featureDescription}
-									<div class="text-tertiary mt-1 text-xs leading-tight">
-										{featureDescription}
-									</div>
+							</div>
+						</th>
+					{/each}
+				</tr>
+			</thead>
+
+			<tbody>
+				<!-- Included Seats Row -->
+				<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
+					<td class="text-secondary border-r border-gray-700 p-4">
+						<div class="text-sm font-medium">Seats</div>
+					</td>
+					{#each filteredPlans as plan (plan.type)}
+						<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
+							<div class="flex flex-col">
+								<span class="text-secondary">
+									{plan.included_seats === null ? 'Unlimited' : plan.included_seats}
+								</span>
+								{#if plan.seat_cents}
+									<span class="text-tertiary text-sm">
+										{formatSeatAddonPricing(plan)} for additional seats
+									</span>
 								{/if}
-							</td>
+							</div>
+						</td>
+					{/each}
+				</tr>
 
-							<!-- Feature values per plan -->
-							{#each $currentPlans as plan (plan.type)}
-								{@const value = getFeatureValue(plan.type, featureKey)}
-								<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
-									{#if typeof value === 'boolean'}
-										{#if value}
-											<Check class="mx-auto h-8 w-8 text-success" />
-										{:else}
-											<X class="text-muted mx-auto h-8 w-8" />
-										{/if}
-									{:else if value === null}
-										<span class="text-tertiary">—</span>
-									{:else}
-										<span class="text-secondary text-lg">{value}</span>
+				<!-- Included Networks Row -->
+				<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
+					<td class="text-secondary border-r border-gray-700 p-4">
+						<div class="text-sm font-medium">Networks</div>
+					</td>
+					{#each filteredPlans as plan (plan.type)}
+						<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
+							<div class="flex flex-col">
+								<span class="text-secondary">
+									{plan.included_networks === null ? 'Unlimited' : plan.included_networks}
+								</span>
+								{#if plan.network_cents}
+									<span class="text-tertiary text-sm">
+										{formatNetworkAddonPricing(plan)} for additional networks
+									</span>
+								{/if}
+							</div>
+						</td>
+					{/each}
+				</tr>
+
+				<!-- Feature Rows grouped by category -->
+				{#each [...groupedFeatures.entries()] as [category, categoryFeatures] (category)}
+					<!-- Category Header (collapsible) -->
+					<tr class="border-b border-gray-700">
+						<td colspan={filteredPlans.length + 1} class="p-0">
+							<button
+								type="button"
+								class="text-secondary hover:text-primary flex w-full items-center justify-between p-3 text-left transition-colors hover:bg-gray-800/60"
+								onclick={() => toggleCategory(category)}
+								aria-expanded={!collapsedCategories[category]}
+							>
+								<span class="text-sm font-semibold uppercase tracking-wide">{category}</span>
+								<ChevronDown
+									class="h-4 w-4 transition-transform {collapsedCategories[category]
+										? '-rotate-90'
+										: ''}"
+								/>
+							</button>
+						</td>
+					</tr>
+
+					{#if !collapsedCategories[category]}
+						{#each categoryFeatures as featureKey (featureKey)}
+							{@const featureDescription = features.getDescription(featureKey)}
+							{@const comingSoon = isComingSoon(featureKey)}
+							<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
+								<td class="text-secondary border-r border-gray-700 p-4">
+									<div class="text-sm font-medium">
+										{features.getName(featureKey)}
+									</div>
+									{#if featureDescription}
+										<div class="text-tertiary mt-1 text-xs leading-tight">
+											{featureDescription}
+										</div>
 									{/if}
 								</td>
-							{/each}
-						</tr>
-					{/each}
-				</tbody>
 
-				<!-- Footer Row: Select Buttons -->
-				<tfoot>
-					<tr class="bg-gray-800/50">
-						<!-- Empty cell for feature labels column -->
-						<td class="border-r border-gray-700 p-4"></td>
-
-						<!-- Select buttons -->
-						{#each $currentPlans as plan (plan.type)}
-							<td class="border-r border-gray-700 p-4 last:border-r-0">
-								<button
-									type="button"
-									onclick={() => handlePlanSelect(plan)}
-									class="btn-primary w-full"
-								>
-									Select
-								</button>
-							</td>
+								{#each filteredPlans as plan (plan.type)}
+									{@const value = getFeatureValue(plan.type, featureKey)}
+									<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
+										{#if comingSoon && value}
+											<Tag label="Coming Soon" color="yellow" />
+										{:else if typeof value === 'boolean'}
+											{#if value}
+												<Check class="mx-auto h-8 w-8 text-success" />
+											{:else}
+												<X class="text-muted mx-auto h-8 w-8" />
+											{/if}
+										{:else if value === null}
+											<span class="text-tertiary">—</span>
+										{:else}
+											<span class="text-secondary text-lg">{value}</span>
+										{/if}
+									</td>
+								{/each}
+							</tr>
 						{/each}
-					</tr>
-				</tfoot>
-			</table>
+					{/if}
+				{/each}
+			</tbody>
+		</table>
+	</div>
+	<div class="fixed bottom-0 left-0 right-0 z-20 px-10" bind:clientHeight={footerHeight}>
+		<div class="card overflow-hidden rounded-t-none p-0">
+			<div class="flex">
+				<div class="border-r border-gray-700 p-4" style="width: {columnWidth}"></div>
+				{#each filteredPlans as plan (plan.type)}
+					<div class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
+						<button type="button" onclick={() => handlePlanSelect(plan)} class="btn-primary w-full">
+							Select
+						</button>
+					</div>
+				{/each}
+			</div>
 		</div>
 	</div>
 </div>

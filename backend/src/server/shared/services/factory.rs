@@ -167,6 +167,7 @@ impl ServiceFactory {
             None
         });
 
+        // Register services that implement event bus subscriber
         event_bus
             .register_subscriber(topology_service.clone())
             .await;
@@ -174,6 +175,10 @@ impl ServiceFactory {
         event_bus.register_subscriber(logging_service.clone()).await;
 
         event_bus.register_subscriber(host_service.clone()).await;
+
+        if let Some(billing_service) = billing_service.clone() {
+            event_bus.register_subscriber(billing_service).await;
+        }
 
         Ok(Self {
             user_service,

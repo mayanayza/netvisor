@@ -36,7 +36,7 @@ impl EventBusService<Network> for NetworkService {
         None
     }
     fn get_organization_id(&self, entity: &Network) -> Option<Uuid> {
-        Some(entity.id)
+        Some(entity.base.organization_id)
     }
 }
 

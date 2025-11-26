@@ -19,6 +19,20 @@ impl Event {
         }
     }
 
+    pub fn org_id(&self) -> Option<Uuid> {
+        match self {
+            Event::Auth(a) => a.organization_id,
+            Event::Entity(e) => e.organization_id,
+        }
+    }
+
+    pub fn network_id(&self) -> Option<Uuid> {
+        match self {
+            Event::Auth(_) => None,
+            Event::Entity(e) => e.network_id,
+        }
+    }
+
     pub fn log(&self) {
         match self {
             Event::Entity(event) => {
@@ -52,8 +66,8 @@ impl Event {
                     .unwrap_or("unknown".to_string());
                 let org_id_str = event
                     .organization_id
-                    .map(|n| n.to_string())
-                    .unwrap_or("N/A".to_string());
+                    .map(|u| u.to_string())
+                    .unwrap_or("None".to_string());
 
                 tracing::info!(
                     ip = %event.ip_address,
@@ -176,7 +190,7 @@ pub struct EntityEvent {
     pub id: Uuid,
     pub entity_type: Entity,
     pub entity_id: Uuid,
-    pub network_id: Option<Uuid>, // Some entities might belong to an org, not a network
+    pub network_id: Option<Uuid>, // Some entities might belong to an org, not a network (ie users)
     pub organization_id: Option<Uuid>, // Some entities might belong to a network, not an org
     pub operation: EntityOperation,
     pub timestamp: DateTime<Utc>,

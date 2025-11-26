@@ -23,6 +23,8 @@ pub trait EventSubscriber: Send + Sync {
     async fn handle_events(&self, events: Vec<Event>) -> Result<()>;
 
     /// Optional: debounce window in milliseconds (default: 0 = no batching)
+    /// NOTE: Batching is global per-subscriber; per-org grouping happens in handle_events.
+    /// If we add more batching subscribers, consider moving grouping upstream to EventBus.
     fn debounce_window_ms(&self) -> u64 {
         0
     }
@@ -100,14 +102,6 @@ impl EventFilter {
     }
 
     fn matches_auth(&self, event: &AuthEvent) -> bool {
-        // Check network filter (using organization_id for auth events)
-        if let Some(networks) = &self.network_ids
-            && let Some(org_id) = event.organization_id
-            && !networks.contains(&org_id)
-        {
-            return false;
-        }
-
         // Check auth operation filter
         if let Some(auth_operations) = &self.auth_operations {
             return auth_operations.contains(&event.operation);
@@ -170,10 +164,45 @@ impl SubscriberState {
             return;
         }
 
+        // Count events per org before processing
+        let mut events_per_org: HashMap<Option<Uuid>, usize> = HashMap::new();
+        for event in &events {
+            let org_id = match event {
+                Event::Entity(e) => e.network_id,
+                Event::Auth(e) => e.organization_id,
+            };
+            *events_per_org.entry(org_id).or_default() += 1;
+        }
+
+        let batch_start = std::time::Instant::now();
+        let result = subscriber.handle_events(events.clone()).await;
+        let batch_duration = batch_start.elapsed();
+
+        // =============================================================================
+        // EVENT BATCH TELEMETRY SIGNALS
+        // =============================================================================
+        // Use these metrics to determine if per-org batching is needed:
+        //
+        // | Metric                        | Signal                              |
+        // |-------------------------------|-------------------------------------|
+        // | org_count consistently > 1    | Batches are mixing tenants          |
+        // | events_per_org skewed         | Noisy tenant problem                |
+        // | duration_ms grows w/ org_count| Head-of-line blocking matters       |
+        // | Per-network duration variance | Some tenants slower than others     |
+        // | Errors correlate with orgs    | Tenant-specific edge cases          |
+        //
+        // If multiple signals fire, refactor batching to group by org_id upstream.
+        // See: https://github.com/<your-repo>/issues/XXX (or link to design doc)
+        // =============================================================================
+
         tracing::debug!(
             subscriber = %subscriber.name(),
-            event_count = events.len(),
-            "Subscriber processing event batch"
+            batch_size = events_per_org.values().sum::<usize>(),
+            org_count = events_per_org.len(),
+            events_per_org = ?events_per_org,
+            duration_ms = batch_duration.as_millis(),
+            success = result.is_ok(),
+            "Event batch processed"
         );
 
         if let Err(e) = subscriber.handle_events(events).await {
