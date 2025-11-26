@@ -1,9 +1,21 @@
 [
   {
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
+  },
+  {
     "description": "NetVisor Server API for network management",
     "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains netvisor",
     "logo_url": "/logos/netvisor-logo.png",
     "name": "NetVisor Server API"
+  },
+  {
+    "description": "NetVisor Daemon API for network scanning",
+    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
+    "logo_url": "/logos/netvisor-logo.png",
+    "name": "NetVisor Daemon API"
   },
   {
     "description": "User invitation and management system for Jellyfin, Plex, Emby etc",
@@ -750,12 +762,6 @@
     "name": "Docker Swarm"
   },
   {
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
-  },
-  {
     "description": "A generic docker container",
     "discovery_pattern": "All of: (Service is running in a docker container, A custom match pattern evaluated at runtime)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
@@ -1198,11 +1204,5 @@
     "discovery_pattern": "67/udp is open",
     "logo_url": "",
     "name": "Dhcp Server"
-  },
-  {
-    "description": "NetVisor Daemon API for network scanning",
-    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains netvisor",
-    "logo_url": "/logos/netvisor-logo.png",
-    "name": "NetVisor Daemon API"
   }
 ]
