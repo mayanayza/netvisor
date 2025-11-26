@@ -49,7 +49,7 @@
 		}
 	}
 
-	const installCommand = `curl -sSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh | bash`;
+	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh)"`;
 	$: runCommand = `netvisor-daemon --server-url ${serverUrl} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
 
 	let dockerCompose = '';

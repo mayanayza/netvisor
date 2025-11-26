@@ -29,7 +29,7 @@ jobs:
           
           # Update ui/package.json
           cd ui
-          npm version $VERSION --no-git-tag-version
+          npm version $VERSION --no-git-tag-version --allow-same-version
           echo "✅ Updated ui/package.json to version $VERSION"
           cd ..
         shell: bash
@@ -135,6 +135,11 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pull latest changes
+        run: |
+          git fetch origin ${{ github.event.release.target_commitish }}
+          git reset --hard origin/${{ github.event.release.target_commitish }}
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -182,6 +187,11 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pull latest changes
+        run: |
+          git fetch origin ${{ github.event.release.target_commitish }}
+          git reset --hard origin/${{ github.event.release.target_commitish }}
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

@@ -15,7 +15,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/plans", get(get_billing_plans))
         .route("/checkout", post(create_checkout_session))
-        .route("/webhook", post(handle_webhook))
+        .route("/webhooks", post(handle_webhook))
         .route("/portal", post(create_portal_session))
 }
 

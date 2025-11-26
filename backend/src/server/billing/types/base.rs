@@ -1,6 +1,8 @@
-use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
+use crate::server::{
+    billing::types::features::Feature,
+    shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+};
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
 use std::hash::Hash;
 use stripe_product::price::CreatePriceRecurringInterval;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
@@ -19,69 +21,76 @@ use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 )]
 #[serde(tag = "type")]
 pub enum BillingPlan {
-    Community { price: Price, trial_days: u32 },
-    Starter { price: Price, trial_days: u32 },
-    Pro { price: Price, trial_days: u32 },
-    Team { price: Price, trial_days: u32 },
+    Community(PlanConfig),
+    Starter(PlanConfig),
+    Pro(PlanConfig),
+    Team(PlanConfig),
+    Business(PlanConfig),
 }
 
 impl PartialEq for BillingPlan {
     fn eq(&self, other: &Self) -> bool {
-        self.price() == other.price() && self.trial_days() == other.trial_days()
+        self.config() == other.config()
     }
 }
 
 impl Hash for BillingPlan {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.price().hash(state);
-        self.trial_days().hash(state);
+        self.config().hash(state);
     }
 }
 
 impl Default for BillingPlan {
     fn default() -> Self {
-        BillingPlan::Community {
-            price: Price {
-                cents: 0,
-                rate: BillingRate::Month,
-            },
+        BillingPlan::Community(PlanConfig {
+            base_cents: 0,
+            rate: BillingRate::Month,
             trial_days: 0,
-        }
+            seat_cents: None,
+            network_cents: None,
+            included_networks: None,
+            included_seats: None,
+        })
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, Copy, Eq)]
-pub struct Price {
-    pub cents: i64,
+impl BillingPlan {
+    pub fn to_yearly(&self, discount: f32) -> Self {
+        let mut yearly_config = self.config();
+        yearly_config.rate = BillingRate::Year;
+
+        // Round to nearest dollar (100 cents)
+        yearly_config.base_cents =
+            Self::round_to_dollar(yearly_config.base_cents as f32 * 12.0 * (1.0 - discount));
+        yearly_config.seat_cents = yearly_config
+            .seat_cents
+            .map(|c| Self::round_to_dollar(c as f32 * 12.0 * (1.0 - discount)));
+        yearly_config.network_cents = yearly_config
+            .network_cents
+            .map(|c| Self::round_to_dollar(c as f32 * 12.0 * (1.0 - discount)));
+
+        let mut yearly_plan = *self;
+        yearly_plan.set_config(yearly_config);
+        yearly_plan
+    }
+    fn round_to_dollar(cents: f32) -> i64 {
+        ((cents / 100.0).round() * 100.0) as i64
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Default, Hash)]
+pub struct PlanConfig {
+    pub base_cents: i64,
     pub rate: BillingRate,
-}
+    pub trial_days: u32,
 
-impl Hash for Price {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.cents.hash(state);
-        self.rate.hash(state);
-    }
-}
+    // None = can't pay for more
+    pub seat_cents: Option<i64>,
+    pub network_cents: Option<i64>,
 
-impl PartialEq for Price {
-    fn eq(&self, other: &Self) -> bool {
-        self.cents == other.cents && self.rate == other.rate
-    }
-}
-
-impl Price {
-    pub fn stripe_recurring_interval(&self) -> CreatePriceRecurringInterval {
-        match self.rate {
-            BillingRate::Month => CreatePriceRecurringInterval::Month,
-            BillingRate::Year => CreatePriceRecurringInterval::Year,
-        }
-    }
-}
-
-impl Display for Price {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} per {}", self.cents, self.rate)
-    }
+    // None = unlimited
+    pub included_seats: Option<u64>,
+    pub included_networks: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash)]
@@ -91,100 +100,191 @@ pub enum BillingRate {
     Year,
 }
 
+impl BillingRate {
+    pub fn stripe_recurring_interval(&self) -> CreatePriceRecurringInterval {
+        match self {
+            BillingRate::Month => CreatePriceRecurringInterval::Month,
+            BillingRate::Year => CreatePriceRecurringInterval::Year,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillingPlanFeatures {
-    pub max_networks: Option<usize>,
-    // pub api_access: bool,
-    pub team_members: bool,
     pub share_views: bool,
+    pub remove_powered_by: bool,
+    pub audit_logs: bool,
+    pub api_access: bool,
     pub onboarding_call: bool,
     pub dedicated_support_channel: bool,
     pub commercial_license: bool,
 }
 
 impl BillingPlan {
-    pub fn from_id(id: &str, price: Price, trial_days: u32) -> Option<Self> {
+    pub fn from_id(id: &str, plan_config: PlanConfig) -> Option<Self> {
         match id {
-            "starter" => Some(Self::Starter { price, trial_days }),
-            "pro" => Some(Self::Pro { price, trial_days }),
-            "team" => Some(Self::Team { price, trial_days }),
+            "starter" => Some(Self::Starter(plan_config)),
+            "pro" => Some(Self::Pro(plan_config)),
+            "team" => Some(Self::Team(plan_config)),
+            "business" => Some(Self::Business(plan_config)),
             _ => None,
         }
     }
 
-    pub fn is_business_plan(&self) -> bool {
-        matches!(self, BillingPlan::Team { .. })
+    pub fn config(&self) -> PlanConfig {
+        match self {
+            BillingPlan::Community(plan_config) => *plan_config,
+            BillingPlan::Starter(plan_config) => *plan_config,
+            BillingPlan::Pro(plan_config) => *plan_config,
+            BillingPlan::Team(plan_config) => *plan_config,
+            BillingPlan::Business(plan_config) => *plan_config,
+        }
+    }
+
+    pub fn set_config(&mut self, config: PlanConfig) {
+        match self {
+            BillingPlan::Community(plan_config) => *plan_config = config,
+            BillingPlan::Starter(plan_config) => *plan_config = config,
+            BillingPlan::Pro(plan_config) => *plan_config = config,
+            BillingPlan::Team(plan_config) => *plan_config = config,
+            BillingPlan::Business(plan_config) => *plan_config = config,
+        }
+    }
+
+    pub fn is_commercial(&self) -> bool {
+        matches!(self, BillingPlan::Team(_) | BillingPlan::Business(_))
     }
 
     pub fn stripe_product_id(&self) -> String {
         self.to_string().to_lowercase()
     }
 
-    pub fn stripe_price_lookup_key(&self) -> String {
+    pub fn stripe_base_price_lookup_key(&self) -> String {
         format!(
-            "{}_{}_monthly",
+            "{}_{}_{}",
             self.stripe_product_id(),
-            self.price().to_string().replace(" ", "_").replace(".", "_")
+            self.config().base_cents,
+            self.config().rate
         )
     }
 
-    pub fn price(&self) -> Price {
-        match self {
-            BillingPlan::Community { price, .. } => *price,
-            BillingPlan::Starter { price, .. } => *price,
-            BillingPlan::Pro { price, .. } => *price,
-            BillingPlan::Team { price, .. } => *price,
-        }
+    pub fn stripe_seat_addon_price_lookup_key(&self) -> Option<String> {
+        self.config().seat_cents.map(|c| {
+            format!(
+                "{}_seats_{}_{}",
+                self.stripe_product_id(),
+                c,
+                self.config().rate
+            )
+        })
     }
 
-    pub fn trial_days(&self) -> u32 {
-        match self {
-            BillingPlan::Community { trial_days, .. } => *trial_days,
-            BillingPlan::Starter { trial_days, .. } => *trial_days,
-            BillingPlan::Pro { trial_days, .. } => *trial_days,
-            BillingPlan::Team { trial_days, .. } => *trial_days,
-        }
+    pub fn stripe_network_addon_price_lookup_key(&self) -> Option<String> {
+        self.config().network_cents.map(|c| {
+            format!(
+                "{}_networks_{}_{}",
+                self.stripe_product_id(),
+                c,
+                self.config().rate
+            )
+        })
     }
 
     pub fn features(&self) -> BillingPlanFeatures {
         match self {
-            Self::Community { .. } => BillingPlanFeatures {
-                max_networks: None,
-                // api_access: true,
-                team_members: true,
+            BillingPlan::Community { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
                 dedicated_support_channel: true,
+                api_access: true,
+                audit_logs: true,
                 commercial_license: false,
+                remove_powered_by: false,
             },
-            Self::Starter { .. } => BillingPlanFeatures {
-                max_networks: Some(1),
-                // api_access: false,
-                team_members: false,
+            BillingPlan::Starter { .. } => BillingPlanFeatures {
                 share_views: false,
                 onboarding_call: false,
                 dedicated_support_channel: false,
                 commercial_license: false,
+                api_access: false,
+                audit_logs: false,
+                remove_powered_by: false,
             },
-            Self::Pro { .. } => BillingPlanFeatures {
-                max_networks: Some(3),
-                // api_access: false),
-                team_members: false,
+            BillingPlan::Pro { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: false,
                 dedicated_support_channel: false,
                 commercial_license: false,
+                api_access: false,
+                audit_logs: false,
+                remove_powered_by: false,
             },
-            Self::Team { .. } => BillingPlanFeatures {
-                max_networks: None,
-                // api_access: true,
-                team_members: true,
+            BillingPlan::Team { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
                 dedicated_support_channel: true,
                 commercial_license: true,
+                api_access: false,
+                audit_logs: false,
+                remove_powered_by: true,
+            },
+            BillingPlan::Business { .. } => BillingPlanFeatures {
+                share_views: true,
+                onboarding_call: true,
+                dedicated_support_channel: true,
+                commercial_license: true,
+                api_access: true,
+                audit_logs: true,
+                remove_powered_by: true,
             },
         }
+    }
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<Vec<Feature>> for BillingPlanFeatures {
+    fn into(self) -> Vec<Feature> {
+        let mut features = vec![];
+
+        let BillingPlanFeatures {
+            share_views,
+            onboarding_call,
+            dedicated_support_channel,
+            commercial_license,
+            api_access,
+            audit_logs,
+            remove_powered_by,
+        } = self;
+
+        if share_views {
+            features.push(Feature::ShareViews)
+        }
+
+        if onboarding_call {
+            features.push(Feature::OnboardingCall)
+        }
+
+        if dedicated_support_channel {
+            features.push(Feature::DedicatedSupportChannel)
+        }
+
+        if commercial_license {
+            features.push(Feature::CommercialLicense)
+        }
+
+        if api_access {
+            features.push(Feature::ApiAccess);
+        }
+
+        if audit_logs {
+            features.push(Feature::AuditLogs)
+        }
+
+        if remove_powered_by {
+            features.push(Feature::RemovePoweredBy)
+        }
+
+        features
     }
 }
 
@@ -201,6 +301,7 @@ impl EntityMetadataProvider for BillingPlan {
             BillingPlan::Starter { .. } => "ThumbsUp",
             BillingPlan::Pro { .. } => "Zap",
             BillingPlan::Team { .. } => "Users",
+            BillingPlan::Business { .. } => "Building",
         }
     }
 
@@ -210,6 +311,7 @@ impl EntityMetadataProvider for BillingPlan {
             BillingPlan::Starter { .. } => "blue",
             BillingPlan::Pro { .. } => "yellow",
             BillingPlan::Team { .. } => "orange",
+            BillingPlan::Business { .. } => "gray",
         }
     }
 }
@@ -221,6 +323,7 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Starter { .. } => "Starter",
             BillingPlan::Pro { .. } => "Pro",
             BillingPlan::Team { .. } => "Team",
+            BillingPlan::Business { .. } => "Business",
         }
     }
 
@@ -234,12 +337,16 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Team { .. } => {
                 "Collaborate on infrastructure documentation with your team"
             }
+            BillingPlan::Business { .. } => {
+                "Manage multi-site and multi-customer documentation with advanced features"
+            }
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
         serde_json::json!({
             "features": self.features(),
+            "is_commercial": self.is_commercial()
         })
     }
 }

@@ -42,6 +42,7 @@ use crate::{
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use chrono::Utc;
+use cidr::IpCidr;
 use futures::future::try_join_all;
 use std::net::{IpAddr, Ipv4Addr};
 use strum::IntoDiscriminant;
@@ -113,19 +114,44 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
             .await?;
 
+        // Get docker subnets to double verify that subnet interface string matching filtered them correctly
+        let docker_proxy = self.as_ref().config_store.get_docker_proxy().await;
+        let docker_client = self
+            .as_ref()
+            .utils
+            .new_local_docker_client(docker_proxy)
+            .await;
+
+        let (docker_cidrs, has_docker_socket) = if let Ok(docker_client) = docker_client {
+            let docker_subnets = self
+                .as_ref()
+                .utils
+                .get_subnets_from_docker_networks(
+                    daemon_id,
+                    network_id,
+                    &docker_client,
+                    self.discovery_type(),
+                )
+                .await?;
+            let docker_cidrs: Vec<IpCidr> = docker_subnets.iter().map(|s| s.base.cidr).collect();
+            (docker_cidrs, true)
+        } else {
+            (Vec::new(), false)
+        };
+
         // Filter out docker bridge subnets, those are handled in docker discovery
         let subnets_to_create: Vec<Subnet> = subnets
             .into_iter()
-            .filter(|s| s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge)
+            .filter(|s| {
+                s.base.subnet_type.discriminant() != SubnetTypeDiscriminants::DockerBridge
+                    && !docker_cidrs.contains(&s.base.cidr)
+            })
             .collect();
 
         let subnet_futures = subnets_to_create
             .iter()
             .map(|subnet| self.create_subnet(subnet));
         let created_subnets = try_join_all(subnet_futures).await?;
-
-        // Get docker socket
-        let has_docker_socket = self.as_ref().utils.get_own_docker_socket().await?;
 
         // Update capabilities
         let interfaced_subnet_ids: Vec<Uuid> = created_subnets.iter().map(|s| s.id).collect();

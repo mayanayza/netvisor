@@ -9,25 +9,26 @@ use strum::IntoStaticStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize, EnumIter, IntoStaticStr, Display, Default)]
 pub enum Feature {
-    MaxNetworks,
     #[default]
-    TeamMembers,
     ShareViews,
     OnboardingCall,
     DedicatedSupportChannel,
     CommercialLicense,
+    AuditLogs,
+    ApiAccess,
+    RemovePoweredBy,
 }
 
 impl HasId for Feature {
     fn id(&self) -> &'static str {
         match self {
-            Feature::MaxNetworks => "max_networks",
-            // Feature::ApiAccess => "API Access",
-            Feature::TeamMembers => "team_members",
+            Feature::ApiAccess => "api_access",
+            Feature::AuditLogs => "audit_logs",
             Feature::ShareViews => "share_views",
             Feature::OnboardingCall => "onboarding_call",
             Feature::DedicatedSupportChannel => "dedicated_support_channel",
             Feature::CommercialLicense => "commercial_license",
+            Feature::RemovePoweredBy => "remove_powered_by",
         }
     }
 }
@@ -43,23 +44,35 @@ impl EntityMetadataProvider for Feature {
 }
 
 impl TypeMetadataProvider for Feature {
+    fn category(&self) -> &'static str {
+        match self {
+            Feature::OnboardingCall
+            | Feature::DedicatedSupportChannel
+            | Feature::CommercialLicense => "Support & Licensing",
+            _ => "Features",
+        }
+    }
+
     fn name(&self) -> &'static str {
         match self {
-            Feature::MaxNetworks => "Max Networks",
-            // Feature::ApiAccess => "API Access",
-            Feature::TeamMembers => "Team Members",
+            Feature::AuditLogs => "Audit Logs",
+            Feature::ApiAccess => "API Access",
             Feature::ShareViews => "Share Views",
             Feature::OnboardingCall => "Onboarding Call",
             Feature::DedicatedSupportChannel => "Dedicated Discord Channel",
             Feature::CommercialLicense => "Commercial License",
+            Feature::RemovePoweredBy => "Remove 'Powered By'",
         }
     }
 
     fn description(&self) -> &'static str {
         match self {
-            Feature::MaxNetworks => "How many networks your organization can create",
-            // Feature::ApiAccess => "Access NetVisor APIs programmatically to bring your data into other applications",
-            Feature::TeamMembers => "Collaborate on networks with team members and customers",
+            Feature::AuditLogs => {
+                "Comprehensive logs of all access and data modification actions performed in NetVisor"
+            }
+            Feature::ApiAccess => {
+                "Access NetVisor APIs programmatically to bring your data into other applications"
+            }
             Feature::ShareViews => "Share live network diagrams with others",
             Feature::OnboardingCall => {
                 "30 minute onboarding call to ensure you're getting the most out of NetVisor"
@@ -68,14 +81,20 @@ impl TypeMetadataProvider for Feature {
                 "A dedicated discord channel for support and questions"
             }
             Feature::CommercialLicense => "Use NetVisor under a commercial license",
+            Feature::RemovePoweredBy => {
+                "Remove 'Powered By NetVisor' in bottom right corner of visualization"
+            }
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
-        let use_null_as_unlimited = matches!(self, Feature::MaxNetworks);
+        let is_coming_soon = matches!(
+            self,
+            Feature::ApiAccess | Feature::AuditLogs | Feature::RemovePoweredBy
+        );
 
         serde_json::json!({
-            "use_null_as_unlimited": use_null_as_unlimited
+            "is_coming_soon": is_coming_soon
         })
     }
 }
@@ -99,33 +118,34 @@ mod tests {
             .as_object()
             .expect("Features should be an object");
 
-        let billing_plan_keys: HashSet<&str> = features_map.keys().map(|s| s.as_str()).collect();
+        let billing_plan_features: HashSet<&str> =
+            features_map.keys().map(|s| s.as_str()).collect();
 
         // Check that every Feature ID exists in BillingPlanFeatures
         for feature_id in &feature_ids {
             assert!(
-                billing_plan_keys.contains(feature_id),
+                billing_plan_features.contains(feature_id),
                 "Feature ID '{}' does not exist in BillingPlanFeatures",
                 feature_id
             );
         }
 
         // Check that every BillingPlanFeatures field has a corresponding Feature
-        for key in &billing_plan_keys {
+        for feature in &billing_plan_features {
             assert!(
-                feature_ids.contains(key),
+                feature_ids.contains(feature),
                 "BillingPlanFeatures field '{}' does not have a corresponding Feature variant",
-                key
+                feature
             );
         }
 
         // Verify they have the same count
         assert_eq!(
             feature_ids.len(),
-            billing_plan_keys.len(),
+            billing_plan_features.len(),
             "Feature enum has {} variants but BillingPlanFeatures has {} fields",
             feature_ids.len(),
-            billing_plan_keys.len()
+            billing_plan_features.len()
         );
     }
 }

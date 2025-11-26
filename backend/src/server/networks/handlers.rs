@@ -1,4 +1,6 @@
-use crate::server::auth::middleware::{AuthenticatedUser, RequireAdmin};
+use crate::server::auth::middleware::{
+    AuthenticatedUser, CreateNetworkFeature, RequireAdmin, RequireFeature,
+};
 use crate::server::shared::handlers::traits::{
     BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
     update_handler,
@@ -13,7 +15,6 @@ use crate::server::{
         types::api::{ApiResponse, ApiResult},
     },
 };
-use anyhow::anyhow;
 use axum::extract::Path;
 use axum::{
     Router,
@@ -37,35 +38,13 @@ pub fn create_router() -> Router<Arc<AppState>> {
 pub async fn create_handler(
     State(state): State<Arc<AppState>>,
     RequireAdmin(user): RequireAdmin,
+    RequireFeature { .. }: RequireFeature<CreateNetworkFeature>,
     Json(request): Json<Network>,
 ) -> ApiResult<Json<ApiResponse<Network>>> {
     if let Err(err) = request.validate() {
         return Err(ApiError::bad_request(&format!(
             "Network validation failed: {}",
             err
-        )));
-    }
-
-    let organization = state
-        .services
-        .organization_service
-        .get_by_id(&user.organization_id)
-        .await?
-        .ok_or_else(|| anyhow!("Failed to get organization for user {}", user.user_id))?;
-
-    let networks = state
-        .services
-        .network_service
-        .get_all(EntityFilter::unfiltered().organization_id(&organization.id))
-        .await?;
-
-    if let Some(plan) = organization.base.plan
-        && let Some(max_networks) = plan.features().max_networks
-        && networks.len() >= max_networks
-    {
-        return Err(ApiError::forbidden(&format!(
-            "Current plan ({}) only allows for {} network(s). Please upgrade for additional networks.",
-            plan, max_networks
         )));
     }
 

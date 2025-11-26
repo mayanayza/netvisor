@@ -57,10 +57,13 @@ async fn create_invite(
     RequireFeature { plan, .. }: RequireFeature<InviteUsersFeature>,
     Json(request): Json<CreateInviteRequest>,
 ) -> ApiResult<Json<ApiResponse<Invite>>> {
-    // We know they have either team_members or share_views enabled
-    if !plan.features().team_members && request.permissions > UserOrgPermissions::Visualizer {
+    if let Some(s) = plan.config().included_seats
+        && s == 1
+        && plan.features().share_views
+        && request.permissions > UserOrgPermissions::Visualizer
+    {
         return Err(ApiError::forbidden(
-            "You can only create Visualizer invites on your current plan. Please upgrade to a Team plan to add Members and Admins.",
+            "You can only invite users with Visualizer permissions on your plan. Please upgrade to invite Members, Admins, and Owners.",
         ));
     }
 

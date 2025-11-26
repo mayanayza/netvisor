@@ -1,10 +1,14 @@
 use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::hosts::r#impl::interfaces::{Interface, InterfaceBase};
-use crate::server::subnets::r#impl::base::Subnet;
+use crate::server::shared::storage::traits::StorableEntity;
+use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
+use crate::server::subnets::r#impl::base::{Subnet, SubnetBase};
+use crate::server::subnets::r#impl::types::SubnetType;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
-use bollard::Docker;
+use bollard::query_parameters::ListNetworksOptions;
+use bollard::{API_DEFAULT_VERSION, Docker};
 use cidr::IpCidr;
 use local_ip_address::local_ip;
 use mac_address::MacAddress;
@@ -12,6 +16,7 @@ use net_route::Handle;
 use pnet::ipnetwork::IpNetwork;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -103,18 +108,67 @@ pub trait DaemonUtils {
         Ok((interfaces_list, subnets))
     }
 
-    async fn get_own_docker_socket(&self) -> Result<bool, Error> {
-        match Docker::connect_with_local_defaults() {
-            Ok(docker) => {
-                // Actually verify it's a Docker daemon by pinging it
-                if docker.ping().await.is_ok() {
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            }
-            Err(_) => Ok(false),
-        }
+    async fn new_local_docker_client(
+        &self,
+        docker_proxy: Result<Option<String>, Error>,
+    ) -> Result<Docker, Error> {
+        tracing::debug!("Connecting to Docker daemon");
+
+        let client = if let Ok(Some(docker_proxy)) = docker_proxy {
+            Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
+                .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+        } else {
+            Docker::connect_with_local_defaults()
+                .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+        };
+
+        client.ping().await?;
+
+        Ok(client)
+    }
+
+    async fn get_subnets_from_docker_networks(
+        &self,
+        daemon_id: Uuid,
+        network_id: Uuid,
+        client: &Docker,
+        discovery_type: DiscoveryType,
+    ) -> Result<Vec<Subnet>, Error> {
+        let subnets: Vec<Subnet> = client
+            .list_networks(None::<ListNetworksOptions>)
+            .await?
+            .into_iter()
+            .filter_map(|n| {
+                let network_name = n.name.clone().unwrap_or("Unknown Network".to_string());
+                n.ipam.clone().map(|ipam| (network_name, ipam))
+            })
+            .filter_map(|(network_name, ipam)| ipam.config.map(|config| (network_name, config)))
+            .flat_map(|(network_name, configs)| {
+                configs
+                    .iter()
+                    .filter_map(|c| {
+                        if let Some(cidr) = &c.subnet {
+                            return Some(Subnet::new(SubnetBase {
+                                cidr: IpCidr::from_str(cidr).ok()?,
+                                description: None,
+                                network_id,
+                                name: network_name.clone(),
+                                subnet_type: SubnetType::DockerBridge,
+                                source: EntitySource::Discovery {
+                                    metadata: vec![DiscoveryMetadata::new(
+                                        discovery_type.clone(),
+                                        daemon_id,
+                                    )],
+                                },
+                            }));
+                        }
+                        None
+                    })
+                    .collect::<Vec<Subnet>>()
+            })
+            .collect();
+
+        Ok(subnets)
     }
 
     async fn get_own_routing_table_gateway_ips(&self) -> Result<Vec<IpAddr>, Error> {

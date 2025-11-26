@@ -47,7 +47,7 @@ pub enum SubnetType {
 impl SubnetType {
     pub fn from_interface_name(interface_name: &str) -> Self {
         // Docker containers
-        if Self::match_interface_names(&["docker", "br-"], interface_name) {
+        if Self::match_interface_names(&["docker", "br-", "docker"], interface_name) {
             return SubnetType::DockerBridge;
         }
 
@@ -98,8 +98,8 @@ impl SubnetType {
     fn match_interface_names(patterns: &[&str], interface_name: &str) -> bool {
         let name_lower = interface_name.to_lowercase();
         patterns.iter().any(|pattern| {
-            if *pattern == "br-" {
-                // Special case for Docker bridges: br- followed by hex chars
+            if *pattern == "br-" || *pattern == "docker-" {
+                // Special case for Docker bridges: br- or docker- followed by hex chars
                 name_lower.starts_with(pattern)
                     && name_lower
                         .get(pattern.len()..)
