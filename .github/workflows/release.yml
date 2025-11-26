@@ -29,7 +29,7 @@ jobs:
           
           # Update ui/package.json
           cd ui
-          npm version $VERSION --no-git-tag-version
+          npm version $VERSION --no-git-tag-version --allow-same-version
           echo "✅ Updated ui/package.json to version $VERSION"
           cd ..
         shell: bash
