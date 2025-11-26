@@ -137,7 +137,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Pull latest changes
-        run: git pull --rebase origin $(git rev-parse --abbrev-ref HEAD)
+        run: |
+          git fetch origin $(git rev-parse --abbrev-ref HEAD)
+          git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -187,7 +189,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Pull latest changes
-        run: git pull --rebase origin $(git rev-parse --abbrev-ref HEAD)
+        run: |
+          git fetch origin $(git rev-parse --abbrev-ref HEAD)
+          git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
