@@ -138,8 +138,8 @@ jobs:
 
       - name: Pull latest changes
         run: |
-          git fetch origin $(git rev-parse --abbrev-ref HEAD)
-          git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+          git fetch origin ${{ github.event.release.target_commitish }}
+          git reset --hard origin/${{ github.event.release.target_commitish }}
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -190,8 +190,8 @@ jobs:
 
       - name: Pull latest changes
         run: |
-          git fetch origin $(git rev-parse --abbrev-ref HEAD)
-          git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+          git fetch origin ${{ github.event.release.target_commitish }}
+          git reset --hard origin/${{ github.event.release.target_commitish }}
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
