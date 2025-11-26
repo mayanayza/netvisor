@@ -186,8 +186,14 @@ impl DaemonRuntimeService {
         self.config_store.set_network_id(network_id).await?;
         self.config_store.set_api_key(api_key).await?;
 
+        let docker_proxy = self.config_store.get_docker_proxy().await;
+
         let daemon_id = self.config_store.get_id().await?;
-        let has_docker_client = self.utils.get_own_docker_socket().await?;
+        let has_docker_client = self
+            .utils
+            .new_local_docker_client(docker_proxy)
+            .await
+            .is_ok();
 
         // Check if already registered
         if let Some(existing_host_id) = self.config_store.get_host_id().await? {

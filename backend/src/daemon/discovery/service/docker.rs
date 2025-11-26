@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use bollard::API_DEFAULT_VERSION;
 use bollard::{
     Docker,
     query_parameters::{InspectContainerOptions, ListContainersOptions, ListNetworksOptions},
@@ -32,8 +31,8 @@ use crate::server::services::r#impl::virtualization::{
 };
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
-use crate::server::subnets::r#impl::base::{Subnet, SubnetBase};
-use crate::server::subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants};
+use crate::server::subnets::r#impl::base::Subnet;
+use crate::server::subnets::r#impl::types::SubnetTypeDiscriminants;
 use crate::{
     daemon::discovery::service::base::{
         CreatesDiscoveredEntities, DiscoversNetworkedEntities, DiscoveryRunner,
@@ -47,7 +46,6 @@ use crate::{
         },
     },
 };
-use cidr::IpCidr;
 use mac_address::MacAddress;
 use uuid::Uuid;
 
@@ -89,7 +87,13 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Network ID not set"))?;
 
-        let docker = self.new_local_docker_client().await?;
+        let docker_proxy = self.as_ref().config_store.get_docker_proxy().await;
+
+        let docker = self
+            .as_ref()
+            .utils
+            .new_local_docker_client(docker_proxy)
+            .await?;
         self.domain
             .docker_client
             .set(docker.clone())
@@ -214,8 +218,16 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<DockerScanDiscovery> {
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
             .await?;
 
+        let docker = self
+            .domain
+            .docker_client
+            .get()
+            .ok_or_else(|| anyhow!("Docker client unavailable"))?;
+
         let docker_subnets = self
-            .get_subnets_from_docker_networks(daemon_id, network_id)
+            .as_ref()
+            .utils
+            .get_subnets_from_docker_networks(daemon_id, network_id, docker, self.discovery_type())
             .await?;
 
         let subnets: Vec<Subnet> = [host_subnets, docker_subnets].concat();
@@ -228,26 +240,7 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<DockerScanDiscovery> {
 }
 
 impl DiscoveryRunner<DockerScanDiscovery> {
-    /// Create a new Docker discovery instance connecting to a remote Docker daemon
-    pub async fn new_local_docker_client(&self) -> Result<Docker, Error> {
-        tracing::debug!("Connecting to Docker daemon");
-
-        let client =
-            if let Ok(Some(docker_proxy)) = self.as_ref().config_store.get_docker_proxy().await {
-                Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
-                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
-            } else {
-                Docker::connect_with_local_defaults()
-                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
-            };
-
-        client.ping().await?;
-
-        Ok(client)
-    }
-
-    /// Create docker daemon service which has all discovered containers in containers field
-    /// Create netvisor daemon service which has container relationship with docker daemon service
+    /// Create docker daemon service which has container relationship with docker daemon service
     pub async fn create_docker_daemon_service(&self) -> Result<(Host, Vec<Service>), Error> {
         let daemon_id = self.as_ref().config_store.get_id().await?;
         let network_id = self
@@ -740,54 +733,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             .list_containers(None::<ListContainersOptions>)
             .await
             .map_err(|e| anyhow!(e))
-    }
-
-    pub async fn get_subnets_from_docker_networks(
-        &self,
-        daemon_id: Uuid,
-        network_id: Uuid,
-    ) -> Result<Vec<Subnet>> {
-        let docker = self
-            .domain
-            .docker_client
-            .get()
-            .ok_or_else(|| anyhow!("Docker client unavailable"))?;
-
-        let subnets: Vec<Subnet> = docker
-            .list_networks(None::<ListNetworksOptions>)
-            .await?
-            .into_iter()
-            .filter_map(|n| {
-                let network_name = n.name.clone().unwrap_or("Unknown Network".to_string());
-                n.ipam.clone().map(|ipam| (network_name, ipam))
-            })
-            .filter_map(|(network_name, ipam)| ipam.config.map(|config| (network_name, config)))
-            .flat_map(|(network_name, configs)| {
-                configs
-                    .iter()
-                    .filter_map(|c| {
-                        if let Some(cidr) = &c.subnet {
-                            return Some(Subnet::new(SubnetBase {
-                                cidr: IpCidr::from_str(cidr).ok()?,
-                                description: None,
-                                network_id,
-                                name: network_name.clone(),
-                                subnet_type: SubnetType::DockerBridge,
-                                source: EntitySource::Discovery {
-                                    metadata: vec![DiscoveryMetadata::new(
-                                        self.discovery_type(),
-                                        daemon_id,
-                                    )],
-                                },
-                            }));
-                        }
-                        None
-                    })
-                    .collect::<Vec<Subnet>>()
-            })
-            .collect();
-
-        Ok(subnets)
     }
 
     pub async fn get_containers_and_summaries(
