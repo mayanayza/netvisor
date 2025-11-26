@@ -1,10 +1,12 @@
 export interface BillingPlan {
-	price: {
-		cents: number;
-		rate: string;
-	};
+	base_cents: number;
+	seat_cents: number | null;
+	included_seats: number | null;
+	network_cents: number | null;
+	included_networks: number | null;
+	rate: string;
 	trial_days: number;
-	type: string;
+	type: 'Starter' | 'Pro' | 'Team' | 'Enterprise';
 }
 
 export function formatPrice(cents: number, rate: string): string {

@@ -7,7 +7,7 @@ use axum::{
 use clap::Parser;
 use netvisor::server::{
     auth::middleware::AuthenticatedEntity,
-    billing::types::base::{BillingPlan, BillingRate, Price},
+    billing::types::base::{BillingPlan, BillingRate, PlanConfig},
     config::{AppState, CliArgs, ServerConfig},
     organizations::r#impl::base::{Organization, OrganizationBase},
     shared::{
@@ -290,27 +290,42 @@ async fn main() -> anyhow::Result<()> {
     if let Some(billing_service) = billing_service {
         billing_service
             .initialize_products(vec![
-                BillingPlan::Starter {
-                    price: Price {
-                        cents: 1499,
-                        rate: BillingRate::Month,
-                    },
+                BillingPlan::Starter(PlanConfig {
+                    base_cents: 1499,
+                    rate: BillingRate::Month,
                     trial_days: 0,
-                },
-                BillingPlan::Pro {
-                    price: Price {
-                        cents: 2499,
-                        rate: BillingRate::Month,
-                    },
+                    seat_cents: None,
+                    network_cents: None,
+                    included_seats: Some(1),
+                    included_networks: Some(1),
+                }),
+                BillingPlan::Pro(PlanConfig {
+                    base_cents: 2499,
+                    rate: BillingRate::Month,
                     trial_days: 7,
-                },
-                BillingPlan::Team {
-                    price: Price {
-                        cents: 9999,
-                        rate: BillingRate::Month,
-                    },
+                    seat_cents: None,
+                    network_cents: None,
+                    included_seats: Some(1),
+                    included_networks: Some(3),
+                }),
+                BillingPlan::Team(PlanConfig {
+                    base_cents: 7999,
+                    rate: BillingRate::Month,
                     trial_days: 7,
-                },
+                    seat_cents: Some(1000),
+                    network_cents: Some(800),
+                    included_seats: Some(5),
+                    included_networks: Some(5),
+                }),
+                BillingPlan::Business(PlanConfig {
+                    base_cents: 14999,
+                    rate: BillingRate::Month,
+                    trial_days: 14,
+                    seat_cents: Some(800),
+                    network_cents: Some(500),
+                    included_seats: Some(10),
+                    included_networks: Some(25),
+                }),
             ])
             .await?;
     }

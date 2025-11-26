@@ -32,6 +32,10 @@ impl UserOrgPermissions {
     pub fn as_str(&self) -> &'static str {
         self.into()
     }
+
+    pub fn counts_towards_seats(&self) -> bool {
+        *self >= UserOrgPermissions::Member
+    }
 }
 
 impl FromStr for UserOrgPermissions {
@@ -130,7 +134,8 @@ impl TypeMetadataProvider for UserOrgPermissions {
             matches!(self, UserOrgPermissions::Owner | UserOrgPermissions::Admin);
         serde_json::json!({
             "can_manage": can_manage,
-            "network_permissions": network_permissions
+            "network_permissions": network_permissions,
+            "counts_towards_seats": self.counts_towards_seats()
         })
     }
 }

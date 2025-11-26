@@ -4,7 +4,6 @@ import { get } from 'svelte/store';
 import { organization } from '$lib/features/organizations/store';
 import { config } from '$lib/shared/stores/config';
 import { isBillingPlanActive } from '$lib/features/organizations/types';
-import { currentUser } from '$lib/features/auth/store';
 
 /**
  * Determines the correct route for an authenticated user based on their state
@@ -12,20 +11,14 @@ import { currentUser } from '$lib/features/auth/store';
 export function getRoute(): string {
 	const $organization = get(organization);
 	const $config = get(config);
-	const $currentUser = get(currentUser);
 
 	if (!$organization) {
-		return resolve('/');
+		return resolve('/auth');
 	}
 
 	// Check onboarding first
-	if (!$organization.is_onboarded && $currentUser?.permissions === 'Owner') {
-		return resolve('/onboarding');
-	}
-
-	// If not onboarded and not owner, they're stuck (shouldn't happen normally)
 	if (!$organization.is_onboarded) {
-		return resolve('/');
+		return resolve('/onboarding');
 	}
 
 	// Check billing if enabled

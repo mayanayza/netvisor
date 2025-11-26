@@ -47,6 +47,7 @@ export interface BillingPlanMetadata {
 		onboarding_call: boolean;
 		dedicated_support_channel: boolean;
 	};
+	is_commercial: boolean;
 }
 
 export interface ServicedDefinitionMetadata {
@@ -59,6 +60,7 @@ export interface ServicedDefinitionMetadata {
 export interface PermissionsMetadata {
 	can_manage: string[];
 	network_permissions: boolean;
+	counts_towards_seats: boolean;
 }
 
 export interface SubnetTypeMetadata {
@@ -80,6 +82,7 @@ export interface GroupTypeMetadata {}
 
 export interface FeatureMetadata {
 	use_null_as_unlimited: boolean;
+	is_coming_soon: boolean;
 }
 
 export interface PortTypeMetadata {

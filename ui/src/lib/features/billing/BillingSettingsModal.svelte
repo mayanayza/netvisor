@@ -3,13 +3,35 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { CreditCard, CheckCircle, AlertCircle } from 'lucide-svelte';
 	import { organization, getOrganization } from '$lib/features/organizations/store';
-	import { isBillingPlanActive } from '$lib/features/organizations/types';
+	import { isBillingPlanActive } from '../organizations/types';
 	import { currentUser } from '$lib/features/auth/store';
-	import { billingPlans } from '$lib/shared/stores/metadata';
+	import { billingPlans, permissions } from '$lib/shared/stores/metadata';
 	import { openCustomerPortal } from './store';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
+	import { users } from '../users/store';
+	import { networks } from '../networks/store';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
+
+	let org = $derived($organization);
+
+	let seatCount = $derived(
+		$users.filter((u) => permissions.getMetadata(u.permissions).counts_towards_seats).length
+	);
+	let networkCount = $derived($networks.length);
+
+	let extraSeats = $derived.by(() => {
+		if (!org?.plan?.included_seats) return 0;
+		return Math.max(seatCount - org.plan.included_seats, 0);
+	});
+
+	let extraNetworks = $derived.by(() => {
+		if (!org?.plan?.included_networks) return 0;
+		return Math.max(networkCount - org.plan.included_networks, 0);
+	});
+
+	let extraSeatsCents = $derived(extraSeats * (org?.plan?.seat_cents || 0));
+	let extraNetworksCents = $derived(extraNetworks * (org?.plan?.network_cents || 0));
 
 	// Force Svelte to track organization reactivity
 	$effect(() => {
@@ -27,7 +49,6 @@
 		await getOrganization();
 	}
 
-	let org = $derived($organization);
 	let planActive = $derived(org ? isBillingPlanActive(org) : false);
 
 	function formatPlanStatus(status: string): string {
@@ -91,27 +112,86 @@
 						</div>
 					</div>
 
-					<div class="space-y-3">
-						<div class="flex items-baseline justify-between">
-							<div>
-								<p class="text-primary text-lg font-semibold">
-									{billingPlans.getName(org.plan?.type || null)}
-								</p>
-								{#if org.plan && org.plan.trial_days > 0 && org.plan_status === 'trialing'}
-									<p class="text-secondary mt-1 text-xs">
-										Includes {org.plan.trial_days}-day free trial
+					<div class="space-y-4">
+						{#if org.plan}
+							<!-- Base Plan -->
+							<div class="flex items-baseline justify-between">
+								<div>
+									<p class="text-primary text-lg font-semibold">
+										{billingPlans.getName(org.plan.type || null)}
 									</p>
-								{/if}
-							</div>
-							{#if org.plan}
+									{#if org.plan.trial_days > 0 && org.plan_status === 'trialing'}
+										<p class="text-secondary mt-1 text-xs">
+											Includes {org.plan.trial_days}-day free trial
+										</p>
+									{/if}
+								</div>
 								<div class="text-right">
 									<p class="text-primary text-2xl font-bold">
-										${org.plan.price.cents / 100}
+										${org.plan.base_cents / 100}
 									</p>
-									<p class="text-secondary text-xs">per {org.plan.price.rate}</p>
+									<p class="text-secondary text-xs">per {org.plan.rate}</p>
+								</div>
+							</div>
+
+							<!-- Seats Usage -->
+							{#if org.plan.included_seats !== null}
+								<div class="border-t border-gray-700 pt-3">
+									<div class="flex items-baseline justify-between">
+										<div>
+											<p class="text-primary font-medium">Seats</p>
+											<p class="text-secondary text-sm">
+												{seatCount} total ({org.plan.included_seats} included
+												{#if extraSeats > 0}
+													+ {extraSeats} extra @ ${org.plan.seat_cents
+														? org.plan.seat_cents / 100
+														: 0} each
+												{/if})
+											</p>
+										</div>
+										{#if extraSeatsCents > 0}
+											<div class="text-right">
+												<p class="text-primary text-xl font-bold">
+													+${extraSeatsCents / 100}
+												</p>
+												<p class="text-secondary text-xs">per {org.plan.rate}</p>
+											</div>
+										{:else}
+											<p class="text-tertiary text-sm">Included</p>
+										{/if}
+									</div>
 								</div>
 							{/if}
-						</div>
+
+							<!-- Networks Usage -->
+							{#if org.plan.included_networks !== null}
+								<div class="border-t border-gray-700 pt-3">
+									<div class="flex items-baseline justify-between">
+										<div>
+											<p class="text-primary font-medium">Networks</p>
+											<p class="text-secondary text-sm">
+												{networkCount} total ({org.plan.included_networks} included
+												{#if extraNetworks > 0}
+													+ {extraNetworks} extra @ ${org.plan.network_cents
+														? org.plan.network_cents / 100
+														: 0} each
+												{/if})
+											</p>
+										</div>
+										{#if extraNetworksCents > 0}
+											<div class="text-right">
+												<p class="text-primary text-xl font-bold">
+													+${extraNetworksCents / 100}
+												</p>
+												<p class="text-secondary text-xs">per {org.plan.rate}</p>
+											</div>
+										{:else}
+											<p class="text-tertiary text-sm">Included</p>
+										{/if}
+									</div>
+								</div>
+							{/if}
+						{/if}
 
 						{#if org.plan_status === 'trialing'}
 							<div

@@ -203,6 +203,25 @@ impl OrganizationService {
         Ok(())
     }
 
+    /// Revoke a specific invite
+    pub async fn get_org_invites(&self, organization_id: &Uuid) -> Result<Vec<Invite>, Error> {
+        let invites = self.invites.read().await;
+
+        let org_invites: Vec<Invite> = invites
+            .iter()
+            .filter_map(|(_, invite)| {
+                if invite.organization_id == *organization_id {
+                    Some(invite)
+                } else {
+                    None
+                }
+            })
+            .cloned()
+            .collect();
+
+        Ok(org_invites)
+    }
+
     /// List all active invites for an organization
     pub async fn list_invites(&self, organization_id: &Uuid) -> Vec<Invite> {
         let invites = self.invites.read().await;
