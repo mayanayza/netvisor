@@ -6,6 +6,7 @@ use bollard::{
     query_parameters::{InspectContainerOptions, ListContainersOptions, ListNetworksOptions},
     secret::{ContainerInspectResponse, ContainerSummary, PortTypeEnum},
 };
+use cidr::IpCidr;
 use futures::future::try_join_all;
 use futures::stream::{self, StreamExt};
 use std::str::FromStr;
@@ -230,7 +231,17 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<DockerScanDiscovery> {
             .get_subnets_from_docker_networks(daemon_id, network_id, docker, self.discovery_type())
             .await?;
 
-        let subnets: Vec<Subnet> = [host_subnets, docker_subnets].concat();
+        // Extract Docker CIDRs to filter them from host_subnets
+        let docker_cidrs: Vec<IpCidr> = docker_subnets.iter().map(|s| s.base.cidr).collect();
+
+        // Filter out any host subnets that match Docker CIDRs
+        // This prevents Unknown-typed host interfaces from overriding DockerBridge-typed subnets
+        let filtered_host_subnets: Vec<Subnet> = host_subnets
+            .into_iter()
+            .filter(|s| !docker_cidrs.contains(&s.base.cidr))
+            .collect();
+
+        let subnets: Vec<Subnet> = [filtered_host_subnets, docker_subnets].concat();
 
         let subnet_futures = subnets.iter().map(|subnet| self.create_subnet(subnet));
         let subnets = try_join_all(subnet_futures).await?;

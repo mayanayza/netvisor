@@ -1,7 +1,22 @@
 import type { Validator } from 'svelte-forms';
 import pkg from 'ipaddr.js';
+import { validate } from 'email-validator';
 
 const { isValid, isValidCIDR, parse, parseCIDR } = pkg;
+
+// IP Address validator
+export const emailValidator = (): Validator => (value: string) => {
+	if (!value) return { valid: true, name: 'Valid email' }; // Allow empty if not required
+
+	if (!validate(value)) {
+		return { name: 'Invalid email', message: 'Invalid email address format', valid: false };
+	}
+
+	return {
+		valid: true,
+		name: 'Valid email'
+	};
+};
 
 // IP Address validator
 export const ipAddress = (): Validator => (value: string) => {

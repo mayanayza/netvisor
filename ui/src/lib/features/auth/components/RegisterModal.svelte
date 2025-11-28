@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { RegisterRequest } from '../types/base';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
-	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import { required } from 'svelte-forms/validators';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import { field } from 'svelte-forms';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import { emailValidator } from '$lib/shared/components/forms/validators';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import { config, getConfig } from '$lib/shared/stores/config';
 	import { loadData } from '$lib/shared/utils/dataLoader';

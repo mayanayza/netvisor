@@ -2,12 +2,12 @@
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import type { LoginRequest } from '../types/base';
 	import { config, getConfig } from '$lib/shared/stores/config';
-	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import { required } from 'svelte-forms/validators';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { field } from 'svelte-forms';
-	import { minLength } from '$lib/shared/components/forms/validators';
+	import { emailValidator, minLength } from '$lib/shared/components/forms/validators';
 
 	let {
 		orgName = null,
