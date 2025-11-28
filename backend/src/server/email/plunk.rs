@@ -3,23 +3,56 @@ use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use email_address::EmailAddress;
-use plunk::{PlunkClient, PlunkClientTrait, PlunkPayloads};
+// use plunk::{PlunkClient, PlunkClientTrait, PlunkPayloads};
 use reqwest::Client;
 use serde_json::Value;
+use serde_json::json;
 
 /// Plunk-based email provider
 pub struct PlunkEmailProvider {
     api_key: String,
     client: Client,
-    plunk: PlunkClient,
 }
 
 impl PlunkEmailProvider {
     pub fn new(api_key: String) -> Self {
         Self {
-            plunk: PlunkClient::new(api_key.clone()),
             api_key,
             client: Client::new(),
+        }
+    }
+
+    pub async fn send_transactional_email(
+        &self,
+        to: EmailAddress,
+        subject: String,
+        body: String,
+    ) -> Result<(), Error> {
+        let url = "https://api.useplunk.com/v1/send";
+        let payload = json!({
+            "to": to.to_string(),
+            "subject": subject,
+            "body": body,
+            "name": "NetVisor",
+            "from": "no-reply@email.netvisor.io",
+            "reply": "no-reply@email.netvisor.io"
+        });
+
+        let response = self
+            .client
+            .post(url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&payload)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Failed to send email via Plunk: {}",
+                response.text().await?
+            ))
         }
     }
 }
@@ -32,15 +65,14 @@ impl EmailProvider for PlunkEmailProvider {
         url: String,
         token: String,
     ) -> Result<(), Error> {
-        self.plunk
-            .send_transactional_email(PlunkPayloads {
-                to: to.to_string(),
-                subject: Some(PASSWORD_RESET_TITLE.to_string()),
-                body: self.build_password_reset_email(url, token),
-            })
-            .await
-            .map_err(|e| anyhow!("{}", e))
-            .map(|_| ())
+        self.send_transactional_email(
+            to,
+            PASSWORD_RESET_TITLE.to_string(),
+            self.build_password_reset_email(url, token),
+        )
+        .await
+        .map_err(|e| anyhow!("{}", e))
+        .map(|_| ())
     }
 
     /// Send an invite via email
@@ -50,15 +82,14 @@ impl EmailProvider for PlunkEmailProvider {
         from: EmailAddress,
         url: String,
     ) -> Result<(), Error> {
-        self.plunk
-            .send_transactional_email(PlunkPayloads {
-                to: to.to_string(),
-                subject: Some(self.build_invite_title(from.clone())),
-                body: self.build_invite_email(url, from),
-            })
-            .await
-            .map_err(|e| anyhow!("{}", e))
-            .map(|_| ())
+        self.send_transactional_email(
+            to,
+            self.build_invite_title(from.clone()),
+            self.build_invite_email(url, from),
+        )
+        .await
+        .map_err(|e| anyhow!("{}", e))
+        .map(|_| ())
     }
 
     async fn track_event(

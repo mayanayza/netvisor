@@ -113,10 +113,7 @@ impl OrganizationService {
 
         invites.retain(|_, invite| invite.expires_at > now);
 
-        tracing::debug!(
-            "Cleaned up expired invites. Current count: {}",
-            invites.len()
-        );
+        tracing::debug!("Cleaned up expired invites.");
     }
 
     pub async fn create_invite(
