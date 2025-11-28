@@ -4,7 +4,7 @@
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import { Link, Key, LogOut, User } from 'lucide-svelte';
 	import { field } from 'svelte-forms';
-	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import { required } from 'svelte-forms/validators';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
@@ -14,6 +14,7 @@
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { organization } from '$lib/features/organizations/store';
 	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
+	import { emailValidator } from '$lib/shared/components/forms/validators';
 
 	export let isOpen = false;
 	export let onClose: () => void;

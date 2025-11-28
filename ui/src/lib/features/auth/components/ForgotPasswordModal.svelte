@@ -4,8 +4,9 @@
 	import { Mail } from 'lucide-svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { field } from 'svelte-forms';
-	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import { required } from 'svelte-forms/validators';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
+	import { emailValidator } from '$lib/shared/components/forms/validators';
 
 	export let isOpen = false;
 	export let onRequestReset: (email: string) => Promise<void> | void;
