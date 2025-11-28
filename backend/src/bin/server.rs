@@ -75,6 +75,16 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // Create stalled discovery cleanup task
+    let stalled_discovery_cleanup = discovery_service.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60)); // Every minute
+        loop {
+            interval.tick().await;
+            stalled_discovery_cleanup.cleanup_stalled_sessions().await;
+        }
+    });
+
     // Create auth session cleanup task
     let auth_cleanup_state = state.clone();
     tokio::spawn(async move {

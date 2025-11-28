@@ -15,6 +15,15 @@ pub enum DiscoveryPhase {
     Cancelled,
 }
 
+impl DiscoveryPhase {
+    pub fn is_terminal(&self) -> bool {
+        matches!(
+            self,
+            DiscoveryPhase::Complete | DiscoveryPhase::Cancelled | DiscoveryPhase::Failed
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DiscoverySessionInfo {
     pub total_to_process: usize,

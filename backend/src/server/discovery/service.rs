@@ -33,6 +33,7 @@ pub struct DiscoveryService {
     sessions: RwLock<HashMap<Uuid, DiscoveryUpdatePayload>>, // session_id -> session state mapping
     daemon_sessions: RwLock<HashMap<Uuid, Vec<Uuid>>>,       // daemon_id -> session_id mapping
     daemon_pull_cancellations: RwLock<HashMap<Uuid, (bool, Uuid)>>, // daemon_id -> (boolean, session_id) mapping for pull mode cancellations of current session on daemon
+    session_last_updated: RwLock<HashMap<Uuid, chrono::DateTime<Utc>>>,
     update_tx: broadcast::Sender<DiscoveryUpdatePayload>,
     scheduler: Option<Arc<RwLock<JobScheduler>>>,
     event_bus: Arc<EventBus>,
@@ -73,6 +74,7 @@ impl DiscoveryService {
             sessions: RwLock::new(HashMap::new()),
             daemon_sessions: RwLock::new(HashMap::new()),
             daemon_pull_cancellations: RwLock::new(HashMap::new()),
+            session_last_updated: RwLock::new(HashMap::new()),
             update_tx: tx,
             scheduler: Some(Arc::new(RwLock::new(scheduler))),
             event_bus,
@@ -482,6 +484,10 @@ impl DiscoveryService {
 
         let mut sessions = self.sessions.write().await;
 
+        let mut last_updated = self.session_last_updated.write().await;
+        // Track last update time
+        last_updated.insert(update.session_id, Utc::now());
+
         let session = sessions
             .get_mut(&update.session_id)
             .ok_or_else(|| anyhow::anyhow!("Session not found"))?;
@@ -670,23 +676,81 @@ impl DiscoveryService {
                 if let Some(daemon) = self.daemon_service.get_by_id(&daemon_id).await? {
                     match daemon.base.mode {
                         DaemonMode::Push => {
-                            self.daemon_service
+                            match self
+                                .daemon_service
                                 .send_discovery_cancellation(daemon, session_id, authentication)
                                 .await
-                                .map_err(|e| {
-                                    anyhow!(
-                                        "Failed to send discovery cancellation to daemon {} for session {}: {}",
-                                        daemon_id,
-                                        session_id,
-                                        e
-                                    )
-                                })?;
+                            {
+                                Ok(_) => {
+                                    tracing::info!(
+                                        daemon_id = %daemon_id,
+                                        session_id = %session_id,
+                                        "Cancellation request sent",
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::warn!(
+                                        daemon_id = %daemon_id,
+                                        session_id = %session_id,
+                                        error = %e,
+                                        "Failed to reach daemon for cancellation (daemon may be down). Marking session as cancelled anyway."
+                                    );
 
-                            tracing::info!(
-                                "Cancellation request sent to daemon {} for active session {}",
-                                daemon_id,
-                                session_id
-                            );
+                                    // Daemon is unreachable, immediately fail the session
+                                    let mut sessions = self.sessions.write().await;
+                                    let mut daemon_sessions = self.daemon_sessions.write().await;
+
+                                    if let Some(session) = sessions.remove(&session_id) {
+                                        // Remove from daemon queue
+                                        if let Some(queue) = daemon_sessions.get_mut(&daemon_id) {
+                                            queue.retain(|id| *id != session_id);
+                                        }
+
+                                        // Broadcast failed/cancelled update
+                                        let cancelled_update = DiscoveryUpdatePayload {
+                                            session_id,
+                                            network_id,
+                                            daemon_id,
+                                            phase: DiscoveryPhase::Failed,
+                                            processed: session.processed,
+                                            total_to_process: session.total_to_process,
+                                            error: Some("Daemon unreachable during cancellation. Session was removed from server.".to_string()),
+                                            started_at: session.started_at,
+                                            finished_at: Some(Utc::now()),
+                                            discovery_type: session.discovery_type.clone(),
+                                        };
+                                        let _ = self.update_tx.send(cancelled_update.clone());
+
+                                        // Create historical discovery record for the stalled session
+                                        let historical_discovery = Discovery {
+                                            id: Uuid::new_v4(),
+                                            created_at: session.started_at.unwrap_or(Utc::now()),
+                                            updated_at: Utc::now(),
+                                            base: crate::server::discovery::r#impl::base::DiscoveryBase {
+                                                daemon_id: session.daemon_id,
+                                                network_id: session.network_id,
+                                                name: "Discovery Run (Cancellation Failed)".to_string(),
+                                                discovery_type: session.discovery_type.clone(),
+                                                run_type: RunType::Historical {
+                                                    results: cancelled_update,
+                                                },
+                                            },
+                                        };
+
+                                        if let Err(e) = self
+                                            .discovery_storage
+                                            .create(&historical_discovery)
+                                            .await
+                                        {
+                                            tracing::error!(
+                                                "Failed to create historical discovery record for stalled session {}: {}",
+                                                session_id,
+                                                e
+                                            );
+                                        }
+                                    }
+                                }
+                            }
                             Ok(())
                         }
                         DaemonMode::Pull => {
@@ -726,7 +790,6 @@ impl DiscoveryService {
         }
     }
 
-    /// Cleanup old completed sessions (call periodically)
     pub async fn cleanup_old_sessions(&self, max_age_hours: i64) {
         let cutoff = Utc::now() - chrono::Duration::hours(max_age_hours);
         let mut sessions = self.sessions.write().await;
@@ -752,6 +815,112 @@ impl DiscoveryService {
 
                 tracing::debug!("Cleaned up old discovery session {}", session_id);
             }
+        }
+    }
+
+    /// Cleanup stalled sessions (called periodically from background task)
+    pub async fn cleanup_stalled_sessions(&self) {
+        let now = Utc::now();
+        let stall_threshold = chrono::Duration::minutes(5);
+
+        let mut sessions = self.sessions.write().await;
+        let mut last_updated = self.session_last_updated.write().await;
+        let mut daemon_sessions = self.daemon_sessions.write().await;
+        let mut daemon_pull_cancellations = self.daemon_pull_cancellations.write().await;
+
+        let mut stalled_count = 0;
+
+        let stalled_sessions: Vec<_> = sessions
+            .iter()
+            .filter_map(|(session_id, session)| {
+                // Skip terminal states
+                if session.phase.is_terminal() {
+                    return None;
+                }
+
+                // Check last update time
+                let is_stalled = if let Some(last_update_time) = last_updated.get(session_id) {
+                    now.signed_duration_since(*last_update_time) > stall_threshold
+                } else if let Some(started_at) = session.started_at {
+                    now.signed_duration_since(started_at) > stall_threshold
+                } else {
+                    false
+                };
+
+                if is_stalled { Some(*session_id) } else { None }
+            })
+            .collect();
+
+        for session_id in stalled_sessions {
+            if let Some(mut session) = sessions.remove(&session_id) {
+                let daemon_id = session.daemon_id;
+
+                tracing::warn!(
+                    session_id = %session_id,
+                    daemon_id = %daemon_id,
+                    phase = ?session.phase,
+                    "Cleaning up stalled discovery session (no updates for 5+ minutes)"
+                );
+
+                // Update to failed state
+                session.phase = DiscoveryPhase::Failed;
+                session.error = Some(
+                    "Session stalled - no updates received from daemon for more than 5 minutes"
+                        .to_string(),
+                );
+                session.finished_at = Some(now);
+
+                // Remove from daemon sessions queue
+                if let Some(queue) = daemon_sessions.get_mut(&daemon_id) {
+                    queue.retain(|id| *id != session_id);
+                }
+
+                // Remove from last_updated tracking
+                last_updated.remove(&session_id);
+
+                // Broadcast the failed state update
+                let _ = self.update_tx.send(session.clone());
+
+                // Clean up any pending cancellation for this daemon/session
+                if let Some((_, cancel_session_id)) = daemon_pull_cancellations.get(&daemon_id)
+                    && *cancel_session_id == session_id
+                {
+                    daemon_pull_cancellations.remove(&daemon_id); // Add this
+                    tracing::debug!(
+                        "Removed stale cancellation flag for daemon {} session {}",
+                        daemon_id,
+                        session_id
+                    );
+                }
+
+                // Create historical discovery record for the stalled session
+                let historical_discovery = Discovery {
+                    id: Uuid::new_v4(),
+                    created_at: session.started_at.unwrap_or(now),
+                    updated_at: now,
+                    base: crate::server::discovery::r#impl::base::DiscoveryBase {
+                        daemon_id: session.daemon_id,
+                        network_id: session.network_id,
+                        name: "Discovery Run (Stalled)".to_string(),
+                        discovery_type: session.discovery_type.clone(),
+                        run_type: RunType::Historical { results: session },
+                    },
+                };
+
+                if let Err(e) = self.discovery_storage.create(&historical_discovery).await {
+                    tracing::error!(
+                        "Failed to create historical discovery record for stalled session {}: {}",
+                        session_id,
+                        e
+                    );
+                }
+
+                stalled_count += 1;
+            }
+        }
+
+        if stalled_count > 0 {
+            tracing::info!("Cleaned up {} stalled discovery sessions", stalled_count);
         }
     }
 }
