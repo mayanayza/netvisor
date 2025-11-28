@@ -1,4 +1,3 @@
-<!-- ui/src/routes/onboarding/+page.svelte -->
 <script lang="ts">
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import OnboardingModal from '$lib/features/auth/components/OnboardingModal.svelte';

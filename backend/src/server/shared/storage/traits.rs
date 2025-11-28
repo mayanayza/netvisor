@@ -2,6 +2,7 @@ use std::net::IpAddr;
 
 use crate::server::groups::r#impl::base::Group;
 use crate::server::services::r#impl::base::Service;
+use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::{
     billing::types::base::BillingPlan,
@@ -108,4 +109,5 @@ pub enum SqlValue {
     Subnets(Vec<Subnet>),
     Services(Vec<Service>),
     Groups(Vec<Group>),
+    TelemetryOperation(Vec<TelemetryOperation>),
 }

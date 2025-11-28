@@ -73,6 +73,9 @@ async fn create_invite(
         ));
     }
 
+    let send_to = request.send_to.clone();
+    let from_user = user.email.clone();
+
     let invite = state
         .services
         .organization_service
@@ -82,9 +85,21 @@ async fn create_invite(
             user.user_id,
             state.config.public_url.clone(),
             user.into(),
+            send_to.clone(),
         )
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+    if let Some(send_to) = send_to
+        && let Some(email_service) = &state.services.email_service
+    {
+        let url = format!(
+            "{}/api/organizations/invites/{}/accept",
+            invite.url.clone(),
+            invite.id
+        );
+        email_service.send_invite(send_to, from_user, url).await?;
+    }
 
     Ok(Json(ApiResponse::success(invite)))
 }

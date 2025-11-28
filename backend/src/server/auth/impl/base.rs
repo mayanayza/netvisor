@@ -9,6 +9,7 @@ pub struct LoginRegisterParams {
     pub ip: IpAddr,
     pub user_agent: Option<String>,
     pub network_ids: Vec<Uuid>,
+    pub subscribed: bool,
 }
 
 pub struct ProvisionUserParams {
@@ -19,4 +20,5 @@ pub struct ProvisionUserParams {
     pub org_id: Option<Uuid>,
     pub permissions: Option<UserOrgPermissions>,
     pub network_ids: Vec<Uuid>,
+    pub subscribed: bool,
 }

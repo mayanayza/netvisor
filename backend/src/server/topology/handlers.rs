@@ -2,6 +2,7 @@ use crate::server::{
     auth::middleware::{AuthenticatedUser, RequireMember},
     config::AppState,
     shared::{
+        events::types::{TelemetryEvent, TelemetryOperation},
         handlers::traits::{
             CrudHandlers, delete_handler, get_all_handler, get_by_id_handler, update_handler,
         },
@@ -20,8 +21,10 @@ use axum::{
     },
     routing::{delete, get, post, put},
 };
+use chrono::Utc;
 use futures::{Stream, stream};
 use std::{convert::Infallible, sync::Arc};
+use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -169,7 +172,32 @@ async fn rebuild(
     topology.base.nodes = nodes;
     topology.clear_stale();
 
-    service.update(&mut topology, user.into()).await?;
+    service.update(&mut topology, user.clone().into()).await?;
+
+    let organization = state
+        .services
+        .organization_service
+        .get_by_id(&user.organization_id)
+        .await?;
+
+    if let Some(organization) = organization
+        && organization.not_onboarded(&TelemetryOperation::FirstTopologyRebuild)
+    {
+        state
+            .services
+            .event_bus
+            .publish_telemetry(TelemetryEvent {
+                id: Uuid::new_v4(),
+                organization_id: user.organization_id,
+                operation: TelemetryOperation::FirstTopologyRebuild,
+                timestamp: Utc::now(),
+                authentication: user.into(),
+                metadata: serde_json::json!({
+                    "is_onboarding_step": true
+                }),
+            })
+            .await?;
+    }
 
     // Return will be handled through event subscriber which triggers SSE
 

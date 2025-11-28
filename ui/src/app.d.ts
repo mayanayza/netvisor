@@ -11,4 +11,9 @@ declare global {
 	}
 }
 
+declare module 'freemail' {
+	export function isFree(email: string): boolean;
+	export function disposable(email: string): boolean;
+}
+
 export {};

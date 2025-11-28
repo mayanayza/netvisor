@@ -33,6 +33,16 @@ pub struct ApiKey {
     pub base: ApiKeyBase,
 }
 
+impl ApiKey {
+    pub fn suppress_logs(&self, other: &Self) -> bool {
+        self.base.key == other.base.key
+            && self.base.name == other.base.name
+            && self.base.expires_at == other.base.expires_at
+            && self.base.network_id == other.base.network_id
+            && self.base.is_enabled == other.base.is_enabled
+    }
+}
+
 impl Display for ApiKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.base.name, self.id)

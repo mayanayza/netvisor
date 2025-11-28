@@ -1,7 +1,6 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
-	import { networks } from '$lib/features/networks/store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import type { ApiKey } from '../types/base';
@@ -19,10 +18,6 @@
 		iconColor: entities.getColorHelper('ApiKey').icon,
 		Icon: entities.getIconComponent('ApiKey'),
 		fields: [
-			{
-				label: 'Network',
-				value: $networks.find((n) => n.id == apiKey.network_id)?.name || 'Unknown Network'
-			},
 			{
 				label: 'Created',
 				value: formatTimestamp(apiKey.created_at)

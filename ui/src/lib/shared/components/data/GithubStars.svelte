@@ -20,8 +20,6 @@
 				method: 'GET'
 			});
 
-			console.log(response);
-
 			if (response) {
 				error = false;
 			} else {

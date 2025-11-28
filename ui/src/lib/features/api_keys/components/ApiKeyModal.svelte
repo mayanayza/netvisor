@@ -44,7 +44,6 @@
 	}
 
 	async function handleGenerateKey() {
-		console.log('formData being sent:', formData);
 		const generatedKey = await createNewApiKey(formData);
 		if (generatedKey) {
 			keyStore.set(generatedKey);
@@ -66,7 +65,6 @@
 		loading = true;
 		try {
 			if (isEditing) {
-				console.log(formData);
 				await onUpdate(formData);
 			}
 		} finally {
@@ -129,6 +127,7 @@
 
 			<div class="flex items-start gap-2">
 				<button
+					type="button"
 					class="btn-primary flex-shrink-0 self-stretch"
 					on:click={apiKey != null ? handleRotateKey : handleGenerateKey}
 					disabled={loading}

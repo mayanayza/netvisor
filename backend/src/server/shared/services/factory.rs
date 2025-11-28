@@ -5,7 +5,7 @@ use crate::server::{
     config::ServerConfig,
     daemons::service::DaemonService,
     discovery::service::DiscoveryService,
-    email::service::EmailService,
+    email::{plunk::PlunkEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
     groups::service::GroupService,
     hosts::service::HostService,
     logging::service::LoggingService,
@@ -103,7 +103,31 @@ impl ServiceFactory {
             subnet_service.clone(),
             event_bus.clone(),
         ));
+
         let user_service = Arc::new(UserService::new(storage.users.clone(), event_bus.clone()));
+
+        let email_service = config.clone().and_then(|c| {
+            // Prefer Plunk if API key is provided
+            if let Some(plunk_api_key) = c.plunk_api_key {
+                let provider = Box::new(PlunkEmailProvider::new(plunk_api_key));
+                return Some(Arc::new(EmailService::new(provider, user_service.clone())));
+            }
+
+            // Fall back to SMTP
+            if let (Some(smtp_username), Some(smtp_password), Some(smtp_email), Some(smtp_relay)) =
+                (c.smtp_username, c.smtp_password, c.smtp_email, c.smtp_relay)
+            {
+                let provider =
+                    SmtpEmailProvider::new(smtp_username, smtp_password, smtp_email, smtp_relay)
+                        .ok()?;
+                return Some(Arc::new(EmailService::new(
+                    Box::new(provider),
+                    user_service.clone(),
+                )));
+            }
+
+            None
+        });
 
         let billing_service = config.clone().and_then(|c| {
             if let Some(strip_secret) = c.stripe_secret
@@ -115,19 +139,8 @@ impl ServiceFactory {
                     organization_service.clone(),
                     user_service.clone(),
                     network_service.clone(),
+                    event_bus.clone(),
                 )));
-            }
-            None
-        });
-
-        let email_service = config.clone().and_then(|c| {
-            if let (Some(smtp_username), Some(smtp_password), Some(smtp_email), Some(smtp_relay)) =
-                (c.smtp_username, c.smtp_password, c.smtp_email, c.smtp_relay)
-            {
-                return Some(Arc::new(
-                    EmailService::new(smtp_username, smtp_password, smtp_email, smtp_relay)
-                        .unwrap(),
-                ));
             }
             None
         });
@@ -140,29 +153,14 @@ impl ServiceFactory {
         ));
 
         let oidc_service = config.and_then(|c| {
-            if let (
-                Some(issuer_url),
-                Some(redirect_url),
-                Some(client_id),
-                Some(client_secret),
-                Some(provider_name),
-            ) = (
-                &c.oidc_issuer_url,
-                &c.oidc_redirect_url,
-                &c.oidc_client_id,
-                &c.oidc_client_secret,
-                &c.oidc_provider_name,
-            ) {
-                return Some(Arc::new(OidcService::new(OidcService {
-                    issuer_url: issuer_url.to_owned(),
-                    client_id: client_id.to_owned(),
-                    client_secret: client_secret.to_owned(),
-                    redirect_url: redirect_url.to_owned(),
-                    provider_name: provider_name.to_owned(),
-                    auth_service: auth_service.clone(),
-                    user_service: user_service.clone(),
-                    event_bus: event_bus.clone(),
-                })));
+            if let Some(oidc_providers) = c.oidc_providers {
+                return Some(Arc::new(OidcService::new(
+                    oidc_providers,
+                    &c.public_url,
+                    auth_service.clone(),
+                    user_service.clone(),
+                    event_bus.clone(),
+                )));
             }
             None
         });
@@ -173,11 +171,17 @@ impl ServiceFactory {
             .await;
 
         event_bus.register_subscriber(logging_service.clone()).await;
-
         event_bus.register_subscriber(host_service.clone()).await;
+        event_bus
+            .register_subscriber(organization_service.clone())
+            .await;
 
         if let Some(billing_service) = billing_service.clone() {
             event_bus.register_subscriber(billing_service).await;
+        }
+
+        if let Some(email_service) = email_service.clone() {
+            event_bus.register_subscriber(email_service).await;
         }
 
         Ok(Self {

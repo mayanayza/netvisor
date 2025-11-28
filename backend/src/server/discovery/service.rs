@@ -188,8 +188,17 @@ impl DiscoveryService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Could not find discovery {}", discovery))?;
 
-        // If it's a scheduled discovery, need to reschedule
-        let updated = if matches!(discovery.base.run_type, RunType::Scheduled { .. }) {
+        // If it's a scheduled discovery and schedule has changed, need to reschedule
+        let updated = if let RunType::Scheduled {
+            cron_schedule: new_cron,
+            ..
+        } = &discovery.base.run_type
+            && let RunType::Scheduled {
+                cron_schedule: current_cron,
+                ..
+            } = &current.base.run_type
+            && current_cron != new_cron
+        {
             // Remove old schedule first
             if let Some(scheduler) = &self.scheduler {
                 let _ = scheduler.write().await.remove(&discovery.id).await;
@@ -214,9 +223,7 @@ impl DiscoveryService {
             updated
         } else {
             // For non-scheduled, just update
-            let updated = self.discovery_storage.update(&mut discovery).await?;
-            tracing::info!("Updated discovery {}: {}", updated.base.name, updated.id);
-            updated
+            self.discovery_storage.update(&mut discovery).await?
         };
 
         let trigger_stale = updated.triggers_staleness(Some(current));
@@ -394,7 +401,7 @@ impl DiscoveryService {
 
         let job_id = scheduler.write().await.add(job).await?;
 
-        tracing::info!(
+        tracing::debug!(
             "Scheduled discovery {} with cron: {}",
             discovery_id,
             cron_schedule

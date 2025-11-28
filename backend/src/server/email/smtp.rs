@@ -1,24 +1,30 @@
-use anyhow::{Result, anyhow};
-use email_address::EmailAddress;
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
     message::{Mailbox, MultiPart, SinglePart},
     transport::smtp::authentication::Credentials,
 };
 
-#[derive(Clone)]
-pub struct EmailService {
+use anyhow::{Error, anyhow};
+use async_trait::async_trait;
+use email_address::EmailAddress;
+
+use crate::server::email::{
+    templates::PASSWORD_RESET_TITLE,
+    traits::{EmailProvider, strip_html_tags},
+};
+
+pub struct SmtpEmailProvider {
     mailer: AsyncSmtpTransport<Tokio1Executor>,
     from: Mailbox,
 }
 
-impl EmailService {
+impl SmtpEmailProvider {
     pub fn new(
         smtp_username: String,
         smtp_password: String,
         smtp_email: String,
         smtp_relay: String,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error> {
         let creds = Credentials::new(smtp_username, smtp_password);
 
         let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp_relay)
@@ -33,11 +39,10 @@ impl EmailService {
                 .map_err(|e| anyhow!("Invalid from email address: {}", e))?,
         );
 
-        Ok(EmailService { mailer, from })
+        Ok(Self { mailer, from })
     }
 
-    /// Send an HTML email
-    pub async fn send_email(&self, to: EmailAddress, subject: &str, html_body: &str) -> Result<()> {
+    async fn send_email(&self, to: EmailAddress, title: String, body: String) -> Result<(), Error> {
         let to_mbox = Mailbox::new(
             None,
             to.email()
@@ -48,11 +53,11 @@ impl EmailService {
         let email = lettre::Message::builder()
             .from(self.from.clone())
             .to(to_mbox)
-            .subject(subject)
+            .subject(title)
             .multipart(
                 MultiPart::alternative()
-                    .singlepart(SinglePart::plain(strip_html_tags(html_body)))
-                    .singlepart(SinglePart::html(html_body.to_string())),
+                    .singlepart(SinglePart::plain(strip_html_tags(body.clone())))
+                    .singlepart(SinglePart::html(body)),
             )?;
 
         self.mailer
@@ -64,7 +69,33 @@ impl EmailService {
     }
 }
 
-/// Strip HTML tags for plain text fallback
-fn strip_html_tags(html: &str) -> String {
-    html2text::from_read(html.as_bytes(), 80).unwrap_or_else(|_| html.to_string())
+#[async_trait]
+impl EmailProvider for SmtpEmailProvider {
+    async fn send_invite(
+        &self,
+        to: EmailAddress,
+        from: EmailAddress,
+        url: String,
+    ) -> Result<(), Error> {
+        self.send_email(
+            to,
+            self.build_invite_title(from.clone()),
+            self.build_invite_email(url, from),
+        )
+        .await
+    }
+
+    async fn send_password_reset(
+        &self,
+        to: EmailAddress,
+        url: String,
+        token: String,
+    ) -> Result<(), Error> {
+        self.send_email(
+            to,
+            PASSWORD_RESET_TITLE.to_string(),
+            self.build_password_reset_email(url, token),
+        )
+        .await
+    }
 }

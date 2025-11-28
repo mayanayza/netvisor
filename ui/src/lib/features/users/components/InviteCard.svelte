@@ -40,6 +40,10 @@
 				value: $users.find((u) => u.id == invite.created_by)?.email || 'Unknown User'
 			},
 			{
+				label: 'Sent To',
+				value: invite.send_to ? invite.send_to : 'N/A'
+			},
+			{
 				label: 'Expires',
 				value: formatTimestamp(invite.expires_at)
 			}

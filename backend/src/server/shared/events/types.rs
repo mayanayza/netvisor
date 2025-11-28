@@ -1,6 +1,6 @@
 use crate::server::{auth::middleware::AuthenticatedEntity, shared::entities::Entity};
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr};
 use strum::IntoDiscriminant;
 use uuid::Uuid;
@@ -9,6 +9,7 @@ use uuid::Uuid;
 pub enum Event {
     Entity(Box<EntityEvent>),
     Auth(AuthEvent),
+    Telemetry(TelemetryEvent),
 }
 
 impl Event {
@@ -16,6 +17,7 @@ impl Event {
         match self {
             Event::Auth(a) => a.id,
             Event::Entity(e) => e.id,
+            Event::Telemetry(t) => t.id,
         }
     }
 
@@ -23,6 +25,7 @@ impl Event {
         match self {
             Event::Auth(a) => a.organization_id,
             Event::Entity(e) => e.organization_id,
+            Event::Telemetry(t) => Some(t.organization_id),
         }
     }
 
@@ -30,6 +33,15 @@ impl Event {
         match self {
             Event::Auth(_) => None,
             Event::Entity(e) => e.network_id,
+            Event::Telemetry(_) => None,
+        }
+    }
+
+    pub fn metadata(&self) -> serde_json::Value {
+        match self {
+            Event::Auth(e) => e.metadata.clone(),
+            Event::Entity(e) => e.metadata.clone(),
+            Event::Telemetry(e) => e.metadata.clone(),
         }
     }
 
@@ -51,7 +63,6 @@ impl Event {
                     network_id = %network_id_str,
                     organization_id = %org_id_str,
                     operation = %event.operation,
-                    "Entity Event Logged"
                 );
             }
             Event::Auth(event) => {
@@ -75,7 +86,12 @@ impl Event {
                     user_id = %user_id_str,
                     user_agent = %user_agent_str,
                     operation = %event.operation,
-                    "Auth Event Logged"
+                );
+            }
+            Event::Telemetry(event) => {
+                tracing::info!(
+                    organization_id = %event.organization_id,
+                    operation = %event.operation,
                 );
             }
         }
@@ -119,6 +135,11 @@ impl Display for Event {
                 e.metadata,
                 e.authentication
             ),
+            Event::Telemetry(t) => write!(
+                f,
+                "{{ id: {}, authentication: {}, organization_id: {}, operation: {}, timestamp: {}, metadata: {} }}",
+                t.id, t.authentication, t.organization_id, t.operation, t.timestamp, t.metadata,
+            ),
         }
     }
 }
@@ -134,7 +155,9 @@ impl PartialEq for Event {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum AuthOperation {
+    // User Auth
     Register,
     LoginSuccess,
     LoginFailed,
@@ -146,6 +169,9 @@ pub enum AuthOperation {
     OidcLinked,
     OidcUnlinked,
     LoggedOut,
+
+    // Api Key Auth
+    RotateKey,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -173,7 +199,22 @@ impl PartialEq for AuthEvent {
     }
 }
 
+impl Display for AuthEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ id: {}, operation: {}, ip: {}, user_agent: {}, authentication: {} }}",
+            self.id,
+            self.operation,
+            self.ip_address,
+            self.user_agent.clone().unwrap_or("unknown".to_string()),
+            self.authentication
+        )
+    }
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum EntityOperation {
     Get,
     GetAll,
@@ -182,7 +223,6 @@ pub enum EntityOperation {
     Deleted,
     DiscoveryStarted,
     DiscoveryCancelled,
-    Custom(&'static str),
 }
 
 #[derive(Debug, Clone, Serialize, Eq)]
@@ -213,8 +253,43 @@ impl Display for EntityEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Event: {{ id: {}, entity_type: {}, entity_id: {} }}",
-            self.id, self.entity_type, self.entity_id
+            "{{ id: {}, entity_type: {}, entity_id: {}, operation: {} }}",
+            self.id, self.entity_type, self.entity_id, self.operation
+        )
+    }
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash, Deserialize, strum::Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum TelemetryOperation {
+    // Onboarding funnel
+    OrgCreated,
+    OnboardingModalCompleted,
+    PersonalPlanSelected,
+    CommercialPlanSelected,
+    FirstApiKeyCreated,
+    FirstDaemonRegistered,
+    FirstTopologyRebuild, // FirstDiscoveryStarted,
+                          // FirstDiscoveryCompleted,
+                          // FirstHostDiscovered,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct TelemetryEvent {
+    pub id: Uuid,
+    pub organization_id: Uuid,
+    pub operation: TelemetryOperation,
+    pub timestamp: DateTime<Utc>,
+    pub authentication: AuthenticatedEntity,
+    pub metadata: serde_json::Value,
+}
+
+impl Display for TelemetryEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ id: {}, organization_id: {}, operation: {}, authentication: {} }}",
+            self.id, self.organization_id, self.operation, self.authentication
         )
     }
 }

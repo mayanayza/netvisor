@@ -18,15 +18,18 @@ impl EventSubscriber for LoggingService {
     async fn handle_events(&self, events: Vec<Event>) -> Result<(), Error> {
         // Log each event individually
         for event in events {
-            event.log();
-            tracing::debug!("{}", event);
+            let suppress_logs = event
+                .metadata()
+                .get("suppress_logs")
+                .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
+                .unwrap_or(false);
+
+            if !suppress_logs {
+                tracing::info!("{}", event);
+            }
         }
 
         Ok(())
-    }
-
-    fn debounce_window_ms(&self) -> u64 {
-        0 // No batching for logging - we want immediate logs
     }
 
     fn name(&self) -> &str {

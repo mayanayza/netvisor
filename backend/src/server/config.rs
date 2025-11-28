@@ -1,110 +1,125 @@
-use crate::server::shared::services::factory::ServiceFactory;
+use crate::server::auth::r#impl::oidc::OidcProviderMetadata;
+use crate::server::{
+    auth::r#impl::oidc::OidcProviderConfig, shared::services::factory::ServiceFactory,
+};
 use anyhow::{Error, Result};
+use clap::Parser;
 use figment::{
     Figment,
-    providers::{Env, Serialized},
+    providers::{Env, Format, Serialized, Toml},
 };
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
 
 use crate::server::shared::storage::factory::StorageFactory;
 
-/// CLI arguments structure (for figment integration)
-#[derive(Debug)]
-pub struct CliArgs {
-    pub server_port: Option<u16>,
-    pub log_level: Option<String>,
-    pub rust_log: Option<String>,
-    pub database_url: Option<String>,
-    pub integrated_daemon_url: Option<String>,
-    pub use_secure_session_cookies: Option<bool>,
-    pub disable_registration: bool,
-    pub oidc_issuer_url: Option<String>,
-    pub oidc_client_id: Option<String>,
-    pub oidc_client_secret: Option<String>,
-    pub oidc_redirect_url: Option<String>,
-    pub oidc_provider_name: Option<String>,
-    pub stripe_secret: Option<String>,
-    pub stripe_webhook_secret: Option<String>,
-    pub smtp_username: Option<String>,
-    pub smtp_password: Option<String>,
-    pub smtp_relay: Option<String>,
-    pub smtp_email: Option<String>,
-    pub public_url: Option<String>,
+#[derive(Parser)]
+#[command(name = "netvisor-server")]
+#[command(about = "NetVisor server")]
+pub struct ServerCli {
+    /// Override server port
+    #[arg(long)]
+    server_port: Option<u16>,
+
+    /// Override log level
+    #[arg(long)]
+    log_level: Option<String>,
+
+    /// Override rust system log level
+    #[arg(long)]
+    rust_log: Option<String>,
+
+    /// Override database path
+    #[arg(long)]
+    database_url: Option<String>,
+
+    /// Override integrated daemon url
+    #[arg(long)]
+    integrated_daemon_url: Option<String>,
+
+    /// Use secure session cookies (if serving UI behind HTTPS)
+    #[arg(long)]
+    use_secure_session_cookies: Option<bool>,
+
+    /// Enable or disable registration flow
+    #[arg(long)]
+    disable_registration: bool,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    stripe_secret: Option<String>,
+
+    /// OIDC redirect url
+    #[arg(long)]
+    stripe_webhook_secret: Option<String>,
+
+    #[arg(long)]
+    smtp_username: Option<String>,
+
+    #[arg(long)]
+    smtp_password: Option<String>,
+
+    /// Email used as to/from in emails send by NetVisor using SMTP
+    #[arg(long)]
+    smtp_email: Option<String>,
+
+    #[arg(long)]
+    smtp_relay: Option<String>,
+
+    #[arg(long)]
+    smtp_port: Option<String>,
+
+    /// Server URL used in features like password reset and invite links
+    #[arg(long)]
+    public_url: Option<String>,
+
+    #[arg(long)]
+    pub plunk_api_key: Option<String>,
+
+    /// Configure what proxy (if any) is providing IP address for requests, ie in a reverse proxy setup, for accurate IP in auth event logging
+    #[arg(long)]
+    pub client_ip_source: Option<String>,
+
+    /// List of OIDC providers
+    #[arg(long)]
+    pub oidc_providers: Option<String>,
 }
 
-/// Flattened server configuration struct
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
-    // Server settings
-    /// What port the server should listen on
     pub server_port: u16,
-
-    /// Level of logs to show
     pub log_level: String,
-
-    /// Rust log level
     pub rust_log: String,
-
-    /// Where database should be located
     pub database_url: String,
-
-    /// Where static web assets are located for serving
     pub web_external_path: Option<PathBuf>,
-
-    /// Public URL for server for email links, webhooks, etc
     pub public_url: String,
-
-    /// URL for daemon running in same docker stack or in other local context
     pub integrated_daemon_url: Option<String>,
-
-    /// Use secure with issued session cookies
     pub use_secure_session_cookies: bool,
-
-    /// Disable user registration endpoint
     pub disable_registration: bool,
-
-    /// OIDC issuer URL
-    pub oidc_issuer_url: Option<String>,
-
-    /// OIDC client ID
-    pub oidc_client_id: Option<String>,
-
-    /// OIDC client secret
-    pub oidc_client_secret: Option<String>,
-
-    /// OIDC redirect url
-    pub oidc_redirect_url: Option<String>,
-
-    /// OIDC redirect url
-    pub oidc_provider_name: Option<String>,
-
-    /// Stripe key
-    pub stripe_key: Option<String>,
-
-    /// Stripe Secret
-    pub stripe_secret: Option<String>,
-
-    pub stripe_webhook_secret: Option<String>,
-
+    pub client_ip_source: Option<String>,
     pub smtp_username: Option<String>,
-
     pub smtp_password: Option<String>,
-
     pub smtp_relay: Option<String>,
-
     pub smtp_email: Option<String>,
+    #[serde(default)]
+    pub oidc_providers: Option<Vec<OidcProviderConfig>>,
+
+    // Used in SaaS deployment
+    pub plunk_api_key: Option<String>,
+    pub stripe_key: Option<String>,
+    pub stripe_secret: Option<String>,
+    pub stripe_webhook_secret: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicConfigResponse {
     pub server_port: u16,
     pub disable_registration: bool,
-    pub oidc_enabled: bool,
-    pub oidc_provider_name: String,
+    pub oidc_providers: Vec<OidcProviderMetadata>,
     pub billing_enabled: bool,
     pub has_integrated_daemon: bool,
     pub has_email_service: bool,
+    pub has_email_opt_in: bool,
     pub public_url: String,
 }
 
@@ -120,11 +135,6 @@ impl Default for ServerConfig {
             use_secure_session_cookies: false,
             integrated_daemon_url: None,
             disable_registration: false,
-            oidc_client_id: None,
-            oidc_client_secret: None,
-            oidc_issuer_url: None,
-            oidc_redirect_url: None,
-            oidc_provider_name: None,
             stripe_key: None,
             stripe_secret: None,
             stripe_webhook_secret: None,
@@ -132,17 +142,19 @@ impl Default for ServerConfig {
             smtp_password: None,
             smtp_email: None,
             smtp_relay: None,
+            plunk_api_key: None,
+            client_ip_source: None,
+            oidc_providers: None,
         }
     }
 }
 
 impl ServerConfig {
-    pub fn load(cli_args: CliArgs) -> anyhow::Result<Self> {
+    pub fn load(cli_args: ServerCli) -> anyhow::Result<Self> {
         // Standard configuration layering: Defaults → Env → CLI (highest priority)
-        let mut figment = Figment::from(Serialized::defaults(ServerConfig::default()));
-
-        // Add environment variables with NETVISOR_ prefix
-        figment = figment.merge(Env::prefixed("NETVISOR_"));
+        let mut figment = Figment::from(Serialized::defaults(ServerConfig::default()))
+            .merge(Toml::file("../oidc.toml"))
+            .merge(Env::prefixed("NETVISOR_"));
 
         // Add CLI overrides (highest priority) - only if explicitly provided
         if let Some(server_port) = cli_args.server_port {
@@ -162,21 +174,6 @@ impl ServerConfig {
         }
         if let Some(use_secure_session_cookies) = cli_args.use_secure_session_cookies {
             figment = figment.merge(("use_secure_session_cookies", use_secure_session_cookies));
-        }
-        if let Some(oidc_issuer_url) = cli_args.oidc_issuer_url {
-            figment = figment.merge(("oidc_issuer_url", oidc_issuer_url));
-        }
-        if let Some(oidc_client_id) = cli_args.oidc_client_id {
-            figment = figment.merge(("oidc_client_id", oidc_client_id));
-        }
-        if let Some(oidc_client_secret) = cli_args.oidc_client_secret {
-            figment = figment.merge(("oidc_client_secret", oidc_client_secret));
-        }
-        if let Some(oidc_redirect_url) = cli_args.oidc_redirect_url {
-            figment = figment.merge(("oidc_redirect_url", oidc_redirect_url));
-        }
-        if let Some(oidc_provider_name) = cli_args.oidc_provider_name {
-            figment = figment.merge(("oidc_provider_name", oidc_provider_name));
         }
         if let Some(stripe_secret) = cli_args.stripe_secret {
             figment = figment.merge(("stripe_secret", stripe_secret));
@@ -198,6 +195,15 @@ impl ServerConfig {
         }
         if let Some(public_url) = cli_args.public_url {
             figment = figment.merge(("public_url", public_url));
+        }
+        if let Some(plunk_api_key) = cli_args.plunk_api_key {
+            figment = figment.merge(("plunk_api_key", plunk_api_key));
+        }
+        if let Some(client_ip_source) = cli_args.client_ip_source {
+            figment = figment.merge(("client_ip_source", client_ip_source));
+        }
+        if let Some(oidc_providers) = cli_args.oidc_providers {
+            figment = figment.merge(("oidc_providers", oidc_providers));
         }
 
         figment = figment.merge(("disable_registration", cli_args.disable_registration));
