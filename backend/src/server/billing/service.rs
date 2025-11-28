@@ -1,4 +1,4 @@
-use crate::server::auth::middleware::AuthenticatedEntity;
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
 use crate::server::networks::service::NetworkService;

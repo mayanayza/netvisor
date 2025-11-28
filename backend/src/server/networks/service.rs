@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     hosts::service::HostService,
     networks::r#impl::Network,
     shared::{

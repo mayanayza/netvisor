@@ -1,5 +1,6 @@
 use crate::server::api_keys::r#impl::base::{ApiKey, ApiKeyBase};
-use crate::server::auth::middleware::{AuthenticatedEntity, AuthenticatedUser, RequireOwner};
+use crate::server::auth::middleware::auth::{AuthenticatedEntity, AuthenticatedUser};
+use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
 use crate::server::config::PublicConfigResponse;

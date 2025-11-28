@@ -1,4 +1,5 @@
-use crate::server::auth::middleware::{AuthenticatedUser, RequireAdmin, RequireMember};
+use crate::server::auth::middleware::auth::AuthenticatedUser;
+use crate::server::auth::middleware::permissions::{RequireAdmin, RequireMember};
 use crate::server::shared::handlers::traits::{
     CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
 };

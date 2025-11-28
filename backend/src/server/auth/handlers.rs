@@ -9,7 +9,7 @@ use crate::server::{
             base::LoginRegisterParams,
             oidc::OidcPendingAuth,
         },
-        middleware::AuthenticatedUser,
+        middleware::auth::AuthenticatedUser,
     },
     config::AppState,
     organizations::handlers::process_pending_invite,

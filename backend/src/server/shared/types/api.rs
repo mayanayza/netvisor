@@ -66,6 +66,10 @@ impl ApiError {
     pub fn bad_gateway(message: String) -> Self {
         Self::new(StatusCode::BAD_GATEWAY, message.to_string())
     }
+
+    pub fn too_many_requests(message: String) -> Self {
+        Self::new(StatusCode::TOO_MANY_REQUESTS, message.to_string())
+    }
 }
 
 impl axum::response::IntoResponse for ApiError {

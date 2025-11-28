@@ -1,13 +1,10 @@
 use std::fmt::Display;
 
 use crate::server::{
-    billing::types::base::BillingPlan,
     config::AppState,
-    organizations::r#impl::base::Organization,
     shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
     users::r#impl::{base::User, permissions::UserOrgPermissions},
 };
-use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
     http::request::Parts,
@@ -19,7 +16,7 @@ use serde::Serialize;
 use tower_sessions::Session;
 use uuid::Uuid;
 
-pub struct AuthError(ApiError);
+pub struct AuthError(pub ApiError);
 
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
@@ -39,6 +36,7 @@ pub enum AuthenticatedEntity {
     Daemon {
         network_id: Uuid,
         api_key_id: Uuid,
+        daemon_id: Uuid,
     }, // network_id
     System,
     Anonymous,
@@ -67,13 +65,7 @@ impl AuthenticatedEntity {
     pub fn entity_id(&self) -> String {
         match self {
             AuthenticatedEntity::User { user_id, .. } => user_id.to_string(),
-            AuthenticatedEntity::Daemon {
-                network_id,
-                api_key_id,
-            } => format!(
-                "Daemon for network {} using API key {}",
-                network_id, api_key_id
-            ),
+            AuthenticatedEntity::Daemon { daemon_id, .. } => daemon_id.to_string(),
             AuthenticatedEntity::System => "System".to_string(),
             AuthenticatedEntity::Anonymous => "Anonymous".to_string(),
         }
@@ -125,6 +117,11 @@ where
         if let Some(auth_header) = parts.headers.get(axum::http::header::AUTHORIZATION)
             && let Ok(auth_str) = auth_header.to_str()
             && let Some(api_key) = auth_str.strip_prefix("Bearer ")
+            && let Some(daemon_id) = parts
+                .headers
+                .get("X-Daemon-ID")
+                .and_then(|h| h.to_str().ok())
+                .and_then(|s| Uuid::parse_str(s).ok())
         {
             let api_key_filter = EntityFilter::unfiltered().api_key(api_key.to_owned());
             // Get API key record by key
@@ -170,6 +167,7 @@ where
                 return Ok(AuthenticatedEntity::Daemon {
                     network_id,
                     api_key_id,
+                    daemon_id,
                 });
             }
             // Invalid API key
@@ -278,6 +276,7 @@ where
 pub struct AuthenticatedDaemon {
     pub network_id: Uuid,
     pub api_key_id: Uuid,
+    pub daemon_id: Uuid,
 }
 
 impl From<AuthenticatedDaemon> for AuthenticatedEntity {
@@ -285,6 +284,7 @@ impl From<AuthenticatedDaemon> for AuthenticatedEntity {
         AuthenticatedEntity::Daemon {
             network_id: value.network_id,
             api_key_id: value.api_key_id,
+            daemon_id: value.daemon_id,
         }
     }
 }
@@ -302,325 +302,15 @@ where
             AuthenticatedEntity::Daemon {
                 network_id,
                 api_key_id,
+                daemon_id,
             } => Ok(AuthenticatedDaemon {
                 network_id,
                 api_key_id,
+                daemon_id,
             }),
             _ => Err(AuthError(ApiError::unauthorized(
                 "Daemon authentication required".to_string(),
             ))),
         }
-    }
-}
-
-/// Extractor that accepts either a Member+ user OR a daemon
-/// Returns the network IDs the authenticated entity has access to
-pub struct MemberOrDaemon {
-    pub network_ids: Vec<Uuid>,
-    pub entity: AuthenticatedEntity,
-}
-
-impl<S> FromRequestParts<S> for MemberOrDaemon
-where
-    S: Send + Sync + AsRef<AppState>,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        // Get the authenticated entity (works for both users and daemons)
-        let entity = AuthenticatedEntity::from_request_parts(parts, state).await?;
-
-        match entity {
-            AuthenticatedEntity::User { .. } => {
-                // For users, check they're at least Member level
-                let member = RequireMember::from_request_parts(parts, state).await?;
-                let user: AuthenticatedUser = member.into();
-
-                Ok(MemberOrDaemon {
-                    network_ids: user.network_ids.clone(),
-                    entity: user.into(),
-                })
-            }
-            AuthenticatedEntity::Daemon { network_id, .. } => {
-                // Daemons only have access to their single network
-                Ok(MemberOrDaemon {
-                    network_ids: vec![network_id],
-                    entity,
-                })
-            }
-            _ => Err(AuthError(ApiError::forbidden(
-                "Member or Daemon permission required",
-            ))),
-        }
-    }
-}
-
-/// Extractor that requires the user to be at least an Owner
-pub struct RequireOwner(pub AuthenticatedUser);
-
-impl From<RequireOwner> for AuthenticatedUser {
-    fn from(value: RequireOwner) -> Self {
-        value.0
-    }
-}
-
-impl<S> FromRequestParts<S> for RequireOwner
-where
-    S: Send + Sync + AsRef<AppState>,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let user = AuthenticatedUser::from_request_parts(parts, state).await?;
-
-        if user.permissions < UserOrgPermissions::Owner {
-            return Err(AuthError(ApiError::forbidden("Owner permission required")));
-        }
-
-        Ok(RequireOwner(user))
-    }
-}
-
-/// Extractor that requires the user to be at least an Admin
-pub struct RequireAdmin(pub AuthenticatedUser);
-
-impl From<RequireAdmin> for AuthenticatedUser {
-    fn from(value: RequireAdmin) -> Self {
-        value.0
-    }
-}
-
-impl From<RequireOwner> for RequireAdmin {
-    fn from(value: RequireOwner) -> Self {
-        RequireAdmin(value.0)
-    }
-}
-
-impl<S> FromRequestParts<S> for RequireAdmin
-where
-    S: Send + Sync + AsRef<AppState>,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let user = AuthenticatedUser::from_request_parts(parts, state).await?;
-
-        if user.permissions < UserOrgPermissions::Admin {
-            return Err(AuthError(ApiError::forbidden("Admin permission required")));
-        }
-
-        Ok(RequireAdmin(user))
-    }
-}
-
-/// Extractor that requires the user to be at least a Member
-pub struct RequireMember(pub AuthenticatedUser);
-
-impl From<RequireMember> for AuthenticatedUser {
-    fn from(value: RequireMember) -> Self {
-        value.0
-    }
-}
-
-impl From<RequireOwner> for RequireMember {
-    fn from(value: RequireOwner) -> Self {
-        RequireMember(value.0)
-    }
-}
-
-impl From<RequireAdmin> for RequireMember {
-    fn from(value: RequireAdmin) -> Self {
-        RequireMember(value.0)
-    }
-}
-
-impl<S> FromRequestParts<S> for RequireMember
-where
-    S: Send + Sync + AsRef<AppState>,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let user = AuthenticatedUser::from_request_parts(parts, state).await?;
-
-        if user.permissions < UserOrgPermissions::Member {
-            return Err(AuthError(ApiError::forbidden("Member permission required")));
-        }
-
-        Ok(RequireMember(user))
-    }
-}
-
-/// Context available for feature/quota checks
-pub struct FeatureCheckContext<'a> {
-    pub organization: &'a Organization,
-    pub plan: BillingPlan,
-    pub app_state: &'a AppState,
-}
-
-pub enum FeatureCheckResult {
-    Allowed,
-    Denied { message: String },
-}
-
-impl FeatureCheckResult {
-    pub fn denied(msg: impl Into<String>) -> Self {
-        Self::Denied {
-            message: msg.into(),
-        }
-    }
-
-    pub fn is_allowed(&self) -> bool {
-        matches!(self, Self::Allowed)
-    }
-}
-
-#[async_trait]
-pub trait FeatureCheck: Send + Sync + Default {
-    async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult;
-}
-
-// ============ Extractor ============
-
-pub struct RequireFeature<T: FeatureCheck> {
-    pub permissions: UserOrgPermissions,
-    pub plan: BillingPlan,
-    pub organization: Organization,
-    pub _phantom: std::marker::PhantomData<T>,
-}
-
-impl<S, T> FromRequestParts<S> for RequireFeature<T>
-where
-    S: Send + Sync + AsRef<AppState>,
-    T: FeatureCheck + Default,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let AuthenticatedUser {
-            permissions,
-            organization_id,
-            ..
-        } = AuthenticatedUser::from_request_parts(parts, state).await?;
-
-        let app_state = state.as_ref();
-
-        let organization = app_state
-            .services
-            .organization_service
-            .get_by_id(&organization_id)
-            .await
-            .map_err(|_| AuthError(ApiError::internal_error("Failed to load organization")))?
-            .ok_or_else(|| AuthError(ApiError::forbidden("Organization not found")))?;
-
-        let plan = organization.base.plan.unwrap_or_default();
-
-        let ctx = FeatureCheckContext {
-            organization: &organization,
-            plan,
-            app_state,
-        };
-
-        let checker = T::default();
-        match checker.check(&ctx).await {
-            FeatureCheckResult::Allowed => Ok(RequireFeature {
-                permissions,
-                plan,
-                organization,
-                _phantom: std::marker::PhantomData,
-            }),
-            FeatureCheckResult::Denied { message } => Err(AuthError(ApiError::forbidden(&message))),
-        }
-    }
-}
-
-// ============ Concrete Checkers ============
-
-#[derive(Default)]
-pub struct InviteUsersFeature;
-
-#[async_trait]
-impl FeatureCheck for InviteUsersFeature {
-    async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
-        let features = ctx.plan.features();
-
-        if !features.share_views {
-            return FeatureCheckResult::denied(
-                "Your plan does not include team collaboration features",
-            );
-        }
-
-        // Check seat quota if there's a limit and user doesn't have a plan that lets them buy more seats
-        if let Some(max_seats) = ctx.plan.config().included_seats
-            && ctx.plan.config().seat_cents.is_none()
-        {
-            let org_filter = EntityFilter::unfiltered().organization_id(&ctx.organization.id);
-
-            let current_members = ctx
-                .app_state
-                .services
-                .user_service
-                .get_all(org_filter)
-                .await
-                .unwrap_or_default()
-                .iter()
-                .filter(|u| u.base.permissions.counts_towards_seats())
-                .count();
-
-            let pending_invites = ctx
-                .app_state
-                .services
-                .organization_service
-                .get_org_invites(&ctx.organization.id)
-                .await
-                .unwrap_or_default()
-                .iter()
-                .filter(|i| i.permissions.counts_towards_seats())
-                .count();
-
-            let total_seats_used = current_members + pending_invites;
-
-            if total_seats_used >= max_seats as usize {
-                return FeatureCheckResult::denied(format!(
-                    "Seat limit reached ({}/{}). Upgrade your plan for more seats, or delete any unused pending invites.",
-                    total_seats_used, max_seats
-                ));
-            }
-        }
-
-        FeatureCheckResult::Allowed
-    }
-}
-
-#[derive(Default)]
-pub struct CreateNetworkFeature;
-
-#[async_trait]
-impl FeatureCheck for CreateNetworkFeature {
-    async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
-        // Check networks quota if there's a limit and user doesn't have a plan that lets them buy more networks
-        if let Some(max_networks) = ctx.plan.config().included_networks
-            && ctx.plan.config().network_cents.is_none()
-        {
-            let org_filter = EntityFilter::unfiltered().organization_id(&ctx.organization.id);
-
-            let current_networks = ctx
-                .app_state
-                .services
-                .network_service
-                .get_all(org_filter)
-                .await
-                .map(|o| o.len())
-                .unwrap_or(0);
-
-            if current_networks >= max_networks as usize {
-                return FeatureCheckResult::denied(format!(
-                    "Network limit reached ({}/{}). Upgrade your plan for more networks.",
-                    current_networks, max_networks
-                ));
-            }
-        }
-
-        FeatureCheckResult::Allowed
     }
 }

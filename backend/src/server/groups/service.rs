@@ -4,7 +4,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     groups::r#impl::base::Group,
     shared::{
         entities::ChangeTriggersTopologyStaleness,

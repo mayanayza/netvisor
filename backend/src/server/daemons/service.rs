@@ -1,7 +1,7 @@
 use crate::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
-        auth::middleware::AuthenticatedEntity,
+        auth::middleware::auth::AuthenticatedEntity,
         daemons::r#impl::{
             api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse, DiscoveryUpdatePayload},
             base::Daemon,

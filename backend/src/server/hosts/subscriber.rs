@@ -4,7 +4,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     hosts::service::HostService,
     shared::{
         entities::EntityDiscriminants,

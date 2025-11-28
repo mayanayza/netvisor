@@ -295,6 +295,7 @@ impl DiscoveryRunner<SelfReportDiscovery> {
                 "{}/api/daemons/{}/update-capabilities",
                 server_target, daemon_id
             ))
+            .header("X-Daemon-ID", daemon_id.to_string())
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&capabilities)
             .send()

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::server::{
     api_keys::r#impl::base::{ApiKey, ApiKeyBase},
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     shared::{
         entities::ChangeTriggersTopologyStaleness,
         events::{

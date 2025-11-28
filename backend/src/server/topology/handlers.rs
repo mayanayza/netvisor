@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::{AuthenticatedUser, RequireMember},
+    auth::middleware::{auth::AuthenticatedUser, permissions::RequireMember},
     config::AppState,
     shared::{
         handlers::traits::{

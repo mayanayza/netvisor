@@ -1,6 +1,7 @@
-use crate::server::auth::middleware::AuthenticatedEntity;
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::{
-    AuthenticatedUser, InviteUsersFeature, RequireFeature, RequireMember,
+    auth::AuthenticatedUser, features::InviteUsersFeature, features::RequireFeature,
+    permissions::RequireMember,
 };
 use crate::server::config::AppState;
 use crate::server::organizations::r#impl::api::CreateInviteRequest;

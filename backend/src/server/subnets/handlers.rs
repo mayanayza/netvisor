@@ -1,4 +1,5 @@
-use crate::server::auth::middleware::{AuthenticatedEntity, MemberOrDaemon};
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
+use crate::server::auth::middleware::permissions::MemberOrDaemon;
 use crate::server::shared::handlers::traits::{
     CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler, update_handler,
 };
