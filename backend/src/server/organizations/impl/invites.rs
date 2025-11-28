@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -17,6 +18,7 @@ pub struct Invite {
     pub created_by: Uuid,
     pub created_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
+    pub send_to: Option<EmailAddress>,
 }
 
 impl Invite {
@@ -27,6 +29,7 @@ impl Invite {
         expiration_hours: i64,
         permissions: UserOrgPermissions,
         network_ids: Vec<Uuid>,
+        send_to: Option<EmailAddress>,
     ) -> Self {
         let now = Utc::now();
         Self {
@@ -38,6 +41,7 @@ impl Invite {
             url,
             created_at: now,
             expires_at: now + chrono::Duration::hours(expiration_hours),
+            send_to,
         }
     }
 

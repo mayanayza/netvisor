@@ -19,6 +19,7 @@ use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
     EnumDiscriminants,
     Eq,
 )]
+#[strum_discriminants(derive(IntoStaticStr, Serialize))]
 #[serde(tag = "type")]
 pub enum BillingPlan {
     Community(PlanConfig),

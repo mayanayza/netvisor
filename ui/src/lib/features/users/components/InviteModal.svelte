@@ -1,7 +1,15 @@
 <script lang="ts">
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
-	import { UserPlus, Copy, Check, Calendar, Link as LinkIcon, RotateCcw } from 'lucide-svelte';
+	import {
+		UserPlus,
+		Copy,
+		Check,
+		Calendar,
+		Link as LinkIcon,
+		RotateCcw,
+		Send
+	} from 'lucide-svelte';
 	import { pushSuccess, pushError } from '$lib/shared/stores/feedback';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
@@ -10,14 +18,19 @@
 	import type { UserOrgPermissions } from '../types';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
-	import { required } from 'svelte-forms/validators';
+	import { email, required } from 'svelte-forms/validators';
 	import { permissions, metadata, entities } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { networks } from '$lib/features/networks/store';
 	import { NetworkDisplay } from '$lib/shared/components/forms/selection/display/NetworkDisplay.svelte';
+	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import { config } from '$lib/shared/stores/config';
+	import type { Network } from '$lib/features/networks/types';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
+
+	let enableEmail = $derived($config?.has_email_service ?? false);
 
 	// Force Svelte to track reactivity
 	$effect(() => {
@@ -44,19 +57,16 @@
 
 	// Create form field with validation
 	const permissionsField = field('permissions', 'Visualizer', [required()]);
+	const emailField = field('email', '', [email()]);
+
+	let usingEmail = $derived(enableEmail && $emailField.value && $emailField.valid);
+	let ctaText = $derived(usingEmail ? 'Send Invite Link' : 'Generate Invite Link');
+	let ctaLoadingText = $derived(usingEmail ? 'Sending...' : 'Generating...');
+	let CtaIcon = $derived(usingEmail ? Send : RotateCcw);
 
 	const networksNotNeeded: UserOrgPermissions[] = ['Admin', 'Owner'];
 
-	let selectedNetworks = $derived(
-		$networks.filter((n) => {
-			if ($currentUser) {
-				return networksNotNeeded.includes($currentUser.permissions)
-					? true
-					: $currentUser.network_ids.includes(n.id);
-			}
-			return false;
-		})
-	);
+	let selectedNetworks: Network[] = $state([]);
 
 	let networkOptions = $derived(
 		$networks
@@ -93,6 +103,7 @@
 
 	function handleClose() {
 		invite = null;
+		emailField.clear();
 		onClose();
 	}
 
@@ -101,14 +112,14 @@
 		try {
 			invite = await createInvite(
 				$permissionsField.value as UserOrgPermissions,
-				selectedNetworks.map((n) => n.id)
+				selectedNetworks.map((n) => n.id),
+				$emailField.value
 			);
 			if (invite) {
-				pushSuccess('Invite generated successfully');
+				pushSuccess(`Invite ${usingEmail ? 'sent' : 'generated'} successfully`);
 			}
 		} catch (err) {
-			pushError('Failed to generate invite');
-			console.error('Failed to generate invite:', err);
+			pushError(`Failed to ${usingEmail ? 'send' : 'generate'} invite: ${err}`);
 		} finally {
 			generatingInvite = false;
 		}
@@ -201,11 +212,26 @@
 			/>
 		{/if}
 
+		{#if enableEmail}
+			<TextInput
+				label="Email"
+				id="name"
+				{formApi}
+				placeholder="Enter email address..."
+				helpText="Enter the email you would like to send this invite to, or leave empty to just generate a link"
+				field={emailField}
+			/>
+		{/if}
+
 		<!-- Generate Invite Button (shown when no invite exists) -->
 		{#if !invite}
-			<button onclick={handleGenerateInvite} disabled={generatingInvite} class="btn-primary w-full">
-				<RotateCcw class="mr-2 h-4 w-4" />
-				{generatingInvite ? 'Generating...' : 'Generate Invite Link'}
+			<button
+				onclick={handleGenerateInvite}
+				disabled={generatingInvite || $emailField.invalid}
+				class="btn-primary w-full"
+			>
+				<CtaIcon class="mr-2 h-4 w-4" />
+				{generatingInvite ? ctaLoadingText : ctaText}
 			</button>
 		{/if}
 

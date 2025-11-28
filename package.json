@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "-": "^0.0.1",
+    "baseline-browser-mapping": "^2.8.31",
     "html-to-image": "^1.11.13"
   },
   "devDependencies": {

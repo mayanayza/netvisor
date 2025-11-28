@@ -9,19 +9,21 @@ export interface Organization {
 	name: string;
 	plan: BillingPlan;
 	plan_status: string;
-	is_onboarded: boolean;
+	onboarding: string[];
 }
 
 export interface CreateInviteRequest {
 	expiration_hours: number | null;
 	permissions: UserOrgPermissions;
 	network_ids: string[];
+	send_to: string | null;
 }
 
 export interface OrganizationInvite {
 	id: string;
 	permissions: UserOrgPermissions;
 	url: string;
+	send_to: string | null;
 	expires_at: string;
 	created_at: string;
 	created_by: string;

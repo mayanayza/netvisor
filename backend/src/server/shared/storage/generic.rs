@@ -96,6 +96,7 @@ where
             SqlValue::Subnets(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Services(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Groups(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::TelemetryOperation(v) => query.bind(serde_json::to_value(v)?),
         };
 
         Ok(value)
@@ -117,7 +118,7 @@ where
         }
 
         query.execute(&self.pool).await?;
-        tracing::debug!("Created {}: {}", T::table_name(), entity);
+        tracing::trace!("Created {}: {}", T::table_name(), entity);
         Ok(entity.clone())
     }
 
@@ -173,7 +174,7 @@ where
             query = Self::bind_value(query, value)?;
         }
 
-        tracing::debug!("Updated {}", entity);
+        tracing::trace!("Updated {}", entity);
 
         query.execute(&self.pool).await?;
         Ok(entity.clone())
@@ -184,7 +185,7 @@ where
 
         sqlx::query(&query_str).bind(id).execute(&self.pool).await?;
 
-        tracing::debug!("Deleted {} with id: {}", T::table_name(), id);
+        tracing::trace!("Deleted {} with id: {}", T::table_name(), id);
 
         Ok(())
     }
@@ -203,7 +204,7 @@ where
 
         let deleted_count = result.rows_affected() as usize;
 
-        tracing::debug!(
+        tracing::trace!(
             "Bulk deleted {} {}s (requested: {}, deleted: {})",
             deleted_count,
             T::table_name(),

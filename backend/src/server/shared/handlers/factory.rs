@@ -12,6 +12,7 @@ use crate::server::organizations::r#impl::base::Organization;
 use crate::server::services::definitions::ServiceDefinitionRegistry;
 use crate::server::shared::concepts::Concept;
 use crate::server::shared::entities::EntityDiscriminants;
+use crate::server::shared::events::types::{TelemetryEvent, TelemetryOperation};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::api::{ApiError, ApiResult};
@@ -34,11 +35,13 @@ use axum::extract::State;
 use axum::http::HeaderValue;
 use axum::routing::post;
 use axum::{Json, Router, routing::get};
+use chrono::Utc;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use strum::{IntoDiscriminant, IntoEnumIterator};
 use tower_http::set_header::SetResponseHeaderLayer;
+use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -103,26 +106,26 @@ async fn get_health() -> Json<ApiResponse<String>> {
 pub async fn get_public_config(
     State(state): State<Arc<AppState>>,
 ) -> Json<ApiResponse<PublicConfigResponse>> {
+    let oidc_providers = state
+        .services
+        .oidc_service
+        .as_ref()
+        .map(|o| o.as_ref().list_providers())
+        .unwrap_or_default();
+
     Json(ApiResponse::success(PublicConfigResponse {
         server_port: state.config.server_port,
         disable_registration: state.config.disable_registration,
-        oidc_enabled: state.config.oidc_client_id.is_some()
-            && state.config.oidc_client_secret.is_some()
-            && state.config.oidc_issuer_url.is_some()
-            && state.config.oidc_provider_name.is_some()
-            && state.config.oidc_redirect_url.is_some(),
-        oidc_provider_name: state
-            .config
-            .oidc_provider_name
-            .clone()
-            .unwrap_or("OIDC Provider".to_string()),
+        oidc_providers,
         billing_enabled: state.config.stripe_secret.is_some(),
         has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
-        has_email_service: state.config.smtp_password.is_some()
+        has_email_service: (state.config.smtp_password.is_some()
             && state.config.smtp_username.is_some()
             && state.config.smtp_email.is_some()
-            && state.config.smtp_relay.is_some(),
+            && state.config.smtp_relay.is_some())
+            || state.config.plunk_api_key.is_some(),
         public_url: state.config.public_url.clone(),
+        has_email_opt_in: state.config.plunk_api_key.is_some(),
     }))
 }
 
@@ -145,8 +148,10 @@ pub async fn onboarding(
         .await?
         .ok_or_else(|| anyhow!("Could not find organization."))?;
 
-    if org.base.is_onboarded {
-        return Err(ApiError::bad_request("Org is already onboarded"));
+    if org.has_onboarded(&TelemetryOperation::OnboardingModalCompleted) {
+        return Err(ApiError::bad_request(
+            "Org has already completed onboarding modal",
+        ));
     }
 
     // Billing not enabled = self hosted
@@ -155,7 +160,9 @@ pub async fn onboarding(
     }
 
     org.base.name = request.organization_name;
-    org.base.is_onboarded = true;
+    org.base
+        .onboarding
+        .push(TelemetryOperation::OnboardingModalCompleted);
     let updated_org = state
         .services
         .organization_service
@@ -171,6 +178,14 @@ pub async fn onboarding(
         .create(network, user.clone().into())
         .await?;
 
+    if request.populate_seed_data {
+        state
+            .services
+            .network_service
+            .seed_default_data(network.id, user.clone().into())
+            .await?;
+    }
+
     let topology = Topology::new(TopologyBase::new("My Topology".to_string(), network.id));
 
     state
@@ -178,14 +193,6 @@ pub async fn onboarding(
         .topology_service
         .create(topology, user.clone().into())
         .await?;
-
-    if request.populate_seed_data {
-        state
-            .services
-            .network_service
-            .seed_default_data(network.id, user.into())
-            .await?;
-    }
 
     if let Some(integrated_daemon_url) = &state.config.integrated_daemon_url {
         let api_key = state
@@ -210,6 +217,21 @@ pub async fn onboarding(
             .initialize_local_daemon(integrated_daemon_url.clone(), network.id, api_key.base.key)
             .await?;
     }
+
+    state
+        .services
+        .event_bus
+        .publish_telemetry(TelemetryEvent {
+            id: Uuid::new_v4(),
+            organization_id: org.id,
+            operation: TelemetryOperation::OnboardingModalCompleted,
+            timestamp: Utc::now(),
+            authentication: user.into(),
+            metadata: serde_json::json!({
+                "is_onboarding_step": true
+            }),
+        })
+        .await?;
 
     Ok(Json(ApiResponse::success(updated_org)))
 }

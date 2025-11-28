@@ -22,10 +22,11 @@
 	const loading = loadData([getConfig]);
 
 	$: user = $currentUser;
+	$: oidcProviders = $loading ? [] : ($config?.oidc_providers ?? []);
+	$: hasOidcProviders = oidcProviders.length > 0;
 
-	$: enableOidc = $loading ? true : $config.oidc_enabled;
 	let activeSection: 'main' | 'credentials' = 'main';
-	let isLinkingOidc = false;
+	let linkingProviderSlug: string | null = null;
 	let savingCredentials = false;
 
 	let formData: { email: string; password: string; confirmPassword: string } = {
@@ -45,23 +46,33 @@
 		resetModal();
 	}
 
+	// Find which provider (if any) is linked to this user
+	$: linkedProvider = user?.oidc_provider
+		? oidcProviders.find((p) => p.slug === user.oidc_provider)
+		: null;
+
 	function resetModal() {
 		activeSection = 'main';
 		formData = { email: '', password: '', confirmPassword: '' };
-		isLinkingOidc = false;
+		linkingProviderSlug = null;
 		email.set(user?.email || '');
 	}
 
-	async function linkOidcAccount() {
-		isLinkingOidc = true;
+	function linkOidcAccount(providerSlug: string) {
+		linkingProviderSlug = providerSlug;
 		const returnUrl = encodeURIComponent(window.location.origin);
-		window.location.href = `/api/auth/oidc/authorize?link=true&return_url=${returnUrl}`;
+		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=link&return_url=${returnUrl}`;
 	}
 
-	async function unlinkOidcAccount() {
-		const result = await api.request('/auth/oidc/unlink', currentUser, (user) => user, {
-			method: 'POST'
-		});
+	async function unlinkOidcAccount(providerSlug: string) {
+		const result = await api.request(
+			`/auth/oidc/${providerSlug}/unlink`,
+			currentUser,
+			(user) => user,
+			{
+				method: 'POST'
+			}
+		);
 
 		if (result?.success) {
 			pushSuccess('OIDC account unlinked successfully');
@@ -76,7 +87,7 @@
 			// Build request with only changed/provided fields
 			const updateRequest: { email?: string; password?: string } = {};
 
-			// Add email if it changed and OIDC is not linked
+			// Add email if it changed
 			if (formData.email !== user?.email) {
 				updateRequest.email = formData.email;
 			}
@@ -125,7 +136,7 @@
 		onClose();
 	}
 
-	$: hasOidc = !!user?.oidc_provider;
+	$: hasLinkedOidc = !!user?.oidc_provider;
 	$: modalTitle = activeSection === 'main' ? 'Account Settings' : 'Update Credentials';
 	$: showSave = activeSection === 'credentials';
 	$: cancelLabel = activeSection === 'main' ? 'Close' : 'Back';
@@ -166,8 +177,8 @@
 						<!-- Email & Password -->
 						<InfoCard variant="compact">
 							<div class="flex items-center justify-between">
-								<div class="flex items-center gap-2">
-									<Key class="text-secondary h-4 w-4 flex-shrink-0" />
+								<div class="flex items-center gap-4">
+									<Key class="text-secondary h-5 w-5 flex-shrink-0" />
 									<div>
 										<p class="text-primary text-sm font-medium">Email & Password</p>
 										<p class="text-secondary text-xs">Update email and password</p>
@@ -185,34 +196,63 @@
 							</div>
 						</InfoCard>
 
-						<!-- OIDC -->
-						{#if enableOidc}
-							<InfoCard variant="compact">
-								<div class="flex items-center justify-between">
-									<div class="mr-2 flex items-center gap-2">
-										<Link class="text-secondary h-4 w-4 flex-shrink-0" />
-										<div>
-											<p class="text-primary text-sm font-medium">{$config.oidc_provider_name}</p>
-											{#if hasOidc}
-												<p class="text-secondary text-xs">
-													{user.oidc_provider} - Linked on {new Date(
-														user.oidc_linked_at || ''
-													).toLocaleDateString()}
-												</p>
+						<!-- OIDC Providers -->
+						{#if hasOidcProviders}
+							<div class="space-y-3">
+								<p class="text-secondary text-xs">
+									Link your account with an identity provider for faster sign-in. You can only link
+									one provider at a time.
+								</p>
+
+								{#each oidcProviders as provider (provider.slug)}
+									{@const isLinked = hasLinkedOidc && user.oidc_provider === provider.slug}
+									{@const isDisabled = hasLinkedOidc && !isLinked}
+									<InfoCard variant="compact">
+										<div class="flex items-center justify-between">
+											<div class="mr-2 flex items-center gap-4">
+												{#if provider.logo}
+													<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
+												{:else}
+													<Link class="text-secondary h-5 w-5 flex-shrink-0" />
+												{/if}
+												<div>
+													<p class="text-primary text-sm font-medium">{provider.name}</p>
+													{#if isLinked}
+														<p class="text-secondary text-xs">
+															Linked on {new Date(user.oidc_linked_at || '').toLocaleDateString()}
+														</p>
+													{:else if isDisabled}
+														<p class="text-secondary text-xs">
+															Unlink {linkedProvider?.name} first to link this provider
+														</p>
+													{:else}
+														<p class="text-secondary text-xs">Not linked</p>
+													{/if}
+												</div>
+											</div>
+											{#if isLinked}
+												<button
+													on:click={() => unlinkOidcAccount(provider.slug)}
+													class="btn-danger"
+												>
+													Unlink
+												</button>
+											{:else if !hasLinkedOidc}
+												<button
+													on:click={() => linkOidcAccount(provider.slug)}
+													disabled={(linkingProviderSlug && linkingProviderSlug != provider.slug) ||
+														isDisabled}
+													class={isDisabled ? 'btn-disabled' : 'btn-primary'}
+												>
+													{linkingProviderSlug == provider.slug ? 'Redirecting...' : 'Link'}
+												</button>
 											{:else}
-												<p class="text-secondary text-xs">Not linked</p>
+												<button disabled={isDisabled} class="btn-primary"> Link </button>
 											{/if}
 										</div>
-									</div>
-									{#if hasOidc}
-										<button on:click={unlinkOidcAccount} class="btn-danger"> Unlink </button>
-									{:else}
-										<button on:click={linkOidcAccount} disabled={isLinkingOidc} class="btn-primary">
-											{isLinkingOidc ? 'Redirecting...' : 'Link'}
-										</button>
-									{/if}
-								</div>
-							</InfoCard>
+									</InfoCard>
+								{/each}
+							</div>
 						{/if}
 					</div>
 				</div>
@@ -220,8 +260,8 @@
 				<!-- Logout -->
 				<InfoCard variant="compact">
 					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<LogOut class="text-secondary h-4 w-4" />
+						<div class="flex items-center gap-4">
+							<LogOut class="text-secondary h-5 w-5" />
 							<span class="text-primary text-sm">Sign out of your account</span>
 						</div>
 						<button on:click={handleLogout} class="btn-secondary"> Logout </button>

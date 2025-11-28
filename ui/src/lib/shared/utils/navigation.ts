@@ -17,7 +17,8 @@ export function getRoute(): string {
 	}
 
 	// Check onboarding first
-	if (!$organization.is_onboarded) {
+	const onboardingModalCompleted = $organization.onboarding.includes('OnboardingModalCompleted');
+	if (!onboardingModalCompleted) {
 		return resolve('/onboarding');
 	}
 

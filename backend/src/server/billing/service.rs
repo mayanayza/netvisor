@@ -4,6 +4,9 @@ use crate::server::billing::types::features::Feature;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::r#impl::base::Organization;
 use crate::server::organizations::service::OrganizationService;
+use crate::server::shared::events::bus::EventBus;
+use crate::server::shared::events::types::TelemetryEvent;
+use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
@@ -11,6 +14,7 @@ use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::users::service::UserService;
 use anyhow::Error;
 use anyhow::anyhow;
+use chrono::Utc;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use stripe::Client;
@@ -48,6 +52,7 @@ pub struct BillingService {
     pub user_service: Arc<UserService>,
     pub network_service: Arc<NetworkService>,
     pub plans: OnceLock<Vec<BillingPlan>>,
+    pub event_bus: Arc<EventBus>,
 }
 
 const SEAT_PRODUCT_ID: &str = "extra_seats";
@@ -62,6 +67,7 @@ impl BillingService {
         organization_service: Arc<OrganizationService>,
         user_service: Arc<UserService>,
         network_service: Arc<NetworkService>,
+        event_bus: Arc<EventBus>,
     ) -> Self {
         Self {
             stripe: Client::new(stripe_secret),
@@ -70,6 +76,7 @@ impl BillingService {
             network_service,
             user_service,
             plans: OnceLock::new(),
+            event_bus,
         }
     }
 
@@ -299,7 +306,7 @@ impl BillingService {
         authentication: AuthenticatedEntity,
     ) -> Result<CheckoutSession, Error> {
         // Get or create Stripe customer
-        let customer_id = self
+        let (_, customer_id) = self
             .get_or_create_customer(organization_id, authentication)
             .await?;
 
@@ -509,7 +516,7 @@ impl BillingService {
         &self,
         organization_id: Uuid,
         authentication: AuthenticatedEntity,
-    ) -> Result<CustomerId, Error> {
+    ) -> Result<(Organization, CustomerId), Error> {
         // Check if org already has stripe_customer_id
         let mut organization = self
             .organization_service
@@ -517,8 +524,8 @@ impl BillingService {
             .await?
             .ok_or_else(|| anyhow!("Organization {} doesn't exist.", organization_id))?;
 
-        if let Some(customer_id) = organization.base.stripe_customer_id {
-            return Ok(CustomerId::from(customer_id));
+        if let Some(customer_id) = organization.base.stripe_customer_id.clone() {
+            return Ok((organization, CustomerId::from(customer_id.to_owned())));
         }
 
         let organization_owners = self
@@ -550,7 +557,7 @@ impl BillingService {
             .update(&mut organization, authentication)
             .await?;
 
-        Ok(customer.id)
+        Ok((organization, customer.id))
     }
 
     /// Handle webhook events
@@ -633,31 +640,64 @@ impl BillingService {
             .await?
             .ok_or_else(|| anyhow!("Could not find organization to update subscriptions status"))?;
 
-        // Update enabled features to match new plan
-        // if let Some(included_networks) = plan.config().included_networks {
-        //     let networks = self
-        //         .network_service
-        //         .get_all(EntityFilter::unfiltered().organization_id(&org_id))
-        //         .await?;
-        //     let keep_ids = networks
-        //         .iter()
-        //         .take(included_networks)
-        //         .map(|n| n.id)
-        //         .collect::<Vec<Uuid>>();
+        let owners = self
+            .user_service
+            .get_organization_owners(&organization.id)
+            .await?;
 
-        //     for network in networks {
-        //         if !keep_ids.contains(&network.id) {
-        //             self.network_service
-        //                 .delete(&network.id, AuthenticatedEntity::System)
-        //                 .await?;
-        //             tracing::info!(
-        //                 organization_id = %org_id,
-        //                 network_id = %network.id,
-        //                 "Deleted network due to plan downgrade"
-        //             );
-        //         }
-        //     }
-        // }
+        // First time signing up for a plan
+        if let Some(owner) = owners.first()
+            && organization.base.plan.is_none()
+            && organization.not_onboarded(&TelemetryOperation::CommercialPlanSelected)
+            && organization.not_onboarded(&TelemetryOperation::PersonalPlanSelected)
+        {
+            let operation = if plan.is_commercial() {
+                TelemetryOperation::CommercialPlanSelected
+            } else {
+                TelemetryOperation::PersonalPlanSelected
+            };
+
+            self.event_bus
+                .publish_telemetry(TelemetryEvent {
+                    id: Uuid::new_v4(),
+                    authentication: owner.clone().into(),
+                    organization_id: organization.id,
+                    operation,
+                    timestamp: Utc::now(),
+                    metadata: serde_json::json!({
+                        "is_onboarding_step": true
+                    }),
+                })
+                .await?;
+        }
+
+        // If they can't pay for networks, remove them
+        if let Some(included_networks) = plan.config().included_networks
+            && plan.config().network_cents.is_none()
+        {
+            let networks = self
+                .network_service
+                .get_all(EntityFilter::unfiltered().organization_id(&org_id))
+                .await?;
+            let keep_ids = networks
+                .iter()
+                .take(included_networks.try_into().unwrap_or(3))
+                .map(|n| n.id)
+                .collect::<Vec<Uuid>>();
+
+            for network in networks {
+                if !keep_ids.contains(&network.id) {
+                    self.network_service
+                        .delete(&network.id, AuthenticatedEntity::System)
+                        .await?;
+                    tracing::info!(
+                        organization_id = %org_id,
+                        network_id = %network.id,
+                        "Deleted network due to plan downgrade"
+                    );
+                }
+            }
+        }
 
         match plan {
             BillingPlan::Community { .. } => {}

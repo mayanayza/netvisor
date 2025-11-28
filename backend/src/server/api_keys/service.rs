@@ -1,17 +1,18 @@
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
+use std::net::IpAddr;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::server::{
-    api_keys::r#impl::base::{ApiKey, ApiKeyBase},
-    auth::middleware::AuthenticatedEntity,
+    api_keys::r#impl::base::ApiKey,
+    auth::middleware::{AuthenticatedEntity, AuthenticatedUser},
     shared::{
         entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
-            types::{EntityEvent, EntityOperation},
+            types::{AuthEvent, AuthOperation, EntityEvent, EntityOperation},
         },
         services::traits::{CrudService, EventBusService},
         storage::{
@@ -45,44 +46,39 @@ impl CrudService<ApiKey> for ApiKeyService {
         &self.storage
     }
 
-    async fn create(&self, api_key: ApiKey, authentication: AuthenticatedEntity) -> Result<ApiKey> {
-        let key = self.generate_api_key();
+    /// Update entity
+    async fn update(
+        &self,
+        entity: &mut ApiKey,
+        authentication: AuthenticatedEntity,
+    ) -> Result<ApiKey, anyhow::Error> {
+        let current = self
+            .get_by_id(&entity.id())
+            .await?
+            .ok_or_else(|| anyhow!("Could not find {}", entity))?;
+        let updated = self.storage().update(entity).await?;
 
-        tracing::debug!(
-            api_key_name = %api_key.base.name,
-            network_id = %api_key.base.network_id,
-            "Creating API key"
-        );
-
-        let api_key = ApiKey::new(ApiKeyBase {
-            key: key.clone(),
-            name: api_key.base.name,
-            last_used: None,
-            expires_at: api_key.base.expires_at,
-            network_id: api_key.base.network_id,
-            is_enabled: true,
-        });
-
-        let created = self.storage.create(&api_key).await?;
-        let trigger_stale = created.triggers_staleness(None);
+        let suppress_logs = updated.suppress_logs(&current);
+        let trigger_stale = updated.triggers_staleness(Some(current));
 
         self.event_bus()
             .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
-                entity_type: created.clone().into(),
-                entity_id: created.id(),
-                network_id: self.get_network_id(&created),
-                organization_id: self.get_organization_id(&created),
-                operation: EntityOperation::Created,
+                entity_id: updated.id(),
+                network_id: self.get_network_id(&updated),
+                organization_id: self.get_organization_id(&updated),
+                entity_type: updated.clone().into(),
+                operation: EntityOperation::Updated,
                 timestamp: Utc::now(),
                 metadata: serde_json::json!({
-                    "trigger_stale": trigger_stale
+                    "trigger_stale": trigger_stale,
+                    "suppress_logs": suppress_logs
                 }),
                 authentication,
             })
             .await?;
 
-        Ok(created)
+        Ok(updated)
     }
 }
 
@@ -98,19 +94,30 @@ impl ApiKeyService {
     pub async fn rotate_key(
         &self,
         api_key_id: Uuid,
-        authentication: AuthenticatedEntity,
+        ip_address: IpAddr,
+        user_agent: Option<String>,
+        user: AuthenticatedUser,
     ) -> Result<String> {
-        tracing::info!(
-            api_key_id = %api_key_id,
-            "Rotating API key"
-        );
-
         if let Some(mut api_key) = self.get_by_id(&api_key_id).await? {
             let new_key = self.generate_api_key();
 
             api_key.base.key = new_key.clone();
 
-            let _updated = self.update(&mut api_key, authentication).await?;
+            self.event_bus
+                .publish_auth(AuthEvent {
+                    id: Uuid::new_v4(),
+                    user_id: Some(user.user_id),
+                    organization_id: Some(user.organization_id),
+                    operation: AuthOperation::RotateKey,
+                    timestamp: Utc::now(),
+                    ip_address,
+                    user_agent,
+                    metadata: serde_json::json!({}),
+                    authentication: user.clone().into(),
+                })
+                .await?;
+
+            let _updated = self.update(&mut api_key, user.into()).await?;
 
             Ok(new_key)
         } else {

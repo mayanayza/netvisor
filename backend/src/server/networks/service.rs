@@ -91,8 +91,6 @@ impl NetworkService {
             .create_host_with_services(remote_host, vec![client_service], authenticated.clone())
             .await?;
 
-        tracing::info!("Default data seeded successfully");
-
         Ok(())
     }
 }

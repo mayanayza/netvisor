@@ -3,10 +3,11 @@ use crate::server::{
     auth::middleware::RequireMember,
     config::AppState,
     shared::{
+        events::types::{TelemetryEvent, TelemetryOperation},
         handlers::traits::{
             CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         types::api::{ApiError, ApiResponse, ApiResult},
     },
 };
@@ -15,6 +16,9 @@ use axum::{
     extract::{Path, State},
     routing::{delete, get, post, put},
 };
+use axum_client_ip::ClientIp;
+use axum_extra::{TypedHeader, headers::UserAgent};
+use chrono::Utc;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -32,7 +36,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 pub async fn create_handler(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Json(api_key): Json<ApiKey>,
+    Json(mut api_key): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKeyResponse>>> {
     tracing::debug!(
         api_key_name = %api_key.base.name,
@@ -42,6 +46,7 @@ pub async fn create_handler(
     );
 
     let service = ApiKey::get_service(&state);
+    api_key.base.key = service.generate_api_key();
     let api_key = service
         .create(api_key, user.clone().into())
         .await
@@ -54,6 +59,30 @@ pub async fn create_handler(
             ApiError::internal_error(&e.to_string())
         })?;
 
+    let organization = state
+        .services
+        .organization_service
+        .get_by_id(&user.organization_id)
+        .await?;
+
+    if let Some(organization) = organization
+        && organization.not_onboarded(&TelemetryOperation::FirstApiKeyCreated)
+    {
+        service
+            .event_bus()
+            .publish_telemetry(TelemetryEvent {
+                id: Uuid::new_v4(),
+                authentication: user.clone().into(),
+                organization_id: user.organization_id,
+                operation: TelemetryOperation::FirstApiKeyCreated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "is_onboarding_step": true
+                }),
+            })
+            .await?;
+    }
+
     Ok(Json(ApiResponse::success(ApiKeyResponse {
         key: api_key.base.key.clone(),
         api_key,
@@ -63,17 +92,15 @@ pub async fn create_handler(
 pub async fn rotate_key_handler(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
+    ClientIp(ip): ClientIp,
+    user_agent: Option<TypedHeader<UserAgent>>,
     Path(api_key_id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
-    tracing::debug!(
-        api_key_id = %api_key_id,
-        user_id = %user.user_id,
-        "API key rotation request received"
-    );
+    let user_agent = user_agent.map(|u| u.to_string());
 
     let service = ApiKey::get_service(&state);
     let key = service
-        .rotate_key(api_key_id, user.clone().into())
+        .rotate_key(api_key_id, ip, user_agent, user.clone())
         .await
         .map_err(|e| {
             tracing::error!(

@@ -18,12 +18,12 @@
 	import { getOrganization } from '$lib/features/organizations/store';
 	import { navigate } from '$lib/shared/utils/navigation';
 
-	type ModalType = 'login' | 'register' | 'forgot' | 'reset';
-	let activeModal = $state<ModalType>('login');
-	let resetToken = $state<string>('');
-
 	let orgName = $derived($page.url.searchParams.get('org_name'));
 	let invitedBy = $derived($page.url.searchParams.get('invited_by'));
+
+	type ModalType = 'login' | 'register' | 'forgot' | 'reset';
+	let activeModal = $derived<ModalType>(invitedBy ? 'register' : 'login');
+	let resetToken = $state<string>('');
 
 	onMount(() => {
 		// Check if we have a reset token in the URL

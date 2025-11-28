@@ -14,6 +14,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::Utc;
+use email_address::EmailAddress;
 use serde::Deserialize;
 use serde::Serialize;
 use tower_sessions::Session;
@@ -35,6 +36,7 @@ pub enum AuthenticatedEntity {
         organization_id: Uuid,
         permissions: UserOrgPermissions,
         network_ids: Vec<Uuid>,
+        email: EmailAddress,
     },
     Daemon {
         network_id: Uuid,
@@ -50,7 +52,15 @@ impl Display for AuthenticatedEntity {
             AuthenticatedEntity::Anonymous => write!(f, "Anonymous"),
             AuthenticatedEntity::System => write!(f, "System"),
             AuthenticatedEntity::Daemon { .. } => write!(f, "Daemon"),
-            AuthenticatedEntity::User { .. } => write!(f, "User"),
+            AuthenticatedEntity::User {
+                user_id,
+                permissions,
+                ..
+            } => write!(
+                f,
+                "User {{ user_id: {}, permissions: {} }}",
+                user_id, permissions
+            ),
         }
     }
 }
@@ -107,6 +117,7 @@ impl From<User> for AuthenticatedEntity {
             organization_id: value.base.organization_id,
             permissions: value.base.permissions,
             network_ids: vec![],
+            email: value.base.email,
         }
     }
 }
@@ -221,6 +232,7 @@ where
             organization_id: user.base.organization_id,
             permissions: user.base.permissions,
             network_ids,
+            email: user.base.email,
         })
     }
 }
@@ -232,6 +244,7 @@ pub struct AuthenticatedUser {
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
     pub network_ids: Vec<Uuid>,
+    pub email: EmailAddress,
 }
 
 impl From<AuthenticatedUser> for AuthenticatedEntity {
@@ -241,6 +254,7 @@ impl From<AuthenticatedUser> for AuthenticatedEntity {
             organization_id: value.organization_id,
             permissions: value.permissions,
             network_ids: value.network_ids,
+            email: value.email,
         }
     }
 }
@@ -260,11 +274,13 @@ where
                 organization_id,
                 permissions,
                 network_ids,
+                email,
             } => Ok(AuthenticatedUser {
                 user_id,
                 organization_id,
                 permissions,
                 network_ids,
+                email,
             }),
             _ => Err(AuthError(ApiError::unauthorized(
                 "User authentication required".to_string(),
@@ -274,7 +290,7 @@ where
 }
 
 /// Extractor that only accepts authenticated daemons (rejects users)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Copy)]
 pub struct AuthenticatedDaemon {
     pub network_id: Uuid,
     pub api_key_id: Uuid,
