@@ -81,10 +81,6 @@ impl EventSubscriber for BillingService {
         Ok(())
     }
 
-    fn debounce_window_ms(&self) -> u64 {
-        50 // Small window to batch multiple subnet deletions
-    }
-
     fn name(&self) -> &str {
         "billing_quota_update"
     }

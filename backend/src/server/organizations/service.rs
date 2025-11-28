@@ -11,6 +11,7 @@ use crate::server::{
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
+use email_address::EmailAddress;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -125,6 +126,7 @@ impl OrganizationService {
         user_id: Uuid,
         url: String,
         authentication: AuthenticatedEntity,
+        send_to: Option<EmailAddress>,
     ) -> Result<Invite, Error> {
         let expiration_hours = request.expiration_hours.unwrap_or(168); // Default 7 days
 
@@ -135,6 +137,7 @@ impl OrganizationService {
             expiration_hours,
             request.permissions,
             request.network_ids,
+            send_to,
         );
 
         // Store invite

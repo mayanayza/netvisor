@@ -6,51 +6,80 @@
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import { field } from 'svelte-forms';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
+	import { config, getConfig } from '$lib/shared/stores/config';
+	import { loadData } from '$lib/shared/utils/dataLoader';
 
-	export let orgName: string | null = null;
-	export let invitedBy: string | null = null;
-	export let isOpen = false;
-	export let onRegister: (data: RegisterRequest) => Promise<void> | void;
-	export let onClose: () => void;
-	export let onSwitchToLogin: (() => void) | null = null;
+	let {
+		orgName = null,
+		invitedBy = null,
+		isOpen = false,
+		onRegister,
+		onClose,
+		onSwitchToLogin = null
+	}: {
+		orgName?: string | null;
+		invitedBy?: string | null;
+		isOpen?: boolean;
+		onRegister: (data: RegisterRequest) => Promise<void> | void;
+		onClose: () => void;
+		onSwitchToLogin?: (() => void) | null;
+	} = $props();
 
-	let loading = false;
+	const loading = loadData([getConfig]);
+	let registering = $state(false);
 
-	let formData: RegisterRequest & { confirmPassword: string } = {
+	let oidcProviders = $derived($loading ? [] : ($config?.oidc_providers ?? []));
+	let hasOidcProviders = $derived(oidcProviders.length > 0);
+	let enableEmailOptIn = $derived($loading ? false : ($config?.has_email_opt_in ?? false));
+
+	let formData: RegisterRequest & { confirmPassword: string } = $state({
 		email: '',
 		password: '',
-		confirmPassword: ''
-	};
+		confirmPassword: '',
+		subscribed: true
+	});
 
 	// Create form fields with validation
-	const email = field('email', formData.email, [required(), emailValidator()]);
+	const email = field('email', '', [required(), emailValidator()]);
 
 	// Update formData when field values change
-	$: formData.email = $email.value;
+	$effect(() => {
+		formData.email = $email.value;
+	});
 
 	// Reset form when modal opens
-	$: if (isOpen) {
-		resetForm();
+	$effect(() => {
+		if (isOpen) {
+			resetForm();
+		}
+	});
+
+	function handleOidcRegister(providerSlug: string) {
+		const returnUrl = encodeURIComponent(window.location.origin);
+		const subscribed = formData.subscribed ? '&subscribed=true' : '';
+		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}${subscribed}`;
 	}
 
 	function resetForm() {
 		formData = {
 			email: '',
 			password: '',
-			confirmPassword: ''
+			confirmPassword: '',
+			subscribed: true
 		};
 	}
 
 	async function handleSubmit() {
-		loading = true;
+		registering = true;
 		try {
-			// Only pass username and password to onRegister
 			await onRegister({
 				email: formData.email,
-				password: formData.password
+				password: formData.password,
+				subscribed: formData.subscribed
 			});
 		} finally {
-			loading = false;
+			registering = false;
 		}
 	}
 </script>
@@ -58,7 +87,7 @@
 <EditModal
 	{isOpen}
 	title="Create your account"
-	{loading}
+	loading={registering || $loading}
 	centerTitle={true}
 	saveLabel="Create Account"
 	showCancel={false}
@@ -102,13 +131,53 @@
 		/>
 	</div>
 
-	<!-- Custom footer with login link -->
+	<!-- Custom footer -->
 	<svelte:fragment slot="footer">
 		<div class="flex w-full flex-col gap-4">
 			<!-- Create Account Button -->
-			<button type="button" disabled={loading} on:click={handleSubmit} class="btn-primary w-full">
-				{loading ? 'Creating account...' : 'Create Account'}
+			<button
+				type="button"
+				disabled={registering}
+				onclick={handleSubmit}
+				class="btn-primary w-full"
+			>
+				{registering ? 'Creating account...' : 'Create Account with Email'}
 			</button>
+
+			<!-- OIDC Providers -->
+			{#if hasOidcProviders}
+				<div class="relative">
+					<div class="absolute inset-0 flex items-center">
+						<div class="w-full border-t border-gray-600"></div>
+					</div>
+					<div class="relative flex justify-center text-sm">
+						<span class="bg-gray-900 px-2 text-gray-400">or</span>
+					</div>
+				</div>
+
+				<div class="space-y-2">
+					{#each oidcProviders as provider (provider.slug)}
+						<button
+							onclick={() => handleOidcRegister(provider.slug)}
+							class="btn-secondary flex w-full items-center justify-center gap-3"
+						>
+							{#if provider.logo}
+								<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
+							{/if}
+							Sign up with {provider.name}
+						</button>
+					{/each}
+				</div>
+			{/if}
+
+			{#if enableEmailOptIn}
+				<div class="flex flex-grow items-center justify-center">
+					<Checkbox
+						bind:field={formData.subscribed}
+						title="Sign up for product updates via email"
+					/>
+				</div>
+			{/if}
 
 			<!-- Login Link -->
 			{#if onSwitchToLogin}
@@ -117,7 +186,7 @@
 						Already have an account?
 						<button
 							type="button"
-							on:click={onSwitchToLogin}
+							onclick={onSwitchToLogin}
 							class="font-medium text-blue-400 hover:text-blue-300"
 						>
 							Sign in here

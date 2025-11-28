@@ -1,0 +1,18 @@
+[[oidc_providers]]
+# Display name shown in UI (e.g., "Authentik", "Keycloak")
+name = "Authentik"
+
+# Unique lowercase slug to use in callback URLs
+slug = "authentik"
+
+# Optional logo to display next to provider
+logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg"
+
+# OIDC provider's issuer URL (must end with `/`)
+issuer_url = "YOUR_ISSUER_URL"
+
+# OAuth2 client ID from provider
+client_id = "YOUR_CLIENT_ID"
+
+# OAuth2 client secret from provider
+client_secret = "YOUR_CLIENT_SECRET"

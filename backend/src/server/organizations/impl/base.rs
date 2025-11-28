@@ -5,7 +5,8 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::{
-    billing::types::base::BillingPlan, shared::entities::ChangeTriggersTopologyStaleness,
+    billing::types::base::BillingPlan,
+    shared::{entities::ChangeTriggersTopologyStaleness, events::types::TelemetryOperation},
 };
 
 #[derive(Debug, Clone, Serialize, Validate, Deserialize, Default, PartialEq, Eq, Hash)]
@@ -15,7 +16,7 @@ pub struct OrganizationBase {
     pub name: String,
     pub plan: Option<BillingPlan>,
     pub plan_status: Option<String>,
-    pub is_onboarded: bool,
+    pub onboarding: Vec<TelemetryOperation>,
 }
 
 #[derive(Debug, Clone, Validate, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -26,6 +27,16 @@ pub struct Organization {
     #[serde(flatten)]
     #[validate(nested)]
     pub base: OrganizationBase,
+}
+
+impl Organization {
+    pub fn not_onboarded(&self, step: &TelemetryOperation) -> bool {
+        !self.base.onboarding.contains(step)
+    }
+
+    pub fn has_onboarded(&self, step: &TelemetryOperation) -> bool {
+        self.base.onboarding.contains(step)
+    }
 }
 
 impl Display for Organization {

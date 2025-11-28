@@ -1,3 +1,4 @@
+use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::{
     auth::middleware::{AuthenticatedDaemon, AuthenticatedEntity},
     config::AppState,
@@ -14,11 +15,12 @@ use crate::server::{
     },
     hosts::r#impl::base::{Host, HostBase},
     shared::{
+        events::types::TelemetryEvent,
         handlers::traits::{
             bulk_delete_handler, create_handler, delete_handler, get_all_handler,
             get_by_id_handler, update_handler,
         },
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::traits::StorableEntity,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
@@ -65,7 +67,7 @@ async fn register_daemon(
     let (host, _) = state
         .services
         .host_service
-        .create_host_with_services(dummy_host, Vec::new(), auth_daemon.clone().into())
+        .create_host_with_services(dummy_host, Vec::new(), auth_daemon.into())
         .await?;
 
     let mut daemon = Daemon::new(DaemonBase {
@@ -84,6 +86,39 @@ async fn register_daemon(
         .create(daemon, auth_daemon.into())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to register daemon: {}", e)))?;
+
+    let org_id = state
+        .services
+        .network_service
+        .get_by_id(&request.network_id)
+        .await?
+        .map(|n| n.base.organization_id)
+        .unwrap_or_default();
+    let organization = state
+        .services
+        .organization_service
+        .get_by_id(&org_id)
+        .await?;
+
+    if let Some(organization) = organization
+        && organization.not_onboarded(&TelemetryOperation::FirstDaemonRegistered)
+    {
+        state
+            .services
+            .daemon_service
+            .event_bus()
+            .publish_telemetry(TelemetryEvent {
+                id: Uuid::new_v4(),
+                authentication: auth_daemon.into(),
+                organization_id: organization.id,
+                operation: TelemetryOperation::FirstDaemonRegistered,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "is_onboarding_step": true
+                }),
+            })
+            .await?;
+    }
 
     let discovery_service = state.services.discovery_service.clone();
 
@@ -231,7 +266,7 @@ async fn receive_work_request(
     daemon.base.last_seen = Utc::now();
 
     service
-        .update(&mut daemon, auth_daemon.clone().into())
+        .update(&mut daemon, auth_daemon.into())
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to update heartbeat: {}", e)))?;
 

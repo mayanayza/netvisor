@@ -75,11 +75,20 @@ impl DaemonRuntimeService {
                     let error_msg = api_response
                         .error
                         .unwrap_or_else(|| "Unknown error".to_string());
-                    tracing::warn!(
-                        daemon_id = %daemon_id,
-                        err = %error_msg,
-                        "Failed to check for work"
-                    );
+
+                    if error_msg.contains("not found") {
+                        tracing::error!(
+                            daemon_id = %daemon_id,
+                            error = %error_msg,
+                            "Failed to check for work - the Daemon ID present in the config on this host could not be found on the server. Please remove the config and install a new daemon."
+                        );
+                    } else {
+                        tracing::error!(
+                            daemon_id = %daemon_id,
+                            err = %error_msg,
+                            "Failed to check for work"
+                        );
+                    }
                 } else if let Some((payload, cancel_current_session)) = api_response.data {
                     if !cancel_current_session && payload.is_none() {
                         tracing::info!(
@@ -162,10 +171,20 @@ impl DaemonRuntimeService {
                     let error_msg = api_response
                         .error
                         .unwrap_or_else(|| "Unknown error".to_string());
-                    tracing::error!(
-                        error = %error_msg,
-                        "Heartbeat failed - check network connectivity"
-                    );
+
+                    if error_msg.contains("not found") {
+                        tracing::error!(
+                            error = %error_msg,
+                            daemon_id = %daemon_id,
+                            "Heartbeat failed - the Daemon ID present in the config on this host could not be found on the server. Please remove the config and install a new daemon."
+                        );
+                    } else {
+                        tracing::error!(
+                            error = %error_msg,
+                            daemon_id = %daemon_id,
+                            "Heartbeat failed - check network connectivity"
+                        );
+                    }
                 }
 
                 if let Err(e) = self.config_store.update_heartbeat().await {

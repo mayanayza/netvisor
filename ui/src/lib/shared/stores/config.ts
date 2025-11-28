@@ -3,14 +3,20 @@ import { api } from '../utils/api';
 
 export const config = writable<PublicServerConfig>();
 
+export interface OidcProviderMetadata {
+	name: string;
+	slug: string;
+	logo: string;
+}
+
 export interface PublicServerConfig {
 	server_port: number;
 	disable_registration: boolean;
-	oidc_enabled: boolean;
-	oidc_provider_name: string;
+	oidc_providers: OidcProviderMetadata[];
 	billing_enabled: boolean;
 	has_integrated_daemon: boolean;
 	has_email_service: boolean;
+	has_email_opt_in: boolean;
 	public_url: string;
 }
 

@@ -142,15 +142,11 @@ environment:
 | **Secure Cookies** | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Enable HTTPS-only cookies |
 | **Integrated Daemon URL** | `--integrated-daemon-url` | `NETVISOR_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL to reach daemon in default docker compose |
 | **Disable Registration** | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | `false` | Disable new user registration |
-| **OIDC Issuer URL** | `--oidc-issuer-url` | `NETVISOR_OIDC_ISSUER_URL` | - | OIDC provider's issuer URL (must end with `/`) |
-| **OIDC Client ID** | `--oidc-client-id` | `NETVISOR_OIDC_CLIENT_ID` | - | OAuth2 client ID from provider |
-| **OIDC Client Secret** | `--oidc-client-secret` | `NETVISOR_OIDC_CLIENT_SECRET` | - | OAuth2 client secret from provider |
-| **OIDC Provider Name** | `--oidc-provider-name` | `NETVISOR_OIDC_PROVIDER_NAME` | - | Display name shown in UI (e.g., "Authentik", "Keycloak") |
-| **OIDC Redirect URL** | `--oidc-redirect-url` | `NETVISOR_OIDC_REDIRECT_URL` | - | URL from OIDC provider for authentication redirect |
 | **SMTP Username** | `--smtp-username` | `NETVISOR_SMTP_USERNAME` | - | SMTP username for email features (password reset, notifications) |
 | **SMTP Password** | `--smtp-password` | `NETVISOR_SMTP_PASSWORD` | - | SMTP password for email authentication |
 | **SMTP Relay** | `--smtp-relay` | `NETVISOR_SMTP_RELAY` | - | SMTP server address (e.g., `smtp.gmail.com`) |
 | **SMTP Email** | `--smtp-email` | `NETVISOR_SMTP_EMAIL` | - | Sender email address for outgoing emails |
+| **Client IP Source** | `--client-ip-source` | `NETVISOR_CLIENT_IP_SOURCE` | - | Source of IP address from request headers, used to log accurate IP address in auth logs while using a reverse proxy. Refer to [axum-client-ip](https://github.com/imbolc/axum-client-ip?tab=readme-ov-file#configurable-vs-specific-extractors) docs for values you can set. |
 
 ### Integrated Daemon URL
 
@@ -215,29 +211,7 @@ netvisor-server:
 
 NetVisor supports OpenID Connect (OIDC) for enterprise authentication with providers like Authentik, Keycloak, Auth0, Okta, and others.
 
-### Server Configuration
-
-Add these environment variables to your server configuration:
-
-```yaml
-environment:
-  # Required OIDC settings
-  - NETVISOR_OIDC_ISSUER_URL=https://your-provider.com/application/o/netvisor/
-  - NETVISOR_OIDC_CLIENT_ID=your-client-id
-  - NETVISOR_OIDC_CLIENT_SECRET=your-client-secret
-  - NETVISOR_OIDC_REDIRECT_URL=https://auth.example.com/callback
-  - NETVISOR_OIDC_PROVIDER_NAME=Authentik
-```
-
-### Parameter Details
-
-| Parameter | Environment Variable | Description |
-|-----------|---------------------|-------------|
-| **Issuer URL** | `NETVISOR_OIDC_ISSUER_URL` | Your OIDC provider's issuer URL (ends in `/`) |
-| **Client ID** | `NETVISOR_OIDC_CLIENT_ID` | OAuth2 client ID from your provider |
-| **Client Secret** | `NETVISOR_OIDC_CLIENT_SECRET` | OAuth2 client secret from your provider |
-| **Redirect URL** | `NETVISOR_OIDC_REDIRECT_URL` | URL provider redirects to after auth |
-| **Provider Name** | `NETVISOR_OIDC_PROVIDER_NAME` | Display name shown in UI (e.g., "Authentik", "Keycloak") |
+To get started, refer to oidc.toml.example. You can set up multiple OIDC providers by adding entries with a `[[oidc_providers]]` header and the listd fields. Create a copy of the file named oidc.toml and fill the fields for your provider(s).
 
 ### Provider Configuration
 
@@ -263,20 +237,13 @@ https://your-netvisor-domain/api/auth/oidc/callback
    - Provider: OAuth2/OpenID Provider
 
 2. **Configure Provider**:
-   - Redirect URI: `http://netvisor.local:60072/api/auth/oidc/callback`
+   - Redirect URI: `http://netvisor.local:60072/api/auth/oidc/authentik/callback`
+      - Note: the value you use in place of `authentik` in this url for your provider needs to match the `slug` field in oidc.toml.
    - Scopes: `openid email profile`
    - Client Type: Confidential
    - Copy Client ID and Client Secret
 
-3. **Set NetVisor Environment Variables**:
-```yaml
-environment:
-  - NETVISOR_OIDC_ISSUER_URL=https://authentik.company.com/application/o/netvisor/
-  - NETVISOR_OIDC_CLIENT_ID=ABC123DEF456
-  - NETVISOR_OIDC_CLIENT_SECRET=xyz789uvw012
-  - NETVISOR_OIDC_REDIRECT_URL=https://auth.example.com/callback
-  - NETVISOR_OIDC_PROVIDER_NAME=Authentik
-```
+3. **Set Variables in oidc.toml**
 
 4. **Restart server** and test login
 

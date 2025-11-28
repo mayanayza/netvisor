@@ -22,6 +22,7 @@ pub struct RegisterRequest {
     #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
     #[validate(custom(function = "validate_password_complexity"))]
     pub password: String,
+    pub subscribed: bool,
 }
 
 /// Validate password complexity requirements
@@ -61,11 +62,11 @@ pub struct UpdateEmailPasswordRequest {
     pub email: Option<EmailAddress>,
 }
 
-// Query params for authorize
 #[derive(Debug, Deserialize)]
 pub struct OidcAuthorizeParams {
-    pub link: Option<bool>,
+    pub flow: Option<String>, // "login", "register", or "link"
     pub return_url: Option<String>,
+    pub subscribed: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]

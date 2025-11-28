@@ -31,6 +31,17 @@ pub struct Daemon {
     pub base: DaemonBase,
 }
 
+impl Daemon {
+    pub fn suppress_logs(&self, other: &Self) -> bool {
+        self.base.capabilities == other.base.capabilities
+            && self.base.mode == other.base.mode
+            && self.base.ip == other.base.ip
+            && self.base.port == other.base.port
+            && self.base.network_id == other.base.network_id
+            && self.base.host_id == other.base.host_id
+    }
+}
+
 impl Display for Daemon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.base.ip, self.id)
