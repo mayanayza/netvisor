@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     discovery::r#impl::types::DiscoveryType,
     shared::{
         entities::ChangeTriggersTopologyStaleness,

@@ -1,5 +1,6 @@
 use crate::server::auth::middleware::{
-    AuthenticatedUser, CreateNetworkFeature, RequireAdmin, RequireFeature,
+    auth::AuthenticatedUser, features::CreateNetworkFeature, features::RequireFeature,
+    permissions::RequireAdmin,
 };
 use crate::server::shared::handlers::traits::{
     BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,

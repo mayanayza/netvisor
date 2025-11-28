@@ -2,7 +2,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     organizations::service::OrganizationService,
     shared::{
         events::{

@@ -23,8 +23,8 @@
 		</div>
 
 		<!-- Content (sits above background) -->
-		<div class="flex justify-center">
-			<div class="relative z-10 mt-6">
+		<div class="flex min-h-screen items-center justify-center">
+			<div class="relative z-10">
 				<BillingPlanForm />
 			</div>
 		</div>

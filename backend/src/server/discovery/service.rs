@@ -1,4 +1,4 @@
-use crate::server::auth::middleware::AuthenticatedEntity;
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::daemons::r#impl::base::DaemonMode;
 use crate::server::discovery::r#impl::types::RunType;
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;

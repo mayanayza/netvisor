@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     email::traits::EmailService,
     shared::events::{
         bus::{EventFilter, EventSubscriber},

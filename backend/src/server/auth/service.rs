@@ -5,7 +5,7 @@ use crate::server::{
             api::{LoginRequest, RegisterRequest},
             base::{LoginRegisterParams, ProvisionUserParams},
         },
-        middleware::{AuthenticatedEntity, AuthenticatedUser},
+        middleware::auth::{AuthenticatedEntity, AuthenticatedUser},
     },
     email::traits::EmailService,
     organizations::{

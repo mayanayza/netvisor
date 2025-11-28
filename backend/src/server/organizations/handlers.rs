@@ -1,6 +1,7 @@
-use crate::server::auth::middleware::AuthenticatedEntity;
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::{
-    AuthenticatedUser, InviteUsersFeature, RequireFeature, RequireMember,
+    auth::AuthenticatedUser, features::InviteUsersFeature, features::RequireFeature,
+    permissions::RequireMember,
 };
 use crate::server::config::AppState;
 use crate::server::organizations::r#impl::api::CreateInviteRequest;
@@ -8,6 +9,7 @@ use crate::server::organizations::r#impl::base::Organization;
 use crate::server::organizations::r#impl::invites::Invite;
 use crate::server::shared::handlers::traits::{CrudHandlers, update_handler};
 use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::ApiError;
 use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::ApiResult;
@@ -57,14 +59,41 @@ async fn create_invite(
     RequireFeature { plan, .. }: RequireFeature<InviteUsersFeature>,
     Json(request): Json<CreateInviteRequest>,
 ) -> ApiResult<Json<ApiResponse<Invite>>> {
-    if let Some(s) = plan.config().included_seats
-        && s == 1
-        && plan.features().share_views
-        && request.permissions > UserOrgPermissions::Visualizer
+    // Seat limit check - only applies if permissions count towards seats
+    if request.permissions.counts_towards_seats()
+        && let Some(max_seats) = plan.config().included_seats
+        && plan.config().seat_cents.is_none()
     {
-        return Err(ApiError::forbidden(
-            "You can only invite users with Visualizer permissions on your plan. Please upgrade to invite Members, Admins, and Owners.",
-        ));
+        let org_filter = EntityFilter::unfiltered().organization_id(&user.organization_id);
+
+        let current_members = state
+            .services
+            .user_service
+            .get_all(org_filter)
+            .await
+            .unwrap_or_default()
+            .iter()
+            .filter(|u| u.base.permissions.counts_towards_seats())
+            .count();
+
+        let pending_invites = state
+            .services
+            .organization_service
+            .get_org_invites(&user.organization_id)
+            .await
+            .unwrap_or_default()
+            .iter()
+            .filter(|i| i.permissions.counts_towards_seats())
+            .count();
+
+        let total_seats_used = current_members + pending_invites;
+
+        if total_seats_used >= max_seats as usize {
+            return Err(ApiError::forbidden(&format!(
+                "Seat limit reached ({}/{}). Upgrade your plan for more seats, or delete any unused pending invites.",
+                total_seats_used, max_seats
+            )));
+        }
     }
 
     if user.permissions < request.permissions {

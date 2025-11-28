@@ -2,7 +2,7 @@ use serial_test::serial;
 
 use crate::{
     server::{
-        auth::middleware::AuthenticatedEntity,
+        auth::middleware::auth::AuthenticatedEntity,
         groups::r#impl::types::GroupType,
         services::r#impl::{bindings::Binding, patterns::MatchDetails},
         shared::{

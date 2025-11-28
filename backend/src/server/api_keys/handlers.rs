@@ -1,6 +1,6 @@
 use crate::server::{
     api_keys::r#impl::{api::ApiKeyResponse, base::ApiKey},
-    auth::middleware::RequireMember,
+    auth::middleware::permissions::RequireMember,
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},

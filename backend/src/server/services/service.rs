@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     groups::{
         r#impl::{base::Group, types::GroupType},
         service::GroupService,

@@ -59,6 +59,7 @@ impl DaemonRuntimeService {
                         server_target, daemon_id
                     ))
                     .json(&daemon_id)
+                    .header("X-Daemon-ID", daemon_id.to_string())
                     .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
@@ -156,6 +157,7 @@ impl DaemonRuntimeService {
                         "{}/api/daemons/{}/heartbeat",
                         server_target, daemon_id
                     ))
+                    .header("X-Daemon-ID", daemon_id.to_string())
                     .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
@@ -275,6 +277,7 @@ impl DaemonRuntimeService {
             let response = self
                 .client
                 .post(format!("{}/api/daemons/register", server_target))
+                .header("X-Daemon-ID", daemon_id.to_string())
                 .header("Authorization", format!("Bearer {}", api_key))
                 .json(&registration_request)
                 .send()

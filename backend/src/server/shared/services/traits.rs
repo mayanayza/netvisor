@@ -5,7 +5,7 @@ use std::{fmt::Display, sync::Arc};
 use uuid::Uuid;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     shared::{
         entities::{ChangeTriggersTopologyStaleness, Entity},
         events::{

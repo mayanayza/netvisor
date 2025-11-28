@@ -9,7 +9,7 @@ use crate::server::{
             base::LoginRegisterParams,
             oidc::{OidcFlow, OidcPendingAuth, OidcProviderMetadata},
         },
-        middleware::AuthenticatedUser,
+        middleware::auth::AuthenticatedUser,
         oidc::OidcService,
     },
     config::AppState,

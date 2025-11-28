@@ -1,4 +1,4 @@
-use crate::server::auth::middleware::AuthenticatedEntity;
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::organizations::r#impl::invites::Invite;
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::events::bus::EventBus;
