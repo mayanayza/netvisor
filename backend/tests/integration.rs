@@ -254,7 +254,7 @@ where
 async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
     println!("\n=== Authenticating Test User ===");
 
-    let test_email: EmailAddress = EmailAddress::new_unchecked("user@example.com");
+    let test_email: EmailAddress = EmailAddress::new_unchecked("user@gmail.com");
 
     // Try to register
     match client.register(&test_email, TEST_PASSWORD).await {
