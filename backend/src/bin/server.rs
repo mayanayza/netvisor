@@ -3,11 +3,15 @@ use std::{net::SocketAddr, str::FromStr, sync::Arc, time::Duration};
 use axum::{
     Extension, Router,
     http::{HeaderValue, Method},
+    middleware,
 };
 use axum_client_ip::ClientIpSource;
 use clap::Parser;
 use netvisor::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::{
+        auth::AuthenticatedEntity, logging::request_logging_middleware,
+        rate_limit::rate_limit_middleware,
+    },
     billing::types::base::{BillingPlan, BillingRate, PlanConfig},
     config::{AppState, ServerCli, ServerConfig},
     organizations::r#impl::base::{Organization, OrganizationBase},
@@ -43,8 +47,8 @@ async fn main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(format!(
-            "netvisor={},server={}",
-            config.log_level, config.log_level
+            "netvisor={},server={},request_log={}",
+            config.log_level, config.log_level, config.log_level
         )))
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -109,14 +113,10 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let session_store = state.storage.sessions.clone();
+    let base_router = create_router().with_state(state.clone());
 
     let api_router = if let Some(static_path) = &web_external_path {
-        // First create the API router
-        let router = create_router().layer(session_store).with_state(state);
-
-        // Then add static file serving with SPA fallback
-        router.fallback_service(
+        base_router.fallback_service(
             ServeDir::new(static_path)
                 .append_index_html_on_directories(true)
                 .fallback(ServeFile::new(format!(
@@ -126,8 +126,10 @@ async fn main() -> anyhow::Result<()> {
         )
     } else {
         tracing::info!("Server is not serving web assets due to no web_external_path");
-        create_router().layer(session_store).with_state(state)
+        base_router
     };
+
+    let session_store = state.storage.sessions.clone();
 
     let cors = if cfg!(debug_assertions) {
         // Development: Allow localhost with credentials
@@ -167,11 +169,19 @@ async fn main() -> anyhow::Result<()> {
         ServiceBuilder::new()
             .layer(TraceLayer::new_for_http())
             .layer(cors)
+            .layer(client_ip_source.into_extension())
+            .layer(session_store)
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                request_logging_middleware,
+            ))
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                rate_limit_middleware,
+            ))
             .layer(Extension(app_cache))
-            .layer(cache_headers)
-            .layer(client_ip_source.into_extension()),
+            .layer(cache_headers),
     );
-
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
     let actual_port = listener.local_addr()?.port();
 

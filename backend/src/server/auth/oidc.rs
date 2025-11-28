@@ -11,7 +11,7 @@ use crate::server::{
             base::{LoginRegisterParams, ProvisionUserParams},
             oidc::{OidcPendingAuth, OidcProvider, OidcProviderConfig, OidcProviderMetadata},
         },
-        middleware::AuthenticatedEntity,
+        middleware::auth::AuthenticatedEntity,
         service::AuthService,
     },
     shared::{

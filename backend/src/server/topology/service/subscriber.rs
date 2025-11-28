@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     shared::{
         entities::{Entity, EntityDiscriminants},
         events::{

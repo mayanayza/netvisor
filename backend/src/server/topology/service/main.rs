@@ -8,7 +8,7 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     groups::{r#impl::base::Group, service::GroupService},
     hosts::{r#impl::base::Host, service::HostService},
     services::{r#impl::base::Service, service::ServiceService},

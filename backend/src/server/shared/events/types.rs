@@ -1,4 +1,4 @@
-use crate::server::{auth::middleware::AuthenticatedEntity, shared::entities::Entity};
+use crate::server::{auth::middleware::auth::AuthenticatedEntity, shared::entities::Entity};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, net::IpAddr};

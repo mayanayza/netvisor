@@ -74,7 +74,7 @@ pub struct ServerCli {
     public_url: Option<String>,
 
     #[arg(long)]
-    pub plunk_api_key: Option<String>,
+    pub plunk_secret: Option<String>,
 
     /// Configure what proxy (if any) is providing IP address for requests, ie in a reverse proxy setup, for accurate IP in auth event logging
     #[arg(long)]
@@ -105,7 +105,7 @@ pub struct ServerConfig {
     pub oidc_providers: Option<Vec<OidcProviderConfig>>,
 
     // Used in SaaS deployment
-    pub plunk_api_key: Option<String>,
+    pub plunk_secret: Option<String>,
     pub stripe_key: Option<String>,
     pub stripe_secret: Option<String>,
     pub stripe_webhook_secret: Option<String>,
@@ -142,7 +142,7 @@ impl Default for ServerConfig {
             smtp_password: None,
             smtp_email: None,
             smtp_relay: None,
-            plunk_api_key: None,
+            plunk_secret: None,
             client_ip_source: None,
             oidc_providers: None,
         }
@@ -196,8 +196,8 @@ impl ServerConfig {
         if let Some(public_url) = cli_args.public_url {
             figment = figment.merge(("public_url", public_url));
         }
-        if let Some(plunk_api_key) = cli_args.plunk_api_key {
-            figment = figment.merge(("plunk_api_key", plunk_api_key));
+        if let Some(plunk_secret) = cli_args.plunk_secret {
+            figment = figment.merge(("plunk_secret", plunk_secret));
         }
         if let Some(client_ip_source) = cli_args.client_ip_source {
             figment = figment.merge(("client_ip_source", client_ip_source));

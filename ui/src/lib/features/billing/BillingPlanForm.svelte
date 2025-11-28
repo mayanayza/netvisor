@@ -8,7 +8,7 @@
 	import ToggleGroup from './ToggleGroup.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { currentUser } from '../auth/store';
-	import { isFreeEmail } from 'free-email-domains-list';
+	import { isCompanyEmail } from 'company-email-validator';
 
 	$effect(() => {
 		void $currentPlans;
@@ -20,8 +20,8 @@
 
 	// Plan filter state
 	type PlanFilter = 'all' | 'personal' | 'commercial';
-	let freeEmail = $currentUser ? isFreeEmail($currentUser.email) : false;
-	let planFilter = $state<PlanFilter>(freeEmail ? 'personal' : 'commercial');
+	let companyEmail = $currentUser ? isCompanyEmail($currentUser.email) : false;
+	let planFilter = $state<PlanFilter>(companyEmail ? 'commercial' : 'personal');
 
 	// Billing period filter state
 	type BillingPeriod = 'monthly' | 'yearly';

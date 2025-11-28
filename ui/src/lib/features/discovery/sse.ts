@@ -7,6 +7,7 @@ import { getSubnets } from '../subnets/store';
 import { getServices } from '../services/store';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
 import { getDaemons } from '../daemons/store';
+import { getDiscoveries } from './store';
 
 // session_id to latest update
 export const sessions = writable<DiscoveryUpdatePayload[]>([]);
@@ -30,7 +31,7 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 	protected createConfig(): SSEConfig<DiscoveryUpdatePayload> {
 		return {
 			url: '/api/discovery/stream',
-			onMessage: (update) => {
+			onMessage: async (update) => {
 				// Check if discovered_count increased
 				const lastCount = lastProcessedCount.get(update.session_id) || 0;
 				const currentCount = update.processed || 0;
@@ -48,10 +49,13 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 				if (update.phase === 'Complete') {
 					pushSuccess(`${update.discovery_type.type} discovery completed`);
 					// Final refresh on completion
-					getHosts();
-					getServices();
-					getSubnets();
-					getDaemons();
+					await Promise.all([
+						getHosts(),
+						getServices(),
+						getSubnets(),
+						getDaemons(),
+						getDiscoveries()
+					]);
 				} else if (update.phase === 'Cancelled') {
 					pushWarning(`Discovery cancelled`);
 				} else if (update.phase === 'Failed' && update.error) {

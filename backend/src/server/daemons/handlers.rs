@@ -1,6 +1,6 @@
 use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::{
-    auth::middleware::{AuthenticatedDaemon, AuthenticatedEntity},
+    auth::middleware::auth::{AuthenticatedDaemon, AuthenticatedEntity},
     config::AppState,
     daemons::r#impl::{
         api::{
