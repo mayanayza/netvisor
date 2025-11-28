@@ -167,9 +167,9 @@ async fn main() -> anyhow::Result<()> {
     // Create main app
     let app = Router::new().merge(api_router).layer(
         ServiceBuilder::new()
+            .layer(client_ip_source.into_extension())
             .layer(TraceLayer::new_for_http())
             .layer(cors)
-            .layer(client_ip_source.into_extension())
             .layer(session_store)
             .layer(middleware::from_fn_with_state(
                 state.clone(),
