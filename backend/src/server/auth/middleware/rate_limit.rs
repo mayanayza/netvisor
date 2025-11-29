@@ -163,6 +163,12 @@ pub async fn rate_limit_middleware(
     request: Request,
     next: Next,
 ) -> Result<Response, Response> {
+    // Exempt billing webhook endpoints
+    let path = request.uri().path();
+    if path.starts_with("/api/billing/webhooks/") {
+        return Ok(next.run(request).await);
+    }
+
     let (mut parts, body) = request.into_parts();
 
     let entity = AuthenticatedEntity::from_request_parts(&mut parts, &state)

@@ -173,11 +173,11 @@ async fn main() -> anyhow::Result<()> {
             .layer(session_store)
             .layer(middleware::from_fn_with_state(
                 state.clone(),
-                request_logging_middleware,
+                rate_limit_middleware,
             ))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
-                rate_limit_middleware,
+                request_logging_middleware,
             ))
             .layer(Extension(app_cache))
             .layer(cache_headers),

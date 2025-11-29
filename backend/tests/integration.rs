@@ -501,14 +501,84 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
                 "logo_url": s.logo_url(),
                 "name": s.name(),
                 "description": s.description(),
-                "discovery_pattern": s.discovery_pattern().to_string()
+                "discovery_pattern": s.discovery_pattern().to_string(),
+                "category": s.category()
             })
         })
         .collect();
 
+    // Write JSON file
     let json_string = serde_json::to_string_pretty(&services)?;
-    let path = std::path::Path::new("../ui/static/services-next.json");
-    tokio::fs::write(path, json_string).await?;
+    let json_path = std::path::Path::new("../ui/static/services-next.json");
+    tokio::fs::write(json_path, json_string).await?;
+
+    Ok(())
+}
+
+#[cfg(feature = "generate-fixtures")]
+async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> {
+    use std::collections::HashMap;
+
+    let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions();
+
+    // Group services by category
+    let mut by_category: HashMap<String, Vec<&serde_json::Value>> = HashMap::new();
+    for service in services {
+        let category = service["category"]
+            .as_str()
+            .unwrap_or("Unknown")
+            .to_string();
+        by_category.entry(category).or_default().push(service);
+    }
+
+    // Sort categories for consistent output
+    let mut categories: Vec<String> = by_category.keys().cloned().collect();
+    categories.sort();
+
+    let mut markdown = String::from("# NetVisor Service Definitions\n\n");
+    markdown.push_str("This document lists all services that NetVisor can automatically discover and identify.\n\n");
+
+    for category in categories {
+        let services = by_category.get(&category).unwrap();
+
+        // Add category header
+        markdown.push_str(&format!("## {}\n\n", category));
+
+        // Table header
+        markdown.push_str("| Logo | Name | Description | Discovery Pattern |\n");
+        markdown.push_str("|------|------|-------------|-------------------|\n");
+
+        // Sort services by name within category
+        let mut sorted_services = services.clone();
+        sorted_services.sort_by_key(|s| s["name"].as_str().unwrap_or(""));
+
+        for service in sorted_services {
+            let logo_url = service["logo_url"].as_str().unwrap_or("");
+            let name = service["name"].as_str().unwrap_or("");
+            let description = service["description"].as_str().unwrap_or("");
+            let pattern = service["discovery_pattern"].as_str().unwrap_or("");
+
+            // Format logo - use image markdown if URL exists, otherwise use placeholder
+            let logo = if !logo_url.is_empty() {
+                format!("![{}]({})", name, logo_url)
+            } else {
+                "—".to_string()
+            };
+
+            // Escape pipe characters in pattern to avoid breaking table
+            let escaped_pattern = pattern.replace('|', "\\|");
+
+            markdown.push_str(&format!(
+                "| {} | {} | {} | `{}` |\n",
+                logo, name, description, escaped_pattern
+            ));
+        }
+
+        markdown.push_str("\n");
+    }
+
+    let md_path = std::path::Path::new("../docs/SERVICES-NEXT.md");
+    tokio::fs::write(md_path, markdown).await?;
 
     Ok(())
 }
@@ -576,6 +646,10 @@ async fn test_full_integration() {
         generate_services_json()
             .await
             .expect("Failed to generate services json");
+
+        generate_services_markdown()
+            .await
+            .expect("Failed to generate services markdown");
 
         println!("✅ Generated test fixtures");
     }

@@ -22,6 +22,7 @@
 		"@sveltejs/vite-plugin-svelte": "^6.1.4",
 		"@types/prismjs": "^1.26.5",
 		"autoprefixer": "^10.4.21",
+		"baseline-browser-mapping": "^2.8.32",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",
