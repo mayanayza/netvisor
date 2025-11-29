@@ -567,7 +567,10 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
 
             // Format logo
             let logo = if !logo_url.is_empty() {
-                format!("<img src=\"{}\" alt=\"{}\" width=\"32\" height=\"32\" />", logo_url, name)
+                format!(
+                    "<img src=\"{}\" alt=\"{}\" width=\"32\" height=\"32\" />",
+                    logo_url, name
+                )
             } else {
                 "—".to_string()
             };
