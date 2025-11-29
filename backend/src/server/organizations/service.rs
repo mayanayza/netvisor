@@ -1,4 +1,4 @@
-use crate::server::auth::middleware::AuthenticatedEntity;
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::organizations::r#impl::invites::Invite;
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::events::bus::EventBus;
@@ -11,6 +11,7 @@ use crate::server::{
 use anyhow::{Error, anyhow};
 use async_trait::async_trait;
 use chrono::Utc;
+use email_address::EmailAddress;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -112,10 +113,7 @@ impl OrganizationService {
 
         invites.retain(|_, invite| invite.expires_at > now);
 
-        tracing::debug!(
-            "Cleaned up expired invites. Current count: {}",
-            invites.len()
-        );
+        tracing::debug!("Cleaned up expired invites.");
     }
 
     pub async fn create_invite(
@@ -125,6 +123,7 @@ impl OrganizationService {
         user_id: Uuid,
         url: String,
         authentication: AuthenticatedEntity,
+        send_to: Option<EmailAddress>,
     ) -> Result<Invite, Error> {
         let expiration_hours = request.expiration_hours.unwrap_or(168); // Default 7 days
 
@@ -135,6 +134,7 @@ impl OrganizationService {
             expiration_hours,
             request.permissions,
             request.network_ids,
+            send_to,
         );
 
         // Store invite

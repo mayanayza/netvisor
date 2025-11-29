@@ -9,6 +9,8 @@ use netvisor::server::organizations::r#impl::base::Organization;
 use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
+#[cfg(feature = "generate-fixtures")]
+use netvisor::server::services::r#impl::definitions::ServiceDefinition;
 use netvisor::server::shared::handlers::factory::OnboardingRequest;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
@@ -117,6 +119,7 @@ impl TestClient {
         let register_request = RegisterRequest {
             email: email.clone(),
             password: password.to_string(),
+            subscribed: false,
         };
 
         let response = self
@@ -253,7 +256,7 @@ where
 async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
     println!("\n=== Authenticating Test User ===");
 
-    let test_email: EmailAddress = EmailAddress::new_unchecked("user@example.com");
+    let test_email: EmailAddress = EmailAddress::new_unchecked("user@gmail.com");
 
     // Try to register
     match client.register(&test_email, TEST_PASSWORD).await {
@@ -500,14 +503,92 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
                 "logo_url": s.logo_url(),
                 "name": s.name(),
                 "description": s.description(),
-                "discovery_pattern": s.discovery_pattern().to_string()
+                "discovery_pattern": s.discovery_pattern().to_string(),
+                "category": s.category()
             })
         })
         .collect();
 
+    // Write JSON file
     let json_string = serde_json::to_string_pretty(&services)?;
-    let path = std::path::Path::new("../ui/static/services-next.json");
-    tokio::fs::write(path, json_string).await?;
+    let json_path = std::path::Path::new("../ui/static/services-next.json");
+    tokio::fs::write(json_path, json_string).await?;
+
+    Ok(())
+}
+
+#[cfg(feature = "generate-fixtures")]
+async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> {
+    use std::collections::HashMap;
+
+    let services = ServiceDefinitionRegistry::all_service_definitions();
+
+    // Group services by category
+    let mut by_category: HashMap<String, Vec<&Box<dyn ServiceDefinition>>> = HashMap::new();
+    for service in &services {
+        let category = service.category().to_string();
+        by_category.entry(category).or_default().push(service);
+    }
+
+    // Sort categories for consistent output
+    let mut categories: Vec<String> = by_category.keys().cloned().collect();
+    categories.sort();
+
+    let mut markdown = String::from("# NetVisor Service Definitions\n\n");
+    markdown.push_str("This document lists all services that NetVisor can automatically discover and identify.\n\n");
+
+    for category in categories {
+        let services = by_category.get(&category).unwrap();
+
+        // Add category header
+        markdown.push_str(&format!("## {}\n\n", category));
+
+        // Use HTML table for better control
+        markdown.push_str("<table>\n");
+        markdown.push_str("<thead>\n");
+        markdown.push_str("<tr>\n");
+        markdown.push_str("<th width=\"60\">Logo</th>\n");
+        markdown.push_str("<th width=\"200\">Name</th>\n");
+        markdown.push_str("<th width=\"300\">Description</th>\n");
+        markdown.push_str("<th>Discovery Pattern</th>\n");
+        markdown.push_str("</tr>\n");
+        markdown.push_str("</thead>\n");
+        markdown.push_str("<tbody>\n");
+
+        // Sort services by name within category
+        let mut sorted_services = services.clone();
+        sorted_services.sort_by_key(|s| s.name());
+
+        for service in sorted_services {
+            let logo_url = service.logo_url();
+            let name = service.name();
+            let description = service.description();
+            let pattern = service.discovery_pattern().to_string();
+
+            // Format logo
+            let logo = if !logo_url.is_empty() {
+                format!(
+                    "<img src=\"{}\" alt=\"{}\" width=\"32\" height=\"32\" />",
+                    logo_url, name
+                )
+            } else {
+                "—".to_string()
+            };
+
+            markdown.push_str("<tr>\n");
+            markdown.push_str(&format!("<td align=\"center\">{}</td>\n", logo));
+            markdown.push_str(&format!("<td>{}</td>\n", name));
+            markdown.push_str(&format!("<td>{}</td>\n", description));
+            markdown.push_str(&format!("<td><code>{}</code></td>\n", pattern));
+            markdown.push_str("</tr>\n");
+        }
+
+        markdown.push_str("</tbody>\n");
+        markdown.push_str("</table>\n\n");
+    }
+
+    let md_path = std::path::Path::new("../docs/SERVICES-NEXT.md");
+    tokio::fs::write(md_path, markdown).await?;
 
     Ok(())
 }
@@ -575,6 +656,10 @@ async fn test_full_integration() {
         generate_services_json()
             .await
             .expect("Failed to generate services json");
+
+        generate_services_markdown()
+            .await
+            .expect("Failed to generate services markdown");
 
         println!("✅ Generated test fixtures");
     }

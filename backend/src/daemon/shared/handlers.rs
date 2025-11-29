@@ -32,8 +32,9 @@ async fn initialize(
     Json(request): Json<InitializeDaemonRequest>,
 ) -> ApiResult<Json<ApiResponse<String>>> {
     tracing::info!(
-        "Received initialization signal with network_id: {}, api_key: [redacted]",
-        request.network_id,
+        network_id = %request.network_id,
+        api_key = %request.api_key,
+        "Received initialization signal",
     );
 
     state

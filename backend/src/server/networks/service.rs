@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     hosts::service::HostService,
     networks::r#impl::Network,
     shared::{
@@ -90,8 +90,6 @@ impl NetworkService {
         self.host_service
             .create_host_with_services(remote_host, vec![client_service], authenticated.clone())
             .await?;
-
-        tracing::info!("Default data seeded successfully");
 
         Ok(())
     }

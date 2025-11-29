@@ -2,50 +2,67 @@
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import type { LoginRequest } from '../types/base';
 	import { config, getConfig } from '$lib/shared/stores/config';
-	import { email as emailValidator, required } from 'svelte-forms/validators';
+	import { required } from 'svelte-forms/validators';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { field } from 'svelte-forms';
-	import { minLength } from '$lib/shared/components/forms/validators';
+	import { emailValidator, minLength } from '$lib/shared/components/forms/validators';
 
-	export let orgName: string | null = null;
-	export let invitedBy: string | null = null;
-	export let isOpen = false;
-	export let onLogin: (data: LoginRequest) => Promise<void> | void;
-	export let onClose: () => void;
-	export let onSwitchToRegister: (() => void) | null = null;
-	export let onSwitchToForgot: (() => void) | null = null;
+	let {
+		orgName = null,
+		invitedBy = null,
+		isOpen = false,
+		onLogin,
+		onClose,
+		onSwitchToRegister = null,
+		onSwitchToForgot = null
+	}: {
+		orgName?: string | null;
+		invitedBy?: string | null;
+		isOpen?: boolean;
+		onLogin: (data: LoginRequest) => Promise<void> | void;
+		onClose: () => void;
+		onSwitchToRegister?: (() => void) | null;
+		onSwitchToForgot?: (() => void) | null;
+	} = $props();
 
 	const loading = loadData([getConfig]);
-	let signingIn = false;
+	let signingIn = $state(false);
 
-	$: disableRegistration = $loading || !$config ? false : $config.disable_registration;
-	$: enableOidc = $loading || !$config ? false : $config.oidc_enabled;
-	$: enablePasswordReset = $loading || !$config ? false : $config.has_email_service;
+	let disableRegistration = $derived($loading ? false : ($config?.disable_registration ?? false));
+	let oidcProviders = $derived($loading ? [] : ($config?.oidc_providers ?? []));
+	let hasOidcProviders = $derived(oidcProviders.length > 0);
+	let enablePasswordReset = $derived($loading ? false : ($config?.has_email_service ?? false));
 
 	let formData: LoginRequest = {
 		email: '',
 		password: ''
 	};
 
-	// Reset form when modal opens
-	$: if (isOpen) {
-		resetForm();
-	}
-
 	// Create form fields with validation
 	const email = field('email', formData.email, [required(), emailValidator()]);
 	const password = field('password', formData.password, [required(), minLength(12)]);
 
 	// Update formData when field values change
-	$: formData.email = $email.value;
-	$: formData.password = $password.value;
+	$effect(() => {
+		formData.email = $email.value;
+	});
 
-	async function handleOidcLogin() {
-		// Pass current URL as return_url parameter
+	$effect(() => {
+		formData.password = $password.value;
+	});
+
+	// Reset form when modal opens
+	$effect(() => {
+		if (isOpen) {
+			resetForm();
+		}
+	});
+
+	function handleOidcLogin(providerSlug: string) {
 		const returnUrl = encodeURIComponent(window.location.origin);
-		window.location.href = `/api/auth/oidc/authorize?return_url=${returnUrl}`;
+		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=login&return_url=${returnUrl}`;
 	}
 
 	function resetForm() {
@@ -97,7 +114,7 @@
 		<div class="space-y-4">
 			<TextInput
 				label="Email"
-				id="name"
+				id="email"
 				{formApi}
 				placeholder="Enter your email"
 				required={true}
@@ -120,12 +137,12 @@
 	<svelte:fragment slot="footer">
 		<div class="flex w-full flex-col gap-4">
 			<!-- Sign In Button -->
-			<button type="button" disabled={signingIn} on:click={handleSubmit} class="btn-primary w-full">
+			<button type="button" disabled={signingIn} onclick={handleSubmit} class="btn-primary w-full">
 				{signingIn ? 'Signing in...' : 'Sign In with Email'}
 			</button>
 
-			<!-- Separator before OIDC -->
-			{#if enableOidc}
+			<!-- OIDC Providers -->
+			{#if hasOidcProviders}
 				<div class="relative">
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-gray-600"></div>
@@ -135,10 +152,19 @@
 					</div>
 				</div>
 
-				<!-- OIDC Button -->
-				<button on:click={handleOidcLogin} class="btn-secondary w-full">
-					Sign in with {$config.oidc_provider_name}
-				</button>
+				<div class="space-y-2">
+					{#each oidcProviders as provider (provider.slug)}
+						<button
+							onclick={() => handleOidcLogin(provider.slug)}
+							class="btn-secondary flex w-full items-center justify-center gap-3"
+						>
+							{#if provider.logo}
+								<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
+							{/if}
+							Sign in with {provider.name}
+						</button>
+					{/each}
+				</div>
 			{/if}
 
 			<!-- Register Link -->
@@ -148,7 +174,7 @@
 						Don't have an account?
 						<button
 							type="button"
-							on:click={onSwitchToRegister}
+							onclick={onSwitchToRegister}
 							class="font-medium text-blue-400 hover:text-blue-300"
 						>
 							Register here
@@ -162,7 +188,7 @@
 						Forgot your password?
 						<button
 							type="button"
-							on:click={onSwitchToForgot}
+							onclick={onSwitchToForgot}
 							class="font-medium text-blue-400 hover:text-blue-300"
 						>
 							Reset password

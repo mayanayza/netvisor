@@ -1,7 +1,9 @@
-use crate::server::auth::middleware::{AuthenticatedEntity, MemberOrDaemon};
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
+use crate::server::auth::middleware::permissions::MemberOrDaemon;
 use crate::server::shared::handlers::traits::{
     CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler, update_handler,
 };
+use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
     config::AppState,
@@ -80,14 +82,14 @@ async fn get_all_subnets(
     match &entity {
         AuthenticatedEntity::User { user_id, .. } => {
             tracing::debug!(
-                entity_type = "subnet",
+                entity_type = Subnet::table_name(),
                 user_id = %user_id,
                 "Get all request received"
             );
         }
         AuthenticatedEntity::Daemon { .. } => {
             tracing::debug!(
-                entity_type = "subnet",
+                entity_type = Subnet::table_name(),
                 daemon_id = %entity.entity_id(),
                 "Get all request received"
             );

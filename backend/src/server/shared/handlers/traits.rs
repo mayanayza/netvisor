@@ -1,5 +1,5 @@
 use crate::server::{
-    auth::middleware::{AuthenticatedUser, RequireMember},
+    auth::middleware::{auth::AuthenticatedUser, permissions::RequireMember},
     config::AppState,
     shared::{
         entities::{ChangeTriggersTopologyStaleness, Entity},
@@ -79,12 +79,6 @@ where
         )));
     }
 
-    tracing::debug!(
-        entity_type = T::table_name(),
-        user_id = %user.user_id,
-        "Create request received"
-    );
-
     let service = T::get_service(&state);
     let created = service
         .create(request, user.clone().into())
@@ -110,13 +104,6 @@ where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
     Entity: From<T>,
 {
-    tracing::debug!(
-        entity_type = T::table_name(),
-        user_id = %user.user_id,
-        network_count = %user.network_ids.len(),
-        "Get all request received"
-    );
-
     let network_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
 
     let service = T::get_service(&state);
@@ -142,13 +129,6 @@ where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
     Entity: From<T>,
 {
-    tracing::debug!(
-        entity_type = T::table_name(),
-        entity_id = %id,
-        user_id = %user.user_id,
-        "Get by ID request received"
-    );
-
     let service = T::get_service(&state);
     let entity = service
         .get_by_id(&id)
@@ -186,13 +166,6 @@ where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
     Entity: From<T>,
 {
-    tracing::debug!(
-        entity_type = T::table_name(),
-        entity_id = %id,
-        user_id = %user.user_id,
-        "Update request received"
-    );
-
     let service = T::get_service(&state);
 
     // Verify entity exists
@@ -248,7 +221,7 @@ where
     let service = T::get_service(&state);
 
     // Verify entity exists and log the deletion attempt
-    let entity = service
+    service
         .get_by_id(&id)
         .await
         .map_err(|e| {
@@ -268,13 +241,6 @@ where
             );
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
-
-    tracing::debug!(
-        entity_type = T::table_name(),
-        entity_id = %id,
-        entity_name = %entity,
-        "Delete request received"
-    );
 
     service.delete(&id, user.into()).await.map_err(|e| {
         tracing::error!(
@@ -301,13 +267,6 @@ where
     if ids.is_empty() {
         return Err(ApiError::bad_request("No IDs provided for bulk delete"));
     }
-
-    tracing::debug!(
-        entity_type = T::table_name(),
-        user_id = %user.user_id,
-        count = ids.len(),
-        "Bulk delete request received"
-    );
 
     let service = T::get_service(&state);
     let deleted_count = service

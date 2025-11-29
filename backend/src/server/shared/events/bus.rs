@@ -10,7 +10,10 @@ use uuid::Uuid;
 
 use crate::server::shared::{
     entities::EntityDiscriminants,
-    events::types::{AuthEvent, AuthOperation, EntityEvent, EntityOperation, Event},
+    events::types::{
+        AuthEvent, AuthOperation, EntityEvent, EntityOperation, Event, TelemetryEvent,
+        TelemetryOperation,
+    },
 };
 
 // Trait for event subscribers
@@ -38,6 +41,7 @@ pub struct EventFilter {
     // None = match all values (ignore as a filter)
     pub entity_operations: Option<HashMap<EntityDiscriminants, Option<Vec<EntityOperation>>>>,
     pub auth_operations: Option<Vec<AuthOperation>>,
+    pub telemetry_operations: Option<Vec<TelemetryOperation>>,
     pub network_ids: Option<Vec<Uuid>>,
 }
 
@@ -46,6 +50,7 @@ impl EventFilter {
         Self {
             entity_operations: None,
             auth_operations: None,
+            telemetry_operations: None,
             network_ids: None,
         }
     }
@@ -55,16 +60,27 @@ impl EventFilter {
     ) -> Self {
         Self {
             entity_operations: Some(entity_operations),
-            auth_operations: None,
+            auth_operations: Some(vec![]),
+            telemetry_operations: Some(vec![]),
             network_ids: None,
         }
     }
 
-    pub fn auth_only(auth_operations: Vec<AuthOperation>) -> Self {
+    pub fn auth_only(auth_operations: Option<Vec<AuthOperation>>) -> Self {
         Self {
-            entity_operations: None,
-            auth_operations: Some(auth_operations),
-            network_ids: None,
+            entity_operations: Some(HashMap::new()),
+            telemetry_operations: Some(vec![]),
+            auth_operations,
+            network_ids: Some(vec![]),
+        }
+    }
+
+    pub fn telemetry_only(telemetry_operations: Option<Vec<TelemetryOperation>>) -> Self {
+        Self {
+            entity_operations: Some(HashMap::new()),
+            telemetry_operations,
+            auth_operations: Some(vec![]),
+            network_ids: Some(vec![]),
         }
     }
 
@@ -72,6 +88,7 @@ impl EventFilter {
         match event {
             Event::Entity(entity_event) => self.matches_entity(entity_event),
             Event::Auth(auth_event) => self.matches_auth(auth_event),
+            Event::Telemetry(telemetry_event) => self.matches_telemetry(telemetry_event),
         }
     }
 
@@ -105,6 +122,15 @@ impl EventFilter {
         // Check auth operation filter
         if let Some(auth_operations) = &self.auth_operations {
             return auth_operations.contains(&event.operation);
+        }
+
+        true
+    }
+
+    fn matches_telemetry(&self, event: &TelemetryEvent) -> bool {
+        // Check auth operation filter
+        if let Some(telemetry_operations) = &self.telemetry_operations {
+            return telemetry_operations.contains(&event.operation);
         }
 
         true
@@ -167,10 +193,7 @@ impl SubscriberState {
         // Count events per org before processing
         let mut events_per_org: HashMap<Option<Uuid>, usize> = HashMap::new();
         for event in &events {
-            let org_id = match event {
-                Event::Entity(e) => e.network_id,
-                Event::Auth(e) => e.organization_id,
-            };
+            let org_id = event.org_id();
             *events_per_org.entry(org_id).or_default() += 1;
         }
 
@@ -278,26 +301,13 @@ impl EventBus {
         self.publish(Event::Auth(event)).await
     }
 
+    /// Publish an auth event
+    pub async fn publish_telemetry(&self, event: TelemetryEvent) -> Result<()> {
+        self.publish(Event::Telemetry(event)).await
+    }
+
     /// Publish an event to all subscribers
     async fn publish(&self, event: Event) -> Result<()> {
-        match &event {
-            Event::Entity(e) => {
-                tracing::debug!(
-                    operation = %e.operation,
-                    entity_type = %e.entity_type,
-                    entity_id = %e.entity_id,
-                    "Publishing entity event",
-                );
-            }
-            Event::Auth(e) => {
-                tracing::debug!(
-                    operation = ?e.operation,
-                    user_id = ?e.user_id,
-                    "Publishing auth event",
-                );
-            }
-        }
-
         // Send to broadcast channel (non-blocking)
         let _ = self.sender.send(event.clone());
 

@@ -6,7 +6,10 @@ use uuid::Uuid;
 use crate::server::{
     billing::types::base::BillingPlan,
     organizations::r#impl::base::{Organization, OrganizationBase},
-    shared::storage::traits::{SqlValue, StorableEntity},
+    shared::{
+        events::types::TelemetryOperation,
+        storage::traits::{SqlValue, StorableEntity},
+    },
 };
 
 impl StorableEntity for Organization {
@@ -58,7 +61,7 @@ impl StorableEntity for Organization {
                     stripe_customer_id,
                     plan,
                     plan_status,
-                    is_onboarded,
+                    onboarding,
                 },
         } = self.clone();
 
@@ -71,7 +74,7 @@ impl StorableEntity for Organization {
                 "stripe_customer_id",
                 "plan",
                 "plan_status",
-                "is_onboarded",
+                "onboarding",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -81,7 +84,7 @@ impl StorableEntity for Organization {
                 SqlValue::OptionalString(stripe_customer_id),
                 SqlValue::OptionBillingPlan(plan),
                 SqlValue::OptionalString(plan_status),
-                SqlValue::Bool(is_onboarded),
+                SqlValue::TelemetryOperation(onboarding),
             ],
         ))
     }
@@ -92,6 +95,10 @@ impl StorableEntity for Organization {
             .unwrap_or(None)
             .and_then(|v| serde_json::from_value(v).ok());
 
+        let onboarding: Vec<TelemetryOperation> =
+            serde_json::from_value(row.get::<serde_json::Value, _>("onboarding"))
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize onboarding: {}", e))?;
+
         Ok(Organization {
             id: row.get("id"),
             created_at: row.get("created_at"),
@@ -101,7 +108,7 @@ impl StorableEntity for Organization {
                 stripe_customer_id: row.get("stripe_customer_id"),
                 plan,
                 plan_status: row.get("plan_status"),
-                is_onboarded: row.get("is_onboarded"),
+                onboarding,
             },
         })
     }

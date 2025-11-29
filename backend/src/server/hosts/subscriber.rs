@@ -4,7 +4,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     hosts::service::HostService,
     shared::{
         entities::EntityDiscriminants,
@@ -95,7 +95,7 @@ impl EventSubscriber for HostService {
     }
 
     fn debounce_window_ms(&self) -> u64 {
-        50 // Small window to batch multiple subnet deletions
+        50 // Small window to batch bulk subnet deletions
     }
 
     fn name(&self) -> &str {

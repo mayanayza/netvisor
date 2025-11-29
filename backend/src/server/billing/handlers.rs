@@ -1,4 +1,5 @@
-use crate::server::auth::middleware::{AuthenticatedUser, RequireOwner};
+use crate::server::auth::middleware::auth::AuthenticatedUser;
+use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::billing::types::api::CreateCheckoutRequest;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::config::AppState;

@@ -1,5 +1,8 @@
 use crate::server::{
-    auth::middleware::{AuthenticatedDaemon, AuthenticatedUser, RequireMember},
+    auth::middleware::{
+        auth::{AuthenticatedDaemon, AuthenticatedUser},
+        permissions::RequireMember,
+    },
     config::AppState,
     daemons::r#impl::api::DiscoveryUpdatePayload,
     discovery::r#impl::{base::Discovery, types::RunType},

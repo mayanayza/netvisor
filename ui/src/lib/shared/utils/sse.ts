@@ -30,10 +30,10 @@ export class SSEClient<T> {
 			this.config.onOpen?.();
 		};
 
-		this.eventSource.onmessage = (event) => {
+		this.eventSource.onmessage = async (event) => {
 			try {
 				const data = JSON.parse(event.data) as T;
-				this.config.onMessage(data);
+				await this.config.onMessage(data);
 			} catch (error) {
 				console.error('Failed to parse SSE message:', error);
 			}

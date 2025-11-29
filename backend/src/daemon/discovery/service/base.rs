@@ -144,6 +144,7 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
         let server_target = self.as_ref().config_store.get_server_url().await?;
         let session = self.as_ref().get_session().await?;
         let discovery_type = self.discovery_type();
+        let daemon_id = self.as_ref().config_store.get_id().await?;
 
         let api_key = self
             .as_ref()
@@ -165,6 +166,7 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
                 "{}/api/discovery/{}/update",
                 server_target, session.info.session_id
             ))
+            .header("X-Daemon-ID", daemon_id.to_string())
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&payload)
             .send()
@@ -411,8 +413,7 @@ pub trait DiscoversNetworkedEntities:
             ip = %interface.base.ip_address,
             host_name = %host.base.name,
             service_count = %services.len(),
-            "Processed host for ip {}",
-            interface.base.ip_address
+            "Processed host",
         );
         Ok(Some((host, services)))
     }
@@ -596,7 +597,7 @@ pub trait CreatesDiscoveredEntities:
         services: Vec<Service>,
     ) -> Result<(Host, Vec<Service>), Error> {
         let server_target = self.as_ref().config_store.get_server_url().await?;
-
+        let daemon_id = self.as_ref().config_store.get_id().await?;
         tracing::info!("Creating host {}", host.base.name);
 
         let api_key = self
@@ -610,6 +611,7 @@ pub trait CreatesDiscoveredEntities:
             .as_ref()
             .client
             .post(format!("{}/api/hosts", server_target))
+            .header("X-Daemon-ID", daemon_id.to_string())
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&HostWithServicesRequest {
                 host,
@@ -645,6 +647,7 @@ pub trait CreatesDiscoveredEntities:
 
     async fn create_subnet(&self, subnet: &Subnet) -> Result<Subnet, Error> {
         let server_target = self.as_ref().config_store.get_server_url().await?;
+        let daemon_id = self.as_ref().config_store.get_id().await?;
 
         let api_key = self
             .as_ref()
@@ -657,6 +660,7 @@ pub trait CreatesDiscoveredEntities:
             .as_ref()
             .client
             .post(format!("{}/api/subnets", server_target))
+            .header("X-Daemon-ID", daemon_id.to_string())
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&subnet)
             .send()
@@ -687,6 +691,7 @@ pub trait CreatesDiscoveredEntities:
 
     async fn create_service(&self, service: &Service) -> Result<Service, Error> {
         let server_target = self.as_ref().config_store.get_server_url().await?;
+        let daemon_id = self.as_ref().config_store.get_id().await?;
 
         let api_key = self
             .as_ref()
@@ -699,6 +704,7 @@ pub trait CreatesDiscoveredEntities:
             .as_ref()
             .client
             .post(format!("{}/api/services", server_target))
+            .header("X-Daemon-ID", daemon_id.to_string())
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&service)
             .send()
@@ -729,6 +735,7 @@ pub trait CreatesDiscoveredEntities:
 
     async fn create_group(&self, group: &Group) -> Result<Group, Error> {
         let server_target = self.as_ref().config_store.get_server_url().await?;
+        let daemon_id = self.as_ref().config_store.get_id().await?;
 
         let api_key = self
             .as_ref()
@@ -741,6 +748,7 @@ pub trait CreatesDiscoveredEntities:
             .as_ref()
             .client
             .post(format!("{}/api/groups", server_target))
+            .header("X-Daemon-ID", daemon_id.to_string())
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&group)
             .send()

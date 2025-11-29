@@ -109,8 +109,12 @@ impl TypeMetadataProvider for UserOrgPermissions {
             UserOrgPermissions::Member => {
                 "Create and modify hosts, services, run discovery scans, and invite Visualizers to networks they have access to"
             }
-            UserOrgPermissions::Visualizer => "Read-only access: view network topology",
-            UserOrgPermissions::None => "No permissions assigned",
+            UserOrgPermissions::Visualizer => {
+                "Read-only access: view network topology. Does not count towards seat usage."
+            }
+            UserOrgPermissions::None => {
+                "No permissions assigned. Does not count towards seat usage."
+            }
         }
     }
 

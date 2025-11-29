@@ -44,12 +44,14 @@ export async function updateOrganization(org: Organization) {
 
 export async function createInvite(
 	permissions: UserOrgPermissions,
-	network_ids: string[]
+	network_ids: string[],
+	email: string
 ): Promise<OrganizationInvite | null> {
 	const request: CreateInviteRequest = {
 		expiration_hours: null,
 		permissions,
-		network_ids
+		network_ids,
+		send_to: email?.length == 0 ? null : email
 	};
 
 	const result = await api.request<OrganizationInvite, OrganizationInvite[]>(

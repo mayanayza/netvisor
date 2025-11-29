@@ -120,7 +120,7 @@ That's it! NetVisor automatically:
 - **Scan additional VLANs**: Deploy more daemons at **Manage > Daemons** or add subnets to your existing daemon's scan list in **Discover > Scheduled**
 - **Organize your network**: Create groups, consolidate hosts, manage subnets
 
-See the [User Guide](USER_GUIDE.md) for detailed feature documentation.
+See the [User Guide](./docs/USER_GUIDE.md) for detailed feature documentation.
 
 ## 🔍 What Gets Discovered?
 
@@ -137,7 +137,7 @@ NetVisor automatically detects **200+ common services** including:
 **Media & Content**: Plex, Jellyfin, Emby, streaming servers  
 **Automation & IoT**: Home Assistant, Node-RED, MQTT brokers
 
-For the complete list, see the [service definitions directory](https://github.com/mayanayza/netvisor/tree/main/backend/src/server/services/definitions).
+For the complete list, see the [service definitions directory](./docs/SERVICES.md).
 
 **Missing a service?** [Request it](https://github.com/mayanayza/netvisor/issues/new?template=missing-service-detection.md) or [contribute a definition](contributing.md#adding-service-definitions)!
 

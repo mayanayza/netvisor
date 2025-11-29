@@ -59,6 +59,7 @@ impl DaemonRuntimeService {
                         server_target, daemon_id
                     ))
                     .json(&daemon_id)
+                    .header("X-Daemon-ID", daemon_id.to_string())
                     .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
@@ -75,11 +76,20 @@ impl DaemonRuntimeService {
                     let error_msg = api_response
                         .error
                         .unwrap_or_else(|| "Unknown error".to_string());
-                    tracing::warn!(
-                        daemon_id = %daemon_id,
-                        err = %error_msg,
-                        "Failed to check for work"
-                    );
+
+                    if error_msg.contains("not found") {
+                        tracing::error!(
+                            daemon_id = %daemon_id,
+                            error = %error_msg,
+                            "Failed to check for work - the Daemon ID present in the config on this host could not be found on the server. Please remove the config and install a new daemon."
+                        );
+                    } else {
+                        tracing::error!(
+                            daemon_id = %daemon_id,
+                            err = %error_msg,
+                            "Failed to check for work"
+                        );
+                    }
                 } else if let Some((payload, cancel_current_session)) = api_response.data {
                     if !cancel_current_session && payload.is_none() {
                         tracing::info!(
@@ -147,6 +157,7 @@ impl DaemonRuntimeService {
                         "{}/api/daemons/{}/heartbeat",
                         server_target, daemon_id
                     ))
+                    .header("X-Daemon-ID", daemon_id.to_string())
                     .header("Authorization", format!("Bearer {}", api_key))
                     .send()
                     .await?;
@@ -162,10 +173,20 @@ impl DaemonRuntimeService {
                     let error_msg = api_response
                         .error
                         .unwrap_or_else(|| "Unknown error".to_string());
-                    tracing::error!(
-                        error = %error_msg,
-                        "Heartbeat failed - check network connectivity"
-                    );
+
+                    if error_msg.contains("not found") {
+                        tracing::error!(
+                            error = %error_msg,
+                            daemon_id = %daemon_id,
+                            "Heartbeat failed - the Daemon ID present in the config on this host could not be found on the server. Please remove the config and install a new daemon."
+                        );
+                    } else {
+                        tracing::error!(
+                            error = %error_msg,
+                            daemon_id = %daemon_id,
+                            "Heartbeat failed - check network connectivity"
+                        );
+                    }
                 }
 
                 if let Err(e) = self.config_store.update_heartbeat().await {
@@ -184,11 +205,12 @@ impl DaemonRuntimeService {
     pub async fn initialize_services(&self, network_id: Uuid, api_key: String) -> Result<()> {
         // Ensure network_id is stored
         self.config_store.set_network_id(network_id).await?;
-        self.config_store.set_api_key(api_key).await?;
+        self.config_store.set_api_key(api_key.clone()).await?;
 
         let docker_proxy = self.config_store.get_docker_proxy().await;
 
         let daemon_id = self.config_store.get_id().await?;
+
         let has_docker_client = self
             .utils
             .new_local_docker_client(docker_proxy)
@@ -238,7 +260,6 @@ impl DaemonRuntimeService {
 
         let daemon_port = self.config_store.get_port().await?;
         if let Some(api_key) = self.config_store.get_api_key().await? {
-            tracing::info!("Registering daemon with ID: {}", daemon_id,);
             let registration_request = DaemonRegistrationRequest {
                 daemon_id,
                 network_id,
@@ -253,9 +274,16 @@ impl DaemonRuntimeService {
 
             let server_target = self.config_store.get_server_url().await?;
 
+            tracing::info!(
+                daemon_id = %daemon_id,
+                api_key = %api_key,
+                "Sending register request",
+            );
+
             let response = self
                 .client
                 .post(format!("{}/api/daemons/register", server_target))
+                .header("X-Daemon-ID", daemon_id.to_string())
                 .header("Authorization", format!("Bearer {}", api_key))
                 .json(&registration_request)
                 .send()

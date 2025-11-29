@@ -1,7 +1,7 @@
 use crate::{
     daemon::runtime::types::InitializeDaemonRequest,
     server::{
-        auth::middleware::AuthenticatedEntity,
+        auth::middleware::auth::AuthenticatedEntity,
         daemons::r#impl::{
             api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse, DiscoveryUpdatePayload},
             base::Daemon,
@@ -9,16 +9,21 @@ use crate::{
         hosts::r#impl::ports::PortBase,
         services::r#impl::endpoints::{ApplicationProtocol, Endpoint},
         shared::{
+            entities::ChangeTriggersTopologyStaleness,
             events::{
                 bus::EventBus,
                 types::{EntityEvent, EntityOperation},
             },
             services::traits::{CrudService, EventBusService},
-            storage::generic::GenericPostgresStorage,
+            storage::{
+                generic::GenericPostgresStorage,
+                traits::{StorableEntity, Storage},
+            },
             types::api::ApiResponse,
         },
     },
 };
+use anyhow::anyhow;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use chrono::Utc;
@@ -48,6 +53,41 @@ impl EventBusService<Daemon> for DaemonService {
 impl CrudService<Daemon> for DaemonService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Daemon>> {
         &self.daemon_storage
+    }
+
+    /// Update entity
+    async fn update(
+        &self,
+        entity: &mut Daemon,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Daemon, anyhow::Error> {
+        let current = self
+            .get_by_id(&entity.id())
+            .await?
+            .ok_or_else(|| anyhow!("Could not find {}", entity))?;
+        let updated = self.storage().update(entity).await?;
+
+        let suppress_logs = updated.suppress_logs(&current);
+        let trigger_stale = updated.triggers_staleness(Some(current));
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: updated.id(),
+                network_id: self.get_network_id(&updated),
+                organization_id: self.get_organization_id(&updated),
+                entity_type: updated.clone().into(),
+                operation: EntityOperation::Updated,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "trigger_stale": trigger_stale,
+                    "suppress_logs": suppress_logs
+                }),
+                authentication,
+            })
+            .await?;
+
+        Ok(updated)
     }
 }
 
@@ -247,11 +287,17 @@ impl DaemonService {
                         .text()
                         .await
                         .unwrap_or_else(|_| "Could not read body".to_string());
-                    tracing::warn!("Daemon returned error. Status: {}, Body: {}", status, body);
+                    tracing::warn!(
+                        status = %status,
+                        body = %body,
+                        "Daemon returned error"
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("Failed to reach daemon: {:?}", e);
+                tracing::warn!(
+                    error = %e,
+                    "Failed to reach daemon");
             }
         }
 

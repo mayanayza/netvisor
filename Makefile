@@ -3,6 +3,7 @@
 help:
 	@echo "NetVisor Development Commands"
 	@echo ""
+	@echo "  make fresh-db       - Clean and set up a new database"
 	@echo "  make setup-db       - Set up database"
 	@echo "  make clean-db       - Clean up database"
 	@echo "  make clean-daemon   - Remove daemon config file"
@@ -21,6 +22,10 @@ help:
 	@echo "  make clean          - Clean build artifacts and containers"
 	@echo "  make install-dev-mac    - Install development dependencies on macOS"
 	@echo "  make install-dev-linux  - Install development dependencies on Linux"
+
+fresh-db:
+	make clean-db
+	make setup-db
 
 setup-db:
 	@echo "Setting up PostgreSQL..."
@@ -96,6 +101,9 @@ lint:
 	cd backend && cargo clippy --bin daemon -- -D warnings
 	@echo "Linting UI..."
 	cd ui && npm run lint && npm run format -- --check && npm run check
+
+stripe-webhook:
+	stripe listen --forward-to http://localhost:60072/api/billing/webhooks
 
 clean:
 	make clean-db

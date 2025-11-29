@@ -2,18 +2,27 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Error;
 use async_trait::async_trait;
+use chrono::Utc;
 use petgraph::{Graph, graph::NodeIndex, visit::EdgeRef};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::server::{
+    auth::middleware::auth::AuthenticatedEntity,
     groups::{r#impl::base::Group, service::GroupService},
     hosts::{r#impl::base::Host, service::HostService},
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
-        events::bus::EventBus,
+        events::{
+            bus::EventBus,
+            types::{EntityEvent, EntityOperation},
+        },
         services::traits::{CrudService, EventBusService},
-        storage::{filter::EntityFilter, generic::GenericPostgresStorage},
+        storage::{
+            filter::EntityFilter,
+            generic::GenericPostgresStorage,
+            traits::{StorableEntity, Storage},
+        },
     },
     subnets::{r#impl::base::Subnet, service::SubnetService},
     topology::{
@@ -57,6 +66,65 @@ impl EventBusService<Topology> for TopologyService {
 impl CrudService<Topology> for TopologyService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Topology>> {
         &self.storage
+    }
+
+    /// Create entity
+    async fn create(
+        &self,
+        entity: Topology,
+        authentication: AuthenticatedEntity,
+    ) -> Result<Topology, anyhow::Error> {
+        let mut topology = if entity.id() == Uuid::nil() {
+            Topology::new(entity.get_base())
+        } else {
+            entity
+        };
+
+        let (hosts, subnets, groups) = self.get_entity_data(topology.base.network_id).await?;
+
+        let services = self
+            .get_service_data(topology.base.network_id, &topology.base.options)
+            .await?;
+
+        let params = BuildGraphParams {
+            hosts: &hosts,
+            services: &services,
+            subnets: &subnets,
+            groups: &groups,
+            old_edges: &[],
+            old_nodes: &[],
+            options: &topology.base.options,
+        };
+
+        let (nodes, edges) = self.build_graph(params);
+
+        topology.base.edges = edges;
+        topology.base.nodes = nodes;
+        topology.base.hosts = hosts;
+        topology.base.services = services;
+        topology.base.subnets = subnets;
+        topology.base.groups = groups;
+        topology.clear_stale();
+
+        let created = self.storage().create(&topology).await?;
+
+        self.event_bus()
+            .publish_entity(EntityEvent {
+                id: Uuid::new_v4(),
+                entity_id: created.id(),
+                network_id: self.get_network_id(&created),
+                organization_id: self.get_organization_id(&created),
+                entity_type: created.clone().into(),
+                operation: EntityOperation::Created,
+                timestamp: Utc::now(),
+                metadata: serde_json::json!({
+                    "clear_stale": true
+                }),
+                authentication,
+            })
+            .await?;
+
+        Ok(created)
     }
 }
 

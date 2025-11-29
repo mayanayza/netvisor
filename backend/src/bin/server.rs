@@ -1,14 +1,19 @@
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{net::SocketAddr, str::FromStr, sync::Arc, time::Duration};
 
 use axum::{
     Extension, Router,
     http::{HeaderValue, Method},
+    middleware,
 };
+use axum_client_ip::ClientIpSource;
 use clap::Parser;
 use netvisor::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::{
+        auth::AuthenticatedEntity, logging::request_logging_middleware,
+        rate_limit::rate_limit_middleware,
+    },
     billing::types::base::{BillingPlan, BillingRate, PlanConfig},
-    config::{AppState, CliArgs, ServerConfig},
+    config::{AppState, ServerCli, ServerConfig},
     organizations::r#impl::base::{Organization, OrganizationBase},
     shared::{
         handlers::{cache::AppCache, factory::create_router},
@@ -27,130 +32,23 @@ use tower_http::{
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[derive(Parser)]
-#[command(name = "netvisor-server")]
-#[command(about = "NetVisor server")]
-struct Cli {
-    /// Override server port
-    #[arg(long)]
-    server_port: Option<u16>,
-
-    /// Override log level
-    #[arg(long)]
-    log_level: Option<String>,
-
-    /// Override rust system log level
-    #[arg(long)]
-    rust_log: Option<String>,
-
-    /// Override database path
-    #[arg(long)]
-    database_url: Option<String>,
-
-    /// Override integrated daemon url
-    #[arg(long)]
-    integrated_daemon_url: Option<String>,
-
-    /// Use secure session cookies (if serving UI behind HTTPS)
-    #[arg(long)]
-    use_secure_session_cookies: Option<bool>,
-
-    /// Enable or disable registration flow
-    #[arg(long)]
-    disable_registration: bool,
-
-    /// OIDC client ID
-    #[arg(long)]
-    oidc_client_id: Option<String>,
-
-    /// OIDC client secret
-    #[arg(long)]
-    oidc_client_secret: Option<String>,
-
-    /// OIDC issuer url
-    #[arg(long)]
-    oidc_issuer_url: Option<String>,
-
-    /// OIDC issuer url
-    #[arg(long)]
-    oidc_provider_name: Option<String>,
-
-    /// OIDC redirect url
-    #[arg(long)]
-    oidc_redirect_url: Option<String>,
-
-    /// OIDC redirect url
-    #[arg(long)]
-    stripe_secret: Option<String>,
-
-    /// OIDC redirect url
-    #[arg(long)]
-    stripe_webhook_secret: Option<String>,
-
-    #[arg(long)]
-    smtp_username: Option<String>,
-
-    #[arg(long)]
-    smtp_password: Option<String>,
-
-    /// Email used as to/from in emails send by NetVisor
-    #[arg(long)]
-    smtp_email: Option<String>,
-
-    #[arg(long)]
-    smtp_relay: Option<String>,
-
-    #[arg(long)]
-    smtp_port: Option<String>,
-
-    /// Server URL used in features like password reset and invite links
-    #[arg(long)]
-    public_url: Option<String>,
-}
-
-impl From<Cli> for CliArgs {
-    fn from(cli: Cli) -> Self {
-        Self {
-            server_port: cli.server_port,
-            log_level: cli.log_level,
-            rust_log: cli.rust_log,
-            database_url: cli.database_url,
-            integrated_daemon_url: cli.integrated_daemon_url,
-            use_secure_session_cookies: cli.use_secure_session_cookies,
-            disable_registration: cli.disable_registration,
-            oidc_client_id: cli.oidc_client_id,
-            oidc_client_secret: cli.oidc_client_secret,
-            oidc_issuer_url: cli.oidc_issuer_url,
-            oidc_provider_name: cli.oidc_provider_name,
-            oidc_redirect_url: cli.oidc_redirect_url,
-            stripe_secret: cli.stripe_secret,
-            stripe_webhook_secret: cli.stripe_webhook_secret,
-            smtp_email: cli.smtp_email,
-            smtp_password: cli.smtp_password,
-            smtp_relay: cli.smtp_relay,
-            smtp_username: cli.smtp_username,
-            public_url: cli.public_url,
-        }
-    }
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = dotenv::dotenv();
 
-    let cli = Cli::parse();
-    let cli_args = CliArgs::from(cli);
+    let cli = ServerCli::parse();
 
     // Load configuration using figment
-    let config = ServerConfig::load(cli_args)?;
+    let config = ServerConfig::load(cli)?;
     let listen_addr = format!("0.0.0.0:{}", &config.server_port);
     let web_external_path = config.web_external_path.clone();
+    let client_ip_source = config.client_ip_source.clone();
 
     // Initialize tracing
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(format!(
-            "netvisor={},server={}",
-            config.log_level, config.log_level
+            "netvisor={},server={},request_log={}",
+            config.log_level, config.log_level, config.log_level
         )))
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -181,6 +79,16 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // Create stalled discovery cleanup task
+    let stalled_discovery_cleanup = discovery_service.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60)); // Every minute
+        loop {
+            interval.tick().await;
+            stalled_discovery_cleanup.cleanup_stalled_sessions().await;
+        }
+    });
+
     // Create auth session cleanup task
     let auth_cleanup_state = state.clone();
     tokio::spawn(async move {
@@ -205,14 +113,10 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let session_store = state.storage.sessions.clone();
+    let base_router = create_router().with_state(state.clone());
 
     let api_router = if let Some(static_path) = &web_external_path {
-        // First create the API router
-        let router = create_router().layer(session_store).with_state(state);
-
-        // Then add static file serving with SPA fallback
-        router.fallback_service(
+        base_router.fallback_service(
             ServeDir::new(static_path)
                 .append_index_html_on_directories(true)
                 .fallback(ServeFile::new(format!(
@@ -222,8 +126,10 @@ async fn main() -> anyhow::Result<()> {
         )
     } else {
         tracing::info!("Server is not serving web assets due to no web_external_path");
-        create_router().layer(session_store).with_state(state)
+        base_router
     };
+
+    let session_store = state.storage.sessions.clone();
 
     let cors = if cfg!(debug_assertions) {
         // Development: Allow localhost with credentials
@@ -247,6 +153,10 @@ async fn main() -> anyhow::Result<()> {
         CorsLayer::permissive()
     };
 
+    let client_ip_source = client_ip_source
+        .map(|s| ClientIpSource::from_str(&s))
+        .unwrap_or(Ok(ClientIpSource::ConnectInfo))?;
+
     let cache_headers = SetResponseHeaderLayer::if_not_present(
         header::CACHE_CONTROL,
         HeaderValue::from_static("no-store, no-cache, must-revalidate, private"),
@@ -257,12 +167,21 @@ async fn main() -> anyhow::Result<()> {
     // Create main app
     let app = Router::new().merge(api_router).layer(
         ServiceBuilder::new()
+            .layer(client_ip_source.into_extension())
             .layer(TraceLayer::new_for_http())
             .layer(cors)
+            .layer(session_store)
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                rate_limit_middleware,
+            ))
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                request_logging_middleware,
+            ))
             .layer(Extension(app_cache))
             .layer(cache_headers),
     );
-
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
     let actual_port = listener.local_addr()?.port();
 
@@ -339,7 +258,7 @@ async fn main() -> anyhow::Result<()> {
                     plan: None,
                     plan_status: None,
                     name: "My Organization".to_string(),
-                    is_onboarded: false,
+                    onboarding: vec![],
                 }),
                 AuthenticatedEntity::System,
             )
@@ -351,8 +270,6 @@ async fn main() -> anyhow::Result<()> {
                 AuthenticatedEntity::System,
             )
             .await?;
-    } else {
-        tracing::debug!("Server already has data, skipping seed data");
     }
 
     tokio::signal::ctrl_c().await?;

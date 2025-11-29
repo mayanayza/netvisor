@@ -1,7 +1,7 @@
 <script lang="ts">
 	export let field: boolean;
 	export let title: string;
-	export let description: string;
+	export let description: string = '';
 </script>
 
 <label class="flex flex-col gap-1">
@@ -13,9 +13,11 @@
 		/>
 		<span class="text-primary text-sm">{title}</span>
 	</div>
-	<p class="text-tertiary text-xs leading-tight">
-		{description}
-	</p>
+	{#if description.length > 0}
+		<p class="text-tertiary text-xs leading-tight">
+			{description}
+		</p>
+	{/if}
 </label>
 
 <style>

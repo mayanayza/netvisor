@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::server::{
-    auth::middleware::AuthenticatedEntity,
+    auth::middleware::auth::AuthenticatedEntity,
     shared::{
         entities::{Entity, EntityDiscriminants},
         events::{
@@ -29,6 +29,7 @@ struct TopologyChanges {
     removed_subnets: std::collections::HashSet<Uuid>,
     removed_groups: std::collections::HashSet<Uuid>,
     should_mark_stale: bool,
+    clear_stale: bool,
 }
 
 #[async_trait]
@@ -41,7 +42,7 @@ impl EventSubscriber for TopologyService {
             (EntityDiscriminants::Group, None),
             (
                 EntityDiscriminants::Topology,
-                Some(vec![EntityOperation::Updated]),
+                Some(vec![EntityOperation::Created, EntityOperation::Updated]),
             ),
         ]))
     }
@@ -68,10 +69,19 @@ impl EventSubscriber for TopologyService {
                     .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
                     .unwrap_or(false);
 
+                // Check if any event clears staleness (only set on topology create to avoid showing topology as stale on first load)
+                let clear_stale = entity_event
+                    .metadata
+                    .get("clear_stale")
+                    .and_then(|v| serde_json::from_value::<bool>(v.clone()).ok())
+                    .unwrap_or(false);
+
                 // Topology updates from changes to options should be applied immediately and not processed alongside
                 // other changes, otherwise another call to topology_service.update will be made which will trigger
                 // an infinite loop
-                if let Entity::Topology(mut topology) = entity_event.entity_type {
+                if let Entity::Topology(mut topology) = entity_event.entity_type.clone()
+                    && entity_event.operation == EntityOperation::Updated
+                {
                     if trigger_stale {
                         topology.base.is_stale = true;
                     }
@@ -106,6 +116,8 @@ impl EventSubscriber for TopologyService {
                 if trigger_stale {
                     // User will be prompted to update entities
                     changes.should_mark_stale = true;
+                } else if clear_stale {
+                    changes.clear_stale = true;
                 } else {
                     // It's safe to automatically update entities
                     match entity_event.entity_type {
@@ -155,8 +167,13 @@ impl EventSubscriber for TopologyService {
                     }
 
                     // Mark stale if needed
-                    if changes.should_mark_stale {
+                    if changes.should_mark_stale && !changes.clear_stale {
                         topology.base.is_stale = true;
+                    }
+
+                    // Clear stale - this only happens on topology create to avoid a stale state when loading app for the first time
+                    if changes.clear_stale {
+                        topology.base.is_stale = false;
                     }
 
                     if changes.updated_hosts {
@@ -196,6 +213,6 @@ impl EventSubscriber for TopologyService {
     }
 
     fn name(&self) -> &str {
-        "topology_validation"
+        "topology_stale"
     }
 }

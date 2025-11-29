@@ -1,12 +1,13 @@
+use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::{
     auth::{
         r#impl::{
             api::{LoginRequest, RegisterRequest},
             base::{LoginRegisterParams, ProvisionUserParams},
         },
-        middleware::{AuthenticatedEntity, AuthenticatedUser},
+        middleware::auth::{AuthenticatedEntity, AuthenticatedUser},
     },
-    email::service::EmailService,
+    email::traits::EmailService,
     organizations::{
         r#impl::base::{Organization, OrganizationBase},
         service::OrganizationService,
@@ -14,7 +15,7 @@ use crate::server::{
     shared::{
         events::{
             bus::EventBus,
-            types::{AuthEvent, AuthOperation},
+            types::{AuthEvent, AuthOperation, TelemetryEvent},
         },
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
@@ -80,6 +81,7 @@ impl AuthService {
             ip,
             user_agent,
             network_ids,
+            subscribed,
         } = params;
 
         request
@@ -106,6 +108,7 @@ impl AuthService {
                 org_id,
                 permissions,
                 network_ids,
+                subscribed,
             })
             .await?;
 
@@ -138,6 +141,7 @@ impl AuthService {
             org_id,
             permissions,
             network_ids,
+            subscribed,
         } = params;
 
         let all_users = self
@@ -151,7 +155,9 @@ impl AuthService {
             .find(|u| u.base.password_hash.is_none() && u.base.oidc_subject.is_none())
             .cloned();
 
-        if let Some(mut seed_user) = seed_user {
+        let mut is_new_org = false;
+
+        let user = if let Some(mut seed_user) = seed_user {
             // First user ever - claim seed user
             tracing::info!("First user registration - claiming seed user");
             seed_user.base.email = email;
@@ -166,6 +172,8 @@ impl AuthService {
                 seed_user.base.oidc_linked_at = Some(chrono::Utc::now());
             }
 
+            is_new_org = true;
+
             self.user_service
                 .update(&mut seed_user, AuthenticatedEntity::System)
                 .await
@@ -174,6 +182,8 @@ impl AuthService {
             let organization_id = if let Some(org_id) = org_id {
                 org_id
             } else {
+                is_new_org = true;
+
                 // Create new organization for this user
                 let organization = self
                     .organization_service
@@ -183,7 +193,7 @@ impl AuthService {
                             name: "My Organization".to_string(),
                             plan: None,
                             plan_status: None,
-                            is_onboarded: false,
+                            onboarding: vec![],
                         }),
                         AuthenticatedEntity::System,
                     )
@@ -225,7 +235,24 @@ impl AuthService {
             } else {
                 Err(anyhow!("Must provide either password or OIDC credentials"))
             }
+        };
+
+        if is_new_org && let Ok(user) = &user {
+            self.event_bus
+                .publish_telemetry(TelemetryEvent {
+                    id: Uuid::new_v4(),
+                    authentication: user.clone().into(),
+                    organization_id: user.base.organization_id,
+                    operation: TelemetryOperation::OrgCreated,
+                    timestamp: Utc::now(),
+                    metadata: serde_json::json!({
+                        "subscribed": subscribed
+                    }),
+                })
+                .await?;
         }
+
+        user
     }
 
     /// Login with username and password
@@ -434,14 +461,7 @@ impl AuthService {
         tokens.insert(token.clone(), (user.id, Instant::now()));
 
         email_service
-            .send_email(
-                user.base.email.clone(),
-                "NetVisor Password Reset",
-                &format!(
-                    "<a href=\"{}/reset-password?token={}\">Click here to reset your password</a>",
-                    url, token
-                ),
-            )
+            .send_password_reset(user.base.email.clone(), url, token)
             .await?;
 
         Ok(())
