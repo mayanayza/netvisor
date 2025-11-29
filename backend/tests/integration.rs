@@ -519,15 +519,12 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
 async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> {
     use std::collections::HashMap;
 
-    let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions();
+    let services = ServiceDefinitionRegistry::all_service_definitions();
 
     // Group services by category
-    let mut by_category: HashMap<String, Vec<&serde_json::Value>> = HashMap::new();
-    for service in services {
-        let category = service["category"]
-            .as_str()
-            .unwrap_or("Unknown")
-            .to_string();
+    let mut by_category: HashMap<String, Vec<&Box<dyn ServiceDefinition>>> = HashMap::new();
+    for service in &services {
+        let category = service.category().to_string();
         by_category.entry(category).or_default().push(service);
     }
 
@@ -550,13 +547,13 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
 
         // Sort services by name within category
         let mut sorted_services = services.clone();
-        sorted_services.sort_by_key(|s| s["name"].as_str().unwrap_or(""));
+        sorted_services.sort_by_key(|s| s.name());
 
         for service in sorted_services {
-            let logo_url = service["logo_url"].as_str().unwrap_or("");
-            let name = service["name"].as_str().unwrap_or("");
-            let description = service["description"].as_str().unwrap_or("");
-            let pattern = service["discovery_pattern"].as_str().unwrap_or("");
+            let logo_url = service.logo_url();
+            let name = service.name();
+            let description = service.description();
+            let pattern = service.discovery_pattern().to_string();
 
             // Format logo - use image markdown if URL exists, otherwise use placeholder
             let logo = if !logo_url.is_empty() {
