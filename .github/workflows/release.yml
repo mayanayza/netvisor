@@ -83,6 +83,7 @@ jobs:
           mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
           mv ui/static/services-next.json ui/static/services.json
           mv docs/SERVICES-NEXT.md docs/SERVICES.md
+          mv ui/static/billing-plans-next.json ui/static/billing-plans.json
           echo "✅ Updated test fixtures"
       
       - name: Commit and push fixture updates
@@ -94,7 +95,7 @@ jobs:
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
 
            # Stage fixture updates
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md
+          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
