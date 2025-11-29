@@ -157,7 +157,10 @@ impl BillingPlan {
     }
 
     pub fn is_commercial(&self) -> bool {
-        matches!(self, BillingPlan::Team(_) | BillingPlan::Business(_) | BillingPlan::Enterprise(_))
+        matches!(
+            self,
+            BillingPlan::Team(_) | BillingPlan::Business(_) | BillingPlan::Enterprise(_)
+        )
     }
 
     pub fn stripe_product_id(&self) -> String {

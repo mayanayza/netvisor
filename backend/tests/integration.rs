@@ -10,7 +10,7 @@ use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
 use netvisor::server::shared::handlers::factory::OnboardingRequest;
 use netvisor::server::shared::types::api::ApiResponse;
-use netvisor::server::shared::types::metadata::{HasId};
+use netvisor::server::shared::types::metadata::HasId;
 use netvisor::server::users::r#impl::base::User;
 use std::process::{Child, Command};
 
