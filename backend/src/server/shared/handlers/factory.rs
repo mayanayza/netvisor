@@ -201,7 +201,7 @@ pub async fn onboarding(
             .api_key_service
             .create(
                 ApiKey::new(ApiKeyBase {
-                    key: "".to_string(),
+                    key: state.services.api_key_service.generate_api_key(),
                     name: "Integrated Daemon API Key".to_string(),
                     last_used: None,
                     expires_at: None,

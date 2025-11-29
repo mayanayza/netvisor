@@ -287,11 +287,17 @@ impl DaemonService {
                         .text()
                         .await
                         .unwrap_or_else(|_| "Could not read body".to_string());
-                    tracing::warn!("Daemon returned error. Status: {}, Body: {}", status, body);
+                    tracing::warn!(
+                        status = %status,
+                        body = %body,
+                        "Daemon returned error"
+                    );
                 }
             }
             Err(e) => {
-                tracing::warn!("Failed to reach daemon: {:?}", e);
+                tracing::warn!(
+                    error = %e,
+                    "Failed to reach daemon");
             }
         }
 

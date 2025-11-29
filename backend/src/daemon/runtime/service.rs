@@ -205,11 +205,12 @@ impl DaemonRuntimeService {
     pub async fn initialize_services(&self, network_id: Uuid, api_key: String) -> Result<()> {
         // Ensure network_id is stored
         self.config_store.set_network_id(network_id).await?;
-        self.config_store.set_api_key(api_key).await?;
+        self.config_store.set_api_key(api_key.clone()).await?;
 
         let docker_proxy = self.config_store.get_docker_proxy().await;
 
         let daemon_id = self.config_store.get_id().await?;
+
         let has_docker_client = self
             .utils
             .new_local_docker_client(docker_proxy)
@@ -259,7 +260,6 @@ impl DaemonRuntimeService {
 
         let daemon_port = self.config_store.get_port().await?;
         if let Some(api_key) = self.config_store.get_api_key().await? {
-            tracing::info!("Registering daemon with ID: {}", daemon_id,);
             let registration_request = DaemonRegistrationRequest {
                 daemon_id,
                 network_id,
@@ -273,6 +273,12 @@ impl DaemonRuntimeService {
             };
 
             let server_target = self.config_store.get_server_url().await?;
+
+            tracing::info!(
+                daemon_id = %daemon_id,
+                api_key = %api_key,
+                "Sending register request",
+            );
 
             let response = self
                 .client
