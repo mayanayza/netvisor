@@ -5,10 +5,12 @@ use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::discovery::r#impl::types::DiscoveryType;
 use netvisor::server::networks::r#impl::Network;
 use netvisor::server::organizations::r#impl::base::Organization;
+use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 #[cfg(feature = "generate-fixtures")]
 use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
+use netvisor::server::services::r#impl::definitions::ServiceDefinition;
 #[cfg(feature = "generate-fixtures")]
 use netvisor::server::services::r#impl::definitions::ServiceDefinition;
 use netvisor::server::shared::handlers::factory::OnboardingRequest;
@@ -517,7 +519,8 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(feature = "generate-fixtures")]
+// #[cfg(feature = "generate-fixtures")]
+#[tokio::test]
 async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> {
     use std::collections::HashMap;
 
@@ -543,14 +546,16 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
         // Add category header
         markdown.push_str(&format!("## {}\n\n", category));
 
-        // Use HTML table for better control
-        markdown.push_str("<table>\n");
+        // Use HTML table with dark theme styling
+        markdown.push_str("<table style=\"background-color: #1a1d29; border-collapse: collapse; width: 100%;\">\n");
         markdown.push_str("<thead>\n");
-        markdown.push_str("<tr>\n");
-        markdown.push_str("<th width=\"60\">Logo</th>\n");
-        markdown.push_str("<th width=\"200\">Name</th>\n");
-        markdown.push_str("<th width=\"300\">Description</th>\n");
-        markdown.push_str("<th>Discovery Pattern</th>\n");
+        markdown.push_str(
+            "<tr style=\"background-color: #1f2937; border-bottom: 2px solid #374151;\">\n",
+        );
+        markdown.push_str("<th width=\"60\" style=\"padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;\">Logo</th>\n");
+        markdown.push_str("<th width=\"200\" style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Name</th>\n");
+        markdown.push_str("<th width=\"300\" style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Description</th>\n");
+        markdown.push_str("<th style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Discovery Pattern</th>\n");
         markdown.push_str("</tr>\n");
         markdown.push_str("</thead>\n");
         markdown.push_str("<tbody>\n");
@@ -575,11 +580,20 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
                 "—".to_string()
             };
 
-            markdown.push_str("<tr>\n");
-            markdown.push_str(&format!("<td align=\"center\">{}</td>\n", logo));
-            markdown.push_str(&format!("<td>{}</td>\n", name));
-            markdown.push_str(&format!("<td>{}</td>\n", description));
-            markdown.push_str(&format!("<td><code>{}</code></td>\n", pattern));
+            markdown.push_str("<tr style=\"border-bottom: 1px solid #374151;\">\n");
+            markdown.push_str(&format!(
+                "<td align=\"center\" style=\"padding: 12px; color: #d1d5db;\">{}</td>\n",
+                logo
+            ));
+            markdown.push_str(&format!(
+                "<td style=\"padding: 12px; color: #f3f4f6; font-weight: 500;\">{}</td>\n",
+                name
+            ));
+            markdown.push_str(&format!(
+                "<td style=\"padding: 12px; color: #d1d5db;\">{}</td>\n",
+                description
+            ));
+            markdown.push_str(&format!("<td style=\"padding: 12px;\"><code style=\"background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;\">{}</code></td>\n", pattern));
             markdown.push_str("</tr>\n");
         }
 

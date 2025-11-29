@@ -208,6 +208,45 @@ fn test_service_definition_has_required_fields() {
 }
 
 #[test]
+fn test_no_duplicate_discovery_patterns() {
+    let registry: Vec<_> = ServiceDefinitionRegistry::all_service_definitions()
+        .into_iter()
+        .filter(|s| !matches!(s.discovery_pattern(), Pattern::None))
+        .collect();
+
+    let mut duplicates: Vec<String> = Vec::new();
+
+    for (i, service_a) in registry.iter().enumerate() {
+        let pattern_a = service_a.discovery_pattern();
+
+        for service_b in registry.iter().skip(i + 1) {
+            let pattern_b = service_b.discovery_pattern();
+
+            if pattern_a == pattern_b {
+                duplicates.push(format!(
+                    "  '{}' and '{}' share pattern: {}",
+                    service_a.name(),
+                    service_b.name(),
+                    pattern_a
+                ));
+            }
+        }
+    }
+
+    if !duplicates.is_empty() {
+        panic!(
+            "Duplicate discovery patterns found! Multiple services cannot share the same pattern:\n\n{}\n\n\
+            Each service must have a unique discovery pattern to avoid ambiguous matches.\n\
+            Consider:\n\
+            1. Removing one of the duplicate service definitions\n\
+            2. Adding additional criteria (AllOf with extra port, endpoint path, etc.)\n\
+            3. Using a more specific endpoint match string",
+            duplicates.join("\n")
+        );
+    }
+}
+
+#[test]
 fn test_service_patterns_use_appropriate_port_types() {
     let registry = ServiceDefinitionRegistry::all_service_definitions();
 

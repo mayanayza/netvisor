@@ -25,6 +25,9 @@ impl ServiceDefinition for JiraServer {
             Some(200..300),
         )
     }
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jira.svg"
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<JiraServer>));
