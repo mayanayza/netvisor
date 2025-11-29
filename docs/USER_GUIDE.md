@@ -927,19 +927,20 @@ If you need IPv6 support sooner, [open an issue](https://github.com/mayanayza/ne
 
 ### What services can NetVisor discover?
 
-50+ services including:
+NetVisor automatically detects **200+ common services** including:
 
-**Media Servers**: Plex, Jellyfin, Emby, Tautulli  
-**Home Automation**: Home Assistant, HomeKit, Philips Hue Bridge  
-**Virtualization**: Proxmox, Docker, Kubernetes, Portainer  
-**Network**: Pi-hole, AdGuard, Unifi Controller, pfSense, OPNsense  
-**Storage**: Synology DSM, QNAP, TrueNAS, Nextcloud, Samba  
-**Monitoring**: Grafana, Prometheus, Uptime Kuma, Netdata  
-**Proxies**: Nginx Proxy Manager, Traefik, Caddy, Cloudflared  
-**Databases**: PostgreSQL, MySQL, MongoDB, Redis  
-**Development**: GitLab, Gitea, Jenkins, Ansible AWX
+**Infrastructure & Networking**: Pi-hole, AdGuard Home, Unifi Controller, pfSense, OPNsense  
+**Virtualization & Containers**: Proxmox, Docker, Kubernetes, Portainer  
+**Databases**: PostgreSQL, MySQL/MariaDB, MongoDB, Redis, Microsoft SQL Server  
+**Web Servers & Proxies**: Apache, Nginx, Lighttpd, Traefik, Caddy, HAProxy  
+**Monitoring & Observability**: Grafana, Prometheus, Zabbix, Netdata, Nagios  
+**Storage & File Sharing**: Synology DSM, QNAP, TrueNAS, Nextcloud, Samba, Windows File Server  
+**Development & CI/CD**: GitLab, Jenkins, Ansible AWX, GitHub Enterprise, Azure DevOps  
+**Communication & Collaboration**: Microsoft Exchange, Asterisk, FreePBX, Rocket.Chat  
+**Media & Content**: Plex, Jellyfin, Emby, streaming servers  
+**Automation & IoT**: Home Assistant, Node-RED, MQTT brokers
 
-Complete list: [service definitions directory](https://github.com/mayanayza/netvisor/tree/main/backend/src/server/services/definitions)
+For the complete list, see the [service definitions directory](SERVICES.md).
 
 **Service not detected?**
 - Report it: [Service detection issue](https://github.com/mayanayza/netvisor/issues/new?template=service-detection-issue.md)

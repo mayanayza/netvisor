@@ -18,7 +18,7 @@ Service Name
 # Service Not Detected
 
 **Is the service present in NetVisor's service definition library?**
-Go to https://github.com/mayanayza/netvisor/tree/main/backend/src/server/services/definitions and check if it's listed there
+Go to the [service definitions directory](SERVICES.md) and check if it's listed there
 
 **Are you running the service in a docker container on the same host as the daemon, or are you running it on the network on a different host?**
 Docker on same host / different host on network

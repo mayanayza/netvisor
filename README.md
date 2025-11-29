@@ -112,7 +112,7 @@ NetVisor automatically detects **200+ common services** including:
 **Media & Content**: Plex, Jellyfin, Emby, streaming servers  
 **Automation & IoT**: Home Assistant, Node-RED, MQTT brokers
 
-For the complete list, see the [service definitions directory](https://github.com/mayanayza/netvisor/tree/main/backend/src/server/services/definitions).
+For the complete list, see the [service definitions directory](SERVICES.md).
 
 **Missing a service?** [Request it](https://github.com/mayanayza/netvisor/issues/new?template=missing-service-detection.md) or [contribute a definition](contributing.md#adding-service-definitions)!
 
