@@ -9,6 +9,8 @@ use netvisor::server::organizations::r#impl::base::Organization;
 use netvisor::server::services::definitions::ServiceDefinitionRegistry;
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
+#[cfg(feature = "generate-fixtures")]
+use netvisor::server::services::r#impl::definitions::ServiceDefinition;
 use netvisor::server::shared::handlers::factory::OnboardingRequest;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
