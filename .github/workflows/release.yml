@@ -94,7 +94,7 @@ jobs:
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
 
            # Stage fixture updates
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json
+          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"

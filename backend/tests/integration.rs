@@ -543,9 +543,17 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
         // Add category header
         markdown.push_str(&format!("## {}\n\n", category));
 
-        // Table header
-        markdown.push_str("| Logo | Name | Description | Discovery Pattern |\n");
-        markdown.push_str("|------|------|-------------|-------------------|\n");
+        // Use HTML table for better control
+        markdown.push_str("<table>\n");
+        markdown.push_str("<thead>\n");
+        markdown.push_str("<tr>\n");
+        markdown.push_str("<th width=\"60\">Logo</th>\n");
+        markdown.push_str("<th width=\"200\">Name</th>\n");
+        markdown.push_str("<th width=\"300\">Description</th>\n");
+        markdown.push_str("<th>Discovery Pattern</th>\n");
+        markdown.push_str("</tr>\n");
+        markdown.push_str("</thead>\n");
+        markdown.push_str("<tbody>\n");
 
         // Sort services by name within category
         let mut sorted_services = services.clone();
@@ -557,23 +565,23 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
             let description = service.description();
             let pattern = service.discovery_pattern().to_string();
 
-            // Format logo - use image markdown if URL exists, otherwise use placeholder
+            // Format logo
             let logo = if !logo_url.is_empty() {
-                format!("![{}]({})", name, logo_url)
+                format!("<img src=\"{}\" alt=\"{}\" width=\"32\" height=\"32\" />", logo_url, name)
             } else {
                 "—".to_string()
             };
 
-            // Escape pipe characters in pattern to avoid breaking table
-            let escaped_pattern = pattern.replace('|', "\\|");
-
-            markdown.push_str(&format!(
-                "| {} | {} | {} | `{}` |\n",
-                logo, name, description, escaped_pattern
-            ));
+            markdown.push_str("<tr>\n");
+            markdown.push_str(&format!("<td align=\"center\">{}</td>\n", logo));
+            markdown.push_str(&format!("<td>{}</td>\n", name));
+            markdown.push_str(&format!("<td>{}</td>\n", description));
+            markdown.push_str(&format!("<td><code>{}</code></td>\n", pattern));
+            markdown.push_str("</tr>\n");
         }
 
-        markdown.push_str("\n");
+        markdown.push_str("</tbody>\n");
+        markdown.push_str("</table>\n\n");
     }
 
     let md_path = std::path::Path::new("../docs/SERVICES-NEXT.md");
