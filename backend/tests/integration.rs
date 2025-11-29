@@ -5,12 +5,9 @@ use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::discovery::r#impl::types::DiscoveryType;
 use netvisor::server::networks::r#impl::Network;
 use netvisor::server::organizations::r#impl::base::Organization;
-#[cfg(feature = "generate-fixtures")]
-use netvisor::server::services::definitions::ServiceDefinitionRegistry;
+
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
-#[cfg(feature = "generate-fixtures")]
-use netvisor::server::services::r#impl::definitions::ServiceDefinition;
 use netvisor::server::shared::handlers::factory::OnboardingRequest;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
@@ -407,6 +404,100 @@ async fn verify_home_assistant_discovered(client: &TestClient) -> Result<Service
     .await
 }
 
+#[tokio::test]
+async fn test_full_integration() {
+    // Start containers
+    let mut container_manager = ContainerManager::new();
+    container_manager
+        .start()
+        .expect("Failed to start containers");
+
+    let client = TestClient::new();
+
+    // Authenticate
+    let user = setup_authenticated_user(&client)
+        .await
+        .expect("Failed to authenticate user");
+    println!("✅ Authenticated as: {}", user.base.email);
+
+    // Wait for organization
+    println!("\n=== Waiting for Organization ===");
+    let organization = wait_for_organization(&client)
+        .await
+        .expect("Failed to find organization");
+    println!("✅ Organization: {}", organization.base.name);
+
+    // Onboard
+    println!("\n=== Onboarding ===");
+    onboard(&client).await.expect("Failed to onboard");
+    println!("✅ Onboarded");
+
+    // Wait for network
+    println!("\n=== Waiting for Network ===");
+    let network = wait_for_network(&client)
+        .await
+        .expect("Failed to find network");
+    println!("✅ Network: {}", network.base.name);
+
+    // Wait for daemon
+    println!("\n=== Waiting for Daemon ===");
+    let daemon = wait_for_daemon(&client)
+        .await
+        .expect("Failed to find daemon");
+    println!("✅ Daemon registered: {}", daemon.id);
+
+    // Run discovery
+    run_discovery(&client).await.expect("Discovery failed");
+
+    // Verify service discovered
+    let _service = verify_home_assistant_discovered(&client)
+        .await
+        .expect("Failed to find Home Assistant");
+
+    #[cfg(feature = "generate-fixtures")]
+    {
+        generate_fixtures().await;
+    }
+
+    println!("\n✅ All integration tests passed!");
+    println!("   ✓ User authenticated");
+    println!("   ✓ Network created");
+    println!("   ✓ Daemon registered");
+    println!("   ✓ Discovery completed");
+    println!("   ✓ Home Assistant discovered");
+}
+
+#[cfg(feature = "generate-fixtures")]
+use netvisor::server::{
+    services::{definitions::ServiceDefinitionRegistry, r#impl::definitions::ServiceDefinition},
+    shared::types::metadata::TypeMetadata,
+};
+
+#[cfg(feature = "generate-fixtures")]
+pub async fn generate_fixtures() {
+    generate_db_fixture()
+        .await
+        .expect("Failed to generate db fixture");
+
+    generate_daemon_config_fixture()
+        .await
+        .expect("Failed to generate daemon config fixture");
+
+    generate_services_json()
+        .await
+        .expect("Failed to generate services json");
+
+    generate_services_markdown()
+        .await
+        .expect("Failed to generate services markdown");
+
+    generate_billing_plans_json()
+        .await
+        .expect("Failed to generate billing and features json");
+
+    println!("✅ Generated test fixtures");
+}
+
 #[cfg(feature = "generate-fixtures")]
 async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
@@ -543,14 +634,16 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
         // Add category header
         markdown.push_str(&format!("## {}\n\n", category));
 
-        // Use HTML table for better control
-        markdown.push_str("<table>\n");
+        // Use HTML table with dark theme styling
+        markdown.push_str("<table style=\"background-color: #1a1d29; border-collapse: collapse; width: 100%;\">\n");
         markdown.push_str("<thead>\n");
-        markdown.push_str("<tr>\n");
-        markdown.push_str("<th width=\"60\">Logo</th>\n");
-        markdown.push_str("<th width=\"200\">Name</th>\n");
-        markdown.push_str("<th width=\"300\">Description</th>\n");
-        markdown.push_str("<th>Discovery Pattern</th>\n");
+        markdown.push_str(
+            "<tr style=\"background-color: #1f2937; border-bottom: 2px solid #374151;\">\n",
+        );
+        markdown.push_str("<th width=\"60\" style=\"padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;\">Logo</th>\n");
+        markdown.push_str("<th width=\"200\" style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Name</th>\n");
+        markdown.push_str("<th width=\"300\" style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Description</th>\n");
+        markdown.push_str("<th style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Discovery Pattern</th>\n");
         markdown.push_str("</tr>\n");
         markdown.push_str("</thead>\n");
         markdown.push_str("<tbody>\n");
@@ -575,11 +668,20 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
                 "—".to_string()
             };
 
-            markdown.push_str("<tr>\n");
-            markdown.push_str(&format!("<td align=\"center\">{}</td>\n", logo));
-            markdown.push_str(&format!("<td>{}</td>\n", name));
-            markdown.push_str(&format!("<td>{}</td>\n", description));
-            markdown.push_str(&format!("<td><code>{}</code></td>\n", pattern));
+            markdown.push_str("<tr style=\"border-bottom: 1px solid #374151;\">\n");
+            markdown.push_str(&format!(
+                "<td align=\"center\" style=\"padding: 12px; color: #d1d5db;\">{}</td>\n",
+                logo
+            ));
+            markdown.push_str(&format!(
+                "<td style=\"padding: 12px; color: #f3f4f6; font-weight: 500;\">{}</td>\n",
+                name
+            ));
+            markdown.push_str(&format!(
+                "<td style=\"padding: 12px; color: #d1d5db;\">{}</td>\n",
+                description
+            ));
+            markdown.push_str(&format!("<td style=\"padding: 12px;\"><code style=\"background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;\">{}</code></td>\n", pattern));
             markdown.push_str("</tr>\n");
         }
 
@@ -593,81 +695,32 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-#[tokio::test]
-async fn test_full_integration() {
-    // Start containers
-    let mut container_manager = ContainerManager::new();
-    container_manager
-        .start()
-        .expect("Failed to start containers");
+#[cfg(feature = "generate-fixtures")]
+async fn generate_billing_plans_json() -> Result<(), Box<dyn std::error::Error>> {
+    use netvisor::server::billing::plans::get_all_plans;
+    use netvisor::server::billing::types::features::Feature;
+    use netvisor::server::shared::types::metadata::MetadataProvider;
+    use strum::IntoEnumIterator;
 
-    let client = TestClient::new();
+    // Get all plans (monthly + yearly)
+    let plans = get_all_plans();
 
-    // Authenticate
-    let user = setup_authenticated_user(&client)
-        .await
-        .expect("Failed to authenticate user");
-    println!("✅ Authenticated as: {}", user.base.email);
+    // Convert to metadata format (same as API returns)
+    let plan_metadata: Vec<TypeMetadata> = plans.iter().map(|p| p.to_metadata()).collect();
 
-    // Wait for organization
-    println!("\n=== Waiting for Organization ===");
-    let organization = wait_for_organization(&client)
-        .await
-        .expect("Failed to find organization");
-    println!("✅ Organization: {}", organization.base.name);
+    // Get all features metadata
+    let feature_metadata: Vec<TypeMetadata> = Feature::iter().map(|f| f.to_metadata()).collect();
 
-    // Onboard
-    println!("\n=== Onboarding ===");
-    onboard(&client).await.expect("Failed to onboard");
-    println!("✅ Onboarded");
+    // Combine into a single structure
+    let fixture = serde_json::json!({
+        "billing_plans": plan_metadata,
+        "features": feature_metadata,
+    });
 
-    // Wait for network
-    println!("\n=== Waiting for Network ===");
-    let network = wait_for_network(&client)
-        .await
-        .expect("Failed to find network");
-    println!("✅ Network: {}", network.base.name);
+    let json_string = serde_json::to_string_pretty(&fixture)?;
+    let path = std::path::Path::new("../ui/static/billing-plans-next.json");
+    tokio::fs::write(path, json_string).await?;
 
-    // Wait for daemon
-    println!("\n=== Waiting for Daemon ===");
-    let daemon = wait_for_daemon(&client)
-        .await
-        .expect("Failed to find daemon");
-    println!("✅ Daemon registered: {}", daemon.id);
-
-    // Run discovery
-    run_discovery(&client).await.expect("Discovery failed");
-
-    // Verify service discovered
-    let _service = verify_home_assistant_discovered(&client)
-        .await
-        .expect("Failed to find Home Assistant");
-
-    #[cfg(feature = "generate-fixtures")]
-    {
-        generate_db_fixture()
-            .await
-            .expect("Failed to generate db fixture");
-
-        generate_daemon_config_fixture()
-            .await
-            .expect("Failed to generate daemon config fixture");
-
-        generate_services_json()
-            .await
-            .expect("Failed to generate services json");
-
-        generate_services_markdown()
-            .await
-            .expect("Failed to generate services markdown");
-
-        println!("✅ Generated test fixtures");
-    }
-
-    println!("\n✅ All integration tests passed!");
-    println!("   ✓ User authenticated");
-    println!("   ✓ Network created");
-    println!("   ✓ Daemon registered");
-    println!("   ✓ Discovery completed");
-    println!("   ✓ Home Assistant discovered");
+    println!("✅ Generated billing-plans-next.json");
+    Ok(())
 }

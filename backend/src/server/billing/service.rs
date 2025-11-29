@@ -102,15 +102,8 @@ impl BillingService {
     pub async fn initialize_products(&self, plans: Vec<BillingPlan>) -> Result<(), Error> {
         let mut created_plans = Vec::new();
 
-        let all_plans: Vec<BillingPlan> = plans
-            .clone()
-            .iter()
-            .map(|p| p.to_yearly(0.20))
-            .chain(plans)
-            .collect();
-
         tracing::info!(
-            plan_count = all_plans.len(),
+            plan_count = plans.len(),
             "Initializing Stripe products and prices"
         );
 
@@ -157,7 +150,7 @@ impl BillingService {
             }
         };
 
-        for plan in all_plans {
+        for plan in plans {
             // Check if product exists, create if not
             let product_id = plan.stripe_product_id();
             let product = match RetrieveProduct::new(product_id.clone())
@@ -731,6 +724,7 @@ impl BillingService {
             }
             BillingPlan::Team { .. } => {}
             BillingPlan::Business { .. } => {}
+            BillingPlan::Enterprise { .. } => {}
         }
 
         organization.base.plan_status = Some(sub.status.to_string());

@@ -108,7 +108,6 @@ pub mod ceph;
 pub mod file_server;
 pub mod filezilla_server;
 pub mod minio;
-pub mod nas_device;
 pub mod next_cloud;
 pub mod nfs_server;
 pub mod open_media_vault;

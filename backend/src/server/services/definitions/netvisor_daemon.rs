@@ -23,7 +23,7 @@ impl ServiceDefinition for NetvisorDaemon {
     }
 
     fn logo_url(&self) -> &'static str {
-        "/logos/netvisor-logo.png"
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png"
     }
 }
 
