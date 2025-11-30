@@ -27,6 +27,7 @@ pub enum BillingPlan {
     Pro(PlanConfig),
     Team(PlanConfig),
     Business(PlanConfig),
+    Enterprise(PlanConfig),
 }
 
 impl PartialEq for BillingPlan {
@@ -128,6 +129,7 @@ impl BillingPlan {
             "pro" => Some(Self::Pro(plan_config)),
             "team" => Some(Self::Team(plan_config)),
             "business" => Some(Self::Business(plan_config)),
+            "enterprise" => Some(Self::Enterprise(plan_config)),
             _ => None,
         }
     }
@@ -139,6 +141,7 @@ impl BillingPlan {
             BillingPlan::Pro(plan_config) => *plan_config,
             BillingPlan::Team(plan_config) => *plan_config,
             BillingPlan::Business(plan_config) => *plan_config,
+            BillingPlan::Enterprise(plan_config) => *plan_config,
         }
     }
 
@@ -149,11 +152,15 @@ impl BillingPlan {
             BillingPlan::Pro(plan_config) => *plan_config = config,
             BillingPlan::Team(plan_config) => *plan_config = config,
             BillingPlan::Business(plan_config) => *plan_config = config,
+            BillingPlan::Enterprise(plan_config) => *plan_config = config,
         }
     }
 
     pub fn is_commercial(&self) -> bool {
-        matches!(self, BillingPlan::Team(_) | BillingPlan::Business(_))
+        matches!(
+            self,
+            BillingPlan::Team(_) | BillingPlan::Business(_) | BillingPlan::Enterprise(_)
+        )
     }
 
     pub fn stripe_product_id(&self) -> String {
@@ -238,6 +245,15 @@ impl BillingPlan {
                 audit_logs: true,
                 remove_powered_by: true,
             },
+            BillingPlan::Enterprise { .. } => BillingPlanFeatures {
+                share_views: true,
+                onboarding_call: true,
+                dedicated_support_channel: true,
+                commercial_license: true,
+                api_access: true,
+                audit_logs: true,
+                remove_powered_by: true,
+            },
         }
     }
 }
@@ -302,7 +318,8 @@ impl EntityMetadataProvider for BillingPlan {
             BillingPlan::Starter { .. } => "ThumbsUp",
             BillingPlan::Pro { .. } => "Zap",
             BillingPlan::Team { .. } => "Users",
-            BillingPlan::Business { .. } => "Building",
+            BillingPlan::Business { .. } => "Briefcase",
+            BillingPlan::Enterprise { .. } => "Building",
         }
     }
 
@@ -312,7 +329,8 @@ impl EntityMetadataProvider for BillingPlan {
             BillingPlan::Starter { .. } => "blue",
             BillingPlan::Pro { .. } => "yellow",
             BillingPlan::Team { .. } => "orange",
-            BillingPlan::Business { .. } => "gray",
+            BillingPlan::Business { .. } => "brown",
+            BillingPlan::Enterprise { .. } => "gray",
         }
     }
 }
@@ -325,6 +343,7 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Pro { .. } => "Pro",
             BillingPlan::Team { .. } => "Team",
             BillingPlan::Business { .. } => "Business",
+            BillingPlan::Enterprise { .. } => "Enterprise",
         }
     }
 
@@ -341,11 +360,25 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Business { .. } => {
                 "Manage multi-site and multi-customer documentation with advanced features"
             }
+            BillingPlan::Enterprise { .. } => {
+                "Deploy NetVisor with enterprise-grade features and functionality"
+            }
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
+        let config = self.config();
+
         serde_json::json!({
+            // Pricing information
+            "base_cents": config.base_cents,
+            "rate": config.rate,
+            "trial_days": config.trial_days,
+            "seat_cents": config.seat_cents,
+            "network_cents": config.network_cents,
+            "included_seats": config.included_seats,
+            "included_networks": config.included_networks,
+            // Feature flags and metadata
             "features": self.features(),
             "is_commercial": self.is_commercial()
         })

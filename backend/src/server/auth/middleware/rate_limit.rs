@@ -163,9 +163,10 @@ pub async fn rate_limit_middleware(
     request: Request,
     next: Next,
 ) -> Result<Response, Response> {
-    // Exempt billing webhook endpoints
     let path = request.uri().path();
-    if path.starts_with("/api/billing/webhooks/") {
+
+    // Exempt static file serving and billing webhooks
+    if !path.starts_with("/api/") || path.starts_with("/api/billing/webhooks/") {
         return Ok(next.run(request).await);
     }
 

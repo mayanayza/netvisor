@@ -12,7 +12,7 @@ use netvisor::server::{
         auth::AuthenticatedEntity, logging::request_logging_middleware,
         rate_limit::rate_limit_middleware,
     },
-    billing::types::base::{BillingPlan, BillingRate, PlanConfig},
+    billing::plans::get_all_plans,
     config::{AppState, ServerCli, ServerConfig},
     organizations::r#impl::base::{Organization, OrganizationBase},
     shared::{
@@ -207,46 +207,7 @@ async fn main() -> anyhow::Result<()> {
     let all_users = user_service.get_all(EntityFilter::unfiltered()).await?;
 
     if let Some(billing_service) = billing_service {
-        billing_service
-            .initialize_products(vec![
-                BillingPlan::Starter(PlanConfig {
-                    base_cents: 1499,
-                    rate: BillingRate::Month,
-                    trial_days: 0,
-                    seat_cents: None,
-                    network_cents: None,
-                    included_seats: Some(1),
-                    included_networks: Some(1),
-                }),
-                BillingPlan::Pro(PlanConfig {
-                    base_cents: 2499,
-                    rate: BillingRate::Month,
-                    trial_days: 7,
-                    seat_cents: None,
-                    network_cents: None,
-                    included_seats: Some(1),
-                    included_networks: Some(3),
-                }),
-                BillingPlan::Team(PlanConfig {
-                    base_cents: 7999,
-                    rate: BillingRate::Month,
-                    trial_days: 7,
-                    seat_cents: Some(1000),
-                    network_cents: Some(800),
-                    included_seats: Some(5),
-                    included_networks: Some(5),
-                }),
-                BillingPlan::Business(PlanConfig {
-                    base_cents: 14999,
-                    rate: BillingRate::Month,
-                    trial_days: 14,
-                    seat_cents: Some(800),
-                    network_cents: Some(500),
-                    included_seats: Some(10),
-                    included_networks: Some(25),
-                }),
-            ])
-            .await?;
+        billing_service.initialize_products(get_all_plans()).await?;
     }
 
     // First load - populate user and org

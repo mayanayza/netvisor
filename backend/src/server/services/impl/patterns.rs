@@ -158,6 +158,45 @@ impl Vendor {
     pub const ROKU: &'static str = "Roku, Inc";
 }
 
+impl PartialEq for Pattern<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Pattern::AnyOf(a), Pattern::AnyOf(b)) => a == b,
+            (Pattern::AllOf(a), Pattern::AllOf(b)) => a == b,
+            (Pattern::Not(a), Pattern::Not(b)) => a == b,
+            (Pattern::Port(a), Pattern::Port(b)) => a == b,
+            (
+                Pattern::Endpoint(port_a, path_a, match_a, range_a),
+                Pattern::Endpoint(port_b, path_b, match_b, range_b),
+            ) => port_a == port_b && path_a == path_b && match_a == match_b && range_a == range_b,
+            (
+                Pattern::Header(port_a, header_a, value_a, range_a),
+                Pattern::Header(port_b, header_b, value_b, range_b),
+            ) => {
+                port_a == port_b && header_a == header_b && value_a == value_b && range_a == range_b
+            }
+            (Pattern::SubnetIsType(a), Pattern::SubnetIsType(b)) => a == b,
+            (Pattern::IsGateway, Pattern::IsGateway) => true,
+            (Pattern::MacVendor(a), Pattern::MacVendor(b)) => a == b,
+            (
+                Pattern::Custom(fn_a, match_a, no_match_a, conf_a),
+                Pattern::Custom(fn_b, match_b, no_match_b, conf_b),
+            ) => {
+                // Compare function pointers by address and compare other fields
+                (*fn_a as usize) == (*fn_b as usize)
+                    && match_a == match_b
+                    && no_match_a == no_match_b
+                    && conf_a == conf_b
+            }
+            (Pattern::DockerContainer, Pattern::DockerContainer) => true,
+            (Pattern::None, Pattern::None) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Pattern<'_> {}
+
 impl Display for Pattern<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -175,7 +214,7 @@ impl Display for Pattern<'_> {
                 if let Some(range) = range {
                     write!(
                         f,
-                        "Endpoint response status is between {} and {}, and response body from <ip>:{}{} contains {}",
+                        "Endpoint response status is between {} and {}, and response body from <ip>:{}{} contains \"{}\"",
                         range.start,
                         range.end,
                         port_base.number(),
@@ -185,7 +224,7 @@ impl Display for Pattern<'_> {
                 } else {
                     write!(
                         f,
-                        "Endpoint response body from <ip>:{}{} contains {}",
+                        "Endpoint response body from <ip>:{}{} contains \"{}\"",
                         port_base.number(),
                         path,
                         match_string
@@ -201,13 +240,13 @@ impl Display for Pattern<'_> {
                 if let Some(range) = range {
                     write!(
                         f,
-                        "Endpoint response status is between {} and {}, and response from {} has header {} with value {}",
+                        "Endpoint response status is between {} and {}, and response from {} has header \"{}\" with value \"{}\"",
                         range.start, range.end, ip_str, header, value
                     )
                 } else {
                     write!(
                         f,
-                        "Endpoint response from {} has header {} with value {}",
+                        "Endpoint response from {} has header \"{}\" with value \"{}\"",
                         ip_str, header, value
                     )
                 }

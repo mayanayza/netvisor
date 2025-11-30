@@ -25,10 +25,9 @@ impl ServiceDefinition for Restic {
         ])
     }
 
-    // Does not support SVG
-    // fn icon(&self) -> &'static str {
-    //     "restic"
-    // }
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/restic.png"
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<Restic>));
