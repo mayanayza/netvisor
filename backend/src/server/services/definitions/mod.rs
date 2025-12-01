@@ -256,6 +256,7 @@ pub mod asterisk;
 pub mod bigbluebutton;
 pub mod freepbx;
 pub mod jitsi_meet;
+pub mod mailcow;
 pub mod sip_server;
 
 // ============= END DEVICES =============
