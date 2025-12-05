@@ -230,6 +230,15 @@ https://your-netvisor-domain/api/auth/oidc/callback
 - `email` - For user email address
 - `profile` - For user display name (optional)
 
+### OIDC with Docker Compose
+
+If you want to use OIDC with NetVisor's docker compose deployment, you'll need to add the following volume mount:
+
+```
+volumes:
+  - ./oidc.toml:/oidc.toml:ro
+```
+
 ### Example: Authentik
 
 1. **Create Application** in Authentik:
