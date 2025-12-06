@@ -142,6 +142,10 @@ jobs:
         run: |
           git fetch origin ${{ github.event.release.target_commitish }}
           git reset --hard origin/${{ github.event.release.target_commitish }}
+          echo "=== Current commit ==="
+          git log -1 --oneline
+          echo "=== Cargo.toml version ==="
+          grep "^version" backend/Cargo.toml | head -1
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
