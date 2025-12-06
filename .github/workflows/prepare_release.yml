@@ -65,3 +65,12 @@ jobs:
           git commit -m "chore: bump version to ${{ inputs.version }}"
           git push origin dev
         fi
+    - name: Create release
+      run: |
+        gh release create "v${{ inputs.version }}" \
+          --title "v${{ inputs.version }}" \
+          --generate-notes \
+          --prerelease \
+          --target dev
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
