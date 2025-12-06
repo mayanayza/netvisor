@@ -28,11 +28,13 @@ Later sources override earlier ones. For example, an environment variable overri
 ### Configuration Methods
 
 **Command-line arguments**:
+
 ```bash
 netvisor-daemon --server-url http://192.168.1.100:60072 --api-key YOUR_KEY
 ```
 
 **Environment variables**:
+
 ```bash
 export NETVISOR_SERVER_URL=http://192.168.1.100:60072
 export NETVISOR_DAEMON_API_KEY=YOUR_KEY
@@ -40,6 +42,7 @@ netvisor-daemon
 ```
 
 **Docker environment**:
+
 ```yaml
 environment:
   - NETVISOR_SERVER_URL=http://192.168.1.100:60072
@@ -49,6 +52,7 @@ environment:
 **Configuration file**:
 
 The daemon automatically creates a config file at:
+
 - **Linux**: `~/.config/netvisor/daemon/config.json`
 - **macOS**: `~/Library/Application Support/com.netvisor.daemon/config.json`
 - **Windows**: `%APPDATA%\netvisor\daemon\config.json`
@@ -77,23 +81,27 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 Controls how many hosts the daemon scans simultaneously during network discovery.
 
 **Default behavior**: Auto-detected based on system resources
+
 - Calculates based on available memory
 - Typical range: 10-20 for most systems
 - Adjusts to prevent memory exhaustion
 
 **When to set manually**:
+
 - System crashes during scans
 - Memory errors in logs
 - Very large networks (100+ hosts)
 - Resource-constrained devices (Raspberry Pi)
 
 **Recommended values**:
+
 - **Raspberry Pi 4 (4GB)**: 5-10
 - **Standard desktop**: 15-20
 - **Server**: 20-30+
 - **Low memory**: Start with 5, increase gradually
 
 **Setting**:
+
 ```bash
 # CLI
 netvisor-daemon --concurrent-scans 10
@@ -107,12 +115,14 @@ environment:
 ```
 
 **Symptoms of too high**:
+
 - Daemon crashes during scans
 - "CONCURRENT_SCANS too high for this system" error
 - Out of memory errors
 - System becomes unresponsive
 
 **Impact**:
+
 - Lower value = slower scans, more stable
 - Higher value = faster scans, more memory usage
 
@@ -121,6 +131,7 @@ environment:
 ### Configuration Methods
 
 **Environment variables in docker-compose**:
+
 ```yaml
 environment:
   - NETVISOR_SERVER_PORT=60072
@@ -128,6 +139,7 @@ environment:
 ```
 
 **Command-line** (for binary builds):
+
 ```bash
 ./netvisor-server --port 60072 --database-url postgresql://...
 ```
@@ -154,11 +166,13 @@ environment:
 The integrated daemon runs in a separate container and needs to reach the server. The default assumes Docker's bridge network gateway is `172.17.0.1`.
 
 **Check your bridge gateway**:
+
 ```bash
 docker network inspect bridge | grep Gateway
 ```
 
 **If different**, update in docker-compose.yml:
+
 ```yaml
 environment:
   - NETVISOR_INTEGRATED_DAEMON_URL=http://YOUR_GATEWAY_IP:60073
@@ -171,6 +185,7 @@ SMTP settings enable email-based features such as password reset.
 **All SMTP parameters are optional.** If not configured, email features will be disabled.
 
 **Configuration**:
+
 ```yaml
 environment:
   - NETVISOR_SMTP_RELAY=smtp.gmail.com:587
@@ -217,19 +232,31 @@ To get started, refer to oidc.toml.example. You can set up multiple OIDC provide
 ### Provider Configuration
 
 **Callback URL**: Configure this in your OIDC provider:
+
 ```
 http://your-netvisor-domain:60072/api/auth/oidc/callback
 ```
 
 Or with HTTPS:
+
 ```
 https://your-netvisor-domain/api/auth/oidc/callback
 ```
 
 **Required scopes**:
+
 - `openid` - OIDC standard
 - `email` - For user email address
 - `profile` - For user display name (optional)
+
+### OIDC with Docker Compose
+
+If you want to use OIDC with NetVisor's docker compose deployment, you'll need to add the following volume mount:
+
+```
+volumes:
+  - ./oidc.toml:/oidc.toml:ro
+```
 
 ### Example: Authentik
 
@@ -260,16 +287,19 @@ environment:
 ```
 
 **When to enable**:
+
 - Behind a reverse proxy with TLS (Nginx, Traefik, Caddy)
 - Using a domain with HTTPS
 - Production deployments
 
 **When to disable** (default):
+
 - Internal networks without HTTPS
 - Development environments
 - Accessing via IP address without TLS
 
 **Effect**:
+
 - `true`: Cookies marked as Secure, only sent over HTTPS
 - `false`: Cookies sent over HTTP and HTTPS
 
@@ -278,6 +308,7 @@ environment:
 For easier management, use `.env` files:
 
 **Create `.env`**:
+
 ```bash
 # Database
 NETVISOR_DATABASE_URL=postgresql://postgres:password@db:5432/netvisor
@@ -294,18 +325,12 @@ NETVISOR_SMTP_USERNAME=your-email@gmail.com
 NETVISOR_SMTP_PASSWORD=your-app-password
 NETVISOR_SMTP_EMAIL=netvisor@yourdomain.com
 
-# OIDC (optional)
-NETVISOR_OIDC_ISSUER_URL=https://auth.example.com/
-NETVISOR_OIDC_CLIENT_ID=client_id
-NETVISOR_OIDC_CLIENT_SECRET=client_secret
-NETVISOR_OIDC_REDIRECT_URL=https://redirect.example.com/callback
-NETVISOR_OIDC_PROVIDER_NAME=Authentik
-
 # Daemon
 NETVISOR_INTEGRATED_DAEMON_URL=http://172.17.0.1:60073
 ```
 
 **Reference in docker-compose.yml**:
+
 ```yaml
 services:
   netvisor-server:
