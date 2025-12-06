@@ -8,11 +8,13 @@
 
 	const { getNodes, getEdges, getViewport, setViewport } = useSvelteFlow();
 
-	let hideCreatedWith = $derived(
-		$organization?.plan.type
-			? billingPlans.getMetadata($organization?.plan.type).features.remove_created_with
-			: false
-	);
+	let hideCreatedWith = $derived.by(() => {
+		if ($organization && $organization.plan && $organization.plan.type) {
+			return billingPlans.getMetadata($organization.plan.type).features.remove_created_with;
+		} else {
+			return false;
+		}
+	});
 
 	function downloadImage(dataUrl: string) {
 		const link = document.createElement('a');
