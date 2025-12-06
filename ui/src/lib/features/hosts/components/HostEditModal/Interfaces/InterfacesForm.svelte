@@ -17,6 +17,8 @@
 	// Computed values
 	$: interfaces = formData.interfaces || [];
 
+	$: availableSubnets = $subnets.filter((s) => s.network_id == formData.network_id);
+
 	// Helper function to find subnet by ID
 	function findSubnetById(subnetId: string) {
 		return $subnets.find((s) => s.id === subnetId) || null;
@@ -64,7 +66,7 @@
 			emptyMessage="No interfaces configured. Add one to get started."
 			allowReorder={false}
 			{formApi}
-			options={$subnets}
+			options={availableSubnets}
 			{items}
 			optionDisplayComponent={SubnetDisplay}
 			itemDisplayComponent={InterfaceDisplay}

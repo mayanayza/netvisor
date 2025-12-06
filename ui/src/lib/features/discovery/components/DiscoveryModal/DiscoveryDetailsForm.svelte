@@ -19,6 +19,8 @@
 
 	// Update formData when field values change
 	$: formData.name = $name.value;
+
+	$: daemon = daemons.find((d) => d.id === formData.daemon_id) || null;
 </script>
 
 <div class="space-y-4">
@@ -45,7 +47,9 @@
 			options={daemons}
 			displayComponent={DaemonDisplay}
 			onSelect={(value) => {
-				formData = { ...formData, daemon_id: value };
+				if (daemon) {
+					formData = { ...formData, daemon_id: value, network_id: daemon.network_id };
+				}
 			}}
 		/>
 		<p class="text-tertiary text-xs">The daemon that will execute this discovery</p>
