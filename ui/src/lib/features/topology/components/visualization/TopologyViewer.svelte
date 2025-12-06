@@ -279,3 +279,39 @@
 		/>
 	</SvelteFlow>
 </div>
+
+<style>
+	:global(.svelte-flow__attribution) {
+		background: transparent;
+		color: rgba(255, 255, 255, 0.15);
+		font-size: 10px;
+	}
+
+	:global(.svelte-flow__attribution.right) {
+		right: 10px;
+	}
+
+	:global(.svelte-flow__attribution.bottom) {
+		bottom: 10px;
+	}
+
+	:global(.svelte-flow__attribution a) {
+		color: rgba(255, 255, 255, 0.15);
+	}
+
+	:global(.svelte-flow__attribution a:hover) {
+		color: rgba(255, 255, 255, 0.3);
+	}
+
+	:global(.hide-for-export .svelte-flow__attribution) {
+		opacity: 0;
+	}
+
+	:global(.hide-for-export .svelte-flow__controls) {
+		opacity: 0;
+	}
+
+	:global(.hide-for-export .svelte-flow__resize-control) {
+		opacity: 0;
+	}
+</style>

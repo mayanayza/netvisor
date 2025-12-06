@@ -3,8 +3,16 @@
 	import { useSvelteFlow, type Node } from '@xyflow/svelte';
 	import { Download } from 'lucide-svelte';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
+	import { organization } from '$lib/features/organizations/store';
+	import { billingPlans } from '$lib/shared/stores/metadata';
 
 	const { getNodes, getEdges, getViewport, setViewport } = useSvelteFlow();
+
+	let hideCreatedWith = $derived(
+		$organization?.plan.type
+			? billingPlans.getMetadata($organization?.plan.type).features.remove_created_with
+			: false
+	);
 
 	function downloadImage(dataUrl: string) {
 		const link = document.createElement('a');
@@ -27,7 +35,7 @@
 		return { x: node.position.x, y: node.position.y };
 	}
 
-	function handleClick() {
+	async function handleClick() {
 		const nodes = getNodes();
 		const edges = getEdges();
 
@@ -145,52 +153,71 @@
 		setViewport(newViewport, { duration: 0 });
 		flowElement.classList.add('hide-for-export');
 
-		const watermark = document.createElement('div');
-		watermark.textContent = 'created with netvisor.io';
-		watermark.style.cssText = `
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 12px;
-      font-family: system-ui;
-      pointer-events: none;
-      z-index: 9999;
-    `;
+		let watermark = document.createElement('div');
 
-		flowElement.appendChild(watermark);
+		if (!hideCreatedWith) {
+			watermark = document.createElement('div');
+			watermark.style.cssText = `
+				position: absolute;
+				bottom: 15px;
+				right: 15px;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				color: rgba(255, 255, 255, 0.5);
+				font-size: 14px;
+				font-family: system-ui;
+				pointer-events: none;
+				z-index: 9999;
+			`;
 
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				toPng(flowElement, {
-					width: imageWidth,
-					height: imageHeight,
-					pixelRatio: 2
-				})
-					.then((dataUrl) => {
-						downloadImage(dataUrl);
-						watermark.remove();
-						flowElement.classList.remove('hide-for-export');
-						flowElement.style.width = originalWidth;
-						flowElement.style.height = originalHeight;
+			const logo = document.createElement('img');
+			logo.src = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png';
+			logo.style.cssText = `
+				height: 18px;
+				width: auto;
+			`;
 
-						setTimeout(() => {
-							setViewport(originalViewport, { duration: 0 });
-						}, 50);
-					})
-					.catch((err) => {
-						console.error('Export failed:', err);
-						watermark.remove();
-						flowElement.classList.remove('hide-for-export');
-						flowElement.style.width = originalWidth;
-						flowElement.style.height = originalHeight;
-						setViewport(originalViewport, { duration: 0 });
-					});
+			const text = document.createElement('span');
+			text.textContent = 'Created using netvisor.io';
+
+			watermark.appendChild(logo);
+			watermark.appendChild(text);
+			flowElement.appendChild(watermark);
+
+			// Wait for logo to load
+			await new Promise<void>((resolve) => {
+				if (logo.complete) {
+					resolve();
+				} else {
+					logo.onload = () => resolve();
+					logo.onerror = () => resolve(); // Continue even if logo fails
+				}
 			});
-		});
+		}
+
+		await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+		try {
+			const dataUrl = await toPng(flowElement, {
+				width: imageWidth,
+				height: imageHeight,
+				pixelRatio: 2
+			});
+			downloadImage(dataUrl);
+		} catch (err) {
+			console.error('Export failed:', err);
+			pushError('Export failed');
+		} finally {
+			watermark.remove();
+			flowElement.classList.remove('hide-for-export');
+			flowElement.style.width = originalWidth;
+			flowElement.style.height = originalHeight;
+			setTimeout(() => setViewport(originalViewport, { duration: 0 }), 50);
+		}
 	}
 </script>
 
-<button class="btn-secondary" on:click={handleClick}>
+<button class="btn-secondary" onclick={handleClick}>
 	<Download class="h-5 w-5" /> Export
 </button>

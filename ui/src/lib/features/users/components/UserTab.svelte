@@ -48,7 +48,7 @@
 		if (!$organization || !$organization.plan) return [];
 
 		let features = billingPlans.getMetadata($organization.plan.type).features;
-		return features.share_views || features.team_members;
+		return features.share_views;
 	});
 
 	async function handleBulkDelete(ids: string[]) {

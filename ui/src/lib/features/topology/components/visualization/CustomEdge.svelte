@@ -273,7 +273,7 @@
 		class={useMultiColorDash ? 'dashed-overlay' : ''}
 	/>
 
-	{#if label && shouldShowFull}
+	{#if label}
 		<EdgeLabel
 			x={labelX + labelOffsetX}
 			y={labelY + labelOffsetY}
