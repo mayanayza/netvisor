@@ -1,4 +1,4 @@
--- Migration: Fix NULL plans for self-hosted instances that completed onboarding
+-- Migration: Fix JSONB null plans for self-hosted instances
 
 UPDATE organizations
 SET plan = '{
@@ -11,5 +11,5 @@ SET plan = '{
   "included_seats": null,
   "included_networks": null
 }'::jsonb
-WHERE plan IS NULL
+WHERE (plan IS NULL OR plan = 'null'::jsonb)
   AND onboarding @> '["OnboardingModalCompleted"]'::jsonb;
