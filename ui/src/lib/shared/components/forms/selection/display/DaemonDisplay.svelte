@@ -8,7 +8,26 @@
 		getDescription: (daemon: Daemon) => get(getHostFromId(daemon.host_id))?.description || '',
 		getIcon: () => entities.getIconComponent('Daemon'),
 		getIconColor: () => entities.getColorHelper('Daemon').icon,
-		getTags: () => [],
+		getTags: (daemon: Daemon) => {
+			let tags = [];
+
+			tags.push({
+				label: 'Docker Socket ' + (daemon.capabilities.has_docker_socket ? '✓' : '✘'),
+				color: daemon.capabilities.has_docker_socket ? 'blue' : 'gray'
+			});
+
+			daemon.capabilities.interfaced_subnet_ids.forEach((s) => {
+				let subnet = get(getSubnetFromId(s));
+				if (subnet) {
+					tags.push({
+						label: subnet.cidr,
+						color: entities.getColorHelper('Subnet').string
+					});
+				}
+			});
+
+			return tags;
+		},
 		getCategory: () => null
 	};
 </script>
@@ -19,6 +38,7 @@
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { getHostFromId } from '$lib/features/hosts/store';
 	import { get } from 'svelte/store';
+	import { getSubnetFromId } from '$lib/features/subnets/store';
 
 	export let item: Daemon;
 	export let context = {};

@@ -33,6 +33,7 @@
 		const newService: Service = createDefaultService(
 			serviceTypeId,
 			formData.id,
+			formData.network_id,
 			serviceDefinitions.getName(serviceTypeId)
 		);
 

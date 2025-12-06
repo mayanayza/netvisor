@@ -22,10 +22,14 @@
 	let loading = false;
 	let showPreview = false;
 
-	// Get available hosts (excluding the source host)
-	$: availableHosts = (otherHost ? $hosts.filter((host) => host.id !== otherHost.id) : $hosts).sort(
-		(a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-	);
+	// Get available hosts (excluding the host being consolidated away)
+	$: availableHosts = (
+		otherHost
+			? $hosts
+					.filter((host) => host.id !== otherHost.id)
+					.filter((host) => host.network_id == otherHost.network_id)
+			: []
+	).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
 	// Get the selected target host
 	$: selectedTargetHost = selectedDestinationHostId

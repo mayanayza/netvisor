@@ -38,9 +38,7 @@
 	$: daemon = daemons.find((d) => d.id === formData.daemon_id) || null;
 	$: daemonHostId = (daemon ? hosts.find((h) => h.id === daemon.host_id)?.id : null) || null;
 
-	let formData: Discovery = createEmptyDiscoveryFormData(
-		daemon ? daemon.capabilities.interfaced_subnet_ids : []
-	);
+	let formData: Discovery = createEmptyDiscoveryFormData(daemon);
 
 	// Reset form when modal opens
 	$: if (isOpen) {
@@ -50,20 +48,18 @@
 	// Set default daemon when available
 	$: if (formData.daemon_id === uuidv4Sentinel && daemons.length > 0) {
 		formData.daemon_id = daemons[0].id;
+		formData.network_id = daemons[0].network_id;
 	}
 
 	function resetForm() {
-		formData = discovery
-			? { ...discovery }
-			: createEmptyDiscoveryFormData(daemon ? daemon.capabilities.interfaced_subnet_ids : []);
+		formData = discovery ? { ...discovery } : createEmptyDiscoveryFormData(daemon);
 	}
 
 	async function handleSubmit() {
 		if (daemon) {
 			const discoveryData: Discovery = {
 				...formData,
-				name: formData.name.trim(),
-				network_id: daemon.network_id
+				name: formData.name.trim()
 			};
 
 			loading = true;

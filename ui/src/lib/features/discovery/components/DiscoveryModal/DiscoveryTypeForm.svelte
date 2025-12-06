@@ -105,6 +105,7 @@
 	$: availableSubnets = $subnets.filter(
 		(s) =>
 			formData.discovery_type.type === 'Network' &&
+			s.network_id == formData.network_id &&
 			!formData.discovery_type.subnet_ids?.includes(s.id) &&
 			subnetTypes.getMetadata(s.subnet_type).network_scan_discovery_eligible
 	);
@@ -239,7 +240,7 @@
 				<div class="rounded-lg bg-gray-800/50 p-4">
 					<ListManager
 						label="Target Subnets"
-						helpText="Select specific subnets to scan, or leave empty to scan all subnets that the daemon has an interface with. Default selection is subnets that the daemon has an interface with."
+						helpText="Select specific subnets to scan, or leave empty to scan all subnets that the daemon has an interface with."
 						placeholder="Select a subnet..."
 						emptyMessage="All subnets in network will be scanned"
 						allowReorder={false}
