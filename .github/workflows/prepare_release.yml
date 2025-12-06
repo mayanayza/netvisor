@@ -1,0 +1,65 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 0.11.3)'
+        required: true
+        type: string
+
+jobs:
+  prepare-release:
+    name: Bump Version and Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format. Use semver (e.g., 0.11.3)"
+            exit 1
+          fi
+      
+      - name: Update version in Cargo.toml and package.json
+        run: |
+          VERSION="${{ inputs.version }}"
+          
+          # Update backend/Cargo.toml
+          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" backend/Cargo.toml
+          rm backend/Cargo.toml.bak
+          echo "✅ Updated backend/Cargo.toml to version $VERSION"
+          
+          # Update Cargo.lock
+          cd backend && cargo check --quiet && cd ..
+          
+          # Update ui/package.json
+          cd ui
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          echo "✅ Updated ui/package.json to version $VERSION"
+          cd ..
+        shell: bash
+      
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
+          git commit -m "chore: bump version to ${{ inputs.version }}"
+          git push origin main
+      
+      - name: Create release
+        run: |
+          gh release create "v${{ inputs.version }}" \
+            --title "v${{ inputs.version }}" \
+            --generate-notes \
+            --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
