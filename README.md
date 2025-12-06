@@ -46,7 +46,7 @@ Choose the right option for your use case:
 **Use AGPL-3.0 (free) if:**
 - Using NetVisor for personal/home network documentation
 - Comfortable with self-hosting and maintenance
-- OK with AGPL copyleft obligations (making modifications public if running as a service)
+- OK with AGPL copyleft obligations
 
 **Need a Commercial License if:**
 - Using NetVisor for business/company networks
