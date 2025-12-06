@@ -16,7 +16,7 @@ pub enum Feature {
     CommercialLicense,
     AuditLogs,
     ApiAccess,
-    RemovePoweredBy,
+    RemoveCreatedWith,
 }
 
 impl HasId for Feature {
@@ -28,7 +28,7 @@ impl HasId for Feature {
             Feature::OnboardingCall => "onboarding_call",
             Feature::DedicatedSupportChannel => "dedicated_support_channel",
             Feature::CommercialLicense => "commercial_license",
-            Feature::RemovePoweredBy => "remove_powered_by",
+            Feature::RemoveCreatedWith => "remove_created_with",
         }
     }
 }
@@ -61,7 +61,7 @@ impl TypeMetadataProvider for Feature {
             Feature::OnboardingCall => "Onboarding Call",
             Feature::DedicatedSupportChannel => "Dedicated Discord Channel",
             Feature::CommercialLicense => "Commercial License",
-            Feature::RemovePoweredBy => "Remove 'Powered By'",
+            Feature::RemoveCreatedWith => "Remove 'Powered By'",
         }
     }
 
@@ -81,17 +81,14 @@ impl TypeMetadataProvider for Feature {
                 "A dedicated discord channel for support and questions"
             }
             Feature::CommercialLicense => "Use NetVisor under a commercial license",
-            Feature::RemovePoweredBy => {
-                "Remove 'Powered By NetVisor' in bottom right corner of visualization"
+            Feature::RemoveCreatedWith => {
+                "Remove 'Created using netvisor.io' in bottom right corner of visualization"
             }
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
-        let is_coming_soon = matches!(
-            self,
-            Feature::ApiAccess | Feature::AuditLogs | Feature::RemovePoweredBy
-        );
+        let is_coming_soon = matches!(self, Feature::ApiAccess | Feature::AuditLogs);
 
         serde_json::json!({
             "is_coming_soon": is_coming_soon

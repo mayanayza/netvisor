@@ -104,22 +104,9 @@
 			: []
 	);
 
-	function getFeatureValue(planType: string, featureKey: string): string | boolean | number | null {
+	function getFeatureValue(planType: string, featureKey: string): boolean {
 		const metadata = getPlanMetadata(planType);
-		const value = metadata?.features?.[featureKey as keyof typeof metadata.features];
-
-		if (value === undefined) return null;
-
-		const featureMetadata = features.getMetadata(featureKey);
-		if (featureMetadata?.use_null_as_unlimited && value === null) {
-			return 'Unlimited';
-		}
-
-		if (value === -1) {
-			return 'Unlimited';
-		}
-
-		return value as string | boolean | number | null;
+		return metadata?.features?.[featureKey as keyof typeof metadata.features];
 	}
 
 	function isTextField(featureKey: string): boolean {
