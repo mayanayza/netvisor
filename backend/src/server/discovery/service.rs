@@ -496,8 +496,7 @@ impl DiscoveryService {
         tracing::debug!(
             session_id = %update.session_id,
             phase = %update.phase,
-            processed = %update.processed,
-            total_to_process = %update.total_to_process,
+            progrsss = %update.progress,
             "Updated session",
         );
 
@@ -653,8 +652,7 @@ impl DiscoveryService {
                     network_id,
                     daemon_id,
                     phase: DiscoveryPhase::Cancelled,
-                    processed: 0,
-                    total_to_process: session.total_to_process,
+                    progress: 0,
                     error: None,
                     started_at: session.started_at,
                     finished_at: Some(Utc::now()),
@@ -712,8 +710,7 @@ impl DiscoveryService {
                                             network_id,
                                             daemon_id,
                                             phase: DiscoveryPhase::Failed,
-                                            processed: session.processed,
-                                            total_to_process: session.total_to_process,
+                                            progress: session.progress,
                                             error: Some("Daemon unreachable during cancellation. Session was removed from server.".to_string()),
                                             started_at: session.started_at,
                                             finished_at: Some(Utc::now()),

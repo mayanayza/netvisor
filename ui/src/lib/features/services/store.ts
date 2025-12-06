@@ -1,4 +1,4 @@
-import { writable, get, derived, type Readable, readable } from 'svelte/store';
+import { writable, derived, type Readable, readable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { Binding, Service } from './types/base';
 import { formatPort, utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
@@ -6,7 +6,6 @@ import { formatInterface, getInterfaceFromId, getPortFromId, hosts } from '../ho
 import { ALL_INTERFACES, type Host } from '../hosts/types/base';
 import { groups } from '../groups/store';
 import type { Subnet } from '../subnets/types/base';
-import { networks } from '../networks/store';
 
 export const services = writable<Service[]>([]);
 
@@ -53,13 +52,14 @@ export async function updateService(data: Service) {
 export function createDefaultService(
 	serviceType: string,
 	host_id: string,
+	host_network_id: string,
 	serviceName?: string
 ): Service {
 	return {
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
-		network_id: get(networks)[0].id || '',
+		network_id: host_network_id,
 		host_id,
 		is_gateway: false,
 		service_definition: serviceType,

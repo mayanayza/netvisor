@@ -37,6 +37,7 @@
 
 	// Available service bindings (exclude already selected ones)
 	$: availableServiceBindings = $services
+		.filter((s) => s.network_id == formData.network_id)
 		.flatMap((s) => s.bindings)
 		.filter((sb) => !formData.service_bindings.some((binding) => binding === sb.id));
 

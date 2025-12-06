@@ -51,7 +51,14 @@ pub trait DaemonUtils {
         discovery_type: DiscoveryType,
         daemon_id: Uuid,
         network_id: Uuid,
-    ) -> Result<(Vec<Interface>, Vec<Subnet>), Error> {
+    ) -> Result<
+        (
+            Vec<Interface>,
+            Vec<Subnet>,
+            HashMap<IpCidr, Option<MacAddress>>,
+        ),
+        Error,
+    > {
         let interfaces = pnet::datalink::interfaces();
 
         // First pass: collect all interface data and potential subnets
@@ -89,12 +96,15 @@ pub trait DaemonUtils {
         }
 
         // Third pass: assign all interfaces to appropriate subnets
-        let mut interfaces_list = Vec::new();
+        let mut interfaces = Vec::new();
+        let mut cidr_to_mac = HashMap::new();
 
         for (interface_name, ip_addr, mac_address) in interface_data {
             // Find which subnet this IP belongs to
             if let Some(subnet) = subnet_map.values().find(|s| s.base.cidr.contains(&ip_addr)) {
-                interfaces_list.push(Interface::new(InterfaceBase {
+                cidr_to_mac.insert(subnet.base.cidr, mac_address);
+
+                interfaces.push(Interface::new(InterfaceBase {
                     name: Some(interface_name),
                     subnet_id: subnet.id,
                     ip_address: ip_addr,
@@ -105,14 +115,14 @@ pub trait DaemonUtils {
 
         let subnets: Vec<Subnet> = subnet_map.into_values().collect();
 
-        Ok((interfaces_list, subnets))
+        Ok((interfaces, subnets, cidr_to_mac))
     }
 
     async fn new_local_docker_client(
         &self,
         docker_proxy: Result<Option<String>, Error>,
     ) -> Result<Docker, Error> {
-        tracing::debug!("Connecting to Docker daemon");
+        tracing::debug!("Connecting to Docker");
 
         let client = if let Ok(Some(docker_proxy)) = docker_proxy {
             Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
@@ -183,6 +193,12 @@ pub trait DaemonUtils {
             })
             .collect())
     }
+
+    /// Get optimal concurrency for ARP scanning (OS-specific due to BPF limits on macOS)
+    fn get_optimal_arp_concurrency(&self) -> Result<usize, Error>;
+
+    /// Get optimal concurrency for deep port scanning
+    fn get_optimal_deep_scan_concurrency(&self, port_batch_size: usize) -> Result<usize, Error>;
 
     async fn get_optimal_port_batch_size(&self) -> Result<usize, Error> {
         let fd_limit = Self::get_fd_limit()?;

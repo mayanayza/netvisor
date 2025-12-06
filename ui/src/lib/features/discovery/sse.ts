@@ -25,7 +25,7 @@ export async function getActiveSessions() {
 }
 
 // Track last known processed per session to detect changes
-const lastProcessedCount = new Map<string, number>();
+const lastProgress = new Map<string, number>();
 
 class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 	protected createConfig(): SSEConfig<DiscoveryUpdatePayload> {
@@ -33,16 +33,16 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 			url: '/api/discovery/stream',
 			onMessage: async (update) => {
 				// Check if discovered_count increased
-				const lastCount = lastProcessedCount.get(update.session_id) || 0;
-				const currentCount = update.processed || 0;
+				const last = lastProgress.get(update.session_id) || 0;
+				const current = update.progress || 0;
 
-				if (currentCount > lastCount) {
+				if (current > last) {
 					// Refresh data
 					getHosts();
 					getServices();
 					getSubnets();
 					getDaemons();
-					lastProcessedCount.set(update.session_id, currentCount);
+					lastProgress.set(update.session_id, current);
 				}
 
 				// Handle terminal phases
@@ -76,7 +76,7 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 							return m;
 						});
 
-						lastProcessedCount.delete(update.session_id);
+						lastProgress.delete(update.session_id);
 
 						// Remove completed/cancelled/failed sessions
 						return current.filter((session) => session.session_id !== update.session_id);

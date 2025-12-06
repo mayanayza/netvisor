@@ -20,14 +20,11 @@ use std::fmt::Display;
 use std::{net::IpAddr, ops::Range};
 use strum_macros::{Display, EnumDiscriminants, IntoStaticStr};
 
-use crate::server::{
-    hosts::r#impl::ports::{Port, PortBase},
-    services::r#impl::endpoints::Endpoint,
-};
+use crate::server::{hosts::r#impl::ports::PortBase, services::r#impl::endpoints::Endpoint};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct MatchResult {
-    pub ports: Vec<Port>,
+    pub ports: Vec<PortBase>,
     pub endpoint: Option<Endpoint>,
     pub mac_vendor: Option<String>,
     pub details: MatchDetails,
@@ -318,17 +315,11 @@ impl Pattern<'_> {
                             MatchConfidence::Medium,
                         )
                     } else {
-                        (
-                            format!(
-                                "Port {} is open but is used in other service match patterns",
-                                port_base
-                            ),
-                            MatchConfidence::Low,
-                        )
+                        (format!("Port {} is open", port_base), MatchConfidence::Low)
                     };
 
                     Ok(MatchResult {
-                        ports: vec![Port::new(*matched_port)],
+                        ports: vec![*matched_port],
                         endpoint: None,
                         mac_vendor: None,
                         details: MatchDetails {
@@ -400,7 +391,7 @@ impl Pattern<'_> {
 
                 match match_result {
                     Some((response, reason)) => Ok(MatchResult {
-                        ports: vec![Port::new(response.endpoint.port_base)],
+                        ports: vec![response.endpoint.port_base],
                         endpoint: Some(response.endpoint.clone()),
                         mac_vendor: None,
                         details: MatchDetails {
@@ -476,7 +467,7 @@ impl Pattern<'_> {
 
                 match match_result {
                     Some((response, reason)) => Ok(MatchResult {
-                        ports: vec![Port::new(response.endpoint.port_base)],
+                        ports: vec![response.endpoint.port_base],
                         endpoint: Some(response.endpoint.clone()),
                         mac_vendor: None,
                         details: MatchDetails {
@@ -582,6 +573,9 @@ impl Pattern<'_> {
                     }
                 });
 
+                ports.sort_by_key(|p| (p.number(), p.protocol()));
+                ports.dedup();
+
                 if any_matched {
                     Ok(MatchResult {
                         ports,
@@ -645,6 +639,9 @@ impl Pattern<'_> {
                     } else {
                         *max_confidence
                     };
+
+                    ports.sort_by_key(|p| (p.number(), p.protocol()));
+                    ports.dedup();
 
                     Ok(MatchResult {
                         ports,

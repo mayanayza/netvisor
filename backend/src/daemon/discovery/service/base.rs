@@ -1,11 +1,15 @@
 use std::{
     net::IpAddr,
-    sync::{Arc, atomic::AtomicUsize},
+    sync::{
+        Arc,
+        atomic::{AtomicU8, AtomicU64, Ordering},
+    },
 };
 
 use crate::{
-    daemon::discovery::{
-        manager::DaemonDiscoverySessionManager, types::base::DiscoveryCriticalError,
+    daemon::{
+        discovery::{manager::DaemonDiscoverySessionManager, types::base::DiscoveryCriticalError},
+        shared::api_client::DaemonApiClient,
     },
     server::{
         discovery::r#impl::types::{DiscoveryType, HostNamingFallback},
@@ -54,7 +58,7 @@ use crate::{
                 definitions::{ServiceDefinition, ServiceDefinitionExt},
             },
         },
-        shared::types::{api::ApiResponse, metadata::HasId},
+        shared::types::metadata::HasId,
         subnets::r#impl::base::Subnet,
     },
 };
@@ -83,7 +87,8 @@ impl<T> DiscoveryRunner<T> {
 pub struct DiscoverySession {
     pub info: DiscoverySessionInfo,
     pub gateway_ips: Vec<IpAddr>,
-    pub processed_count: Arc<AtomicUsize>,
+    pub last_progress: Arc<AtomicU8>,
+    pub last_progress_report_time: Arc<AtomicU64>,
 }
 
 impl DiscoverySession {
@@ -91,7 +96,8 @@ impl DiscoverySession {
         Self {
             info,
             gateway_ips,
-            processed_count: Arc::new(AtomicUsize::new(0)),
+            last_progress: Arc::new(AtomicU8::new(0)),
+            last_progress_report_time: Arc::new(AtomicU64::new(0)),
         }
     }
 }
@@ -104,7 +110,7 @@ impl<T> AsRef<DaemonDiscoveryService> for DiscoveryRunner<T> {
 
 pub struct DaemonDiscoveryService {
     pub config_store: Arc<ConfigStore>,
-    pub client: reqwest::Client,
+    pub api_client: Arc<DaemonApiClient>,
     pub utils: PlatformDaemonUtils,
     pub current_session: Arc<RwLock<Option<DiscoverySession>>>,
 }
@@ -112,8 +118,8 @@ pub struct DaemonDiscoveryService {
 impl DaemonDiscoveryService {
     pub fn new(config_store: Arc<ConfigStore>) -> Self {
         Self {
+            api_client: Arc::new(DaemonApiClient::new(config_store.clone())),
             config_store,
-            client: reqwest::Client::new(),
             utils: create_system_utils(),
             current_session: Arc::new(RwLock::new(None)),
         }
@@ -139,19 +145,50 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
         cancel: CancellationToken,
     ) -> Result<(), Error>;
 
-    /// Report discovery progress to server
+    /// Report scanning progress with automatic time-based throttling.
+    /// Only reports if at least 10 seconds have passed since the last report.
+    /// Percent should be 0-100.
+    async fn report_scanning_progress(&self, percent: u8) -> Result<(), Error> {
+        let session = self.as_ref().get_session().await?;
+        let last_report_time = &session.last_progress_report_time;
+        let last_progress = &session.last_progress;
+
+        let prev_percent = last_progress.load(Ordering::Relaxed);
+
+        // Skip if progress hasn't moved forward
+        if percent <= prev_percent && percent < 100 {
+            return Ok(());
+        }
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let last_time = last_report_time.load(Ordering::Relaxed);
+
+        // Throttle to every 10 seconds, but always allow 100%
+        if percent < 100 && now < last_time + 10 {
+            return Ok(());
+        }
+
+        // Try to claim this report slot (check both time and progress)
+        if last_report_time
+            .compare_exchange(last_time, now, Ordering::SeqCst, Ordering::Relaxed)
+            .is_err()
+        {
+            return Ok(());
+        }
+
+        // Update last progress (relaxed is fine here since time gate already synchronized)
+        last_progress.store(percent, Ordering::Relaxed);
+
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(percent))
+            .await
+    }
+
     async fn report_discovery_update(&self, update: DiscoverySessionUpdate) -> Result<(), Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
         let session = self.as_ref().get_session().await?;
         let discovery_type = self.discovery_type();
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
 
         let payload = DiscoveryUpdatePayload::from_state_and_update(
             discovery_type,
@@ -159,30 +196,18 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
             update,
         );
 
-        let response = self
-            .as_ref()
-            .client
-            .post(format!(
-                "{}/api/discovery/{}/update",
-                server_target, session.info.session_id
-            ))
-            .header("X-Daemon-ID", daemon_id.to_string())
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&payload)
-            .send()
-            .await?;
+        let path = format!("/api/discovery/{}/update", session.info.session_id);
 
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovery update: HTTP {}",
-                response.status()
-            );
-        }
+        self.as_ref()
+            .api_client
+            .post_no_response(&path, &payload, "Failed to report discovery update")
+            .await?;
 
         tracing::trace!(
             "Discovery update reported for session {}",
             session.info.session_id
         );
+
         Ok(())
     }
 }
@@ -197,7 +222,6 @@ pub trait DiscoversNetworkedEntities:
 
     async fn initialize_discovery_session(
         &self,
-        total_to_process: usize,
         request: DaemonDiscoveryRequest,
         daemon_id: Uuid,
     ) -> Result<(), Error> {
@@ -215,7 +239,6 @@ pub trait DiscoversNetworkedEntities:
             .ok_or_else(|| anyhow!("Network ID not set, aborting discovery session"))?;
 
         let session_info = DiscoverySessionInfo {
-            total_to_process,
             session_id: request.session_id,
             network_id,
             daemon_id,
@@ -230,11 +253,7 @@ pub trait DiscoversNetworkedEntities:
         Ok(())
     }
 
-    async fn start_discovery(
-        &self,
-        total_to_scan: usize,
-        request: DaemonDiscoveryRequest,
-    ) -> Result<(), Error> {
+    async fn start_discovery(&self, request: DaemonDiscoveryRequest) -> Result<(), Error> {
         let daemon_id = self.as_ref().config_store.get_id().await?;
 
         tracing::info!(
@@ -243,12 +262,12 @@ pub trait DiscoversNetworkedEntities:
             request.session_id
         );
 
-        self.initialize_discovery_session(total_to_scan, request, daemon_id)
+        self.initialize_discovery_session(request, daemon_id)
             .await?;
 
         self.report_discovery_update(DiscoverySessionUpdate {
             phase: DiscoveryPhase::Started,
-            processed: 0,
+            progress: 0,
             error: None,
             finished_at: None,
         })
@@ -259,7 +278,6 @@ pub trait DiscoversNetworkedEntities:
         tracing::info!(
             session_id = %session.info.session_id,
             discovery_type = ?self.discovery_type(),
-            total_to_process = %session.info.total_to_process,
             "Discovery session started"
         );
 
@@ -274,20 +292,20 @@ pub trait DiscoversNetworkedEntities:
         let session = self.as_ref().get_session().await?;
         let session_id = session.info.session_id;
 
-        let final_processed_count = session
-            .processed_count
+        let final_progress = session
+            .last_progress
             .load(std::sync::atomic::Ordering::Relaxed);
 
         match &discovery_result {
             Ok(_) => {
                 tracing::info!(
                     session_id = %session_id,
-                    processed = %final_processed_count,
+                    progress = 100,
                     "Discovery session completed successfully"
                 );
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Complete,
-                    processed: final_processed_count,
+                    progress: 100,
                     error: None,
                     finished_at: Some(Utc::now()),
                 })
@@ -296,12 +314,12 @@ pub trait DiscoversNetworkedEntities:
             Err(_) if cancel.is_cancelled() => {
                 tracing::warn!(
                     session_id = %session_id,
-                    processed = %final_processed_count,
+                    progress = %final_progress,
                     "Discovery session cancelled"
                 );
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Cancelled,
-                    processed: final_processed_count,
+                    progress: final_progress,
                     error: None,
                     finished_at: Some(Utc::now()),
                 })
@@ -310,7 +328,7 @@ pub trait DiscoversNetworkedEntities:
             Err(e) => {
                 tracing::error!(
                     session_id = %session_id,
-                    processed = %final_processed_count,
+                    progress = %final_progress,
                     error = %e,
                     "Discovery session failed"
                 );
@@ -321,7 +339,7 @@ pub trait DiscoversNetworkedEntities:
 
                 self.report_discovery_update(DiscoverySessionUpdate {
                     phase: DiscoveryPhase::Failed,
-                    processed: final_processed_count,
+                    progress: final_progress,
                     error: Some(error),
                     finished_at: Some(Utc::now()),
                 })
@@ -475,7 +493,7 @@ pub trait DiscoversNetworkedEntities:
                     host_id: &host.id,
                 };
 
-            if let Some((service, mut result)) = Service::from_discovery(params)
+            if let Some((service, mut ports, endpoint)) = Service::from_discovery(params)
                 && !container_matched
             {
                 // If there's a endpoint match + host target is hostname or none, use a binding as the host target
@@ -485,10 +503,7 @@ pub trait DiscoversNetworkedEntities:
                             Binding::Interface { .. } => false,
                             Binding::Port { port_id, .. } => {
                                 if let Some(port) = host.get_port(port_id) {
-                                    return result
-                                        .endpoint
-                                        .iter()
-                                        .any(|e| e.port_base == port.base);
+                                    return endpoint.iter().any(|e| e.port_base == port.base);
                                 }
                                 false
                             }
@@ -510,9 +525,9 @@ pub trait DiscoversNetworkedEntities:
                 }
 
                 // Add any bound ports to host ports array, remove from open ports
-                let bound_port_bases: Vec<PortBase> = result.ports.iter().map(|p| p.base).collect();
+                let bound_port_bases: Vec<PortBase> = ports.iter().map(|p| p.base).collect();
 
-                host.base.ports.append(&mut result.ports);
+                host.base.ports.append(&mut ports);
 
                 // Add new service
                 unbound_ports.retain(|p| !bound_port_bases.contains(p));
@@ -542,49 +557,6 @@ pub trait DiscoversNetworkedEntities:
 
         Ok(services)
     }
-
-    /// Report discovery progress update periodically
-    /// Returns the current processed count for tracking
-    async fn periodic_scan_update(
-        &self,
-        last_reported_processed_count: usize,
-    ) -> Result<usize, Error> {
-        let session = self.as_ref().get_session().await?;
-        let current_processed = session
-            .processed_count
-            .load(std::sync::atomic::Ordering::Relaxed);
-
-        let total_to_process = session.info.total_to_process;
-
-        // Calculate adaptive threshold based on total size
-        // Goal: Report approximately 10-20 updates total
-        let min_threshold = 1; // Always report at least every item for very small scans
-        let target_updates = 15; // Aim for ~15 progress updates
-        let calculated_threshold = (total_to_process / target_updates).max(1);
-
-        // Cap the threshold at reasonable bounds
-        let threshold = calculated_threshold.clamp(min_threshold, 50);
-
-        // Report if we've processed enough items since last report
-        if current_processed >= last_reported_processed_count + threshold
-            || current_processed == total_to_process
-        // Always report when complete
-        {
-            tracing::debug!(
-                processed = %current_processed,
-                total = %total_to_process,
-                percentage = format!("{:.1}%", current_processed as f32 / total_to_process as f32),
-                "Discovery progress update"
-            );
-
-            self.report_discovery_update(DiscoverySessionUpdate::scanning(current_processed))
-                .await?;
-
-            return Ok(current_processed);
-        }
-
-        Ok(last_reported_processed_count)
-    }
 }
 
 #[async_trait]
@@ -596,184 +568,36 @@ pub trait CreatesDiscoveredEntities:
         host: Host,
         services: Vec<Service>,
     ) -> Result<(Host, Vec<Service>), Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-        tracing::info!("Creating host {}", host.base.name);
-
-        let api_key = self
+        let request = HostWithServicesRequest {
+            host,
+            services: Some(services),
+        };
+        let HostWithServicesRequest { host, services } = self
             .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!("{}/api/hosts", server_target))
-            .header("X-Daemon-ID", daemon_id.to_string())
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&HostWithServicesRequest {
-                host,
-                services: Some(services),
-            })
-            .send()
+            .api_client
+            .post("/api/hosts", &request, "Failed to create host")
             .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovered host: HTTP {}",
-                response.status()
-            );
-        }
-
-        let api_response: ApiResponse<HostWithServicesRequest> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to create host: {}", error_msg);
-        }
-
-        let HostWithServicesRequest { host, services } = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No host data in successful response"))?;
-
-        let services = services.unwrap_or(vec![]);
-
-        Ok((host, services))
+        Ok((host, services.unwrap_or_default()))
     }
 
     async fn create_subnet(&self, subnet: &Subnet) -> Result<Subnet, Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!("{}/api/subnets", server_target))
-            .header("X-Daemon-ID", daemon_id.to_string())
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&subnet)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovered subnet: HTTP {}",
-                response.status(),
-            );
-        }
-
-        let api_response: ApiResponse<Subnet> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to create subnet: {}", error_msg);
-        }
-
-        let created_subnet = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No subnet data in successful response"))?;
-
-        Ok(created_subnet)
+        self.as_ref()
+            .api_client
+            .post("/api/subnets", subnet, "Failed to create subnet")
+            .await
     }
 
     async fn create_service(&self, service: &Service) -> Result<Service, Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!("{}/api/services", server_target))
-            .header("X-Daemon-ID", daemon_id.to_string())
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&service)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovered service: HTTP {}",
-                response.status()
-            );
-        }
-
-        let api_response: ApiResponse<Service> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to create service: {}", error_msg);
-        }
-
-        let created_service = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No service data in successful response"))?;
-
-        Ok(created_service)
+        self.as_ref()
+            .api_client
+            .post("/api/services", service, "Failed to create service")
+            .await
     }
 
     async fn create_group(&self, group: &Group) -> Result<Group, Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!("{}/api/groups", server_target))
-            .header("X-Daemon-ID", daemon_id.to_string())
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&group)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovered group: HTTP {}",
-                response.status()
-            );
-        }
-
-        let api_response: ApiResponse<Group> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to create group: {}", error_msg);
-        }
-
-        let created_group = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No group data in successful response"))?;
-
-        Ok(created_group)
+        self.as_ref()
+            .api_client
+            .post("/api/groups", group, "Failed to create group")
+            .await
     }
 }

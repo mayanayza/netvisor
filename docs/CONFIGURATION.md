@@ -70,6 +70,7 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 | **Heartbeat Interval** | `--heartbeat-interval` | `NETVISOR_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates / work requests (for daemons in pull mode) to server |
 | **Concurrent Scans** | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | *Auto* | Maximum parallel host scans during discovery |
 | **Docker Proxy** | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | *None* | Optional HTTP proxy for Docker API connections |
+| **Allow Self-Signed Certificates** | `--allow-self-signed-certs` | `NETVISOR_ALLOW_SELF_SIGNED_CERTS` | `allow_self_signed_certs` | *None* | Allow self-signed certificates for connection between Daemon and Server. |
 
 ### Concurrent Scans
 

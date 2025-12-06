@@ -1,3 +1,4 @@
+use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::{
     auth::middleware::{
         auth::{AuthenticatedDaemon, AuthenticatedUser},
@@ -5,11 +6,14 @@ use crate::server::{
     },
     config::AppState,
     daemons::r#impl::api::DiscoveryUpdatePayload,
-    discovery::r#impl::{base::Discovery, types::RunType},
+    discovery::r#impl::{
+        base::Discovery,
+        types::{DiscoveryType, RunType},
+    },
     shared::{
         handlers::traits::{
-            bulk_delete_handler, create_handler, delete_handler, get_all_handler,
-            get_by_id_handler, update_handler,
+            CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
+            update_handler,
         },
         services::traits::CrudService,
         types::api::{ApiError, ApiResponse, ApiResult},
@@ -32,7 +36,7 @@ use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create_handler::<Discovery>))
+        .route("/", post(create_handler))
         .route("/", get(get_all_handler::<Discovery>))
         .route("/{id}", put(update_handler::<Discovery>))
         .route("/{id}", delete(delete_handler::<Discovery>))
@@ -43,6 +47,60 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{session_id}/cancel", post(cancel_discovery))
         .route("/{session_id}/update", post(receive_discovery_update))
         .route("/stream", get(discovery_stream))
+}
+
+pub async fn create_handler(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(discovery): Json<Discovery>,
+) -> ApiResult<Json<ApiResponse<Discovery>>> {
+    if let Err(err) = discovery.validate() {
+        tracing::warn!(
+            entity_type = Discovery::table_name(),
+            user_id = %user.user_id,
+            error = %err,
+            "Entity validation failed"
+        );
+        return Err(ApiError::bad_request(&format!(
+            "{} validation failed: {}",
+            Discovery::entity_name(),
+            err
+        )));
+    }
+
+    // Check if any subnets aren't on the same network as the discovery / daemon
+    #[allow(clippy::single_match)]
+    match &discovery.base.discovery_type {
+        DiscoveryType::Network { subnet_ids, .. } => {
+            for subnet_id in subnet_ids.as_ref().unwrap_or(&vec![]) {
+                if let Some(subnet) = state.services.subnet_service.get_by_id(subnet_id).await?
+                    && subnet.base.network_id != discovery.base.network_id
+                {
+                    return Err(ApiError::bad_request(&format!(
+                        "Discovery is on network {}, cannot target subnet \"{}\" which is on network {}.",
+                        discovery.base.network_id, subnet.base.name, subnet.base.network_id
+                    )));
+                }
+            }
+        }
+        _ => (),
+    }
+
+    let service = Discovery::get_service(&state);
+    let created = service
+        .create(discovery, user.clone().into())
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                entity_type = Discovery::table_name(),
+                user_id = %user.user_id,
+                error = %e,
+                "Failed to create entity"
+            );
+            ApiError::internal_error(&e.to_string())
+        })?;
+
+    Ok(Json(ApiResponse::success(created)))
 }
 
 /// Receive discovery progress update from daemon

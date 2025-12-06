@@ -51,14 +51,14 @@ export async function bulkDeleteDiscoveries(ids: string[]) {
 	return result;
 }
 
-export function createEmptyDiscoveryFormData(daemon_interfaced_subnet_ids: string[]): Discovery {
+export function createEmptyDiscoveryFormData(daemon: Daemon | null): Discovery {
 	return {
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		discovery_type: {
 			type: 'Network',
-			subnet_ids: daemon_interfaced_subnet_ids,
+			subnet_ids: daemon ? daemon.capabilities.interfaced_subnet_ids : [],
 			host_naming_fallback: 'BestService'
 		},
 		run_type: {
@@ -68,8 +68,8 @@ export function createEmptyDiscoveryFormData(daemon_interfaced_subnet_ids: strin
 			enabled: true
 		},
 		name: 'My Scheduled Discovery',
-		daemon_id: uuidv4Sentinel,
-		network_id: uuidv4Sentinel
+		daemon_id: daemon ? daemon.id : uuidv4Sentinel,
+		network_id: daemon ? daemon.network_id : uuidv4Sentinel
 	};
 }
 

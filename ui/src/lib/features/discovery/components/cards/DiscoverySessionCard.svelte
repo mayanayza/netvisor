@@ -14,16 +14,6 @@
 
 	$: isCancelling = session?.session_id ? $cancelling.get(session.session_id) === true : false;
 
-	// Calculate progress
-	$: progressPercent = (() => {
-		const progress =
-			session.processed && session.total_to_process && session.total_to_process > 0
-				? session.processed / session.total_to_process
-				: 0;
-
-		return Math.min(100, progress * 100);
-	})();
-
 	async function handleCancelDiscovery() {
 		await cancelDiscovery(session.session_id);
 	}
@@ -79,10 +69,10 @@
 				<div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-700">
 					<div
 						class="h-full bg-blue-500 transition-all duration-300 ease-out"
-						style="width: {progressPercent}%"
+						style="width: {session.progress}%"
 					></div>
 				</div>
-				<span class="text-secondary text-xs">{Math.round(progressPercent)}%</span>
+				<span class="text-secondary text-xs">{session.progress}%</span>
 			</div>
 		</div>
 	</div>

@@ -8,11 +8,19 @@ use dhcproto::Encodable;
 use dhcproto::v4::{self, Decodable, Encoder, Message, MessageType};
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
+use mac_address::MacAddress;
+use pnet::datalink;
+use pnet::datalink::Channel;
+use pnet::packet::MutablePacket;
+use pnet::packet::Packet;
+use pnet::packet::arp::{ArpHardwareTypes, ArpOperations, ArpPacket, MutableArpPacket};
+use pnet::packet::ethernet::{EtherTypes, EthernetPacket, MutableEthernetPacket};
+use pnet::util::MacAddr;
 use rand::{Rng, SeedableRng};
 use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
 use std::collections::HashMap;
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::{net::TcpStream, time::timeout};
@@ -88,12 +96,189 @@ where
     results
 }
 
+/// Send ARP request to a single IP and wait for response
+/// Returns the MAC address if the host responds, None otherwise
+pub async fn arp_scan_host(
+    source_mac: &MacAddress,
+    source_ip: IpAddr,
+    target_ip: IpAddr,
+) -> Result<Option<MacAddress>, Error> {
+    tracing::trace!(
+        source_mac = %source_mac,
+        source_ip = %source_ip,
+        target_ip = %target_ip,
+        "ARP scan: starting"
+    );
+
+    let pnet_source_mac: MacAddr = source_mac.bytes().into();
+    let source_ipv4: Ipv4Addr = match source_ip {
+        IpAddr::V4(ip) => ip,
+        IpAddr::V6(ip) => ip.to_ipv4().unwrap_or(Ipv4Addr::UNSPECIFIED),
+    };
+    let target_ipv4: Ipv4Addr = match target_ip {
+        IpAddr::V4(ip) => ip,
+        IpAddr::V6(ip) => ip.to_ipv4().unwrap_or(Ipv4Addr::UNSPECIFIED),
+    };
+
+    tracing::trace!(target_ip = %target_ip, "ARP scan: looking up interface");
+
+    let interface = datalink::interfaces()
+        .into_iter()
+        .find(|iface| iface.mac.unwrap_or_default() == pnet_source_mac);
+
+    let interface = match interface {
+        Some(iface) => {
+            tracing::trace!(
+                interface_name = %iface.name,
+                target_ip = %target_ip,
+                "ARP scan: found interface"
+            );
+            iface
+        }
+        None => {
+            return Err(anyhow!("No interface found with MAC {}", source_mac));
+        }
+    };
+
+    let result = tokio::task::spawn_blocking(move || {
+        arp_scan_host_blocking(&interface, source_ipv4, pnet_source_mac, target_ipv4)
+    })
+    .await
+    .map_err(|e| anyhow!("ARP scan task join failed: {}", e))??;
+
+    tracing::trace!(
+        target_ip = %target_ip,
+        result = ?result.as_ref().map(|m| m.to_string()),
+        "ARP scan: complete"
+    );
+
+    Ok(result)
+}
+
+fn arp_scan_host_blocking(
+    interface: &pnet::datalink::NetworkInterface,
+    source_ip: Ipv4Addr,
+    source_mac: MacAddr,
+    target_ip: Ipv4Addr,
+) -> Result<Option<MacAddress>, Error> {
+    tracing::trace!(
+        interface = %interface.name,
+        target_ip = %target_ip,
+        "ARP blocking: opening datalink channel"
+    );
+
+    let (mut tx, mut rx) = match datalink::channel(interface, Default::default()) {
+        Ok(Channel::Ethernet(tx, rx)) => {
+            tracing::trace!(target_ip = %target_ip, "ARP blocking: channel opened");
+            (tx, rx)
+        }
+        Ok(_) => {
+            return Err(anyhow!("Unsupported channel type for {}", interface.name));
+        }
+        Err(e) => {
+            return Err(anyhow!(
+                "Failed to open datalink channel on {}: {}",
+                interface.name,
+                e
+            ));
+        }
+    };
+
+    let mut packet_buffer = [0u8; 60];
+    {
+        let mut ethernet_packet = MutableEthernetPacket::new(&mut packet_buffer)
+            .ok_or_else(|| anyhow!("Failed to create ethernet packet"))?;
+
+        ethernet_packet.set_destination(MacAddr::broadcast());
+        ethernet_packet.set_source(source_mac);
+        ethernet_packet.set_ethertype(EtherTypes::Arp);
+
+        let mut arp_packet = MutableArpPacket::new(ethernet_packet.payload_mut())
+            .ok_or_else(|| anyhow!("Failed to create ARP packet"))?;
+
+        arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
+        arp_packet.set_protocol_type(EtherTypes::Ipv4);
+        arp_packet.set_hw_addr_len(6);
+        arp_packet.set_proto_addr_len(4);
+        arp_packet.set_operation(ArpOperations::Request);
+        arp_packet.set_sender_hw_addr(source_mac);
+        arp_packet.set_sender_proto_addr(source_ip);
+        arp_packet.set_target_hw_addr(MacAddr::zero());
+        arp_packet.set_target_proto_addr(target_ip);
+    }
+
+    match tx.send_to(&packet_buffer, None) {
+        Some(Ok(_)) => {
+            tracing::trace!(target_ip = %target_ip, "ARP blocking: packet sent");
+        }
+        Some(Err(e)) => {
+            return Err(anyhow!("Failed to send ARP request: {}", e));
+        }
+        None => {
+            return Err(anyhow!("send_to returned None"));
+        }
+    }
+
+    let deadline = std::time::Instant::now() + SCAN_TIMEOUT;
+    let mut packets_received = 0u32;
+
+    while std::time::Instant::now() < deadline {
+        match rx.next() {
+            Ok(packet) => {
+                packets_received += 1;
+                if let Some((reply_ip, mac)) = parse_arp_reply(packet)
+                    && reply_ip == target_ip
+                {
+                    tracing::trace!(
+                        target_ip = %target_ip,
+                        mac = %mac,
+                        packets_received = packets_received,
+                        "ARP blocking: got matching reply"
+                    );
+                    return Ok(Some(mac));
+                }
+            }
+            Err(e) => {
+                tracing::trace!(error = %e, "ARP blocking: rx.next() error");
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+    }
+
+    tracing::trace!(
+        target_ip = %target_ip,
+        packets_received = packets_received,
+        "ARP blocking: timeout"
+    );
+    Ok(None)
+}
+/// Parse an ethernet frame and extract ARP reply data
+fn parse_arp_reply(packet: &[u8]) -> Option<(Ipv4Addr, MacAddress)> {
+    let ethernet = EthernetPacket::new(packet)?;
+
+    if ethernet.get_ethertype() != EtherTypes::Arp {
+        return None;
+    }
+
+    let arp = ArpPacket::new(ethernet.payload())?;
+
+    if arp.get_operation() != ArpOperations::Reply {
+        return None;
+    }
+
+    let sender_ip = arp.get_sender_proto_addr();
+    let sender_mac = MacAddress::new(arp.get_sender_hw_addr().octets());
+
+    Some((sender_ip, sender_mac))
+}
+
 pub async fn scan_ports_and_endpoints(
     ip: IpAddr,
     cancel: CancellationToken,
     port_scan_batch_size: usize,
     cidr: IpCidr,
     gateway_ips: Vec<IpAddr>,
+    tcp_ports_to_check: Vec<u16>,
 ) -> Result<(Vec<PortBase>, Vec<EndpointResponse>), Error> {
     if cancel.is_cancelled() {
         return Err(anyhow!("Operation cancelled"));
@@ -103,7 +288,8 @@ pub async fn scan_ports_and_endpoints(
     let mut endpoint_responses = Vec::new();
 
     // Scan TCP ports with batching
-    let tcp_ports = scan_tcp_ports(ip, cancel.clone(), port_scan_batch_size).await?;
+    let tcp_ports =
+        scan_tcp_ports(ip, cancel.clone(), port_scan_batch_size, tcp_ports_to_check).await?;
 
     let use_https_ports: HashMap<u16, bool> =
         tcp_ports.iter().map(|(p, h)| (p.number(), *h)).collect();
@@ -143,7 +329,7 @@ pub async fn scan_ports_and_endpoints(
     .await?;
     endpoint_responses.extend(endpoints);
 
-    // IMPORTANT: Add any ports that had endpoint responses but weren't in open_ports
+    // Add any ports that had endpoint responses but weren't in open_ports
     // This handles cases where we got HTTP response but port scan didn't detect it
     for endpoint_response in &endpoint_responses {
         let port = endpoint_response.endpoint.port_base;
@@ -174,17 +360,11 @@ pub async fn scan_tcp_ports(
     ip: IpAddr,
     cancel: CancellationToken,
     batch_size: usize,
+    tcp_ports_to_check: Vec<u16>,
 ) -> Result<Vec<(PortBase, bool)>, Error> {
-    let discovery_ports = Service::all_discovery_ports();
-    let ports: Vec<PortBase> = discovery_ports
+    let ports: Vec<PortBase> = tcp_ports_to_check
         .iter()
-        .filter_map(|p| {
-            if p.protocol() == TransportProtocol::Tcp {
-                Some(*p)
-            } else {
-                None
-            }
-        })
+        .map(|p| PortBase::new_tcp(*p))
         .collect();
 
     let open_ports = batch_scan(ports.clone(), batch_size, cancel, move |port| async move {
@@ -274,7 +454,7 @@ pub async fn scan_tcp_ports(
         ip = %ip,
         ports_scanned = %ports.len(),
         responses = %open_ports.len(),
-        "UDP port scan complete"
+        "TCP ports scanned"
     );
 
     Ok(open_ports)
@@ -334,7 +514,7 @@ pub async fn scan_udp_ports(
         ip = %ip,
         ports_scanned = %ports.len(),
         responses = %open_ports.len(),
-        "UDP port scan complete"
+        "UDP ports scanned"
     );
 
     Ok(open_ports)

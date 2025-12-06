@@ -1,10 +1,10 @@
 [
   {
-    "category": "Netvisor",
-    "description": "NetVisor Daemon API for network scanning",
-    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains \"netvisor\"",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png",
-    "name": "NetVisor Daemon API"
+    "category": "Virtualization",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   },
   {
     "category": "Netvisor",
@@ -12,6 +12,13 @@
     "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains \"netvisor\"",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png",
     "name": "NetVisor Server API"
+  },
+  {
+    "category": "Netvisor",
+    "description": "NetVisor Daemon API for network scanning",
+    "discovery_pattern": "Endpoint response body from <ip>:60073/api/health contains \"netvisor\"",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png",
+    "name": "NetVisor Daemon API"
   },
   {
     "category": "Media",
@@ -880,13 +887,6 @@
     "discovery_pattern": "All of: (2377/tcp is open, 7946/tcp is open)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
     "name": "Docker Swarm"
-  },
-  {
-    "category": "Virtualization",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
   },
   {
     "category": "Virtualization",

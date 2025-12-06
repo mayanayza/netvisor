@@ -75,6 +75,7 @@ impl SubnetLayoutPlanner {
     fn determine_subnet_child_header_text(
         &self,
         ctx: &TopologyContext,
+        interface: &Interface,
         host: &Host,
         subnet_type: &SubnetType,
     ) -> Option<String> {
@@ -151,7 +152,8 @@ impl SubnetLayoutPlanner {
         let host_has_name = host.base.name != "Unknown Device" && !host.base.name.is_empty();
 
         // P2: Assign a name to docker containers whose host will not have a node
-        // Docker container edges are routed to host origin interface, but not if
+        // Docker container edges are routed to host origin interface which has a label
+        // but if host node isn't showing due to filters, we need to provide them with a name
         if *subnet_type == SubnetType::DockerBridge {
             let origin_interface_will_have_node = if let Some(origin_interface) =
                 host.get_first_non_docker_bridge_interface(ctx.subnets)
@@ -182,6 +184,7 @@ impl SubnetLayoutPlanner {
         }
 
         // P3: Show host if it differs from the first service name + isn't shown via interface edges
+        // and if it also isn't just the interface IP
         let first_service_name_matches_host_name = match host.base.services.first() {
             Some(first_service_id) => {
                 if let Some(first_service) = ctx.get_service_by_id(*first_service_id) {
@@ -193,6 +196,8 @@ impl SubnetLayoutPlanner {
             None => false,
         };
 
+        let host_name_is_interface_ip = interface.base.ip_address.to_string() == host.base.name;
+
         // Count of other interfaces that will actually have a node (ie services on that interface > 0)
         // so an interface edge will be created
         let interfaces_with_node: Vec<&Interface> = host
@@ -202,7 +207,10 @@ impl SubnetLayoutPlanner {
             .filter(|i| !ctx.get_services_bound_to_interface(i.id).is_empty())
             .collect();
 
-        if !first_service_name_matches_host_name && host_has_name && interfaces_with_node.len() < 2
+        if !host_name_is_interface_ip
+            && !first_service_name_matches_host_name
+            && host_has_name
+            && interfaces_with_node.len() < 2
         {
             return Some(host.base.name.clone());
         }
@@ -255,7 +263,8 @@ impl SubnetLayoutPlanner {
                 // Update source/target handles for edges
                 let edges = ChildAnchorPlanner::plan_anchors(interface.id, all_edges, ctx);
 
-                let header_text = self.determine_subnet_child_header_text(ctx, host, &subnet_type);
+                let header_text =
+                    self.determine_subnet_child_header_text(ctx, interface, host, &subnet_type);
 
                 let child = SubnetChild {
                     id: interface.id,

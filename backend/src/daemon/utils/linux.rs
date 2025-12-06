@@ -36,6 +36,47 @@ impl DaemonUtils for LinuxDaemonUtils {
         }
     }
 
+    fn get_optimal_arp_concurrency(&self) -> Result<usize, Error> {
+        // Linux doesn't have the same BPF limitations as macOS
+        // Can run more concurrent ARP scans, but still bound by fd limit
+        let fd_limit = Self::get_fd_limit()?;
+        let reserved = 203;
+        let available = fd_limit.saturating_sub(reserved);
+
+        // Each ARP scan holds a raw socket briefly
+        // Allow up to 50 concurrent or 10% of available fds, whichever is smaller
+        let concurrency = std::cmp::min(50, available / 10);
+        let concurrency = std::cmp::max(1, concurrency);
+
+        tracing::debug!(
+            fd_limit = fd_limit,
+            available = available,
+            concurrency = concurrency,
+            "Calculated ARP concurrency"
+        );
+
+        Ok(concurrency)
+    }
+
+    fn get_optimal_deep_scan_concurrency(&self, port_batch_size: usize) -> Result<usize, Error> {
+        let fd_limit = Self::get_fd_limit()?;
+        let reserved = 203;
+        let available = fd_limit.saturating_sub(reserved);
+
+        let concurrency = std::cmp::max(1, available / port_batch_size);
+
+        tracing::debug!(
+            fd_limit = fd_limit,
+            reserved = reserved,
+            available = available,
+            port_batch_size = port_batch_size,
+            concurrency = concurrency,
+            "Calculated deep scan concurrency"
+        );
+
+        Ok(concurrency)
+    }
+
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>, Error> {
         use procfs::net;
 

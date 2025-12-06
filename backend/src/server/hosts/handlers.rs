@@ -56,6 +56,32 @@ async fn create_host(
         )));
     }
 
+    // Check for any interfaces created with subnets on networks other than the host's network
+    for interface in &request.host.base.interfaces {
+        if let Some(subnet) = state
+            .services
+            .subnet_service
+            .get_by_id(&interface.base.subnet_id)
+            .await?
+            && subnet.base.network_id != request.host.base.network_id
+        {
+            return Err(ApiError::bad_request(&format!(
+                "Host is on network {}, cannot have an interface with a subnet \"{}\" which is on network {}.",
+                request.host.base.network_id, subnet.base.name, subnet.base.network_id
+            )));
+        }
+    }
+
+    // Check for any services being created on a different network
+    for service in request.services.as_ref().unwrap_or(&Vec::<Service>::new()) {
+        if service.base.network_id != request.host.base.network_id {
+            return Err(ApiError::bad_request(&format!(
+                "Host is on network {}, Service \"{}\" can't be on a different network ({}).",
+                request.host.base.network_id, service.base.name, service.base.network_id
+            )));
+        }
+    }
+
     let (host, services) = host_service
         .create_host_with_services(request.host, request.services.unwrap_or_default(), entity)
         .await?;
@@ -81,6 +107,13 @@ async fn update_host(
         let mut create_futures = Vec::new();
 
         for mut s in services {
+            if s.base.network_id != request.host.base.network_id {
+                return Err(ApiError::bad_request(&format!(
+                    "Host is on network {}, Service \"{}\" can't be on a different network ({}).",
+                    request.host.base.network_id, s.base.name, s.base.network_id
+                )));
+            }
+
             let user = user.clone();
             if s.id == Uuid::nil() {
                 let service = Service::new(s.base);
@@ -132,6 +165,14 @@ async fn consolidate_hosts(
                 other_host_id
             ))
         })?;
+
+    // Make sure hosts are on same network
+    if destination_host.base.network_id != other_host.base.network_id {
+        return Err(ApiError::bad_request(&format!(
+            "Destination Host is on network {}, other host \"{}\" can't be on a different network ({}).",
+            destination_host.base.network_id, other_host.base.name, other_host.base.network_id
+        )));
+    }
 
     let updated_host = host_service
         .consolidate_hosts(destination_host, other_host, user.into())
