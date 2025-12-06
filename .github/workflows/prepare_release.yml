@@ -18,6 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: dev
           fetch-depth: 0
       
       - name: Validate version format
@@ -53,13 +54,14 @@ jobs:
           
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
           git commit -m "chore: bump version to ${{ inputs.version }}"
-          git push origin main
+          git push origin dev
       
       - name: Create release
         run: |
           gh release create "v${{ inputs.version }}" \
             --title "v${{ inputs.version }}" \
             --generate-notes \
-            --prerelease
+            --prerelease \
+            --target dev
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
