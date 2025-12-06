@@ -26,7 +26,6 @@ impl DiscoveryPhase {
 
 #[derive(Debug, Clone)]
 pub struct DiscoverySessionInfo {
-    pub total_to_process: usize,
     pub session_id: Uuid,
     pub network_id: Uuid,
     pub daemon_id: Uuid,
@@ -36,16 +35,17 @@ pub struct DiscoverySessionInfo {
 #[derive(Debug, Clone)]
 pub struct DiscoverySessionUpdate {
     pub phase: DiscoveryPhase,
-    pub processed: usize,
+    /// Percentage complete (0-100)
+    pub progress: u8,
     pub error: Option<String>,
     pub finished_at: Option<DateTime<Utc>>,
 }
 
 impl DiscoverySessionUpdate {
-    pub fn scanning(processed: usize) -> Self {
+    pub fn scanning(progress: u8) -> Self {
         Self {
             phase: DiscoveryPhase::Scanning,
-            processed,
+            progress: progress.min(100),
             error: None,
             finished_at: None,
         }

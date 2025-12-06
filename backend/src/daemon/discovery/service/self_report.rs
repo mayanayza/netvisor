@@ -21,10 +21,7 @@ use crate::{
         },
         shared::{
             storage::traits::StorableEntity,
-            types::{
-                api::ApiResponse,
-                entities::{DiscoveryMetadata, EntitySource},
-            },
+            types::entities::{DiscoveryMetadata, EntitySource},
         },
         subnets::r#impl::{base::Subnet, types::SubnetTypeDiscriminants},
     },
@@ -84,7 +81,6 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             .ok_or_else(|| anyhow::anyhow!("Network ID not set, aborting discovery session"))?;
 
         let session_info = DiscoverySessionInfo {
-            total_to_process: 1,
             session_id: request.session_id,
             network_id,
             daemon_id,
@@ -110,7 +106,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         let binding_address = self.as_ref().config_store.get_bind_address().await?;
         let binding_ip = IpAddr::V4(binding_address.parse::<Ipv4Addr>()?);
 
-        let (interfaces, subnets) = utils
+        let (interfaces, subnets, _) = utils
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
             .await?;
 
@@ -256,7 +252,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         self.report_discovery_update(DiscoverySessionUpdate {
             phase: DiscoveryPhase::Complete,
-            processed: 1,
+            progress: 100,
             error: None,
             finished_at: Some(Utc::now()),
         })
@@ -272,48 +268,17 @@ impl DiscoveryRunner<SelfReportDiscovery> {
         has_docker_socket: bool,
         interfaced_subnet_ids: Vec<Uuid>,
     ) -> Result<(), Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
-
         let capabilities = DaemonCapabilities {
             has_docker_socket,
             interfaced_subnet_ids,
         };
 
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
+        let daemon_id = self.as_ref().api_client.config().get_id().await?;
+        let path = format!("/api/daemons/{}/update-capabilities", daemon_id);
 
-        let daemon_id = self.as_ref().config_store.get_id().await?;
-
-        let response = self
-            .as_ref()
-            .client
-            .post(format!(
-                "{}/api/daemons/{}/update-capabilities",
-                server_target, daemon_id
-            ))
-            .header("X-Daemon-ID", daemon_id.to_string())
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&capabilities)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!("Failed to update capabilities: HTTP {}", response.status());
-        }
-
-        let api_response: ApiResponse<()> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to update capabilities: {}", error_msg);
-        }
-
-        Ok(())
+        self.as_ref()
+            .api_client
+            .post_no_response(&path, &capabilities, "Failed to update capabilities")
+            .await
     }
 }

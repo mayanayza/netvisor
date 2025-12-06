@@ -351,10 +351,9 @@ async fn run_discovery(client: &TestClient) -> Result<(), String> {
                                     }
 
                                     println!(
-                                        "📊 Discovery: {} - {}/{} processed",
+                                        "📊 Discovery: {} - {}%",
                                         update.phase,
-                                        update.processed,
-                                        update.total_to_process,
+                                        update.progress,
                                     );
 
                                     if update.finished_at.is_some() {
@@ -362,7 +361,6 @@ async fn run_discovery(client: &TestClient) -> Result<(), String> {
                                             return Err(format!("Discovery failed: {}", error));
                                         }
                                         println!("✅ Discovery completed!");
-                                        println!("   Total processed: {}", update.processed);
                                         return Ok(());
                                     }
                                 }

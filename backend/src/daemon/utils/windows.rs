@@ -20,7 +20,7 @@ impl DaemonUtils for WindowsDaemonUtils {
         Self {}
     }
 
-    fn get_fd_limit() -> Result<usize, anyhow::Error> {
+    fn get_fd_limit(&self) -> Result<usize, anyhow::Error> {
         // Windows doesn't have a direct equivalent to Unix file descriptors
         // The _getmaxstdio() function returns the maximum number of FILE streams (default 512)
         // However, socket handles use a different mechanism
@@ -31,6 +31,45 @@ impl DaemonUtils for WindowsDaemonUtils {
         // Return a reasonable default that works well on Windows
         // This is roughly equivalent to what a typical Windows system can handle
         Ok(2048)
+    }
+
+    fn get_optimal_arp_concurrency(&self) -> Result<usize, Error> {
+        // Windows uses WinPcap/Npcap for raw packet capture
+        // More permissive than macOS but still keep reasonable limits
+        let fd_limit = Self::get_fd_limit()?;
+        let reserved = 203;
+        let available = fd_limit.saturating_sub(reserved);
+
+        let concurrency = std::cmp::min(30, available / 10);
+        let concurrency = std::cmp::max(1, concurrency);
+
+        tracing::debug!(
+            fd_limit = fd_limit,
+            available = available,
+            concurrency = concurrency,
+            "Calculated ARP concurrency"
+        );
+
+        Ok(concurrency)
+    }
+
+    fn get_optimal_deep_scan_concurrency(&self, port_batch_size: usize) -> Result<usize, Error> {
+        let fd_limit = Self::get_fd_limit()?;
+        let reserved = 203;
+        let available = fd_limit.saturating_sub(reserved);
+
+        let concurrency = std::cmp::max(1, available / port_batch_size);
+
+        tracing::debug!(
+            fd_limit = fd_limit,
+            reserved = reserved,
+            available = available,
+            port_batch_size = port_batch_size,
+            concurrency = concurrency,
+            "Calculated deep scan concurrency"
+        );
+
+        Ok(concurrency)
     }
 
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>> {

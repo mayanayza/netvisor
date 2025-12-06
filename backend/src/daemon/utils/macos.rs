@@ -57,6 +57,38 @@ impl DaemonUtils for MacOsDaemonUtils {
         }
     }
 
+    fn get_optimal_arp_concurrency(&self) -> Result<usize, Error> {
+        // macOS has limited BPF devices and FD_SET has a fixed-size array (32 on some versions)
+        // Opening too many concurrent datalink channels causes index out of bounds panic
+        // Keep this conservative to avoid crashing
+        Ok(10)
+    }
+
+    fn get_optimal_deep_scan_concurrency(&self, port_batch_size: usize) -> Result<usize, Error> {
+        let fd_limit = Self::get_fd_limit()?;
+
+        // Reserve file descriptors for:
+        // - stdin, stdout, stderr (3)
+        // - HTTP client connections for endpoints (50)
+        // - Docker socket and other daemon operations (50)
+        // - Buffer for safety (100)
+        let reserved = 203;
+        let available = fd_limit.saturating_sub(reserved);
+
+        let concurrency = std::cmp::max(1, available / port_batch_size);
+
+        tracing::debug!(
+            fd_limit = fd_limit,
+            reserved = reserved,
+            available = available,
+            port_batch_size = port_batch_size,
+            concurrency = concurrency,
+            "Calculated deep scan concurrency"
+        );
+
+        Ok(concurrency)
+    }
+
     async fn get_mac_address_for_ip(&self, ip: IpAddr) -> Result<Option<MacAddress>, Error> {
         use tokio::process::Command;
 
