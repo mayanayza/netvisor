@@ -2,6 +2,8 @@
 	import { CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-svelte';
 	import type { DiscoveryUpdatePayload } from '../../types/api';
 	import { formatDuration, formatTimestamp } from '$lib/shared/utils/formatting';
+	import { getSubnetFromId } from '$lib/features/subnets/store';
+	import { get } from 'svelte/store';
 
 	export let payload: DiscoveryUpdatePayload;
 
@@ -86,18 +88,15 @@
 		</div>
 
 		<!-- Processed -->
-		{#if payload.total_to_process !== undefined && payload.processed !== undefined}
+		{#if payload.progress !== undefined}
 			<div class="card p-4">
-				<div class="text-tertiary mb-1 text-xs font-medium uppercase tracking-wide">Processed</div>
+				<div class="text-tertiary mb-1 text-xs font-medium uppercase tracking-wide">Progress</div>
 				<div class="flex items-center gap-2">
 					<div class="text-secondary text-sm">
-						{payload.processed} / {payload.total_to_process}
+						{payload.progress}%
 					</div>
 					<div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-700">
-						<div
-							class="h-full bg-blue-500 transition-all"
-							style="width: {(payload.processed / payload.total_to_process) * 100}%"
-						></div>
+						<div class="h-full bg-blue-500 transition-all" style="width: {payload.progress}%"></div>
 					</div>
 				</div>
 			</div>
@@ -138,10 +137,9 @@
 				{#if payload.discovery_type.subnet_ids === null}
 					Scanned all subnets that daemon had an interface with at time of scan
 				{:else}
-					Scanned {payload.discovery_type.subnet_ids.length} specific subnet{payload.discovery_type
-						.subnet_ids.length !== 1
-						? 's'
-						: ''}
+					Scanned {payload.discovery_type.subnet_ids
+						.map((s) => get(getSubnetFromId(s))?.name || 'Unknown Subnet')
+						.join(', ')}
 				{/if}
 			</div>
 		</div>

@@ -10,6 +10,8 @@ use cidr::IpCidr;
 use futures::future::try_join_all;
 use futures::stream::{self, StreamExt};
 use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{collections::HashMap, net::IpAddr, sync::OnceLock};
 use strum::IntoDiscriminant;
 use tokio_util::sync::CancellationToken;
@@ -102,7 +104,7 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
 
         let container_list = self.get_containers_to_scan().await?;
 
-        self.start_discovery(container_list.len(), request).await?;
+        self.start_discovery(request).await?;
 
         // Create service for docker daemon
         let (_, services) = self.create_docker_daemon_service().await?;
@@ -115,7 +117,7 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
         let subnets = self.discover_create_subnets().await?;
 
         // Get host interfaces
-        let (mut host_interfaces, _) = self
+        let (mut host_interfaces, _, _) = self
             .as_ref()
             .utils
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
@@ -213,7 +215,7 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<DockerScanDiscovery> {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Network ID not set"))?;
 
-        let (_, host_subnets) = self
+        let (_, host_subnets, _) = self
             .as_ref()
             .utils
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
@@ -300,8 +302,11 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         containers_interfaces_and_subnets: &HashMap<String, Vec<(Interface, Subnet)>>,
         docker_service_id: &Uuid,
     ) -> Result<Vec<(Host, Vec<Service>)>> {
-        let session = self.as_ref().get_session().await?;
-        let processed_count = session.processed_count.clone();
+        let total_containers = containers.len();
+
+        self.report_scanning_progress(0).await?;
+
+        let processed_count = Arc::new(AtomicUsize::new(0));
 
         let concurrent_scans = self.as_ref().config_store.get_concurrent_scans().await?;
 
@@ -312,22 +317,30 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         let results = stream::iter(containers.into_iter())
             .map(|(container, container_summary)| {
                 let cancel = cancel.clone();
+                let processed_count = processed_count.clone();
 
                 async move {
-                    self.process_single_container(&ProcessContainerParams {
-                        containers_interfaces_and_subnets,
-                        container: &container,
-                        container_summary: &container_summary,
-                        docker_service_id,
-                        cancel,
-                    })
-                    .await
+                    let result = self
+                        .process_single_container(&ProcessContainerParams {
+                            containers_interfaces_and_subnets,
+                            container: &container,
+                            container_summary: &container_summary,
+                            docker_service_id,
+                            cancel,
+                        })
+                        .await;
+
+                    // Update progress after each container
+                    let done = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                    let pct = (done * 100 / total_containers.max(1)) as u8;
+                    let _ = self.report_scanning_progress(pct).await;
+
+                    result
                 }
             })
             .buffer_unordered(concurrent_scans);
 
         let mut stream_pin = Box::pin(results);
-        let mut last_reported_processed_count: usize = 0;
         let mut all_container_data = Vec::new();
 
         while let Some(result) = stream_pin.next().await {
@@ -335,8 +348,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 tracing::warn!("Docker discovery session was cancelled");
                 return Err(Error::msg("Docker discovery session was cancelled"));
             }
-
-            processed_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
             match result {
                 Ok(Some((host, services))) => all_container_data.push((host, services)),
@@ -349,10 +360,6 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     );
                 }
             }
-
-            last_reported_processed_count = self
-                .periodic_scan_update(last_reported_processed_count)
-                .await?;
         }
 
         Ok(all_container_data)
@@ -802,25 +809,9 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
         let all_endpoints = Service::all_discovery_endpoints();
 
-        // Group endpoints by (port, path) to avoid duplicate requests
-        let mut unique_endpoints: HashMap<(u16, String), Endpoint> = HashMap::new();
-        for endpoint in all_endpoints {
-            let key = (endpoint.port_base.number(), endpoint.path.clone());
-            unique_endpoints.entry(key).or_insert(endpoint);
-        }
-
-        tracing::debug!(
-            "Scanning {} unique endpoints for container {} at {} using docker exec (deduplicated from {} total)",
-            unique_endpoints.len(),
-            container_name,
-            interface.base.ip_address,
-            Service::all_discovery_endpoints().len()
-        );
-
         let mut endpoint_responses = Vec::new();
 
-        // Only make one docker exec per unique (port, path) combination
-        for ((container_port, path), endpoint) in unique_endpoints {
+        for endpoint in all_endpoints {
             if cancel.is_cancelled() {
                 tracing::debug!(
                     "Container endpoint scanning cancelled for {}",
@@ -835,22 +826,26 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 // curl - HTTP
                 format!(
                     "curl -i -s -m 1 -L --max-redirs 2 http://127.0.0.1:{}{}",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
                 // curl - HTTPS (with -k for self-signed certs)
                 format!(
                     "curl -k -i -s -m 1 -L --max-redirs 2 https://127.0.0.1:{}{}",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
                 // wget - HTTP
                 format!(
                     "wget -S -q -O- -T 1 http://127.0.0.1:{}{}",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
                 // wget - HTTPS (with --no-check-certificate)
                 format!(
                     "wget --no-check-certificate -S -q -O- -T 1 https://127.0.0.1:{}{}",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
                 // Python - HTTP
                 format!(
@@ -860,7 +855,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     print(resp.read().decode('utf-8'))\\\\nexcept urllib.error.HTTPError as e:\\\\n \
                     print('HTTP/1.1', e.code, e.msg)\\\\n for h in e.headers: print(h + ':', e.headers[h])\\\\n \
                     print()\\\\n print(e.read().decode('utf-8'))\\\")\"",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
                 // Python - HTTPS (with unverified SSL context)
                 format!(
@@ -872,12 +868,14 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     print(resp.read().decode('utf-8'))\\\\nexcept urllib.error.HTTPError as e:\\\\n \
                     print('HTTP/1.1', e.code, e.msg)\\\\n for h in e.headers: print(h + ':', e.headers[h])\\\\n \
                     print()\\\\n print(e.read().decode('utf-8'))\\\")\"",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
                 // bash /dev/tcp - only supports HTTP (no TLS)
                 format!(
                     "bash -c \"exec 3<>/dev/tcp/127.0.0.1/{} && echo -e 'GET {} HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && cat <&3\"",
-                    container_port, path
+                    endpoint.port_base.number(),
+                    endpoint.path
                 ),
             ];
 
@@ -938,13 +936,15 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 // Parse response to check status code and extract body
                 if let Some((status, body, headers)) = Self::parse_http_response(full_response) {
                     // Map back to the host-visible endpoint
-                    if let Some(host_mappings) = container_to_host_port_map.get(&container_port) {
+                    if let Some(host_mappings) =
+                        container_to_host_port_map.get(&endpoint.port_base.number())
+                    {
                         for (host_ip, host_port) in host_mappings {
                             let host_endpoint = Endpoint {
                                 ip: Some(*host_ip),
                                 port_base: PortBase::new_tcp(*host_port),
                                 protocol: endpoint.protocol,
-                                path: path.clone(),
+                                path: endpoint.path.clone(),
                             };
 
                             endpoint_responses.push(EndpointResponse {
@@ -959,9 +959,9 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     // Also add the container-internal endpoint
                     let container_endpoint = Endpoint {
                         ip: Some(interface.base.ip_address), // Container's IP on the bridge network
-                        port_base: PortBase::new_tcp(container_port), // Container port, not host port
+                        port_base: PortBase::new_tcp(endpoint.port_base.number()), // Container port, not host port
                         protocol: endpoint.protocol,
-                        path: path.clone(),
+                        path: endpoint.path.clone(),
                     };
 
                     endpoint_responses.push(EndpointResponse {

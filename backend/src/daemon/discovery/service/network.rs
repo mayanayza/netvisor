@@ -2,20 +2,21 @@ use crate::daemon::discovery::service::base::{
     CreatesDiscoveredEntities, DiscoversNetworkedEntities, DiscoveryRunner, RunsDiscovery,
 };
 use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySessionUpdate};
-use crate::daemon::utils::scanner::scan_ports_and_endpoints;
+use crate::daemon::utils::scanner::{
+    arp_scan_host, scan_endpoints, scan_tcp_ports, scan_udp_ports,
+};
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::hosts::r#impl::{
     interfaces::{Interface, InterfaceBase},
     ports::PortBase,
 };
-use crate::server::services::r#impl::base::ServiceMatchBaselineParams;
-use crate::server::shared::types::api::ApiResponse;
-use crate::server::subnets::r#impl::types::{SubnetType, SubnetTypeDiscriminants};
+use crate::server::services::r#impl::base::{Service, ServiceMatchBaselineParams};
+use crate::server::subnets::r#impl::types::SubnetTypeDiscriminants;
 use crate::{
     daemon::utils::base::DaemonUtils,
     server::{
         daemons::r#impl::api::DaemonDiscoveryRequest, hosts::r#impl::base::Host,
-        services::r#impl::endpoints::EndpointResponse, subnets::r#impl::base::Subnet,
+        subnets::r#impl::base::Subnet,
     },
 };
 use anyhow::Error;
@@ -25,7 +26,10 @@ use futures::{
     future::try_join_all,
     stream::{self, StreamExt},
 };
+use mac_address::MacAddress;
+use std::collections::{HashMap, HashSet};
 use std::result::Result::Ok;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use std::{net::IpAddr, sync::Arc};
 use strum::IntoDiscriminant;
@@ -48,6 +52,18 @@ impl NetworkScanDiscovery {
     }
 }
 
+pub struct DeepScanParams<'a> {
+    ip: IpAddr,
+    subnet: &'a Subnet,
+    mac: Option<MacAddress>,
+    phase1_ports: Vec<PortBase>,
+    cancel: CancellationToken,
+    port_scan_batch_size: usize,
+    gateway_ips: &'a [IpAddr],
+    batches_done: &'a Arc<AtomicUsize>,
+    total_batches: usize,
+}
+
 impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
 
 #[async_trait]
@@ -67,13 +83,7 @@ impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
         // Ignore docker bridge subnets, they are discovered through Docker Discovery
         let subnets: Vec<Subnet> = self.discover_create_subnets().await?;
 
-        let total_ips_across_subnets: usize = subnets
-            .iter()
-            .map(|subnet| subnet.base.cidr.iter().count())
-            .sum();
-
-        self.start_discovery(total_ips_across_subnets, request)
-            .await?;
+        self.start_discovery(request).await?;
 
         let discovery_result = self
             .scan_and_process_hosts(subnets, cancel.clone())
@@ -115,7 +125,7 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
 
         // Target all interfaced subnets if not
         } else {
-            let (_, subnets) = self
+            let (_, subnets, _) = self
                 .as_ref()
                 .utils
                 .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
@@ -149,23 +159,21 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<NetworkScanDiscovery> {
 }
 
 impl DiscoveryRunner<NetworkScanDiscovery> {
-    /// Scan subnet concurrently and process hosts immediately as they're discovered
     async fn scan_and_process_hosts(
         &self,
         subnets: Vec<Subnet>,
         cancel: CancellationToken,
     ) -> Result<Vec<Host>, Error> {
-        let configured_concurrent_scans = self.as_ref().config_store.get_concurrent_scans().await?;
-        let concurrent_scans = self
+        let session = self.as_ref().get_session().await?;
+
+        let (_, _, subnet_cidr_to_mac) = self
             .as_ref()
             .utils
-            .get_optimal_concurrent_scans(configured_concurrent_scans)
-            .await?;
-
-        let session = self.as_ref().get_session().await?;
-        let scanned_count = session.processed_count.clone();
-
-        self.report_discovery_update(DiscoverySessionUpdate::scanning(0))
+            .get_own_interfaces(
+                self.discovery_type(),
+                session.info.daemon_id,
+                session.info.network_id,
+            )
             .await?;
 
         let all_ips_with_subnets: Vec<(IpAddr, Subnet)> = subnets
@@ -177,162 +185,186 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .collect();
 
         let total_ips = all_ips_with_subnets.len();
-        tracing::info!("Total IPs to scan: {}", total_ips);
 
-        let results = stream::iter(all_ips_with_subnets)
+        // Pre-compute values used in streams
+        let daemon_ip = self.as_ref().utils.get_own_ip_address()?;
+        let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
+        let discovery_ports: Vec<u16> = Service::all_discovery_ports()
+            .iter()
+            .filter(|p| p.is_tcp())
+            .map(|p| p.number())
+            .collect();
+
+        // Partition IPs by whether their subnet is interfaced
+        let (interfaced_ips, non_interfaced_ips): (Vec<_>, Vec<_>) =
+            all_ips_with_subnets.into_iter().partition(|(_, subnet)| {
+                subnet_cidr_to_mac
+                    .get(&subnet.base.cidr)
+                    .and_then(|m| *m)
+                    .is_some()
+            });
+
+        // =============================================================
+        // PHASE 1: Responsiveness check (0-50%)
+        // =============================================================
+        tracing::info!(
+            total_ips = total_ips,
+            interfaced_ips = interfaced_ips.len(),
+            non_interfaced_ips = non_interfaced_ips.len(),
+            "Phase 1: Checking host responsiveness"
+        );
+
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(0))
+            .await?;
+
+        let phase1_scanned = Arc::new(AtomicUsize::new(0));
+        let mut responsive_hosts: Vec<(IpAddr, Subnet, Option<MacAddress>, Vec<PortBase>)> =
+            Vec::new();
+
+        // Process interfaced subnets with ARP
+        if !interfaced_ips.is_empty() {
+            let arp_concurrency = self.as_ref().utils.get_optimal_arp_concurrency()?;
+
+            tracing::info!(
+                count = interfaced_ips.len(),
+                concurrency = arp_concurrency,
+                "Phase 1a: ARP scanning interfaced subnets"
+            );
+
+            let subnet_cidr_to_mac_clone = subnet_cidr_to_mac.clone();
+            let arp_responsive: Vec<_> = stream::iter(interfaced_ips)
             .map(|(ip, subnet)| {
                 let cancel = cancel.clone();
-                let subnet = subnet.clone();
-                let scanned_count = scanned_count.clone();
+                let phase1_scanned = phase1_scanned.clone();
+                let subnet_mac = subnet_cidr_to_mac_clone.get(&subnet.base.cidr).and_then(|m| *m);
 
                 async move {
-                    match self
-                        .scan_host(ip, scanned_count, cancel, subnet.base.cidr)
-                        .await
-                    {
-                        Ok(None) => {
-                            tracing::trace!("Host {} - no ports/endpoints found", ip);
-                            Ok(None)
-                        }
+                    let result = self
+                        .check_host_responsive_arp(ip, subnet_mac.unwrap(), daemon_ip, cancel)
+                        .await;
+
+                    let scanned = phase1_scanned.fetch_add(1, Ordering::Relaxed) + 1;
+                    let pct = (scanned * 50 / total_ips.max(1)) as u8;
+                    let _ = self.report_scanning_progress(pct).await;
+
+                    match result {
+                        Ok(Some(mac)) => Some((ip, subnet, Some(mac), Vec::new())),
+                        Ok(None) => None,
                         Err(e) => {
-                            tracing::warn!(
-                                ip = %ip,
-                                error = %e,
-                                phase = "port_endpoint_scan",
-                                "Scan error"
-                            );
-                            Err(e)
-                        }
-                        Ok(Some((all_ports, endpoint_responses))) => {
-                            tracing::debug!(
-                                "Host {} - found {} ports, {} endpoints",
-                                ip,
-                                all_ports.len(),
-                                endpoint_responses.len()
-                            );
-
-                            let hostname = self.get_hostname_for_ip(ip).await?;
-                            let mac = match subnet.base.subnet_type {
-                                SubnetType::VpnTunnel => None,
-                                _ => self.as_ref().utils.get_mac_address_for_ip(ip).await?,
-                            };
-
-                            let interface = Interface::new(InterfaceBase {
-                                name: None,
-                                subnet_id: subnet.id,
-                                ip_address: ip,
-                                mac_address: mac,
-                            });
-
-                            if let Ok(Some((host, services))) = self
-                                .process_host(
-                                    ServiceMatchBaselineParams {
-                                        subnet: &subnet,
-                                        interface: &interface,
-                                        all_ports: &all_ports,
-                                        endpoint_responses: &endpoint_responses,
-                                        virtualization: &None,
-                                    },
-                                    hostname,
-                                    self.domain.host_naming_fallback,
-                                )
-                                .await
-                            {
-
-                                let services_matched = services.len();
-
-                                tracing::info!(
-                                    ip = %ip,
-                                    services_matched = %services_matched,
-                                    "Host processed"
-                                );
-
-                                if let Ok((created_host, _)) =
-                                    self.create_host(host, services).await
-                                {
-                                    tracing::info!(
-                                        ip = %ip,
-                                        services_matched = %services_matched,
-                                        "Host created"
-                                    );
-                                    return Ok::<Option<Host>, Error>(Some(created_host));
-                                } else {
-                                    tracing::warn!(
-                                        ip = %ip,
-                                        services_matched = %services_matched,
-                                        "Host creation failed"
-                                    );
-                                }
+                            if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                                tracing::error!(ip = %ip, error = %e, "Critical error in ARP check");
                             } else {
-                                tracing::debug!(
-        ip = %ip,
-        "Host processing returned None - no services matched or error occurred"
-    );
+                                tracing::trace!(ip = %ip, error = %e, "ARP check failed");
                             }
-                            Ok(None)
+                            None
                         }
                     }
                 }
             })
-            .buffer_unordered(concurrent_scans);
-
-        let mut stream_pin = Box::pin(results);
-        let mut last_reported_processed_count: usize = 0;
-        let mut successful_discoveries = Vec::new();
-        let mut scanned = 0;
-
-        while let Some(result) = stream_pin.next().await {
-            scanned += 1;
+            .buffer_unordered(arp_concurrency)
+            .filter_map(|x| async { x })
+            .collect()
+            .await;
 
             if cancel.is_cancelled() {
-                tracing::warn!("Discovery session was cancelled");
                 return Err(Error::msg("Discovery session was cancelled"));
             }
 
-            match result {
-                Ok(Some(host)) => successful_discoveries.push(host),
-                Ok(None) => {}
-                Err(e) => {
-                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                        return Err(e);
-                    } else {
-                        tracing::warn!(
-                            error = %e,
-                            phase = "scan_and_process",
-                            "Host scan/processing error"
-                        );
+            responsive_hosts.extend(arp_responsive);
+        }
+
+        // Process non-interfaced subnets with port scanning
+        if !non_interfaced_ips.is_empty() {
+            let configured = self.as_ref().config_store.get_concurrent_scans().await?;
+            let port_concurrency = self
+                .as_ref()
+                .utils
+                .get_optimal_concurrent_scans(configured)
+                .await?;
+
+            tracing::info!(
+                count = non_interfaced_ips.len(),
+                concurrency = port_concurrency,
+                "Phase 1b: Port scanning non-interfaced subnets"
+            );
+
+            let port_responsive: Vec<_> = stream::iter(non_interfaced_ips)
+            .map(|(ip, subnet)| {
+                let cancel = cancel.clone();
+                let phase1_scanned = phase1_scanned.clone();
+                let discovery_ports = discovery_ports.clone();
+
+                async move {
+                    let result = self
+                        .check_host_responsive_ports(ip, &discovery_ports, port_scan_batch_size, cancel)
+                        .await;
+
+                    let scanned = phase1_scanned.fetch_add(1, Ordering::Relaxed) + 1;
+                    let pct = (scanned * 50 / total_ips.max(1)) as u8;
+                    let _ = self.report_scanning_progress(pct).await;
+
+                    match result {
+                        Ok(Some(discovered_ports)) => Some((ip, subnet, None, discovered_ports)),
+                        Ok(None) => None,
+                        Err(e) => {
+                            if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                                tracing::error!(ip = %ip, error = %e, "Critical error in port check");
+                            } else {
+                                tracing::trace!(ip = %ip, error = %e, "Port check failed");
+                            }
+                            None
+                        }
                     }
                 }
+            })
+            .buffer_unordered(port_concurrency)
+            .filter_map(|x| async { x })
+            .collect()
+            .await;
+
+            if cancel.is_cancelled() {
+                return Err(Error::msg("Discovery session was cancelled"));
             }
 
-            last_reported_processed_count = self
-                .periodic_scan_update(last_reported_processed_count)
-                .await?;
+            responsive_hosts.extend(port_responsive);
         }
 
-        tracing::warn!(
-            total_ips = %total_ips,
-            scanned = %scanned,
-            discovered = %successful_discoveries.len(),
-            "Scan complete"
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(50))
+            .await?;
+
+        tracing::info!(
+            responsive = responsive_hosts.len(),
+            total_ips = total_ips,
+            "Phase 1 complete"
         );
 
-        Ok(successful_discoveries)
-    }
-
-    pub async fn scan_host(
-        &self,
-        ip: IpAddr,
-        scanned_count: Arc<std::sync::atomic::AtomicUsize>,
-        cancel: CancellationToken,
-        cidr: IpCidr,
-    ) -> Result<Option<(Vec<PortBase>, Vec<EndpointResponse>)>, Error> {
-        // Check cancellation at the start
-        if cancel.is_cancelled() {
-            return Err(Error::msg("Discovery was cancelled"));
+        if responsive_hosts.is_empty() {
+            self.report_discovery_update(DiscoverySessionUpdate::scanning(100))
+                .await?;
+            tracing::info!("No responsive hosts found, skipping Phase 2");
+            return Ok(Vec::new());
         }
 
-        let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
+        // =============================================================
+        // PHASE 2: Deep scan responsive hosts (50-100%)
+        // =============================================================
+        let ports_per_host_batch = 200;
+        let deep_scan_concurrency = self
+            .as_ref()
+            .utils
+            .get_optimal_deep_scan_concurrency(ports_per_host_batch)?;
+
+        let responsive_count = responsive_hosts.len();
+        let batches_per_host = 65535_usize.div_ceil(ports_per_host_batch);
+        let total_batches = responsive_count * batches_per_host;
+
+        tracing::info!(
+            responsive_hosts = responsive_count,
+            ports_per_host_batch = ports_per_host_batch,
+            deep_scan_concurrency = deep_scan_concurrency,
+            total_batches = total_batches,
+            "Phase 2: Deep scanning responsive hosts"
+        );
 
         let gateway_ips = self
             .as_ref()
@@ -340,56 +372,249 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .get_own_routing_table_gateway_ips()
             .await?;
 
-        // Scan ports and endpoints
-        let scan_result =
-            scan_ports_and_endpoints(ip, cancel.clone(), port_scan_batch_size, cidr, gateway_ips)
-                .await
-                .map_err(|e| anyhow::anyhow!("Scan task panicked: {}", e));
+        let phase2_batches_done = Arc::new(AtomicUsize::new(0));
 
-        // Check cancellation after network operation
+        let results = stream::iter(responsive_hosts)
+        .map(|(ip, subnet, mac, phase1_ports)| {
+            let cancel = cancel.clone();
+            let gateway_ips = gateway_ips.clone();
+            let phase2_batches_done = phase2_batches_done.clone();
+
+            async move {
+                let result = self
+                    .deep_scan_host(DeepScanParams{
+                        ip,
+                        subnet: &subnet,
+                        mac,
+                        phase1_ports,
+                        cancel,
+                        port_scan_batch_size: ports_per_host_batch,
+                        gateway_ips: &gateway_ips,
+                        batches_done: &phase2_batches_done,
+                        total_batches,
+                    })
+                    .await;
+
+                match result {
+                    Ok(Some(host)) => Some(host),
+                    Ok(None) => None,
+                    Err(e) => {
+                        if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                            tracing::error!(ip = %ip, error = %e, "Critical error in deep scan");
+                        } else {
+                            tracing::warn!(ip = %ip, error = %e, "Deep scan failed");
+                        }
+                        None
+                    }
+                }
+            }
+        })
+        .buffer_unordered(deep_scan_concurrency)
+        .filter_map(|x| async { x })
+        .collect::<Vec<Host>>()
+        .await;
+
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(100))
+            .await?;
+
+        tracing::info!(
+            discovered = results.len(),
+            responsive = responsive_count,
+            "Phase 2 complete"
+        );
+
+        Ok(results)
+    }
+
+    async fn check_host_responsive_arp(
+        &self,
+        ip: IpAddr,
+        subnet_mac: MacAddress,
+        daemon_ip: IpAddr,
+        cancel: CancellationToken,
+    ) -> Result<Option<MacAddress>, Error> {
         if cancel.is_cancelled() {
-            scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             return Err(Error::msg("Discovery was cancelled"));
         }
 
-        match scan_result {
-            Ok((open_ports, endpoint_responses)) => {
-                if !open_ports.is_empty() || !endpoint_responses.is_empty() {
-                    tracing::info!(
-                        ip = %ip,
-                        open_port_count = %open_ports.len(),
-                        endpoint_response_count = %endpoint_responses.len(),
-                        "Processing host",
-                    );
+        let mac = arp_scan_host(&subnet_mac, daemon_ip, ip).await?;
 
-                    // Check cancellation before processing
-                    if cancel.is_cancelled() {
-                        scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                        return Err(Error::msg("Discovery was cancelled"));
-                    }
+        if mac.is_some() {
+            tracing::debug!(ip = %ip, mac = ?mac, "Host responsive (ARP)");
+        } else {
+            tracing::trace!(ip = %ip, "Host not responsive (ARP timeout)");
+        }
 
-                    Ok(Some((open_ports, endpoint_responses)))
-                } else {
-                    tracing::debug!("No open ports found on {}", ip);
-                    scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                    Ok(None)
-                }
+        Ok(mac)
+    }
+
+    async fn check_host_responsive_ports(
+        &self,
+        ip: IpAddr,
+        discovery_ports: &[u16],
+        port_scan_batch_size: usize,
+        cancel: CancellationToken,
+    ) -> Result<Option<Vec<PortBase>>, Error> {
+        if cancel.is_cancelled() {
+            return Err(Error::msg("Discovery was cancelled"));
+        }
+
+        let open_ports =
+            scan_tcp_ports(ip, cancel, port_scan_batch_size, discovery_ports.to_vec()).await?;
+
+        if !open_ports.is_empty() {
+            let discovered_ports: Vec<PortBase> = open_ports.iter().map(|(p, _)| *p).collect();
+            tracing::debug!(ip = %ip, open_ports = discovered_ports.len(), "Host responsive (TCP)");
+            Ok(Some(discovered_ports))
+        } else {
+            tracing::trace!(ip = %ip, "Host not responsive (no discovery ports open)");
+            Ok(None)
+        }
+    }
+
+    async fn deep_scan_host(&self, params: DeepScanParams<'_>) -> Result<Option<Host>, Error> {
+        let DeepScanParams {
+            ip,
+            subnet,
+            mac,
+            phase1_ports,
+            cancel,
+            port_scan_batch_size,
+            gateway_ips,
+            batches_done,
+            total_batches,
+        } = params;
+
+        if cancel.is_cancelled() {
+            return Err(Error::msg("Discovery was cancelled"));
+        }
+
+        let phase1_port_nums: HashSet<u16> = phase1_ports.iter().map(|p| p.number()).collect();
+        let remaining_tcp_ports: Vec<u16> = (1..=65535)
+            .filter(|p| !phase1_port_nums.contains(p))
+            .collect();
+
+        tracing::debug!(
+            ip = %ip,
+            phase1_ports = phase1_ports.len(),
+            remaining_ports = remaining_tcp_ports.len(),
+            "Starting deep scan"
+        );
+
+        // Scan in batches, reporting progress after each
+        let mut all_tcp_ports = Vec::new();
+        for chunk in remaining_tcp_ports.chunks(port_scan_batch_size) {
+            if cancel.is_cancelled() {
+                return Err(Error::msg("Discovery was cancelled"));
             }
-            Err(e) => {
-                tracing::warn!(
-                    ip = %ip,
-                    error = %e,
-                    "Host scan failed"
-                );
 
-                if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                    Err(e)
-                } else {
-                    scanned_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                    Ok(None)
-                }
+            let open_ports =
+                scan_tcp_ports(ip, cancel.clone(), port_scan_batch_size, chunk.to_vec()).await?;
+            all_tcp_ports.extend(open_ports);
+
+            let done = batches_done.fetch_add(1, Ordering::Relaxed) + 1;
+            let pct = (50 + done * 50 / total_batches.max(1)) as u8;
+            let _ = self.report_scanning_progress(pct).await;
+        }
+
+        let use_https_ports: HashMap<u16, bool> = all_tcp_ports
+            .iter()
+            .map(|(p, h)| (p.number(), *h))
+            .collect();
+        let mut open_ports: Vec<PortBase> = all_tcp_ports.iter().map(|(p, _)| *p).collect();
+
+        // Merge phase 1 discovered ports
+        open_ports.extend(phase1_ports);
+        open_ports.sort_by_key(|p| (p.number(), p.protocol()));
+        open_ports.dedup();
+
+        // UDP and endpoint scanning
+        let udp_ports = scan_udp_ports(
+            ip,
+            cancel.clone(),
+            port_scan_batch_size,
+            subnet.base.cidr,
+            gateway_ips.to_vec(),
+        )
+        .await?;
+        open_ports.extend(udp_ports);
+
+        let mut ports_to_check = open_ports.clone();
+        let endpoint_only_ports = Service::endpoint_only_ports();
+        ports_to_check.extend(endpoint_only_ports);
+        ports_to_check.sort_by_key(|p| (p.number(), p.protocol()));
+        ports_to_check.dedup();
+
+        let endpoint_responses = scan_endpoints(
+            ip,
+            cancel.clone(),
+            Some(ports_to_check),
+            Some(use_https_ports),
+            port_scan_batch_size,
+        )
+        .await?;
+
+        for endpoint_response in &endpoint_responses {
+            let port = endpoint_response.endpoint.port_base;
+            if !open_ports.contains(&port) {
+                open_ports.push(port);
             }
         }
+
+        open_ports.sort_by_key(|p| (p.number(), p.protocol()));
+        open_ports.dedup();
+
+        if cancel.is_cancelled() {
+            return Err(Error::msg("Discovery was cancelled"));
+        }
+
+        tracing::info!(
+            ip = %ip,
+            open_ports = open_ports.len(),
+            endpoints = endpoint_responses.len(),
+            "Deep scan complete"
+        );
+
+        let hostname = self.get_hostname_for_ip(ip).await?;
+
+        let interface = Interface::new(InterfaceBase {
+            name: None,
+            subnet_id: subnet.id,
+            ip_address: ip,
+            mac_address: mac,
+        });
+
+        if let Ok(Some((host, services))) = self
+            .process_host(
+                ServiceMatchBaselineParams {
+                    subnet,
+                    interface: &interface,
+                    all_ports: &open_ports,
+                    endpoint_responses: &endpoint_responses,
+                    virtualization: &None,
+                },
+                hostname,
+                self.domain.host_naming_fallback,
+            )
+            .await
+        {
+            let services_count = services.len();
+
+            if let Ok((created_host, _)) = self.create_host(host, services).await {
+                tracing::info!(
+                    ip = %ip,
+                    services = services_count,
+                    "Host created"
+                );
+                return Ok(Some(created_host));
+            } else {
+                tracing::warn!(ip = %ip, "Host creation failed");
+            }
+        } else {
+            tracing::debug!(ip = %ip, "Host processing returned None");
+        }
+
+        Ok(None)
     }
 
     async fn get_hostname_for_ip(&self, ip: IpAddr) -> Result<Option<String>, Error> {
@@ -450,43 +675,9 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
     }
 
     async fn get_subnets(&self) -> Result<Vec<Subnet>, Error> {
-        let server_target = self.as_ref().config_store.get_server_url().await?;
-
-        let api_key = self
-            .as_ref()
-            .config_store
-            .get_api_key()
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("API key not set"))?;
-
-        let response = self
-            .as_ref()
-            .client
-            .get(format!("{}/api/subnets", server_target))
-            .header("Authorization", format!("Bearer {}", api_key))
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            anyhow::bail!(
-                "Failed to report discovered subnet: HTTP {}",
-                response.status(),
-            );
-        }
-
-        let api_response: ApiResponse<Vec<Subnet>> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            anyhow::bail!("Failed to create subnet: {}", error_msg);
-        }
-
-        let subnets = api_response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("No subnet data in successful response"))?;
-
-        Ok(subnets)
+        self.as_ref()
+            .api_client
+            .get("/api/subnets", "Failed to get subnets")
+            .await
     }
 }

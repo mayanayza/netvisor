@@ -21,7 +21,8 @@
 		.filter(
 			(p_type) =>
 				p_type.metadata.can_be_added && !formData.ports.some((port) => port.type == p_type.id)
-		);
+		)
+		.sort((a, b) => a.metadata.number - b.metadata.number);
 
 	// Check against currentServices instead of the global store
 	function isPortUsed(port: Port): boolean {
@@ -65,7 +66,7 @@
 		<ListManager
 			label="Ports"
 			helpText="Manage ports for this host"
-			placeholder="Add standard port..."
+			placeholder="Add well-known or IANA registered port..."
 			emptyMessage="No ports on this host. Add one to get started."
 			allowReorder={false}
 			allowCreateNew={true}
@@ -95,8 +96,8 @@
 			/>
 		{:else if selectedItem && selectedItem.type != 'Custom'}
 			<EntityConfigEmpty
-				title="Standard Port"
-				subtitle="This is a standard port, and can't be edited"
+				title="Well-known or registered Port"
+				subtitle="This is designated by the IANA (Internet Assigned Numbers Authority) as a well-known or registered port, and can't be edited"
 			/>
 		{:else}
 			<EntityConfigEmpty

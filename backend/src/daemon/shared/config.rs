@@ -63,6 +63,9 @@ pub struct DaemonCli {
 
     #[arg(long)]
     mode: Option<DaemonMode>,
+
+    #[arg(long)]
+    allow_self_signed_certs: Option<bool>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
@@ -96,6 +99,8 @@ pub struct AppConfig {
     pub docker_proxy: Option<String>,
     #[serde(default)]
     pub mode: DaemonMode,
+    #[serde(default)]
+    allow_self_signed_certs: bool,
 }
 
 impl Default for AppConfig {
@@ -117,6 +122,7 @@ impl Default for AppConfig {
             mode: DaemonMode::Push,
             server_port: None,
             server_target: None,
+            allow_self_signed_certs: false,
         }
     }
 }
@@ -176,6 +182,9 @@ impl AppConfig {
         }
         if let Some(mode) = cli_args.mode {
             figment = figment.merge(("mode", mode));
+        }
+        if let Some(allow_self_signed_certs) = cli_args.allow_self_signed_certs {
+            figment = figment.merge(("allow_self_signed_certs", allow_self_signed_certs));
         }
 
         let config: AppConfig = figment
@@ -260,6 +269,11 @@ impl ConfigStore {
         let mut config = self.config.write().await;
         config.id = id;
         self.save(&config.clone()).await
+    }
+
+    pub async fn get_allow_self_signed_certs(&self) -> Result<bool> {
+        let config = self.config.read().await;
+        Ok(config.allow_self_signed_certs)
     }
 
     pub async fn get_api_key(&self) -> Result<Option<String>> {

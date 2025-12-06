@@ -57,6 +57,10 @@ impl Subnet {
         self.base.subnet_type == SubnetType::DockerBridge
     }
 
+    pub fn is_vpn_subnet(&self) -> bool {
+        self.base.subnet_type == SubnetType::VpnTunnel
+    }
+
     pub fn from_discovery(
         interface_name: String,
         ip_network: &IpNetwork,

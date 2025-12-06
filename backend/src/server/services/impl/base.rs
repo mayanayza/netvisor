@@ -1,12 +1,12 @@
 use crate::server::discovery::r#impl::types::DiscoveryType;
 use crate::server::hosts::r#impl::interfaces::Interface;
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::hosts::r#impl::ports::{Port, PortBase};
 use crate::server::services::definitions::ServiceDefinitionRegistry;
 use crate::server::services::r#impl::bindings::Binding;
 use crate::server::services::r#impl::definitions::ServiceDefinitionExt;
 use crate::server::services::r#impl::definitions::{DefaultServiceDefinition, ServiceDefinition};
 use crate::server::services::r#impl::endpoints::{Endpoint, EndpointResponse};
-use crate::server::services::r#impl::patterns::{MatchConfidence, MatchReason, MatchResult};
+use crate::server::services::r#impl::patterns::{MatchConfidence, MatchReason};
 use crate::server::services::r#impl::virtualization::{
     DockerVirtualization, ServiceVirtualization,
 };
@@ -332,7 +332,7 @@ impl Service {
     /// Matches scanned data and returns service, vec of matched ports
     pub fn from_discovery(
         params: DiscoverySessionServiceMatchParams,
-    ) -> Option<(Self, MatchResult)> {
+    ) -> Option<(Self, Vec<Port>, Option<Endpoint>)> {
         let DiscoverySessionServiceMatchParams {
             host_id,
             network_id,
@@ -362,7 +362,7 @@ impl Service {
                 network_id = %network_id,
                 daemon_id = %daemon_id,
                 discovery_type = ?discovery_type,
-                matched_ports = ?result.ports.iter().map(|p| p.base.number()).collect::<Vec<_>>(),
+                matched_ports = ?result.ports.iter().map(|p| p.number()).collect::<Vec<_>>(),
                 match_confidence = ?result.details.confidence,
                 "Service discovered"
             );
@@ -395,9 +395,10 @@ impl Service {
 
             let discovery_metadata = DiscoveryMetadata::new(discovery_type.clone(), *daemon_id);
 
+            let ports: Vec<Port> = result.ports.iter().map(|p| Port::new(*p)).collect();
+
             let bindings: Vec<Binding> = if !result.ports.is_empty() {
-                result
-                    .ports
+                ports
                     .iter()
                     .map(|p| Binding::new_port(p.id, Some(interface.id)))
                     .collect()
@@ -418,7 +419,7 @@ impl Service {
                 },
             });
 
-            Some((service, result))
+            Some((service, ports, result.endpoint))
         } else {
             tracing::trace!(
                 service = %service_definition.name(),

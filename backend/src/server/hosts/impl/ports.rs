@@ -215,6 +215,13 @@ impl PortBase {
         PortBase::Custom(PortConfig { number, protocol })
     }
 
+    pub fn is_tcp(&self) -> bool {
+        self.protocol() == TransportProtocol::Tcp
+    }
+    pub fn is_udp(&self) -> bool {
+        self.protocol() == TransportProtocol::Udp
+    }
+
     pub fn new_tcp(number: u16) -> Self {
         PortBase::Custom(PortConfig {
             number,

@@ -2,13 +2,12 @@
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
-	import { get } from 'svelte/store';
 	import type { Service } from '../types/base';
 	import type { Host, Interface, Port } from '$lib/features/hosts/types/base';
-	import { getBindingDisplayName } from '../store';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { formatInterface } from '$lib/features/hosts/store';
 	import { matchConfidenceColor, matchConfidenceLabel } from '$lib/shared/types';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	export let service: Service;
 	export let host: Host;
@@ -18,45 +17,54 @@
 	export let selected: boolean;
 	export let onSelectionChange: (selected: boolean) => void = () => {};
 
-	$: ports = host.ports.filter((p) =>
-		service.bindings
-			.map((b) => (b.type == 'Port' ? b.port_id : null))
-			.filter((b) => b !== null)
-			.includes(p.id)
-	);
+	// Replace the existing $: ports reactive statement with this:
+	$: groupedPortBindings = (() => {
+		const portBindings = service.bindings.filter((b) => b.type === 'Port');
+		const grouped = new SvelteMap<string | null, { iface: Interface | null; ports: Port[] }>();
+
+		for (const binding of portBindings) {
+			const port = host.ports.find((p) => p.id === binding.port_id);
+			if (!port) continue;
+
+			const interfaceId = binding.interface_id;
+			if (!grouped.has(interfaceId)) {
+				const iface = interfaceId ? host.interfaces.find((i) => i.id === interfaceId) : null;
+				grouped.set(interfaceId, { iface: iface ?? null, ports: [] });
+			}
+			grouped.get(interfaceId)!.ports.push(port);
+		}
+
+		return Array.from(grouped.values()).map(({ iface, ports }) => {
+			const portList = ports.map((p) => formatPort(p)).join(', ');
+			const label = iface
+				? `${iface.name ? iface.name + ': ' : ''} ${iface.ip_address} (${portList})`
+				: `Unbound (${portList})`;
+			return {
+				id: iface?.id ?? 'unbound',
+				label,
+				color: entities.getColorHelper('Port').string
+			};
+		});
+	})();
+
 	$: ifaces = host.interfaces.filter((i) =>
 		service.bindings
+			.filter((b) => b.type == 'Interface')
 			.map((b) => b.interface_id)
 			.filter((b) => b !== null)
 			.includes(i.id)
 	);
-	$: firstTcpPortBinding = service.bindings.find((b) => {
-		if (b.type == 'Port') {
-			const port = host.ports.find((p) => p.id == b.port_id);
-			if (port) {
-				port.protocol = 'Tcp';
-			}
-		}
-		return false;
-	});
 
 	// Build card data
 	$: cardData = {
 		title: service.name,
 		subtitle: 'On host ' + host.name,
-		link: firstTcpPortBinding
-			? `http://${get(getBindingDisplayName(firstTcpPortBinding))}`
-			: undefined,
 		iconColor: serviceDefinitions.getColorHelper(service.service_definition).icon,
 		Icon: serviceDefinitions.getIconComponent(service.service_definition),
 		fields: [
 			{
 				label: 'Port Bindings',
-				value: ports.map((port: Port) => ({
-					id: port.id,
-					label: formatPort(port),
-					color: entities.getColorHelper('Port').string
-				})),
+				value: groupedPortBindings,
 				emptyText: 'No ports assigned'
 			},
 			{
