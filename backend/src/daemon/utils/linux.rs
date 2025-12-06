@@ -19,7 +19,7 @@ impl DaemonUtils for LinuxDaemonUtils {
         Self {}
     }
 
-    fn get_fd_limit(&self) -> Result<usize, Error> {
+    fn get_fd_limit() -> Result<usize, Error> {
         use libc::{RLIMIT_NOFILE, getrlimit, rlimit};
 
         let mut rlim = rlimit {

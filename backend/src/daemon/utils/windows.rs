@@ -20,7 +20,7 @@ impl DaemonUtils for WindowsDaemonUtils {
         Self {}
     }
 
-    fn get_fd_limit(&self) -> Result<usize, anyhow::Error> {
+    fn get_fd_limit() -> Result<usize, anyhow::Error> {
         // Windows doesn't have a direct equivalent to Unix file descriptors
         // The _getmaxstdio() function returns the maximum number of FILE streams (default 512)
         // However, socket handles use a different mechanism
