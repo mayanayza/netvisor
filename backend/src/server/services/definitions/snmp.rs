@@ -5,30 +5,24 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct LDAP;
+pub struct Snmp;
 
-impl ServiceDefinition for LDAP {
+impl ServiceDefinition for Snmp {
     fn name(&self) -> &'static str {
-        "Open LDAP"
+        "SNMP"
     }
     fn description(&self) -> &'static str {
-        "Generic LDAP directory service"
+        "Simple Network Management Protocol"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::IdentityAndAccess
+        ServiceCategory::NetworkCore
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Ldaps),
-        ])
+        Pattern::Port(PortBase::Snmp)
     }
     fn is_generic(&self) -> bool {
         true
     }
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg"
-    }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<LDAP>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Snmp>));

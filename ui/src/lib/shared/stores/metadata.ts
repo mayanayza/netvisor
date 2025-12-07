@@ -40,12 +40,13 @@ export interface MetadataRegistry {
 
 export interface BillingPlanMetadata {
 	features: {
-		max_networks: number | null;
-		// api_access: bool,
-		team_members: boolean;
+		api_access: boolean;
+		audit_logs: boolean;
 		share_views: boolean;
 		onboarding_call: boolean;
 		dedicated_support_channel: boolean;
+		commercial_license: boolean;
+		remove_created_with: boolean;
 	};
 	is_commercial: boolean;
 }

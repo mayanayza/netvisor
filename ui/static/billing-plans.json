@@ -14,7 +14,7 @@
           "commercial_license": false,
           "dedicated_support_channel": false,
           "onboarding_call": false,
-          "remove_powered_by": false,
+          "remove_created_with": false,
           "share_views": false
         },
         "included_networks": 1,
@@ -41,7 +41,7 @@
           "commercial_license": false,
           "dedicated_support_channel": false,
           "onboarding_call": false,
-          "remove_powered_by": false,
+          "remove_created_with": false,
           "share_views": true
         },
         "included_networks": 3,
@@ -68,7 +68,7 @@
           "commercial_license": true,
           "dedicated_support_channel": true,
           "onboarding_call": true,
-          "remove_powered_by": true,
+          "remove_created_with": true,
           "share_views": true
         },
         "included_networks": 5,
@@ -95,7 +95,7 @@
           "commercial_license": true,
           "dedicated_support_channel": true,
           "onboarding_call": true,
-          "remove_powered_by": true,
+          "remove_created_with": true,
           "share_views": true
         },
         "included_networks": 25,
@@ -122,7 +122,7 @@
           "commercial_license": true,
           "dedicated_support_channel": true,
           "onboarding_call": true,
-          "remove_powered_by": true,
+          "remove_created_with": true,
           "share_views": true
         },
         "included_networks": null,
@@ -149,7 +149,7 @@
           "commercial_license": false,
           "dedicated_support_channel": false,
           "onboarding_call": false,
-          "remove_powered_by": false,
+          "remove_created_with": false,
           "share_views": false
         },
         "included_networks": 1,
@@ -176,7 +176,7 @@
           "commercial_license": false,
           "dedicated_support_channel": false,
           "onboarding_call": false,
-          "remove_powered_by": false,
+          "remove_created_with": false,
           "share_views": true
         },
         "included_networks": 3,
@@ -203,7 +203,7 @@
           "commercial_license": true,
           "dedicated_support_channel": true,
           "onboarding_call": true,
-          "remove_powered_by": true,
+          "remove_created_with": true,
           "share_views": true
         },
         "included_networks": 5,
@@ -230,7 +230,7 @@
           "commercial_license": true,
           "dedicated_support_channel": true,
           "onboarding_call": true,
-          "remove_powered_by": true,
+          "remove_created_with": true,
           "share_views": true
         },
         "included_networks": 25,
@@ -314,11 +314,11 @@
     {
       "category": "Features",
       "color": null,
-      "description": "Remove 'Powered By NetVisor' in bottom right corner of visualization",
+      "description": "Remove 'Created using netvisor.io' in bottom right corner of visualization",
       "icon": null,
-      "id": "remove_powered_by",
+      "id": "remove_created_with",
       "metadata": {
-        "is_coming_soon": true
+        "is_coming_soon": false
       },
       "name": "Remove 'Powered By'"
     }

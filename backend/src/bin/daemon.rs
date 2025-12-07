@@ -19,8 +19,16 @@ use tower_http::{
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_stack_size(4 * 1024 * 1024) // 4MB stack for deep async scanning
+        .enable_all()
+        .build()?;
+
+    runtime.block_on(async_main())
+}
+
+async fn async_main() -> anyhow::Result<()> {
     // Parse CLI and load config
     let cli = DaemonCli::parse();
     let config = AppConfig::load(cli)?;

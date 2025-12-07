@@ -3,7 +3,7 @@ use crate::daemon::discovery::service::base::{
 };
 use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySessionUpdate};
 use crate::daemon::utils::scanner::{
-    arp_scan_host, scan_endpoints, scan_tcp_ports, scan_udp_ports,
+    arp_scan_host, can_arp_scan, scan_endpoints, scan_tcp_ports, scan_udp_ports,
 };
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::hosts::r#impl::{
@@ -195,14 +195,21 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .map(|p| p.number())
             .collect();
 
-        // Partition IPs by whether their subnet is interfaced
-        let (interfaced_ips, non_interfaced_ips): (Vec<_>, Vec<_>) =
+        // Check ARP capability once before partitioning
+        let arp_available = can_arp_scan();
+
+        // Partition IPs - only use ARP path if we have capability
+        let (interfaced_ips, non_interfaced_ips): (Vec<_>, Vec<_>) = if arp_available {
             all_ips_with_subnets.into_iter().partition(|(_, subnet)| {
                 subnet_cidr_to_mac
                     .get(&subnet.base.cidr)
                     .and_then(|m| *m)
                     .is_some()
-            });
+            })
+        } else {
+            // No ARP capability - treat all as non-interfaced (port scan only)
+            (Vec::new(), all_ips_with_subnets)
+        };
 
         // =============================================================
         // PHASE 1: Responsiveness check (0-50%)
@@ -374,45 +381,46 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
 
         let phase2_batches_done = Arc::new(AtomicUsize::new(0));
 
+        // In scan_and_process_hosts, box the deep scan futures
         let results = stream::iter(responsive_hosts)
-        .map(|(ip, subnet, mac, phase1_ports)| {
-            let cancel = cancel.clone();
-            let gateway_ips = gateway_ips.clone();
-            let phase2_batches_done = phase2_batches_done.clone();
+    .map(|(ip, subnet, mac, phase1_ports)| {
+        let cancel = cancel.clone();
+        let gateway_ips = gateway_ips.clone();
+        let batches_done = phase2_batches_done.clone();
 
-            async move {
-                let result = self
-                    .deep_scan_host(DeepScanParams{
-                        ip,
-                        subnet: &subnet,
-                        mac,
-                        phase1_ports,
-                        cancel,
-                        port_scan_batch_size: ports_per_host_batch,
-                        gateway_ips: &gateway_ips,
-                        batches_done: &phase2_batches_done,
-                        total_batches,
-                    })
-                    .await;
+        Box::pin(async move {
+            let result = self
+                .deep_scan_host(DeepScanParams {
+                    ip,
+                    subnet: &subnet,
+                    mac,
+                    phase1_ports,
+                    cancel,
+                    port_scan_batch_size: ports_per_host_batch,
+                    gateway_ips: &gateway_ips,
+                    batches_done: &batches_done,
+                    total_batches,
+                })
+                .await;
 
-                match result {
-                    Ok(Some(host)) => Some(host),
-                    Ok(None) => None,
-                    Err(e) => {
-                        if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                            tracing::error!(ip = %ip, error = %e, "Critical error in deep scan");
-                        } else {
-                            tracing::warn!(ip = %ip, error = %e, "Deep scan failed");
-                        }
-                        None
+            match result {
+                Ok(Some(host)) => Some(host),
+                Ok(None) => None,
+                Err(e) => {
+                    if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                        tracing::error!(ip = %ip, error = %e, "Critical error in deep scan");
+                    } else {
+                        tracing::warn!(ip = %ip, error = %e, "Deep scan failed");
                     }
+                    None
                 }
             }
         })
-        .buffer_unordered(deep_scan_concurrency)
-        .filter_map(|x| async { x })
-        .collect::<Vec<Host>>()
-        .await;
+    })
+    .buffer_unordered(deep_scan_concurrency)
+    .filter_map(|x| async { x })
+    .collect::<Vec<Host>>()
+    .await;
 
         self.report_discovery_update(DiscoverySessionUpdate::scanning(100))
             .await?;
@@ -513,7 +521,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             all_tcp_ports.extend(open_ports);
 
             let done = batches_done.fetch_add(1, Ordering::Relaxed) + 1;
-            let pct = (50 + done * 50 / total_batches.max(1)) as u8;
+            let pct = (50 + done * 40 / total_batches.max(1)) as u8; // 50-90%
             let _ = self.report_scanning_progress(pct).await;
         }
 
@@ -539,6 +547,9 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         .await?;
         open_ports.extend(udp_ports);
 
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(95))
+            .await?;
+
         let mut ports_to_check = open_ports.clone();
         let endpoint_only_ports = Service::endpoint_only_ports();
         ports_to_check.extend(endpoint_only_ports);
@@ -553,6 +564,9 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             port_scan_batch_size,
         )
         .await?;
+
+        self.report_discovery_update(DiscoverySessionUpdate::scanning(98))
+            .await?;
 
         for endpoint_response in &endpoint_responses {
             let port = endpoint_response.endpoint.port_base;

@@ -55,7 +55,12 @@ impl ServiceDefinitionRegistry {
 // NetworkCore
 pub mod dhcp_server;
 pub mod gateway;
+pub mod ntp;
+pub mod rdp;
+pub mod snmp;
+pub mod ssh;
 pub mod switch;
+pub mod telnet;
 
 // NetworkAccess
 pub mod access_point;
@@ -87,7 +92,9 @@ pub mod unbound;
 
 // VPN
 pub mod cloudflared;
+pub mod openvpn;
 pub mod wg_dashboard;
+pub mod wireguard;
 
 // ReverseProxy
 pub mod caddy;
@@ -166,6 +173,7 @@ pub mod rancher;
 // Database
 pub mod cassandra;
 pub mod couchdb;
+pub mod elasticsearch;
 pub mod influxdb;
 pub mod mariadb;
 pub mod mongodb;
@@ -177,6 +185,7 @@ pub mod redis_db;
 
 // Message Queues
 pub mod activemq;
+pub mod ampq;
 pub mod kafka;
 pub mod mqtt;
 pub mod ntfy;
@@ -216,6 +225,7 @@ pub mod active_directory;
 pub mod authentik;
 pub mod bitwarden;
 pub mod freeipa;
+pub mod kerberos;
 pub mod keycloak;
 pub mod ldap;
 pub mod vault;
@@ -319,3 +329,4 @@ pub mod wizarr;
 // Netvisor
 pub mod netvisor_daemon;
 pub mod netvisor_server;
+pub mod open_ports;

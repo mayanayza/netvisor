@@ -114,7 +114,7 @@ impl BillingRate {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BillingPlanFeatures {
     pub share_views: bool,
-    pub remove_powered_by: bool,
+    pub remove_created_with: bool,
     pub audit_logs: bool,
     pub api_access: bool,
     pub onboarding_call: bool,
@@ -207,7 +207,7 @@ impl BillingPlan {
                 api_access: true,
                 audit_logs: true,
                 commercial_license: false,
-                remove_powered_by: false,
+                remove_created_with: false,
             },
             BillingPlan::Starter { .. } => BillingPlanFeatures {
                 share_views: false,
@@ -216,7 +216,7 @@ impl BillingPlan {
                 commercial_license: false,
                 api_access: false,
                 audit_logs: false,
-                remove_powered_by: false,
+                remove_created_with: false,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -225,7 +225,7 @@ impl BillingPlan {
                 commercial_license: false,
                 api_access: false,
                 audit_logs: false,
-                remove_powered_by: false,
+                remove_created_with: false,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -234,7 +234,7 @@ impl BillingPlan {
                 commercial_license: true,
                 api_access: false,
                 audit_logs: false,
-                remove_powered_by: true,
+                remove_created_with: true,
             },
             BillingPlan::Business { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -243,7 +243,7 @@ impl BillingPlan {
                 commercial_license: true,
                 api_access: true,
                 audit_logs: true,
-                remove_powered_by: true,
+                remove_created_with: true,
             },
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -252,7 +252,7 @@ impl BillingPlan {
                 commercial_license: true,
                 api_access: true,
                 audit_logs: true,
-                remove_powered_by: true,
+                remove_created_with: true,
             },
         }
     }
@@ -270,7 +270,7 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             commercial_license,
             api_access,
             audit_logs,
-            remove_powered_by,
+            remove_created_with,
         } = self;
 
         if share_views {
@@ -297,8 +297,8 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             features.push(Feature::AuditLogs)
         }
 
-        if remove_powered_by {
-            features.push(Feature::RemovePoweredBy)
+        if remove_created_with {
+            features.push(Feature::RemoveCreatedWith)
         }
 
         features
