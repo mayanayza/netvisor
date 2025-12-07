@@ -285,6 +285,12 @@ This document lists all services that NetVisor can automatically discover and id
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5984/ contains "couchdb"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/elasticsearch.svg" alt="Elasticsearch" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Elasticsearch</td>
+<td style="padding: 12px; color: #d1d5db;">Distributed search and analytics engine</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:9200/ contains "lucene"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/influxdb.svg" alt="InfluxDB" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">InfluxDB</td>
 <td style="padding: 12px; color: #d1d5db;">Time series database</td>
@@ -543,6 +549,12 @@ This document lists all services that NetVisor can automatically discover and id
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response status is between 200 and 300, and response body from <ip>:80/ipa/ui contains ""</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Kerberos</td>
+<td style="padding: 12px; color: #d1d5db;">Kerberos authentication service</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">88/tcp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/keycloak.svg" alt="Keycloak" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Keycloak</td>
 <td style="padding: 12px; color: #d1d5db;">Identity and access management</td>
@@ -552,7 +564,7 @@ This document lists all services that NetVisor can automatically discover and id
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg" alt="Open LDAP" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Open LDAP</td>
 <td style="padding: 12px; color: #d1d5db;">Generic LDAP directory service</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">389/tcp is open</code></td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (389/tcp is open, 636/tcp is open)</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pocket-id-light.svg" alt="Pocket ID" width="32" height="32" /></td>
@@ -833,6 +845,12 @@ This document lists all services that NetVisor can automatically discover and id
 </tr>
 </thead>
 <tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">AMQP</td>
+<td style="padding: 12px; color: #d1d5db;">Advanced Message Queuing Protocol</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (5672/tcp is open, 5671/tcp is open)</code></td>
+</tr>
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://www.vectorlogo.zone/logos/apache_activemq/apache_activemq-icon.svg" alt="ActiveMQ" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">ActiveMQ</td>
@@ -1168,9 +1186,39 @@ This document lists all services that NetVisor can automatically discover and id
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">NTP Server</td>
+<td style="padding: 12px; color: #d1d5db;">Network Time Protocol server</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">123/udp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Remote Desktop</td>
+<td style="padding: 12px; color: #d1d5db;">Remote Desktop Protocol (RDP)</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">3389/tcp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">SNMP</td>
+<td style="padding: 12px; color: #d1d5db;">Simple Network Management Protocol</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">161/udp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">SSH</td>
+<td style="padding: 12px; color: #d1d5db;">Secure Shell remote access</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">22/tcp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Switch</td>
 <td style="padding: 12px; color: #d1d5db;">Generic network switch for local area networking</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">All of: (Not (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.), All of: (80/tcp is open, 23/tcp is open))</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Telnet</td>
+<td style="padding: 12px; color: #d1d5db;">Telnet remote access</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">23/tcp is open</code></td>
 </tr>
 </tbody>
 </table>
@@ -1216,6 +1264,27 @@ This document lists all services that NetVisor can automatically discover and id
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">pfSense</td>
 <td style="padding: 12px; color: #d1d5db;">Open-source firewall and router platform</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">All of: (22/tcp is open, Endpoint response body from <ip>:80/ contains "pfsense")</code></td>
+</tr>
+</tbody>
+</table>
+
+## OpenPorts
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Unclaimed Open Ports</td>
+<td style="padding: 12px; color: #d1d5db;">Unclaimed open ports. Reassign to the correct service if known.</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">A custom match pattern evaluated at runtime</code></td>
 </tr>
 </tbody>
 </table>
@@ -1393,6 +1462,33 @@ This document lists all services that NetVisor can automatically discover and id
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">TrueNAS</td>
 <td style="padding: 12px; color: #d1d5db;">Open-source network attached storage system</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">All of: (445/tcp is open, Endpoint response body from <ip>:80/ contains "TrueNAS")</code></td>
+</tr>
+</tbody>
+</table>
+
+## VPN
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openvpn.svg" alt="OpenVPN" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">OpenVPN</td>
+<td style="padding: 12px; color: #d1d5db;">OpenVPN server</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">1194/udp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wireguard.svg" alt="WireGuard" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">WireGuard</td>
+<td style="padding: 12px; color: #d1d5db;">WireGuard VPN</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">51820/udp is open</code></td>
 </tr>
 </tbody>
 </table>

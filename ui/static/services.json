@@ -7,6 +7,13 @@
     "name": "Docker"
   },
   {
+    "category": "OpenPorts",
+    "description": "Unclaimed open ports. Reassign to the correct service if known.",
+    "discovery_pattern": "A custom match pattern evaluated at runtime",
+    "logo_url": "",
+    "name": "Unclaimed Open Ports"
+  },
+  {
     "category": "Netvisor",
     "description": "NetVisor Server API for network management",
     "discovery_pattern": "Endpoint response body from <ip>:60072/api/health contains \"netvisor\"",
@@ -548,7 +555,7 @@
   {
     "category": "IdentityAndAccess",
     "description": "Generic LDAP directory service",
-    "discovery_pattern": "389/tcp is open",
+    "discovery_pattern": "Any of: (389/tcp is open, 636/tcp is open)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg",
     "name": "Open LDAP"
   },
@@ -558,6 +565,13 @@
     "discovery_pattern": "Endpoint response body from <ip>:8080/ contains \"/keycloak/\"",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/keycloak.svg",
     "name": "Keycloak"
+  },
+  {
+    "category": "IdentityAndAccess",
+    "description": "Kerberos authentication service",
+    "discovery_pattern": "88/tcp is open",
+    "logo_url": "",
+    "name": "Kerberos"
   },
   {
     "category": "IdentityAndAccess",
@@ -764,6 +778,13 @@
   },
   {
     "category": "MessageQueue",
+    "description": "Advanced Message Queuing Protocol",
+    "discovery_pattern": "Any of: (5672/tcp is open, 5671/tcp is open)",
+    "logo_url": "",
+    "name": "AMQP"
+  },
+  {
+    "category": "MessageQueue",
     "description": "Message broker",
     "discovery_pattern": "Endpoint response body from <ip>:8161/admin contains \"activemq\"",
     "logo_url": "https://www.vectorlogo.zone/logos/apache_activemq/apache_activemq-icon.svg",
@@ -824,6 +845,13 @@
     "discovery_pattern": "8086/tcp is open",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/influxdb.svg",
     "name": "InfluxDB"
+  },
+  {
+    "category": "Database",
+    "description": "Distributed search and analytics engine",
+    "discovery_pattern": "Endpoint response body from <ip>:9200/ contains \"lucene\"",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/elasticsearch.svg",
+    "name": "Elasticsearch"
   },
   {
     "category": "Database",
@@ -1225,11 +1253,25 @@
     "name": "Caddy"
   },
   {
+    "category": "VPN",
+    "description": "WireGuard VPN",
+    "discovery_pattern": "51820/udp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wireguard.svg",
+    "name": "WireGuard"
+  },
+  {
     "category": "Dashboard",
     "description": "Wireguard dashboard for visualizing and managing wireguard clients and server",
     "discovery_pattern": "All of: (10086/tcp is open, Not (Subnet is type VpnTunnel))",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wireguard.svg",
     "name": "WGDashboard"
+  },
+  {
+    "category": "VPN",
+    "description": "OpenVPN server",
+    "discovery_pattern": "1194/udp is open",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openvpn.svg",
+    "name": "OpenVPN"
   },
   {
     "category": "ReverseProxy",
@@ -1380,10 +1422,45 @@
   },
   {
     "category": "NetworkCore",
+    "description": "Telnet remote access",
+    "discovery_pattern": "23/tcp is open",
+    "logo_url": "",
+    "name": "Telnet"
+  },
+  {
+    "category": "NetworkCore",
     "description": "Generic network switch for local area networking",
     "discovery_pattern": "All of: (Not (Host IP is a gateway in daemon's routing tables, or ends in .1 or .254.), All of: (80/tcp is open, 23/tcp is open))",
     "logo_url": "",
     "name": "Switch"
+  },
+  {
+    "category": "NetworkCore",
+    "description": "Secure Shell remote access",
+    "discovery_pattern": "22/tcp is open",
+    "logo_url": "",
+    "name": "SSH"
+  },
+  {
+    "category": "NetworkCore",
+    "description": "Simple Network Management Protocol",
+    "discovery_pattern": "161/udp is open",
+    "logo_url": "",
+    "name": "SNMP"
+  },
+  {
+    "category": "NetworkCore",
+    "description": "Remote Desktop Protocol (RDP)",
+    "discovery_pattern": "3389/tcp is open",
+    "logo_url": "",
+    "name": "Remote Desktop"
+  },
+  {
+    "category": "NetworkCore",
+    "description": "Network Time Protocol server",
+    "discovery_pattern": "123/udp is open",
+    "logo_url": "",
+    "name": "NTP Server"
   },
   {
     "category": "NetworkCore",
