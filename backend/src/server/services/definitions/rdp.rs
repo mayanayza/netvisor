@@ -5,30 +5,26 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct LDAP;
+pub struct RemoteDesktop;
 
-impl ServiceDefinition for LDAP {
+impl ServiceDefinition for RemoteDesktop {
     fn name(&self) -> &'static str {
-        "Open LDAP"
+        "Remote Desktop"
     }
     fn description(&self) -> &'static str {
-        "Generic LDAP directory service"
+        "Remote Desktop Protocol (RDP)"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::IdentityAndAccess
+        ServiceCategory::NetworkCore
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Ldaps),
-        ])
+        Pattern::Port(PortBase::Rdp)
     }
     fn is_generic(&self) -> bool {
         true
     }
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg"
-    }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<LDAP>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<RemoteDesktop>
+));

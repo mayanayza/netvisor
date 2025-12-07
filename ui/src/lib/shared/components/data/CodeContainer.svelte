@@ -70,6 +70,7 @@
 	:global(.prism--code-container pre),
 	:global(.prism--code-container code) {
 		white-space: pre-wrap !important;
+		font-size: 0.875rem;
 		word-wrap: break-word !important;
 		overflow-wrap: break-word !important;
 	}

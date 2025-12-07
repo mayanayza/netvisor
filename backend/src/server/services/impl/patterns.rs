@@ -114,7 +114,7 @@ pub enum Pattern<'a> {
     /// Whether the subnet that the host was found on matches a subnet type
     SubnetIsType(SubnetType),
 
-    /// Whether the host IP is found in the daemon's routing table. WARNING: Using this will automatically classify the service as a Layer3 service, and the service will only be able to bind to interfaces (ports and port bindings will be ignored)
+    /// Whether the host IP is found in the daemon's routing table.
     IsGateway,
 
     /// Whether the vendor derived from the mac address (https://gist.github.com/aallan/b4bb86db86079509e6159810ae9bd3e4) matches the provided str
@@ -127,6 +127,7 @@ pub enum Pattern<'a> {
     /// MatchConfdence - confidence level that match uniquely identifies service
     Custom(
         fn(&DiscoverySessionServiceMatchParams) -> bool,
+        fn(&DiscoverySessionServiceMatchParams) -> Vec<PortBase>,
         &'a str,
         &'a str,
         MatchConfidence,
@@ -176,11 +177,12 @@ impl PartialEq for Pattern<'_> {
             (Pattern::IsGateway, Pattern::IsGateway) => true,
             (Pattern::MacVendor(a), Pattern::MacVendor(b)) => a == b,
             (
-                Pattern::Custom(fn_a, match_a, no_match_a, conf_a),
-                Pattern::Custom(fn_b, match_b, no_match_b, conf_b),
+                Pattern::Custom(con_fn_a, port_fn_a, match_a, no_match_a, conf_a),
+                Pattern::Custom(con_fn_b, port_fn_b, match_b, no_match_b, conf_b),
             ) => {
                 // Compare function pointers by address and compare other fields
-                (*fn_a as usize) == (*fn_b as usize)
+                (*con_fn_a as usize) == (*con_fn_b as usize)
+                    && (*port_fn_a as usize) == (*port_fn_b as usize)
                     && match_a == match_b
                     && no_match_a == no_match_b
                     && conf_a == conf_b
@@ -254,7 +256,9 @@ impl Display for Pattern<'_> {
                 "Host IP is a gateway in daemon's routing tables, or ends in .1 or .254."
             ),
             Pattern::MacVendor(vendor) => write!(f, "MAC Address belongs to {}", vendor),
-            Pattern::Custom(_, _, _, _) => write!(f, "A custom match pattern evaluated at runtime"),
+            Pattern::Custom(_, _, _, _, _) => {
+                write!(f, "A custom match pattern evaluated at runtime")
+            }
             Pattern::DockerContainer => write!(f, "Service is running in a docker container"),
             Pattern::None => write!(f, "No match pattern provided"),
         }
@@ -738,10 +742,16 @@ impl Pattern<'_> {
                 }
             }
 
-            Pattern::Custom(constraint_function, reason, no_match_reason, confidence) => {
+            Pattern::Custom(
+                constraint_function,
+                port_function,
+                reason,
+                no_match_reason,
+                confidence,
+            ) => {
                 if constraint_function(params) {
                     Ok(MatchResult {
-                        ports: vec![],
+                        ports: port_function(params),
                         endpoint: None,
                         mac_vendor: None,
                         details: MatchDetails {

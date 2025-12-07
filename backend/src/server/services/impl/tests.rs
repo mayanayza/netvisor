@@ -247,6 +247,86 @@ fn test_no_duplicate_discovery_patterns() {
 }
 
 #[test]
+fn test_all_protocol_ports_have_generic_service() {
+    use std::collections::HashSet;
+    use strum::IntoEnumIterator;
+
+    use crate::server::{
+        hosts::r#impl::ports::PortBase,
+        services::{
+            definitions::ServiceDefinitionRegistry,
+            r#impl::{definitions::ServiceDefinition, patterns::Pattern},
+        },
+    };
+
+    // Ports to skip - discovered via other mechanisms or require multi-signal matching
+    let skip_ports: HashSet<PortBase> =
+        HashSet::from([PortBase::Docker, PortBase::DockerTls, PortBase::Kubernetes]);
+
+    // Get all well-known ports (non-Custom, non-Http*)
+    let well_known_ports: Vec<PortBase> = PortBase::iter()
+        .filter(|port| {
+            if matches!(port, PortBase::Custom(_)) {
+                return false;
+            }
+            if skip_ports.contains(port) {
+                return false;
+            }
+            let name = format!("{:?}", port);
+            if name.starts_with("Http") || name.starts_with("Https") {
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    let generic_services: Vec<_> = ServiceDefinitionRegistry::all_service_definitions()
+        .into_iter()
+        .filter(|s| s.is_generic())
+        .collect();
+
+    fn pattern_matches_port_alone(pattern: &Pattern, target_port: &PortBase) -> bool {
+        match pattern {
+            Pattern::Port(port) => port == target_port,
+            Pattern::Endpoint(port, _, _, _) => port == target_port,
+            Pattern::AnyOf(patterns) => patterns
+                .iter()
+                .any(|p| pattern_matches_port_alone(p, target_port)),
+            Pattern::AllOf(_) => false,
+            Pattern::Not(_) => false,
+            _ => false,
+        }
+    }
+
+    let mut uncovered_ports: Vec<PortBase> = Vec::new();
+
+    for port in &well_known_ports {
+        let has_coverage = generic_services
+            .iter()
+            .any(|service| pattern_matches_port_alone(&service.discovery_pattern(), port));
+
+        if !has_coverage {
+            uncovered_ports.push(*port);
+        }
+    }
+
+    if !uncovered_ports.is_empty() {
+        let port_list: Vec<String> = uncovered_ports
+            .iter()
+            .map(|p| format!("  - {:?} ({})", p, p))
+            .collect();
+
+        panic!(
+            "The following protocol ports have no generic service definition:\n{}\n\n\
+            Each protocol port needs a generic service (is_generic=true) with either:\n\
+            - Pattern::Port(PortBase::X)\n\
+            - Pattern::Endpoint(PortBase::X, ...)\n\
+            - Pattern::AnyOf containing one of the above",
+            port_list.join("\n")
+        );
+    }
+}
+#[test]
 fn test_service_patterns_use_appropriate_port_types() {
     let registry = ServiceDefinitionRegistry::all_service_definitions();
 

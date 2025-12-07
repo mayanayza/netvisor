@@ -28,6 +28,7 @@ impl ServiceDefinition for Gateway {
                         .iter()
                         .any(|s| !s.base.service_definition.is_gateway())
                 },
+                |_| Vec::new(),
                 "No other gateway services matched",
                 "A gateway service has already been matched",
                 MatchConfidence::Low,

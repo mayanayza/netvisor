@@ -5,30 +5,29 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct LDAP;
+pub struct Elasticsearch;
 
-impl ServiceDefinition for LDAP {
+impl ServiceDefinition for Elasticsearch {
     fn name(&self) -> &'static str {
-        "Open LDAP"
+        "Elasticsearch"
     }
     fn description(&self) -> &'static str {
-        "Generic LDAP directory service"
+        "Distributed search and analytics engine"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::IdentityAndAccess
+        ServiceCategory::Database
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Ldaps),
-        ])
+        Pattern::Endpoint(PortBase::Elasticsearch, "/", "lucene", None)
+    }
+    fn logo_url(&self) -> &'static str {
+        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/elasticsearch.svg"
     }
     fn is_generic(&self) -> bool {
         true
     }
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg"
-    }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<LDAP>));
+inventory::submit!(ServiceDefinitionFactory::new(
+    create_service::<Elasticsearch>
+));

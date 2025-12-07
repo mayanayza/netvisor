@@ -66,7 +66,7 @@
 		<ListManager
 			label="Ports"
 			helpText="Manage ports for this host"
-			placeholder="Add well-known or IANA registered port..."
+			placeholder="Add well-known or registered port..."
 			emptyMessage="No ports on this host. Add one to get started."
 			allowReorder={false}
 			allowCreateNew={true}
@@ -97,7 +97,7 @@
 		{:else if selectedItem && selectedItem.type != 'Custom'}
 			<EntityConfigEmpty
 				title="Well-known or registered Port"
-				subtitle="This is designated by the IANA (Internet Assigned Numbers Authority) as a well-known or registered port, and can't be edited"
+				subtitle="This is a well-known or registered port, and can't be edited"
 			/>
 		{:else}
 			<EntityConfigEmpty

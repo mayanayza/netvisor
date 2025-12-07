@@ -3,6 +3,7 @@ use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
 use crate::server::shared::{
     concepts::Concept,
+    entities::EntityDiscriminants,
     types::metadata::{EntityMetadataProvider, HasId},
 };
 
@@ -61,6 +62,7 @@ pub enum ServiceCategory {
     Unknown,
     Custom,
     Netvisor,
+    OpenPorts,
 }
 
 impl HasId for ServiceCategory {
@@ -108,9 +110,10 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::IdentityAndAccess => "KeyRound",
             ServiceCategory::Communication => "Speech",
 
-            // Unknown
+            // Special
             ServiceCategory::Netvisor => "Zap",
             ServiceCategory::Custom => "Sparkle",
+            ServiceCategory::OpenPorts => EntityDiscriminants::Port.icon(),
             ServiceCategory::Unknown => "CircleQuestionMark",
         }
     }
@@ -156,6 +159,7 @@ impl EntityMetadataProvider for ServiceCategory {
             // Unknown
             ServiceCategory::Netvisor => "purple",
             ServiceCategory::Custom => "rose",
+            ServiceCategory::OpenPorts => EntityDiscriminants::Port.color(),
             ServiceCategory::Unknown => "gray",
         }
     }

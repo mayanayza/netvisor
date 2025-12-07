@@ -46,6 +46,7 @@ impl ServiceDefinition for DockerContainer {
                             _ => true,
                         })
                 },
+                |_| Vec::new(),
                 "No other services with this container's ID have been matched",
                 "A service with this container's ID has already been matched",
                 MatchConfidence::Low,

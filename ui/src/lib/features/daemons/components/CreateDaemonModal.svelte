@@ -16,6 +16,7 @@
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
 	import { config } from '$lib/shared/stores/config';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 
 	export let isOpen = false;
 	export let onClose: () => void;
@@ -50,7 +51,7 @@
 	}
 
 	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh)"`;
-	$: runCommand = `netvisor-daemon --server-url ${serverUrl} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
+	$: runCommand = `sudo netvisor-daemon --server-url ${serverUrl} ${!daemon ? `--network-id ${selectedNetworkId}` : ''} ${key ? `--daemon-api-key ${key} --mode ${$daemonModeField.value.toLowerCase()}` : ''}`;
 
 	let dockerCompose = '';
 	$: if (key) {
@@ -169,6 +170,11 @@
 			<CodeContainer language="bash" expandable={false} code={installCommand} />
 
 			<CodeContainer language="bash" expandable={false} code={runCommand} />
+
+			<InlineInfo
+				title="sudo + privileged: true"
+				body="The Daemon requires privileged access to system resources to perform ARP scanning. If you don't run with sudo (binary) or include privileged: true (docker), the daemon will not be able to detect all hosts on the network."
+			/>
 
 			<div class="text-secondary mt-3"><b>Option 2.</b> Run this docker-compose</div>
 

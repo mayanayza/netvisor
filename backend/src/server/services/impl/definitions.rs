@@ -97,7 +97,10 @@ pub trait ServiceDefinitionExt {
 
 impl ServiceDefinitionExt for Box<dyn ServiceDefinition> {
     fn can_be_manually_added(&self) -> bool {
-        !matches!(ServiceDefinition::category(self), ServiceCategory::Netvisor)
+        !matches!(
+            ServiceDefinition::category(self),
+            ServiceCategory::Netvisor | ServiceCategory::OpenPorts
+        )
     }
 
     fn is_generic(&self) -> bool {
