@@ -15,7 +15,7 @@ use crate::{
         discovery::r#impl::types::{DiscoveryType, HostNamingFallback},
         groups::r#impl::base::Group,
         services::{
-            definitions::docker_container::DockerContainer,
+            definitions::{docker_container::DockerContainer, open_ports::OpenPorts},
             r#impl::{
                 base::{
                     DiscoverySessionServiceMatchParams, ServiceMatchBaselineParams,
@@ -462,15 +462,16 @@ pub trait DiscoversNetworkedEntities:
         sorted_service_definitions.sort_by_key(|s| {
             if !ServiceDefinitionExt::is_generic(s) {
                 0 // Highest priority - non-generic services
-            } else if ServiceDefinitionExt::is_generic(s)
-                && s.id() != DockerContainer.id()
-                && s.id() != Gateway.id()
-            {
-                1 // Generic services that aren't Docker Container or Gateway
-            } else {
-                // Docker Containers and Gateways need to go last
+            } else if s.id() == OpenPorts.id() {
+                // Catch-all for open ports, should be dead last
+                3
+            } else if s.id() == DockerContainer.id() || s.id() == Gateway.id() {
+                // Docker Containers and Gateways need to go second to last last
                 // Other generic services should be able to get matched first
                 2
+            } else {
+                // Generic services that aren't Docker Container or Gateway
+                1
             }
         });
 

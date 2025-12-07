@@ -5,30 +5,24 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct LDAP;
+pub struct NtpServer;
 
-impl ServiceDefinition for LDAP {
+impl ServiceDefinition for NtpServer {
     fn name(&self) -> &'static str {
-        "Open LDAP"
+        "NTP Server"
     }
     fn description(&self) -> &'static str {
-        "Generic LDAP directory service"
+        "Network Time Protocol server"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::IdentityAndAccess
+        ServiceCategory::NetworkCore
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Ldaps),
-        ])
+        Pattern::Port(PortBase::Ntp)
     }
     fn is_generic(&self) -> bool {
         true
     }
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg"
-    }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<LDAP>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<NtpServer>));

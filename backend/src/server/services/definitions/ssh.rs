@@ -5,30 +5,24 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct LDAP;
+pub struct Ssh;
 
-impl ServiceDefinition for LDAP {
+impl ServiceDefinition for Ssh {
     fn name(&self) -> &'static str {
-        "Open LDAP"
+        "SSH"
     }
     fn description(&self) -> &'static str {
-        "Generic LDAP directory service"
+        "Secure Shell remote access"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::IdentityAndAccess
+        ServiceCategory::NetworkCore
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Ldaps),
-        ])
+        Pattern::Port(PortBase::Ssh)
     }
     fn is_generic(&self) -> bool {
         true
     }
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg"
-    }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<LDAP>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Ssh>));

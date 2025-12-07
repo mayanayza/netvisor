@@ -5,30 +5,27 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct LDAP;
+pub struct Amqp;
 
-impl ServiceDefinition for LDAP {
+impl ServiceDefinition for Amqp {
     fn name(&self) -> &'static str {
-        "Open LDAP"
+        "AMQP"
     }
     fn description(&self) -> &'static str {
-        "Generic LDAP directory service"
+        "Advanced Message Queuing Protocol"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::IdentityAndAccess
+        ServiceCategory::MessageQueue
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Ldaps),
+            Pattern::Port(PortBase::AMQP),
+            Pattern::Port(PortBase::AMQPTls),
         ])
     }
     fn is_generic(&self) -> bool {
         true
     }
-    fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/openldap.svg"
-    }
 }
 
-inventory::submit!(ServiceDefinitionFactory::new(create_service::<LDAP>));
+inventory::submit!(ServiceDefinitionFactory::new(create_service::<Amqp>));

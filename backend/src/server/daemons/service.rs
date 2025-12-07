@@ -122,12 +122,31 @@ impl DaemonService {
             path: "/api/discovery/initiate".to_string(),
         };
 
+        tracing::info!(
+            daemon_id = %daemon_id,
+            endpoint = %endpoint,
+            session_id = %request.session_id,
+            "Attempting to send discovery request to daemon"
+        );
+
         let response = self
             .client
             .post(format!("{}", endpoint))
             .json(&request)
             .send()
-            .await?;
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    daemon_id = %daemon_id,
+                    endpoint = %endpoint,
+                    error = %e,
+                    error_debug = ?e,
+                    is_connect = %e.is_connect(),
+                    is_timeout = %e.is_timeout(),
+                    "Failed to connect to daemon"
+                );
+                e
+            })?;
 
         if !response.status().is_success() {
             anyhow::bail!(

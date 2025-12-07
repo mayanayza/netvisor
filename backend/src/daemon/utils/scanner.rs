@@ -21,6 +21,7 @@ use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::pin::Pin;
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::{net::TcpStream, time::timeout};
@@ -57,22 +58,22 @@ where
 {
     let mut results = Vec::new();
     let mut item_iter = items.into_iter();
-    let mut futures = FuturesUnordered::new();
 
-    // Fill initial batch
+    let mut futures: FuturesUnordered<Pin<Box<dyn Future<Output = Option<O>> + Send>>> =
+        FuturesUnordered::new();
+
     for _ in 0..batch_size {
         if cancel.is_cancelled() {
             break;
         }
 
         if let Some(item) = item_iter.next() {
-            futures.push(scan_fn(item));
+            futures.push(Box::pin(scan_fn(item)));
         } else {
             break;
         }
     }
 
-    // Process results and maintain constant parallelism
     while let Some(result) = futures.next().await {
         if cancel.is_cancelled() {
             break;
@@ -82,11 +83,9 @@ where
             results.push(output);
         }
 
-        // Immediately add next item(s) to maintain batch size
-        // Keep adding until we're back at batch_size or out of items
         while futures.len() < batch_size && !cancel.is_cancelled() {
             if let Some(item) = item_iter.next() {
-                futures.push(scan_fn(item));
+                futures.push(Box::pin(scan_fn(item)));
             } else {
                 break;
             }
@@ -94,6 +93,52 @@ where
     }
 
     results
+}
+
+/// Check if ARP scanning is available (requires elevated privileges on some OSes)
+pub fn can_arp_scan() -> bool {
+    // Try to open a datalink channel on any suitable interface
+    let interfaces = datalink::interfaces();
+
+    let suitable_interface = interfaces
+        .into_iter()
+        .find(|iface| iface.is_up() && !iface.is_loopback() && iface.mac.is_some());
+
+    let Some(interface) = suitable_interface else {
+        tracing::debug!("No suitable interface found for ARP capability check");
+        return false;
+    };
+
+    let config = pnet::datalink::Config {
+        read_timeout: Some(Duration::from_millis(100)),
+        ..Default::default()
+    };
+
+    match datalink::channel(&interface, config) {
+        Ok(_) => {
+            tracing::debug!(interface = %interface.name, "ARP scanning available");
+            true
+        }
+        Err(e) => {
+            let err_str = e.to_string().to_lowercase();
+            if err_str.contains("permission")
+                || err_str.contains("operation not permitted")
+                || err_str.contains("access denied")
+                || err_str.contains("requires root")
+            {
+                tracing::info!(
+                    error = %e,
+                    "ARP scanning unavailable (insufficient privileges), falling back to port scanning"
+                );
+            } else {
+                tracing::warn!(
+                    error = %e,
+                    "ARP scanning unavailable, falling back to port scanning"
+                );
+            }
+            false
+        }
+    }
 }
 
 /// Send ARP request to a single IP and wait for response
