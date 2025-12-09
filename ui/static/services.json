@@ -1,12 +1,5 @@
 [
   {
-    "category": "Virtualization",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
-  },
-  {
     "category": "OpenPorts",
     "description": "Unclaimed open ports. Reassign to the correct service if known.",
     "discovery_pattern": "A custom match pattern evaluated at runtime",
@@ -1475,5 +1468,12 @@
     "discovery_pattern": "67/udp is open",
     "logo_url": "",
     "name": "Dhcp Server"
+  },
+  {
+    "category": "Virtualization",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   }
 ]
