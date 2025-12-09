@@ -3,6 +3,7 @@
 	import Tag from './Tag.svelte';
 	import type { Snippet } from 'svelte';
 	import { type IconComponent } from '$lib/shared/utils/types';
+	import GrowIconButton from './GrowIconButton.svelte';
 
 	interface Props {
 		title: string;
@@ -226,45 +227,8 @@
 			{#each actions as action, index (action.label)}
 				{@const isLeftEdge = index === 0}
 				{@const isRightEdge = index === actions.length - 1}
-				<button
-					onclick={action.onClick}
-					disabled={action.disabled}
-					class="group relative overflow-visible transition-all duration-200 ease-in-out {action.animation ||
-						''}"
-					title={action.label}
-				>
-					<div
-						class="flex items-center justify-center transition-opacity duration-200 group-hover:opacity-0 {action.class
-							? action.class
-							: 'btn-icon'}"
-					>
-						<action.icon size={16} class="flex-shrink-0" />
-					</div>
-
-					<div
-						class="absolute top-1/2 flex -translate-y-1/2 items-center justify-center whitespace-nowrap opacity-0 transition-all duration-200 ease-in-out group-hover:opacity-100 {isLeftEdge
-							? 'left-0'
-							: isRightEdge
-								? 'right-0'
-								: 'left-1/2 -translate-x-1/2'} {action.class ? action.class : 'btn-icon'}"
-					>
-						<action.icon size={16} class="flex-shrink-0" />
-						<span class="ml-2">{action.label}</span>
-					</div>
-				</button>
+				<GrowIconButton {action} {isLeftEdge} {isRightEdge} />
 			{/each}
 		</div>
 	{/if}
 </div>
-
-<style>
-	button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	button:disabled:hover {
-		background-color: transparent;
-		color: inherit;
-	}
-</style>

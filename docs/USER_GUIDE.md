@@ -687,7 +687,7 @@ Configure this per-discovery in the discovery type settings.
 The topology view generates an interactive diagram of your network structure.
 
 <p align="center">
-  <img src="../media/topology_full.png" width="800" alt="Discovery Sessions">
+  <img src="../media/topology_full.png" width="800" alt="Topology visualization">
 </p>
 
 ### Topology State
@@ -697,10 +697,18 @@ Topology will display different states depending on if the underlying data has c
 Rebuilding the graph will reset some user-provided changes, such as node positions and subnet sizes. Edge handles will be preserved when possible, but may also be overwritten as the layout of the graph may need to change depending on entities being added or removed.
 <br>
 
+### Auto Rebuild
+
+<p align="center">
+  <img src="../media/topology_auto.png" width="800" alt="Topology auto rebuild">
+</p>
+- Topology will rebuild automatically, regardless of whether rebuilding may change graph layout or remove deleted entities
+<br>
+
 ### Up to date
 
 <p align="center">
-  <img src="../media/topology_fresh.png" width="800" alt="Discovery Sessions">
+  <img src="../media/topology_fresh.png" width="800" alt="Topology up to date">
 </p>
 - All data is up to date<br>
 - There is usually no reason to rebuild the graph in this state<br>
@@ -709,7 +717,7 @@ Rebuilding the graph will reset some user-provided changes, such as node positio
 ### Stale
 
 <p align="center">
-  <img src="../media/topology_stale.png" width="800" alt="Discovery Sessions">
+  <img src="../media/topology_stale.png" width="800" alt="Topology stale">
 </p>
 - One or more entities have been added or updated since the visualization was last rebuilt<br>
 - Rebuilding the graph will add those entities<br>
@@ -718,7 +726,7 @@ Rebuilding the graph will reset some user-provided changes, such as node positio
 ### Conflict
 
 <p align="center">
-  <img src="../media/topology_conflict.png" width="800" alt="Discovery Sessions">
+  <img src="../media/topology_conflict.png" width="800" alt="Topology conflict">
 </p>
 - One or more entities on the graph have been deleted since it was last rebuilt<br>
 - Rebuilding the graph will remove those entities<br>
@@ -728,7 +736,7 @@ Rebuilding the graph will reset some user-provided changes, such as node positio
 ### Locked
 
 <p align="center">
-  <img src="../media/topology_locked.png" width="800" alt="Discovery Sessions">
+  <img src="../media/topology_locked.png" width="800" alt="Topology locked">
 </p>
 - Other states will not be displayed<br>
 - Topology cannot be rebuilt<br>
