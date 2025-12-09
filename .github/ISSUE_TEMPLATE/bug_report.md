@@ -23,14 +23,17 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Environment:**
--  Host: [e.g bare metal, VM, LXC]
+**Environment:** 
+ - NetVisor server & daemon version (can be found in logs)
+ - Host: [e.g bare metal, VM, LXC]
  - OS: [e.g. Ubuntu]
  - Browser [e.g. chrome, safari]
  - Version [e.g. 22]
 
 **Additional context**
 Add any other context about the problem here.
+
+If you have logs from the daemon or server, pleae provide them here.
 
 **Before submitting**
 [ ] I have reviewed [Troubleshooting](https://github.com/mayanayza/netvisor#troubleshooting) in the readme
