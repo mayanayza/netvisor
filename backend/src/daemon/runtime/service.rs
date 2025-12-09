@@ -57,7 +57,7 @@ impl DaemonRuntimeService {
             tracing::info!(daemon_id = %daemon_id, "Checking for work...");
 
             let path = format!("/api/daemons/{}/request-work", daemon_id);
-            let (payload, cancel_current_session): (Option<DiscoveryUpdatePayload>, bool) = self
+            let result: Result<(Option<DiscoveryUpdatePayload>, bool), _> = self
                 .api_client
                 .post(
                     &path,
@@ -68,28 +68,35 @@ impl DaemonRuntimeService {
                     },
                     "Failed to request work",
                 )
-                .await?;
+                .await;
 
-            if !cancel_current_session && payload.is_none() {
-                tracing::info!(daemon_id = %daemon_id, "No work available at this time");
-            }
+            match result {
+                Ok((payload, cancel_current_session)) => {
+                    if !cancel_current_session && payload.is_none() {
+                        tracing::info!(daemon_id = %daemon_id, "No work available at this time");
+                    }
 
-            if cancel_current_session {
-                tracing::info!(daemon_id = %daemon_id, "Received cancellation request from server");
-                self.discovery_manager.cancel_current_session().await;
-            }
+                    if cancel_current_session {
+                        tracing::info!(daemon_id = %daemon_id, "Received cancellation request from server");
+                        self.discovery_manager.cancel_current_session().await;
+                    }
 
-            if let Some(payload) = payload
-                && !self.discovery_manager.is_discovery_running().await
-            {
-                tracing::info!(
-                    daemon_id = %daemon_id,
-                    session_id = %payload.session_id,
-                    "Received discovery session from server"
-                );
-                self.discovery_manager
-                    .initiate_session(payload.into())
-                    .await;
+                    if let Some(payload) = payload
+                        && !self.discovery_manager.is_discovery_running().await
+                    {
+                        tracing::info!(
+                            daemon_id = %daemon_id,
+                            session_id = %payload.session_id,
+                            "Received discovery session from server"
+                        );
+                        self.discovery_manager
+                            .initiate_session(payload.into())
+                            .await;
+                    }
+                }
+                Err(e) => {
+                    tracing::error!(daemon_id = %daemon_id, error = %e, "Failed to request work");
+                }
             }
         }
     }
@@ -113,9 +120,9 @@ impl DaemonRuntimeService {
             }
 
             let path = format!("/api/daemons/{}/heartbeat", daemon_id);
-            let _: () = self
+            match self
                 .api_client
-                .post_no_data(
+                .post_no_data::<_>(
                     &path,
                     &DaemonHeartbeatPayload {
                         url: url.clone(),
@@ -124,10 +131,17 @@ impl DaemonRuntimeService {
                     },
                     "Heartbeat failed",
                 )
-                .await?;
-
-            if let Err(e) = self.config.update_heartbeat().await {
-                tracing::warn!("Failed to update heartbeat timestamp: {}", e);
+                .await
+            {
+                Ok(_) => {
+                    tracing::info!(daemon_id = %daemon_id, "Heartbeat sent");
+                    if let Err(e) = self.config.update_heartbeat().await {
+                        tracing::warn!("Failed to update heartbeat timestamp: {}", e);
+                    }
+                }
+                Err(e) => {
+                    tracing::error!(daemon_id = %daemon_id, error = %e, "Heartbeat failed");
+                }
             }
         }
     }
