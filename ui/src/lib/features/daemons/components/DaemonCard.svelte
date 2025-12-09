@@ -23,7 +23,7 @@
 
 	// Build card data
 	$: cardData = {
-		title: daemon.ip + ':' + daemon.port,
+		title: daemon.name,
 		iconColor: entities.getColorHelper('Daemon').icon,
 		Icon: entities.getIconComponent('Daemon'),
 		fields: [

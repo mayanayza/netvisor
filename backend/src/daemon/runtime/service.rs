@@ -4,8 +4,8 @@ use crate::daemon::shared::config::ConfigStore;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::base::{PlatformDaemonUtils, create_system_utils};
 use crate::server::daemons::r#impl::api::{
-    DaemonCapabilities, DaemonRegistrationRequest, DaemonRegistrationResponse,
-    DiscoveryUpdatePayload,
+    DaemonCapabilities, DaemonHeartbeatPayload, DaemonRegistrationRequest,
+    DaemonRegistrationResponse, DiscoveryUpdatePayload,
 };
 use anyhow::Result;
 use std::net::IpAddr;
@@ -36,6 +36,9 @@ impl DaemonRuntimeService {
     pub async fn request_work(&self) -> Result<()> {
         let interval = Duration::from_secs(self.config.get_heartbeat_interval().await?);
         let daemon_id = self.config.get_id().await?;
+        let name = self.config.get_name().await?;
+        let mode = self.config.get_mode().await?;
+        let url = self.get_daemon_url().await?;
 
         let mut interval_timer = tokio::time::interval(interval);
         interval_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -54,38 +57,18 @@ impl DaemonRuntimeService {
             tracing::info!(daemon_id = %daemon_id, "Checking for work...");
 
             let path = format!("/api/daemons/{}/request-work", daemon_id);
-            let api_response = match self
+            let (payload, cancel_current_session): (Option<DiscoveryUpdatePayload>, bool) = self
                 .api_client
-                .post_raw::<_, (Option<DiscoveryUpdatePayload>, bool)>(&path, &daemon_id)
-                .await
-            {
-                Ok(r) => r,
-                Err(e) => {
-                    tracing::error!(daemon_id = %daemon_id, error = %e, "Failed to request work");
-                    continue;
-                }
-            };
-
-            if !api_response.success {
-                let error_msg = api_response
-                    .error
-                    .unwrap_or_else(|| "Unknown error".to_string());
-                if error_msg.contains("not found") {
-                    tracing::error!(
-                        daemon_id = %daemon_id,
-                        error = %error_msg,
-                        "Failed to check for work - Daemon ID not found on server. Please remove config and reinstall daemon."
-                    );
-                } else {
-                    tracing::error!(daemon_id = %daemon_id, error = %error_msg, "Failed to check for work");
-                }
-                continue;
-            }
-
-            let Some((payload, cancel_current_session)) = api_response.data else {
-                tracing::info!(daemon_id = %daemon_id, "No work available at this time");
-                continue;
-            };
+                .post(
+                    &path,
+                    &DaemonHeartbeatPayload {
+                        url: url.clone(),
+                        name: name.clone(),
+                        mode,
+                    },
+                    "Failed to request work",
+                )
+                .await?;
 
             if !cancel_current_session && payload.is_none() {
                 tracing::info!(daemon_id = %daemon_id, "No work available at this time");
@@ -114,6 +97,9 @@ impl DaemonRuntimeService {
     pub async fn heartbeat(&self) -> Result<()> {
         let interval = Duration::from_secs(self.config.get_heartbeat_interval().await?);
         let daemon_id = self.config.get_id().await?;
+        let name = self.config.get_name().await?;
+        let mode = self.config.get_mode().await?;
+        let url = self.get_daemon_url().await?;
 
         let mut interval_timer = tokio::time::interval(interval);
         interval_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -127,32 +113,18 @@ impl DaemonRuntimeService {
             }
 
             let path = format!("/api/daemons/{}/heartbeat", daemon_id);
-            match self.api_client.post_empty_raw::<()>(&path).await {
-                Ok(api_response) if api_response.success => {
-                    tracing::info!(daemon_id = %daemon_id, "Heartbeat sent");
-                }
-                Ok(api_response) => {
-                    let error_msg = api_response
-                        .error
-                        .unwrap_or_else(|| "Unknown error".to_string());
-                    if error_msg.contains("not found") {
-                        tracing::error!(
-                            daemon_id = %daemon_id,
-                            error = %error_msg,
-                            "Heartbeat failed - Daemon ID not found on server. Please remove config and reinstall daemon."
-                        );
-                    } else {
-                        tracing::error!(daemon_id = %daemon_id, error = %error_msg, "Heartbeat failed");
-                    }
-                }
-                Err(e) => {
-                    tracing::error!(
-                        daemon_id = %daemon_id,
-                        error = %e,
-                        "Heartbeat failed - check network connectivity"
-                    );
-                }
-            }
+            let _: () = self
+                .api_client
+                .post_no_data(
+                    &path,
+                    &DaemonHeartbeatPayload {
+                        url: url.clone(),
+                        name: name.clone(),
+                        mode,
+                    },
+                    "Heartbeat failed",
+                )
+                .await?;
 
             if let Err(e) = self.config.update_heartbeat().await {
                 tracing::warn!("Failed to update heartbeat timestamp: {}", e);
@@ -165,20 +137,32 @@ impl DaemonRuntimeService {
         self.config.set_api_key(api_key).await?;
 
         let docker_proxy = self.config.get_docker_proxy().await;
+        let docker_proxy_ssl_info = self.config.get_docker_proxy_ssl_info().await;
         let daemon_id = self.config.get_id().await?;
 
         let has_docker_client = self
             .utils
-            .new_local_docker_client(docker_proxy)
+            .new_local_docker_client(docker_proxy, docker_proxy_ssl_info)
             .await
             .is_ok();
 
         if let Some(existing_host_id) = self.config.get_host_id().await? {
-            tracing::info!("Already registered with host ID: {}", existing_host_id);
+            tracing::info!(
+                host_id = %existing_host_id,
+                daemon_id = %daemon_id,
+                network_id = %network_id,
+                has_docker = %has_docker_client,
+                "Already registered"
+            );
             return Ok(());
         }
 
-        tracing::info!("Registering with server...");
+        tracing::info!(
+            daemon_id = %daemon_id,
+            network_id = %network_id,
+            has_docker = %has_docker_client,
+            "Registering with server"
+        );
 
         self.register_with_server(daemon_id, network_id, has_docker_client)
             .await?;
@@ -193,6 +177,22 @@ impl DaemonRuntimeService {
         Ok(())
     }
 
+    // Helper function to get daemon url if override is being used, or fallback to default ip + port if not
+    pub async fn get_daemon_url(&self) -> Result<String> {
+        if let Some(daemon_url) = self.config.get_daemon_url().await? {
+            Ok(daemon_url)
+        } else {
+            let bind_address = self.config.get_bind_address().await?;
+            let daemon_ip = if bind_address == "0.0.0.0" || bind_address == "::" {
+                self.utils.get_own_ip_address()?
+            } else {
+                bind_address.parse::<IpAddr>()?
+            };
+            let daemon_port = self.config.get_port().await?;
+            Ok(format!("http://{}:{}", daemon_ip, daemon_port))
+        }
+    }
+
     pub async fn register_with_server(
         &self,
         daemon_id: Uuid,
@@ -200,24 +200,16 @@ impl DaemonRuntimeService {
         has_docker_socket: bool,
     ) -> Result<()> {
         let config = self.api_client.config();
-        let bind_address = config.get_bind_address().await?;
         let mode = config.get_mode().await?;
+        let name = config.get_name().await?;
 
-        let daemon_ip = if bind_address == "0.0.0.0" || bind_address == "::" {
-            self.utils.get_own_ip_address()?
-        } else {
-            bind_address
-                .parse::<IpAddr>()
-                .map_err(|e| anyhow::anyhow!("Invalid bind address '{}': {}", bind_address, e))?
-        };
-
-        let daemon_port = config.get_port().await?;
+        let url = self.get_daemon_url().await?;
 
         let registration_request = DaemonRegistrationRequest {
             daemon_id,
             network_id,
-            daemon_ip,
-            daemon_port,
+            url,
+            name,
             mode,
             capabilities: DaemonCapabilities {
                 has_docker_socket,

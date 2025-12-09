@@ -112,10 +112,12 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         // Get docker subnets to double verify that subnet interface string matching filtered them correctly
         let docker_proxy = self.as_ref().config_store.get_docker_proxy().await;
+        let docker_proxy_ssl_info = self.as_ref().config_store.get_docker_proxy_ssl_info().await;
+
         let docker_client = self
             .as_ref()
             .utils
-            .new_local_docker_client(docker_proxy)
+            .new_local_docker_client(docker_proxy, docker_proxy_ssl_info)
             .await;
 
         let (docker_cidrs, has_docker_socket) = if let Ok(docker_client) = docker_client {
@@ -278,7 +280,7 @@ impl DiscoveryRunner<SelfReportDiscovery> {
 
         self.as_ref()
             .api_client
-            .post_no_response(&path, &capabilities, "Failed to update capabilities")
+            .post_no_data(&path, &capabilities, "Failed to update capabilities")
             .await
     }
 }

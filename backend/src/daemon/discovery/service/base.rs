@@ -200,7 +200,7 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
 
         self.as_ref()
             .api_client
-            .post_no_response(&path, &payload, "Failed to report discovery update")
+            .post_no_data(&path, &payload, "Failed to report discovery update")
             .await?;
 
         tracing::trace!(

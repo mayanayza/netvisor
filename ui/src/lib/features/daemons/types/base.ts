@@ -1,8 +1,8 @@
 export interface DaemonBase {
 	host_id: string;
 	network_id: string;
-	ip: string;
-	port: number;
+	url: string;
+	name: string;
 	last_seen: string;
 	mode: 'Pull' | 'Push';
 	capabilities: {

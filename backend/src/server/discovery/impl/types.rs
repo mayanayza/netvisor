@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde::Serialize;
+use std::fmt::Display;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 use uuid::Uuid;
 
@@ -18,7 +19,6 @@ use crate::server::{
     Eq,
     PartialEq,
     Hash,
-    Display,
     IntoStaticStr,
     EnumDiscriminants,
     EnumIter,
@@ -39,6 +39,16 @@ pub enum DiscoveryType {
         #[serde(default)]
         host_naming_fallback: HostNamingFallback,
     },
+}
+
+impl Display for DiscoveryType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DiscoveryType::SelfReport { .. } => write!(f, "Self Report"),
+            DiscoveryType::Network { .. } => write!(f, "Network Discovery"),
+            DiscoveryType::Docker { .. } => write!(f, "Docker Discovery"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default)]

@@ -21,6 +21,10 @@
 		Icon: entities.getIconComponent('Discovery'),
 		fields: [
 			{
+				label: 'Daemon',
+				value: $daemons.find((d) => d.id == discovery.daemon_id)?.name || 'Unknown Daemon'
+			},
+			{
 				label: 'Type',
 				value: discovery.discovery_type.type
 			},
@@ -37,11 +41,6 @@
 					discovery.run_type.type != 'Historical' && discovery.run_type.last_run
 						? formatTimestamp(discovery.run_type.last_run)
 						: 'Never'
-			},
-			{
-				label: 'Daemon',
-				value:
-					'Daemon @ ' + $daemons.find((d) => d.id == discovery.daemon_id)?.ip || 'Unknown Daemon'
 			}
 		],
 		actions: [

@@ -51,7 +51,7 @@
 			sortable: true,
 			getValue: (item) => {
 				const daemon = $daemons.find((d) => d.id == item.daemon_id);
-				return daemon ? daemon.ip : 'Unknown Daemon';
+				return daemon ? daemon.name : 'Unknown Daemon';
 			}
 		},
 		{

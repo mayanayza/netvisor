@@ -6,8 +6,6 @@ use crate::{
             api::{DaemonDiscoveryRequest, DaemonDiscoveryResponse, DiscoveryUpdatePayload},
             base::Daemon,
         },
-        hosts::r#impl::ports::PortBase,
-        services::r#impl::endpoints::{ApplicationProtocol, Endpoint},
         shared::{
             entities::ChangeTriggersTopologyStaleness,
             events::{
@@ -115,30 +113,25 @@ impl DaemonService {
             .await?
             .ok_or_else(|| anyhow::anyhow!("Could not find daemon {}", daemon_id))?;
 
-        let endpoint = Endpoint {
-            ip: Some(daemon.base.ip),
-            port_base: PortBase::new_tcp(daemon.base.port),
-            protocol: ApplicationProtocol::Http,
-            path: "/api/discovery/initiate".to_string(),
-        };
+        let url = format!("{}/api/discovery/initiate", daemon.base.url);
 
         tracing::info!(
             daemon_id = %daemon_id,
-            endpoint = %endpoint,
+            url = %url,
             session_id = %request.session_id,
             "Attempting to send discovery request to daemon"
         );
 
         let response = self
             .client
-            .post(format!("{}", endpoint))
+            .post(url.clone())
             .json(&request)
             .send()
             .await
             .map_err(|e| {
                 tracing::error!(
                     daemon_id = %daemon_id,
-                    endpoint = %endpoint,
+                    url = %url,
                     error = %e,
                     error_debug = ?e,
                     is_connect = %e.is_connect(),
@@ -192,19 +185,9 @@ impl DaemonService {
         session_id: Uuid,
         authentication: AuthenticatedEntity,
     ) -> Result<(), anyhow::Error> {
-        let endpoint = Endpoint {
-            ip: Some(daemon.base.ip),
-            port_base: PortBase::new_tcp(daemon.base.port),
-            protocol: ApplicationProtocol::Http,
-            path: "/api/discovery/cancel".to_string(),
-        };
+        let url = format!("{}/api/discovery/cancel", daemon.base.url);
 
-        let response = self
-            .client
-            .post(format!("{}", endpoint))
-            .json(&session_id)
-            .send()
-            .await?;
+        let response = self.client.post(url).json(&session_id).send().await?;
 
         if !response.status().is_success() {
             anyhow::bail!(

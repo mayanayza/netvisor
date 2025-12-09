@@ -11,7 +11,7 @@ use netvisor::{
     },
     server::daemons::r#impl::base::DaemonMode,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tower::ServiceBuilder;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -57,6 +57,7 @@ async fn async_main() -> anyhow::Result<()> {
     let network_id = &config_store.get_network_id().await?;
     let api_key = &config_store.get_api_key().await?;
     let mode = &config_store.get_mode().await?;
+    let interval = Duration::from_secs(config_store.get_heartbeat_interval().await?);
 
     let state = DaemonAppState::new(config_store, utils).await?;
     let runtime_service = state.services.runtime_service.clone();
@@ -75,7 +76,7 @@ async fn async_main() -> anyhow::Result<()> {
             ),
     );
 
-    let bind_addr = format!("{}:{}", config.bind_address, config.daemon_port);
+    let bind_addr = format!("{}:{}", config.bind_address, config.port);
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
 
     // Spawn server in background
@@ -105,18 +106,22 @@ async fn async_main() -> anyhow::Result<()> {
 
     if *mode == DaemonMode::Push {
         tracing::info!("Daemon running in Push mode");
-        // Spawn heartbeat task in background
         tokio::spawn(async move {
-            if let Err(e) = runtime_service.heartbeat().await {
-                tracing::warn!("Failed to update heartbeat timestamp: {}", e);
+            loop {
+                if let Err(e) = runtime_service.heartbeat().await {
+                    tracing::warn!("Heartbeat task failed: {}, retrying in 30s...", e);
+                    tokio::time::sleep(interval).await;
+                }
             }
         });
     } else {
         tracing::info!("Daemon running in Pull mode");
-        // Spawn request work in background
         tokio::spawn(async move {
-            if let Err(e) = runtime_service.request_work().await {
-                tracing::warn!("Failed to request work: {}", e);
+            loop {
+                if let Err(e) = runtime_service.request_work().await {
+                    tracing::warn!("Work request task failed: {}, retrying in 30s...", e);
+                    tokio::time::sleep(interval).await;
+                }
             }
         });
     }

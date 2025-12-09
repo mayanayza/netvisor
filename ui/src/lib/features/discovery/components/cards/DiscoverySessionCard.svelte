@@ -20,11 +20,14 @@
 
 	// Build card data
 	$: cardData = {
-		title:
-			session.discovery_type.type + ' Discovery on ' + (daemon ? daemon?.ip : 'Unknown Daemon'),
+		title: session.discovery_type.type + ' Discovery',
 		iconColor: entities.getColorHelper('Discovery').icon,
 		Icon: entities.getIconComponent('Discovery'),
 		fields: [
+			{
+				label: 'Daemon',
+				value: daemon ? daemon.name : 'Unknown Daemon'
+			},
 			{
 				label: 'Started',
 				value: session.started_at ? formatTimestamp(session.started_at) : 'Not Yet'
@@ -32,10 +35,6 @@
 			{
 				label: 'Session ID',
 				value: session.session_id
-			},
-			{
-				label: 'Running On',
-				value: daemon ? `Daemon @ ${daemon.ip}` : 'Unknown Daemon'
 			},
 			{
 				label: '', // No label needed for snippet
