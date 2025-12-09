@@ -1,4 +1,4 @@
-import { Lock, RefreshCcw } from 'lucide-svelte';
+import { Lock, Radio, RefreshCcw } from 'lucide-svelte';
 import type { Topology } from './types/base';
 import type { IconComponent } from '$lib/shared/utils/types';
 
@@ -12,7 +12,7 @@ export interface TopologyStateInfo {
 	class: string;
 	label: string;
 	buttonText: string;
-	hoverLabel?: string;
+	disabled?: boolean;
 }
 
 export interface TopologyStateConfig extends TopologyStateInfo {
@@ -23,7 +23,7 @@ export interface TopologyStateConfig extends TopologyStateInfo {
  * Determine the state info for a topology (without actions)
  * This can be used in displays, lists, etc.
  */
-export function getTopologyStateInfo(topology: Topology): TopologyStateInfo {
+export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): TopologyStateInfo {
 	// Locked state
 	if (topology.is_locked) {
 		return {
@@ -32,7 +32,21 @@ export function getTopologyStateInfo(topology: Topology): TopologyStateInfo {
 			color: 'blue',
 			class: 'btn-info',
 			buttonText: 'Locked',
-			label: 'Locked'
+			label: 'Locked',
+			disabled: true
+		};
+	}
+
+	// Auto rebuild state
+	if (autoRebuild) {
+		return {
+			type: 'fresh',
+			icon: Radio,
+			color: 'green',
+			class: 'btn-success',
+			buttonText: 'Auto',
+			label: 'Auto',
+			disabled: true
 		};
 	}
 
@@ -84,18 +98,17 @@ export function getTopologyStateInfo(topology: Topology): TopologyStateInfo {
  */
 export function getTopologyState(
 	topology: Topology,
+	autoRebuild: boolean,
 	handlers: {
 		onRefresh: () => void;
-		onUnlock: () => void;
 		onReset: () => void;
-		onLock: () => void;
 	}
 ): TopologyStateConfig {
-	const stateInfo = getTopologyStateInfo(topology);
+	const stateInfo = getTopologyStateInfo(topology, autoRebuild);
 
 	// Map state types to actions
 	const actionMap: Record<TopologyStateType, (() => void) | null> = {
-		locked: handlers.onUnlock,
+		locked: null,
 		fresh: handlers.onReset,
 		stale_safe: handlers.onRefresh,
 		stale_conflicts: handlers.onRefresh

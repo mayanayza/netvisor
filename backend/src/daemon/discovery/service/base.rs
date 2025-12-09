@@ -200,7 +200,7 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
 
         self.as_ref()
             .api_client
-            .post_no_response(&path, &payload, "Failed to report discovery update")
+            .post_no_data(&path, &payload, "Failed to report discovery update")
             .await?;
 
         tracing::trace!(
@@ -349,7 +349,11 @@ pub trait DiscoversNetworkedEntities:
         }
 
         let mut current_session = self.as_ref().current_session.write().await;
-        *current_session = None;
+        if let Some(session) = current_session.as_ref()
+            && session.info.session_id == session_id
+        {
+            *current_session = None;
+        }
 
         if cancel.is_cancelled() {
             return Ok(());

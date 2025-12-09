@@ -1,5 +1,5 @@
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
-import { topologies, topology } from './store';
+import { autoRebuild, rebuildTopology, topologies, topology } from './store';
 import { get } from 'svelte/store';
 import type { Topology } from './types/base';
 
@@ -17,7 +17,16 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 					return;
 				}
 
-				// For staleness updates, debounce them
+				// For stale updates with autoRebuild enabled, trigger an actual rebuild
+				if (get(autoRebuild)) {
+					const currentTopo = get(topology);
+					if (currentTopo && currentTopo.id === update.id && !currentTopo.is_locked) {
+						rebuildTopology(currentTopo);
+					}
+					return;
+				}
+
+				// For staleness updates, debounce thema
 				const existingTimer = this.stalenessTimers.get(update.id);
 				if (existingTimer) {
 					clearTimeout(existingTimer);

@@ -53,6 +53,41 @@ impl DaemonApiClient {
             .header("Authorization", format!("Bearer {}", api_key)))
     }
 
+    /// Check response status and handle API errors
+    async fn check_response(
+        &self,
+        response: reqwest::Response,
+        context: &str,
+    ) -> Result<ApiResponse<serde_json::Value>, Error> {
+        if !response.status().is_success() {
+            bail!("{}: HTTP {}", context, response.status());
+        }
+
+        let api_response: ApiResponse<serde_json::Value> = response.json().await?;
+
+        if !api_response.success {
+            let daemon_id = self.config_store.get_id().await?;
+            let error_msg = api_response
+                .error
+                .unwrap_or_else(|| "Unknown error".to_string());
+
+            if error_msg.contains("not found") {
+                tracing::error!(
+                    daemon_id = %daemon_id,
+                    error = %error_msg,
+                    "{}: Daemon ID not found on server. Please remove config and reinstall daemon.",
+                    context
+                );
+            } else {
+                tracing::error!(daemon_id = %daemon_id, error = %error_msg, "{}", context);
+            }
+
+            bail!("{}: {}", context, error_msg);
+        }
+
+        Ok(api_response)
+    }
+
     /// Execute request and parse ApiResponse, extracting data
     async fn execute<T: DeserializeOwned>(
         &self,
@@ -60,23 +95,32 @@ impl DaemonApiClient {
         context: &str,
     ) -> Result<T, Error> {
         let response = request.send().await?;
+        let api_response = self.check_response(response, context).await?;
 
-        if !response.status().is_success() {
-            bail!("{}: HTTP {}", context, response.status());
-        }
-
-        let api_response: ApiResponse<T> = response.json().await?;
-
-        if !api_response.success {
-            let error_msg = api_response
-                .error
-                .unwrap_or_else(|| "Unknown error".to_string());
-            bail!("{}: {}", context, error_msg);
-        }
-
-        api_response
+        let data = api_response
             .data
-            .ok_or_else(|| anyhow::anyhow!("{}: No data in response", context))
+            .ok_or_else(|| anyhow::anyhow!("{}: No data in response", context))?;
+
+        serde_json::from_value(data)
+            .map_err(|e| anyhow::anyhow!("{}: Failed to parse response data: {}", context, e))
+    }
+
+    /// Execute request, check for errors, but ignore response data
+    async fn execute_no_data(&self, request: RequestBuilder, context: &str) -> Result<(), Error> {
+        let response = request.send().await?;
+        self.check_response(response, context).await?;
+        Ok(())
+    }
+
+    /// POST request expecting no response data
+    pub async fn post_no_data<B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+        context: &str,
+    ) -> Result<(), Error> {
+        let request = self.build_request(Method::POST, path).await?.json(body);
+        self.execute_no_data(request, context).await
     }
 
     /// GET request
@@ -94,23 +138,6 @@ impl DaemonApiClient {
     ) -> Result<T, Error> {
         let request = self.build_request(Method::POST, path).await?.json(body);
         self.execute(request, context).await
-    }
-
-    /// POST request expecting no response data (returns () on success)
-    pub async fn post_no_response<B: Serialize>(
-        &self,
-        path: &str,
-        body: &B,
-        context: &str,
-    ) -> Result<(), Error> {
-        let request = self.build_request(Method::POST, path).await?.json(body);
-        let response = request.send().await?;
-
-        if !response.status().is_success() {
-            bail!("{}: HTTP {}", context, response.status());
-        }
-
-        Ok(())
     }
 
     /// POST request returning full ApiResponse for custom error handling

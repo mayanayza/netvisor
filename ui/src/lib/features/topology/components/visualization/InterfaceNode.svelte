@@ -153,7 +153,7 @@
 								</span>
 							</div>
 							{#if !$topologyOptions.request.hide_ports && service.bindings.filter((b) => b.type == 'Port').length > 0}
-								<span class="text-tertiary mt-1 text-xs"
+								<span class="text-tertiary mt-1 text-center text-xs"
 									>{service.bindings
 										.map((b) => {
 											if (

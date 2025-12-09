@@ -1,4 +1,4 @@
-use std::{fmt::Display, net::IpAddr};
+use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
 use clap::ValueEnum;
@@ -14,12 +14,12 @@ use crate::server::{
 pub struct DaemonBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
-    pub ip: IpAddr,
+    pub url: String,
     pub last_seen: DateTime<Utc>,
-    pub port: u16,
     #[serde(default)]
     pub capabilities: DaemonCapabilities,
     pub mode: DaemonMode,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -35,8 +35,7 @@ impl Daemon {
     pub fn suppress_logs(&self, other: &Self) -> bool {
         self.base.capabilities == other.base.capabilities
             && self.base.mode == other.base.mode
-            && self.base.ip == other.base.ip
-            && self.base.port == other.base.port
+            && self.base.url == other.base.url
             && self.base.network_id == other.base.network_id
             && self.base.host_id == other.base.host_id
     }
@@ -44,7 +43,7 @@ impl Daemon {
 
 impl Display for Daemon {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.base.ip, self.id)
+        write!(f, "{}: {}", self.base.url, self.id)
     }
 }
 

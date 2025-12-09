@@ -25,7 +25,7 @@
 		@apply rounded-md px-4 py-2 font-medium text-white;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center gap-2;
-		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-blue-600 disabled:hover:bg-blue-700;
+		@apply disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-blue-600 disabled:hover:bg-blue-700;
 	}
 
 	/* Secondary action button - outlined, less prominent */
@@ -35,7 +35,7 @@
 		@apply rounded-md px-4 py-2 font-medium text-gray-400 hover:text-gray-200;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center gap-2;
-		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-700 disabled:hover:bg-transparent disabled:hover:text-gray-400;
+		@apply disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-gray-700 disabled:hover:bg-transparent disabled:hover:text-gray-400;
 	}
 
 	/* Destructive action button - for dangerous operations */
@@ -45,7 +45,7 @@
 		@apply rounded-md px-4 py-2 font-medium text-red-400 hover:text-red-300;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center gap-2;
-		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-800/50 disabled:hover:bg-red-950/40 disabled:hover:text-red-400;
+		@apply disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-red-800/50 disabled:hover:bg-red-950/40 disabled:hover:text-red-400;
 	}
 
 	/* Success/confirmation action button - for positive operations */
@@ -55,7 +55,7 @@
 		@apply rounded-md px-4 py-2 font-medium text-green-400 hover:text-green-300;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center gap-2;
-		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-green-800/50 disabled:hover:bg-green-950/40 disabled:hover:text-green-400;
+		@apply disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-green-800/50 disabled:hover:bg-green-950/40 disabled:hover:text-green-400;
 	}
 
 	/* Warning action button - mirrors btn-danger pattern for yellow/warning states */
@@ -65,7 +65,7 @@
 		@apply rounded-md px-4 py-2 font-medium text-yellow-400 hover:text-yellow-300;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center gap-2;
-		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-yellow-800/50 disabled:hover:bg-yellow-950/40 disabled:hover:text-yellow-400;
+		@apply disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-yellow-800/50 disabled:hover:bg-yellow-950/40 disabled:hover:text-yellow-400;
 	}
 
 	/* Info action button - mirrors btn-primary pattern for blue/info states */
@@ -75,54 +75,63 @@
 		@apply rounded-md px-4 py-2 font-medium text-blue-400 hover:text-blue-300;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center gap-2;
-		@apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-blue-800/50 disabled:hover:bg-blue-950/40 disabled:hover:text-blue-400;
+		@apply disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:border-blue-800/50 disabled:hover:bg-blue-950/40 disabled:hover:text-blue-400;
 	}
 
 	/* Icon buttons - minimal style for icon-only actions */
 	.btn-icon {
-		@apply rounded p-2 text-gray-500 hover:bg-gray-800 hover:text-gray-200;
+		@apply text-tertiary hover:text-secondary rounded p-2 hover:bg-gray-800;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center;
-		@apply disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500;
+		@apply disabled:hover:text-tertiary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent;
 	}
 
 	/* Icon button - danger variant */
 	.btn-icon-danger {
-		@apply rounded p-2 text-gray-500 hover:bg-red-950/30 hover:text-red-400;
+		@apply text-tertiary rounded p-2 hover:text-red-400;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center;
-		@apply disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500;
+		@apply disabled:hover:text-tertiary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent;
+	}
+
+	/* Icon button - info variant */
+	.btn-icon-info {
+		@apply rounded p-2 text-blue-400 hover:text-blue-300;
+		@apply transition-colors duration-150;
+		@apply inline-flex items-center justify-center;
+		@apply disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-blue-400;
 	}
 
 	/* Icon button - success variant */
 	.btn-icon-success {
-		@apply rounded p-2 text-gray-500 hover:bg-green-950/30 hover:text-green-400;
+		@apply rounded p-2 text-green-400 hover:text-green-300;
 		@apply transition-colors duration-150;
 		@apply inline-flex items-center justify-center;
-		@apply disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500;
-	}
-
-	/* Icon button - primary variant (for emphasized icon actions) */
-	.btn-icon-primary {
-		@apply rounded p-2 text-gray-500 hover:bg-blue-950/30 hover:text-blue-400;
-		@apply transition-colors duration-150;
-		@apply inline-flex items-center justify-center;
-		@apply disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500;
+		@apply disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-green-400;
 	}
 
 	/* Card component */
 	.card {
-		@apply border border-gray-700 bg-gray-800/90 backdrop-blur-sm;
-		@apply hover:ring-1 hover:ring-gray-600;
+		@apply border border-gray-700 bg-gray-800/70 backdrop-blur-sm;
+		@apply hover:ring-1 hover:ring-gray-700;
 		@apply rounded-2xl p-6 shadow-xl transition-all duration-300 ease-in-out;
 	}
 
 	.card-focused {
-		@apply transition-colors hover:border-blue-500;
+		@apply bg-gray-700/50 hover:ring-gray-700;
 	}
 
 	.card-static {
 		@apply hover:ring-0;
+	}
+
+	.card-selected {
+		@apply ring-2 ring-blue-500;
+		@apply hover:ring-2 hover:ring-blue-500;
+	}
+
+	.checkbox-card {
+		@apply cursor-pointer rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500;
 	}
 	/* Card dividers/borders */
 	.card-divider-h {

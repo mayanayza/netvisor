@@ -82,6 +82,7 @@ build:
 	@echo "✓ Daemon image built: mayanayza/netvisor-daemon:latest"
 
 test:
+	cd ui && npx vite-node scripts/export-daemon-field-defs.ts > ../backend/src/tests/daemon-config-frontend-fields.json
 	make dev-down
 	rm -rf ./data/daemon_config/*
 	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test" && \

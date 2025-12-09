@@ -21,19 +21,25 @@
 	export let host: Host;
 	export let service: Service;
 	export let onChange: (updatedService: Service) => void = () => {};
+	export let selectedPortBindings: PortBinding[] = [];
+	export let index: number = -1;
 
 	let currentServiceId: string = service.id;
+	let currentServiceIndex: number = index;
 
 	const getNameField = () => {
-		return field(`service_name_${currentServiceId}`, service.name, [required(), maxLength(100)]);
+		return field(`service_name_${currentServiceId}_${index}`, service.name, [
+			required(),
+			maxLength(100)
+		]);
 	};
 
 	let nameField = getNameField();
 
 	$: serviceMetadata = service ? serviceDefinitions.getItem(service.service_definition) : null;
 
-	$: if (service.id !== currentServiceId) {
-		currentServiceId = service.id;
+	$: if (currentServiceIndex !== index) {
+		currentServiceIndex = index;
 		nameField = getNameField();
 	}
 
@@ -315,9 +321,11 @@
 					allowDuplicates={false}
 					allowItemEdit={() => true}
 					allowItemRemove={() => true}
+					allowSelection={true}
 					allowReorder={false}
 					{formApi}
 					allowCreateNew={true}
+					itemClickAction="select"
 					allowAddFromOptions={false}
 					disableCreateNewButton={!canCreatePortBinding}
 					options={[] as PortBinding[]}
@@ -328,6 +336,7 @@
 					onCreateNew={handleCreatePortBinding}
 					onRemove={handleRemovePortBinding}
 					onEdit={handleUpdatePortBinding}
+					bind:selectedItems={selectedPortBindings}
 				/>
 			{/key}
 		</div>

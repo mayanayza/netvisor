@@ -1,27 +1,25 @@
 <script lang="ts">
-	export let field: boolean;
-	export let title: string;
-	export let description: string = '';
+	import type { BooleanFieldType, FormApi } from '../types';
+	import FormField from './FormField.svelte';
+
+	export let label: string;
+	export let helpText: string = '';
+	export let formApi: FormApi;
+	export let field: BooleanFieldType;
+	export let id: string;
 </script>
 
-<label class="flex flex-col gap-1">
-	<div class="flex items-center gap-2">
-		<input
-			type="checkbox"
-			bind:checked={field}
-			class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-1 focus:ring-blue-500"
-		/>
-		<span class="text-primary text-sm">{title}</span>
-	</div>
-	{#if description.length > 0}
-		<p class="text-tertiary text-xs leading-tight">
-			{description}
-		</p>
-	{/if}
-</label>
+<FormField {label} {formApi} {field} {helpText} {id} inline={true}>
+	<input
+		type="checkbox"
+		{id}
+		checked={$field.value}
+		on:change={(e) => field.set(e.currentTarget.checked)}
+		class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-1 focus:ring-blue-500"
+	/>
+</FormField>
 
 <style>
-	/* Ensure checkboxes are styled consistently */
 	input[type='checkbox']:checked {
 		background-color: rgb(37, 99, 235);
 		border-color: rgb(37, 99, 235);

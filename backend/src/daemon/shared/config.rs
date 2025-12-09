@@ -25,31 +25,27 @@ pub struct DaemonCli {
     #[arg(long)]
     network_id: Option<String>,
 
-    /// Daemon listen port
+    /// Port for daemon to listen on
     #[arg(short, long)]
     daemon_port: Option<u16>,
 
-    /// Daemon listen host
-    #[arg(long)]
-    host: Option<String>,
-
-    /// Daemon name
+    /// Name for this daemon
     #[arg(long)]
     name: Option<String>,
 
-    /// Log level
+    /// Logging verbosity
     #[arg(long)]
     log_level: Option<String>,
 
-    /// Heartbeat interval in seconds
+    /// Seconds between heartbeat updates / work requests (for daemons in pull mode) to server
     #[arg(long)]
     heartbeat_interval: Option<u64>,
 
-    /// Daemon bind address
+    /// IP address to bind daemon to
     #[arg(long)]
     bind_address: Option<String>,
 
-    /// Concurrent scans for discovery
+    /// Maximum parallel host scans
     #[arg(long)]
     concurrent_scans: Option<usize>,
 
@@ -57,15 +53,33 @@ pub struct DaemonCli {
     #[arg(long)]
     daemon_api_key: Option<String>,
 
-    /// Docker socket proxy
+    /// Optional proxy for Docker API. Can use both non-SSL and SSL proxy; SSL proxy requires additional SSL config vars
     #[arg(long)]
     docker_proxy: Option<String>,
 
+    /// Path to SSL certificate if using a docker proxy with SSL
+    #[arg(long)]
+    docker_proxy_ssl_cert: Option<String>,
+
+    /// Path to SSL private key if using a docker proxy with SSL
+    #[arg(long)]
+    docker_proxy_ssl_key: Option<String>,
+
+    /// Path to SSL chain if using a docker proxy with SSL
+    #[arg(long)]
+    docker_proxy_ssl_chain: Option<String>,
+
+    /// Select whether the daemon will Pull work from the server or have work Pushed to it.
     #[arg(long)]
     mode: Option<DaemonMode>,
 
+    /// Allow self-signed certs for daemon -> server connections
     #[arg(long)]
     allow_self_signed_certs: Option<bool>,
+
+    /// Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set.
+    #[arg(long)]
+    daemon_url: Option<String>,
 }
 
 /// Unified configuration struct that handles both startup and runtime config
@@ -93,7 +107,7 @@ pub struct AppConfig {
     pub last_heartbeat: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(default)]
     pub host_id: Option<Uuid>,
-    #[serde(default)]
+    #[serde(default, alias = "daemon_api_key")]
     pub daemon_api_key: Option<String>,
     #[serde(default)]
     pub docker_proxy: Option<String>,
@@ -101,6 +115,13 @@ pub struct AppConfig {
     pub mode: DaemonMode,
     #[serde(default)]
     allow_self_signed_certs: bool,
+    daemon_url: Option<String>,
+    #[serde(default)]
+    docker_proxy_ssl_cert: Option<String>,
+    #[serde(default)]
+    docker_proxy_ssl_key: Option<String>,
+    #[serde(default)]
+    docker_proxy_ssl_chain: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -123,6 +144,10 @@ impl Default for AppConfig {
             server_port: None,
             server_target: None,
             allow_self_signed_certs: false,
+            daemon_url: None,
+            docker_proxy_ssl_cert: None,
+            docker_proxy_ssl_chain: None,
+            docker_proxy_ssl_key: None,
         }
     }
 }
@@ -156,8 +181,8 @@ impl AppConfig {
         if let Some(network_id) = cli_args.network_id {
             figment = figment.merge(("network_id", network_id));
         }
-        if let Some(daemon_port) = cli_args.daemon_port {
-            figment = figment.merge(("daemon_port", daemon_port));
+        if let Some(port) = cli_args.daemon_port {
+            figment = figment.merge(("daemon_port", port));
         }
         if let Some(name) = cli_args.name {
             figment = figment.merge(("name", name));
@@ -174,11 +199,20 @@ impl AppConfig {
         if let Some(concurrent_scans) = cli_args.concurrent_scans {
             figment = figment.merge(("concurrent_scans", concurrent_scans));
         }
-        if let Some(daemon_api_key) = cli_args.daemon_api_key {
-            figment = figment.merge(("daemon_api_key", daemon_api_key));
+        if let Some(api_key) = cli_args.daemon_api_key {
+            figment = figment.merge(("daemon_api_key", api_key));
         }
         if let Some(docker_proxy) = cli_args.docker_proxy {
             figment = figment.merge(("docker_proxy", docker_proxy));
+        }
+        if let Some(docker_proxy_ssl_key) = cli_args.docker_proxy_ssl_key {
+            figment = figment.merge(("docker_proxy_ssl_key", docker_proxy_ssl_key));
+        }
+        if let Some(docker_proxy_ssl_cert) = cli_args.docker_proxy_ssl_cert {
+            figment = figment.merge(("docker_proxy_ssl_cert", docker_proxy_ssl_cert));
+        }
+        if let Some(docker_proxy_ssl_chain) = cli_args.docker_proxy_ssl_chain {
+            figment = figment.merge(("docker_proxy_ssl_chain", docker_proxy_ssl_chain));
         }
         if let Some(mode) = cli_args.mode {
             figment = figment.merge(("mode", mode));
@@ -265,6 +299,11 @@ impl ConfigStore {
         Ok(config.id)
     }
 
+    pub async fn get_name(&self) -> Result<String> {
+        let config = self.config.read().await;
+        Ok(config.name.clone())
+    }
+
     pub async fn set_id(&self, id: Uuid) -> Result<()> {
         let mut config = self.config.write().await;
         config.id = id;
@@ -331,6 +370,12 @@ impl ConfigStore {
         Ok(config.network_id)
     }
 
+    pub async fn get_daemon_url(&self) -> Result<Option<String>> {
+        let config = self.config.read().await;
+
+        Ok(config.daemon_url.clone())
+    }
+
     pub async fn get_server_url(&self) -> Result<String> {
         let config = self.config.read().await;
 
@@ -353,6 +398,20 @@ impl ConfigStore {
     pub async fn get_docker_proxy(&self) -> Result<Option<String>> {
         let config = self.config.read().await;
         Ok(config.docker_proxy.clone())
+    }
+
+    pub async fn get_docker_proxy_ssl_info(&self) -> Result<Option<(String, String, String)>> {
+        let config = self.config.read().await;
+
+        if let (Some(ssl_cert), Some(ssl_key), Some(ssl_chain)) = (
+            config.docker_proxy_ssl_cert.clone(),
+            config.docker_proxy_ssl_key.clone(),
+            config.docker_proxy_ssl_chain.clone(),
+        ) {
+            Ok(Some((ssl_cert, ssl_key, ssl_chain)))
+        } else {
+            Ok(None)
+        }
     }
 
     pub async fn get_heartbeat_interval(&self) -> Result<u64> {
@@ -378,7 +437,12 @@ mod tests {
 
     use serial_test::serial;
 
+    use crate::daemon::shared::config::DaemonCli;
     use crate::{daemon::shared::config::AppConfig, tests::DAEMON_CONFIG_FIXTURE};
+    use clap::CommandFactory;
+    use comrak::nodes::NodeValue;
+    use comrak::{Arena, Options, parse_document};
+    use std::collections::HashMap;
 
     #[test]
     #[serial]
@@ -413,5 +477,286 @@ mod tests {
 
             assert!(false, "Failed to load config fixture");
         }
+    }
+
+    #[derive(Debug)]
+    struct FieldInfo {
+        cli_flag: String,
+        env_var: Option<String>,
+        help_text: String,
+        config_key: String,
+    }
+
+    const EXCLUDED_FIELDS: [&str; 5] = [
+        "daemon_api_key",
+        "network_id",
+        "server_url",
+        // Legacy fields not exposed in UI
+        "server_target",
+        "server_port",
+    ];
+
+    #[test]
+    fn config_fields_are_in_sync() {
+        let rust_fields = extract_rust_fields();
+        let frontend_fields = extract_frontend_fields();
+        let markdown_fields = extract_markdown_fields();
+
+        let mut errors = Vec::new();
+
+        // Check all Rust fields exist in frontend and markdown
+        for (id, rust_info) in &rust_fields {
+            // Check frontend
+            match frontend_fields.get(id) {
+                None => errors.push(format!("Field '{}' missing from frontend", id)),
+                Some(fe_info) => {
+                    if fe_info.cli_flag != rust_info.cli_flag {
+                        errors.push(format!(
+                            "Field '{}' CLI flag mismatch: rust='{}', frontend='{}'",
+                            id, rust_info.cli_flag, fe_info.cli_flag
+                        ));
+                    }
+                    if fe_info.env_var != rust_info.env_var {
+                        errors.push(format!(
+                            "Field '{}' env var mismatch: rust={:?}, frontend={:?}",
+                            id, rust_info.env_var, fe_info.env_var
+                        ));
+                    }
+                    // Normalize whitespace for description comparison
+                    let rust_desc = normalize_text(&rust_info.help_text);
+                    let fe_desc = normalize_text(&fe_info.help_text);
+                    if rust_desc != fe_desc {
+                        errors.push(format!(
+                            "Field '{}' help text mismatch:\n  rust: '{}'\n  frontend: '{}'",
+                            id, rust_desc, fe_desc
+                        ));
+                    }
+                }
+            }
+
+            // Check markdown
+            match markdown_fields.get(id) {
+                None => errors.push(format!("Field '{}' missing from markdown docs", id)),
+                Some(md_info) => {
+                    if md_info.cli_flag != rust_info.cli_flag {
+                        errors.push(format!(
+                            "Field '{}' CLI flag mismatch: rust='{}', markdown='{}'",
+                            id, rust_info.cli_flag, md_info.cli_flag
+                        ));
+                    }
+                    if md_info.env_var != rust_info.env_var {
+                        errors.push(format!(
+                            "Field '{}' env var mismatch: rust={:?}, markdown={:?}",
+                            id, rust_info.env_var, md_info.env_var
+                        ));
+                    }
+
+                    let rust_desc = normalize_text(&rust_info.help_text);
+                    let md_desc = normalize_text(&md_info.help_text);
+                    if rust_desc != md_desc {
+                        errors.push(format!(
+                            "Field '{}' help text mismatch:\n  rust: '{}'\n  markdown: '{}'",
+                            id, rust_desc, md_desc
+                        ));
+                    }
+
+                    if md_info.config_key != rust_info.config_key {
+                        errors.push(format!(
+                            "Field '{}' config key mismatch: rust='{}', markdown='{}'",
+                            id, rust_info.config_key, md_info.config_key
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Check for fields in frontend/markdown that aren't in Rust
+        for id in frontend_fields.keys() {
+            if !rust_fields.contains_key(id) {
+                errors.push(format!("Field '{}' in frontend but not in Rust", id));
+            }
+        }
+        for id in markdown_fields.keys() {
+            if !rust_fields.contains_key(id) {
+                errors.push(format!("Field '{}' in markdown but not in Rust", id));
+            }
+        }
+
+        assert!(
+            errors.is_empty(),
+            "Config sync errors:\n{}",
+            errors.join("\n")
+        );
+    }
+
+    fn extract_rust_fields() -> HashMap<String, FieldInfo> {
+        let cmd = DaemonCli::command();
+        cmd.get_arguments()
+            .filter(|a| {
+                let id = a.get_id().to_string();
+                id != "help" && id != "version" && !EXCLUDED_FIELDS.contains(&id.as_str())
+            })
+            .map(|a| {
+                let id = a.get_id().to_string();
+
+                // Derive env var from field ID using same conversion as Figment
+                let env_var = format!("NETVISOR_{}", id.to_uppercase());
+                let config_key = cli_id_to_config_key(&id);
+
+                let info = FieldInfo {
+                    cli_flag: a.get_long().map(|l| format!("--{}", l)).unwrap_or_default(),
+                    env_var: Some(env_var),
+                    help_text: a.get_help().map(|h| h.to_string()).unwrap_or_default(),
+                    config_key,
+                };
+                (id, info)
+            })
+            .collect()
+    }
+
+    fn extract_frontend_fields() -> HashMap<String, FieldInfo> {
+        let json = include_str!("../../tests/daemon-config-frontend-fields.json");
+        let fields: Vec<serde_json::Value> = serde_json::from_str(json).unwrap();
+
+        fields
+            .into_iter()
+            .filter_map(|v| {
+                let id = v.get("id")?.as_str()?.to_string(); // Already snake_case
+                let info = FieldInfo {
+                    cli_flag: v.get("cliFlag")?.as_str()?.to_string(),
+                    env_var: v.get("envVar").and_then(|e| e.as_str()).map(String::from),
+                    help_text: v.get("helpText")?.as_str()?.to_string(),
+                    config_key: cli_id_to_config_key(&id),
+                };
+                Some((id, info))
+            })
+            .collect()
+    }
+
+    fn extract_markdown_fields() -> HashMap<String, FieldInfo> {
+        let content = include_str!("../../../../docs/CONFIGURATION.md");
+
+        // Extract content between markers
+        let start_marker = "<!-- DAEMON_CONFIG_TABLE_START -->";
+        let end_marker = "<!-- DAEMON_CONFIG_TABLE_END -->";
+
+        let table_content = content
+            .split(start_marker)
+            .nth(1)
+            .and_then(|s| s.split(end_marker).next())
+            .expect("Could not find DAEMON_CONFIG_TABLE markers in docs/config.md");
+
+        let arena = Arena::new();
+        let mut options = Options::default();
+        options.extension.table = true;
+
+        let root = parse_document(&arena, table_content, &options);
+
+        let mut fields = HashMap::new();
+
+        // Walk the AST to find table rows
+        for node in root.descendants() {
+            if let NodeValue::Table(_) = node.data.borrow().value {
+                let mut is_header = true;
+                for row in node.children() {
+                    if let NodeValue::TableRow(_) = row.data.borrow().value {
+                        if is_header {
+                            is_header = false;
+                            continue;
+                        }
+
+                        let cells: Vec<String> = row
+                            .children()
+                            .filter_map(|cell| {
+                                if let NodeValue::TableCell = cell.data.borrow().value {
+                                    Some(extract_text_content(cell))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+
+                        // Expected columns: Parameter | CLI Flag | Env Var | Config Key | Default | Description
+                        if cells.len() >= 6 {
+                            let cli_flag = extract_code_content(&cells[1]);
+                            let env_var = extract_code_content(&cells[2]);
+                            let config_key = extract_code_content(&cells[3]);
+                            let description = cells[5].clone();
+
+                            // Convert CLI flag to field ID: --server-url -> server_url
+                            if let Some(id) = cli_flag
+                                .strip_prefix("--")
+                                .map(|s| s.split(" or ").next().unwrap_or(s))
+                                .map(|s| s.replace('-', "_"))
+                            {
+                                if EXCLUDED_FIELDS.contains(&id.as_str()) {
+                                    continue;
+                                }
+
+                                fields.insert(
+                                    id,
+                                    FieldInfo {
+                                        cli_flag: format!(
+                                            "--{}",
+                                            cli_flag
+                                                .strip_prefix("--")
+                                                .unwrap_or(&cli_flag)
+                                                .split(" or ")
+                                                .next()
+                                                .unwrap_or(&cli_flag)
+                                        ),
+                                        env_var: if env_var.is_empty() {
+                                            None
+                                        } else {
+                                            Some(env_var)
+                                        },
+                                        help_text: description,
+                                        config_key,
+                                    },
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        fields
+    }
+
+    // Maps clap arg ID to the actual serde field name in AppConfig
+    fn cli_id_to_config_key(cli_id: &str) -> String {
+        match cli_id {
+            "daemon_port" => "port".to_string(),
+            "daemon_api_key" => "api_key".to_string(),
+            other => other.to_string(),
+        }
+    }
+
+    fn extract_text_content<'a>(
+        node: &'a comrak::arena_tree::Node<'a, std::cell::RefCell<comrak::nodes::Ast>>,
+    ) -> String {
+        let mut text = String::new();
+        for child in node.descendants() {
+            if let NodeValue::Text(t) = &child.data.borrow().value {
+                text.push_str(t);
+            } else if let NodeValue::Code(c) = &child.data.borrow().value {
+                text.push_str(&c.literal);
+            }
+        }
+        text.trim().to_string()
+    }
+
+    fn extract_code_content(s: &str) -> String {
+        // Extract content from backticks if present
+        if s.starts_with('`') && s.ends_with('`') {
+            s[1..s.len() - 1].to_string()
+        } else {
+            s.to_string()
+        }
+    }
+
+    fn normalize_text(s: &str) -> String {
+        s.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 }

@@ -13,7 +13,7 @@
 	$: description = displayComponent.getDescription?.(item, context) || '';
 </script>
 
-<div class="flex min-w-0 flex-1 items-center gap-3">
+<div class="flex min-w-0 items-center gap-3">
 	<!-- Icon -->
 	{#if icon}
 		<div class="flex h-7 w-7 flex-shrink-0 items-center justify-center">
@@ -25,14 +25,12 @@
 	{/if}
 
 	<!-- Label and description -->
-	<div class="min-w-0 flex-1 text-left">
+	<div class="min-w-0 flex-1 overflow-hidden text-left">
 		<div class="flex min-w-0 items-center gap-2">
-			<span class="text-secondary flex-shrink-0 truncate"
-				>{displayComponent.getLabel(item, context)}</span
-			>
+			<span class="text-secondary truncate">{displayComponent.getLabel(item, context)}</span>
 			<!-- Tags with horizontal scrolling -->
 			{#if tags.length > 0}
-				<div class="tags-scroll-container min-w-0 flex-1">
+				<div class="tags-scroll-container flex-shrink-0">
 					<div class="flex gap-1">
 						{#each tags as tag, i (`${tag.label}-${i}`)}
 							<Tag label={tag.label} color={tag.color} />

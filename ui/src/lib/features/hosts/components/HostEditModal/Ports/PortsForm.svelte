@@ -70,6 +70,7 @@
 			emptyMessage="No ports on this host. Add one to get started."
 			allowReorder={false}
 			allowCreateNew={true}
+			itemClickAction="edit"
 			createNewLabel="Custom Port"
 			allowDuplicates={false}
 			allowItemRemove={(port: Port) => !isPortUsed(port)}

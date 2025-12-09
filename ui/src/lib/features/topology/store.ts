@@ -14,6 +14,7 @@ let lastTopologyId = '';
 export const topologies = writable<Topology[]>([]);
 export const topology = writable<Topology>();
 export const selectedNetwork = writable<string>('');
+export const autoRebuild = writable<boolean>(false);
 
 export const selectedNode = writable<Node | null>(null);
 export const selectedEdge = writable<Edge | null>(null);

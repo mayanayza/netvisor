@@ -20,13 +20,12 @@
 		Icon: entities.getIconComponent('Discovery'),
 		fields: [
 			{
-				label: 'Type',
-				value: discovery.discovery_type.type
+				label: 'Daemon',
+				value: $daemons.find((d) => d.id == discovery.daemon_id)?.name || 'Unknown Daemon'
 			},
 			{
-				label: 'Daemon',
-				value:
-					'Daemon @ ' + $daemons.find((d) => d.id == discovery.daemon_id)?.ip || 'Unknown Daemon'
+				label: 'Type',
+				value: discovery.discovery_type.type
 			},
 			{
 				label: 'Started',

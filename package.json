@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "vite-node": "^5.2.0"
+  }
+}

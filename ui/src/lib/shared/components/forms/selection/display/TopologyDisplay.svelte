@@ -4,11 +4,14 @@
 	export const TopologyDisplay: EntityDisplayComponent<Topology, object> = {
 		getId: (topology: Topology) => topology.id,
 		getLabel: (topology: Topology) => topology.name,
-		getDescription: () => '',
+		getDescription: (topology: Topology) => {
+			const network = get(networks).find((n) => n.id == topology.network_id);
+			return network ? network.name : 'Unknown Network';
+		},
 		getIcon: () => entities.getIconComponent('Topology'),
 		getIconColor: () => entities.getColorHelper('Topology').icon,
 		getTags: (topology: Topology) => {
-			let state = getTopologyStateInfo(topology);
+			let state = getTopologyStateInfo(topology, get(autoRebuild));
 
 			if (state.type == 'fresh') {
 				return [
@@ -34,6 +37,9 @@
 	import ListSelectItem from '../ListSelectItem.svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import { getTopologyStateInfo } from '$lib/features/topology/state';
+	import { networks } from '$lib/features/networks/store';
+	import { get } from 'svelte/store';
+	import { autoRebuild } from '$lib/features/topology/store';
 
 	let {
 		item,

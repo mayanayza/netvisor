@@ -60,22 +60,26 @@ The daemon automatically creates a config file at:
 The config file stores runtime state (daemon ID, host ID) alongside your settings. Command-line and environment variables take priority over the file.
 
 ### Parameter Reference
-
+<!-- DAEMON_CONFIG_TABLE_START -->
 | Parameter | CLI Flag | Environment Variable | Config File Key | Default | Description |
 |-----------|----------|---------------------|-----------------|---------|-------------|
 | **Server URL** | `--server-url` | `NETVISOR_SERVER_URL` | `server_url` | `http://127.0.0.1:60072` | URL where the daemon can reach the server |
-| **API Key** | `--api-key` | `NETVISOR_DAEMON_API_KEY` | `daemon_api_key` | *Required* | Authentication key for daemon (generated via UI) |
-| **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Whether server will push work to daemon or daemon should poll for work from server |
+| **API Key** | `--daemon-api-key` | `NETVISOR_DAEMON_API_KEY` | `api_key` | *Required* | Authentication key for daemon (generated via UI) |
+| **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it |
 | **Network ID** | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
-| **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `daemon_port` | `60073` | Port for daemon to listen on |
+| **Daemon URL** | `--daemon-url` | `NETVISOR_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
+| **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `port` | `60073` | Port for daemon to listen on |
 | **Bind Address** | `--bind-address` | `NETVISOR_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind daemon to |
-| **Daemon Name** | `--name` | `NETVISOR_NAME` | `name` | `netvisor-daemon` | Human-readable name for this daemon |
-| **Log Level** | `--log-level` | `NETVISOR_LOG_LEVEL` | `log_level` | `info` | Logging verbosity: `trace`, `debug`, `info`, `warn`, `error` |
+| **Daemon Name** | `--name` | `NETVISOR_NAME` | `name` | `netvisor-daemon` | Name for this daemon |
+| **Log Level** | `--log-level` | `NETVISOR_LOG_LEVEL` | `log_level` | `info` | Logging verbosity |
 | **Heartbeat Interval** | `--heartbeat-interval` | `NETVISOR_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates / work requests (for daemons in pull mode) to server |
-| **Concurrent Scans** | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | *Auto* | Maximum parallel host scans during discovery |
-| **Docker Proxy** | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | *None* | Optional HTTP proxy for Docker API connections |
-| **Allow Self-Signed Certificates** | `--allow-self-signed-certs` | `NETVISOR_ALLOW_SELF_SIGNED_CERTS` | `allow_self_signed_certs` | *None* | Allow self-signed certificates for connection between Daemon and Server. |
-
+| **Concurrent Scans** | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | *Auto* | Maximum parallel host scans |
+| **Allow Self-Signed Certificates** | `--allow-self-signed-certs` | `NETVISOR_ALLOW_SELF_SIGNED_CERTS` | `allow_self_signed_certs` | *None* | Allow self-signed certs for daemon -> server connections |
+| **Docker Proxy** | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | *None* | Optional proxy for Docker API. Can use both non-SSL and SSL proxy; SSL proxy requires additional SSL config vars |
+| **Docker SSL Proxy Cert Path** | `--docker-proxy-ssl-cert` | `NETVISOR_DOCKER_PROXY_SSL_CERT` | `docker_proxy_ssl_cert` | *None* | Path to SSL certificate if using a docker proxy with SSL |
+| **Docker SSL Proxy Key Path** | `--docker-proxy-ssl-key` | `NETVISOR_DOCKER_PROXY_SSL_KEY` | `docker_proxy_ssl_key` | *None* | Path to SSL private key if using a docker proxy with SSL |
+| **Docker SSL Proxy Chain Path** | `--docker-proxy-ssl-chain` | `NETVISOR_DOCKER_PROXY_SSL_CHAIN` | `docker_proxy_ssl_chain` | *None* | Path to SSL chain if using a docker proxy with SSL |
+<!-- DAEMON_CONFIG_TABLE_END -->
 ### Concurrent Scans
 
 Controls how many hosts the daemon scans simultaneously during network discovery.

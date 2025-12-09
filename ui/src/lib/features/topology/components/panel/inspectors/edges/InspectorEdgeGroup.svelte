@@ -10,7 +10,7 @@
 	import EdgeStyleForm from '$lib/features/groups/components/GroupEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Group } from '$lib/features/groups/types/base';
-	import { topology } from '$lib/features/topology/store';
+	import { autoRebuild, topology } from '$lib/features/topology/store';
 	import { getTopologyStateInfo } from '$lib/features/topology/state';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 
@@ -32,7 +32,7 @@
 		}
 	});
 
-	let liveEditsEnabled = $derived(getTopologyStateInfo($topology).type == 'fresh');
+	let liveEditsEnabled = $derived(getTopologyStateInfo($topology, $autoRebuild).type == 'fresh');
 
 	// Auto-save when styling changes
 	$effect(() => {
@@ -58,7 +58,7 @@
 		</div>
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Edge Style</span>
-		{#if getTopologyStateInfo($topology).type != 'fresh'}
+		{#if getTopologyStateInfo($topology, $autoRebuild).type != 'fresh'}
 			<InlineWarning
 				title="Editing disabled"
 				body="Editing is only available when topology is unlocked and up-to-date."

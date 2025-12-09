@@ -1,4 +1,4 @@
-use std::{fmt::Display, net::IpAddr};
+use std::fmt::Display;
 
 use crate::{
     daemon::discovery::types::base::{
@@ -37,8 +37,8 @@ impl Display for DaemonCapabilities {
 pub struct DaemonRegistrationRequest {
     pub daemon_id: Uuid,
     pub network_id: Uuid,
-    pub daemon_ip: IpAddr,
-    pub daemon_port: u16,
+    pub name: String,
+    pub url: String,
     pub mode: DaemonMode,
     pub capabilities: DaemonCapabilities,
 }
@@ -123,4 +123,11 @@ impl DiscoveryUpdatePayload {
             finished_at: update.finished_at,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonHeartbeatPayload {
+    pub url: String,
+    pub name: String,
+    pub mode: DaemonMode,
 }

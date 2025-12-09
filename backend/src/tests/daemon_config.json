@@ -1,6 +1,6 @@
 {
   "server_url": "http://server:60072",
-  "network_id": "3329f84c-1651-4583-93af-089fb8ec3a79",
+  "network_id": "3a27171e-adfc-4290-8b86-5d6cbc6e2aea",
   "server_target": null,
   "server_port": null,
   "daemon_port": 60073,
@@ -9,11 +9,15 @@
   "heartbeat_interval": 30,
   "bind_address": "0.0.0.0",
   "concurrent_scans": 15,
-  "id": "80e2b4a2-d5d3-4e20-a5d6-b0d4bb161eab",
-  "last_heartbeat": "2025-12-07T01:50:13.198701334Z",
-  "host_id": "616ab26e-bae0-4a2d-930f-9a417673dd11",
-  "daemon_api_key": "457a1d5a435949e7912d012af7008cad",
+  "id": "39fb812a-8aae-4597-90d7-171986fae833",
+  "last_heartbeat": "2025-12-09T20:25:16.334605305Z",
+  "host_id": "0ee12ab7-4c38-49c1-a39d-01324a098dda",
+  "daemon_api_key": "e54d4f1badd94af3a0a4af1eb93da184",
   "docker_proxy": null,
   "mode": "Push",
-  "allow_self_signed_certs": false
+  "allow_self_signed_certs": false,
+  "daemon_url": null,
+  "docker_proxy_ssl_cert": null,
+  "docker_proxy_ssl_key": null,
+  "docker_proxy_ssl_chain": null
 }

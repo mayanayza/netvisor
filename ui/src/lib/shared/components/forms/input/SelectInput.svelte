@@ -22,7 +22,13 @@
 </script>
 
 <FormField {label} {formApi} {field} {helpText} {id}>
-	<select {id} bind:value={$field.value} {disabled} class="input-field">
+	<select
+		{id}
+		bind:value={$field.value}
+		{disabled}
+		class="input-field"
+		onclick={(e) => e.stopPropagation()}
+	>
 		{#each options as option (option.id ? option.id : option.value)}
 			<option disabled={option.disabled} value={option.value}>{option.label}</option>
 		{/each}

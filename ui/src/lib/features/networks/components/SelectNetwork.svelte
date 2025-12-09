@@ -10,7 +10,7 @@
 </script>
 
 <div>
-	<label for="network" class="text-secondary mb-2 block text-sm font-medium"> Network </label>
+	<label for="network" class="text-secondary mb-2 block text-sm font-medium"> Network</label>
 	<select id="network" {disabled} bind:value={selectedNetworkId} class="input-field">
 		{#each $networks as network (network.id)}
 			<option class="select-option" value={network.id}>{network.name}</option>
