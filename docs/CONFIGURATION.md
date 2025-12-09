@@ -67,8 +67,8 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 | **API Key** | `--daemon-api-key` | `NETVISOR_DAEMON_API_KEY` | `api_key` | *Required* | Authentication key for daemon (generated via UI) |
 | **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it |
 | **Network ID** | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
-| **Daemon URL** | `--daemon-url` | `NETVISOR_DAEMON_URL` | `server_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
-| **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `daemon_port` | `60073` | Port for daemon to listen on |
+| **Daemon URL** | `--daemon-url` | `NETVISOR_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
+| **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `port` | `60073` | Port for daemon to listen on |
 | **Bind Address** | `--bind-address` | `NETVISOR_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind daemon to |
 | **Daemon Name** | `--name` | `NETVISOR_NAME` | `name` | `netvisor-daemon` | Name for this daemon |
 | **Log Level** | `--log-level` | `NETVISOR_LOG_LEVEL` | `log_level` | `info` | Logging verbosity |
