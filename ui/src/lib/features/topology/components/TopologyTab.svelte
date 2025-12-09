@@ -4,7 +4,7 @@
 	import TopologyViewer from './visualization/TopologyViewer.svelte';
 	import TopologyOptionsPanel from './panel/TopologyOptionsPanel.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { Edit, Lock, Plus, Trash2 } from 'lucide-svelte';
+	import { Edit, Lock, Plus, Radio, RefreshCcw, Trash2 } from 'lucide-svelte';
 	import { getHosts } from '$lib/features/hosts/store';
 	import { getServices } from '$lib/features/services/store';
 	import { getSubnets } from '$lib/features/subnets/store';
@@ -18,7 +18,8 @@
 		deleteTopology,
 		rebuildTopology,
 		lockTopology,
-		unlockTopology
+		unlockTopology,
+		autoRebuild
 	} from '../store';
 	import type { Topology } from '../types/base';
 	import TopologyModal from './TopologyModal.svelte';
@@ -117,23 +118,20 @@
 		isRefreshConflictsOpen = false;
 	}
 
-	async function handleLock() {
+	async function handleToggleLock() {
 		if (!$topology) return;
-		await lockTopology($topology);
-	}
-
-	async function handleUnlock() {
-		if (!$topology) return;
-		await unlockTopology($topology);
+		if ($topology.is_locked) {
+			await unlockTopology($topology);
+		} else {
+			await lockTopology($topology);
+		}
 	}
 
 	let stateConfig = $derived(
 		$topology
-			? getTopologyState($topology, {
+			? getTopologyState($topology, $autoRebuild, {
 					onRefresh: handleRefresh,
-					onUnlock: handleUnlock,
-					onReset: handleReset,
-					onLock: handleLock
+					onReset: handleReset
 				})
 			: null
 	);
@@ -148,76 +146,98 @@
 		<!-- Header -->
 		<TabHeader title="Topology" subtitle="Generate and view network topology">
 			<svelte:fragment slot="actions">
-				<div class="flex items-start gap-4">
+				<div class="card card-static flex items-center gap-4 px-4 py-2">
 					{#if $topology}
 						<ExportButton />
-					{/if}
 
-					{#if $topology && !$topology.is_locked}
-						<div class="flex flex-col items-center gap-2">
-							<div class="flex items-center">
-								<button class="btn-secondary" onclick={handleLock}>
-									<Lock class="h-5 w-5" /> Lock
-								</button>
-							</div>
-						</div>
-					{/if}
+						<div class="card-divider-v self-stretch"></div>
 
-					<!-- State Badge / Action Button -->
-					{#if $topology && stateConfig}
-						<div class="flex flex-col items-center gap-2">
-							<div class="flex items-center">
-								<StateBadge
-									Icon={stateConfig.icon}
-									label={stateConfig.buttonText}
-									cls={stateConfig.class}
-									onClick={stateConfig.action}
-								/>
-							</div>
-							{#if $topology.is_locked && $topology.locked_at}
-								<div class="flex flex-col items-center">
-									<span class="text-tertiary whitespace-nowrap text-[10px]"
-										>{formatTimestamp($topology.locked_at)}</span
+						<div class="flex items-center py-2">
+							<div class="mr-2 flex flex-col text-center">
+								<div class="flex justify-around gap-6">
+									<button
+										onclick={handleToggleLock}
+										class={`text-xs ${$topology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
 									>
-									<span class="text-tertiary whitespace-nowrap text-[10px]"
-										>by {$users.find((u) => u.id == $topology.locked_by)?.email}</span
+										<Lock class="mr-2 h-4 w-4" />
+										{$topology.is_locked ? 'Unlock' : 'Lock'}
+									</button>
+
+									<button
+										onclick={() => autoRebuild.set(!$autoRebuild)}
+										type="button"
+										class={`text-xs ${$autoRebuild && !$topology.is_locked ? 'btn-icon-success' : 'btn-icon'}`}
+										disabled={$topology.is_locked}
 									>
+										{#if $autoRebuild}
+											<Radio class="mr-2 h-4 w-4" /> Auto
+										{:else}
+											<RefreshCcw class="mr-2 h-4 w-4" /> Manual
+										{/if}
+									</button>
 								</div>
-							{:else}
-								<span class="text-tertiary whitespace-nowrap text-[10px]"
-									>{formatTimestamp($topology.last_refreshed)}</span
-								>
+								{#if $topology.is_locked && $topology.locked_at}
+									<span class="text-tertiary whitespace-nowrap text-[10px]"
+										>Locked: {formatTimestamp($topology.locked_at)} by {$users.find(
+											(u) => u.id == $topology.locked_by
+										)?.email}</span
+									>
+								{:else}
+									<span class="text-tertiary whitespace-nowrap text-[10px]"
+										>Last Rebuild: {formatTimestamp($topology.last_refreshed)}</span
+									>
+								{/if}
+							</div>
+							<!-- State Badge / Action Button -->
+							{#if stateConfig && !$topology.is_locked && !$autoRebuild}
+								<div class="flex flex-col items-center gap-2">
+									<div class="flex items-center">
+										<StateBadge
+											disabled={stateConfig?.disabled || false}
+											Icon={stateConfig.icon}
+											label={stateConfig.buttonText}
+											cls={stateConfig.class}
+											onClick={stateConfig.action}
+										/>
+									</div>
+								</div>
 							{/if}
 						</div>
+
+						<div class="card-divider-v self-stretch"></div>
+
+						{#if $topologies}
+							<div class="min-w-[300px]">
+								<RichSelect
+									label=""
+									selectedValue={$topology.id}
+									displayComponent={TopologyDisplay}
+									onSelect={handleTopologyChange}
+									options={$topologies}
+								/>
+							</div>
+						{/if}
 					{/if}
 
-					{#if $topologies && $topology}
-						<div class="min-w-[300px]">
-							<RichSelect
-								label=""
-								selectedValue={$topology.id}
-								displayComponent={TopologyDisplay}
-								onSelect={handleTopologyChange}
-								options={$topologies}
-							/>
-						</div>
-					{/if}
+					<div class="card-divider-v self-stretch"></div>
 
-					{#if $topology}
-						<button class="btn-primary" onclick={handleEditTopology}>
-							<Edit class="mr-2 h-5 w-5" /> Edit
+					<div class="flex items-center gap-4 py-2">
+						{#if $topology}
+							<button class="btn-primary" onclick={handleEditTopology}>
+								<Edit class="mr-2 h-4 w-4" /> Edit
+							</button>
+						{/if}
+
+						<button class="btn-primary" onclick={handleCreateTopology}>
+							<Plus class="h-4 w-4" /> New
 						</button>
-					{/if}
 
-					<button class="btn-primary" onclick={handleCreateTopology}>
-						<Plus class="h-5 w-5" /> New
-					</button>
-
-					{#if $topology}
-						<button class="btn-danger" onclick={handleDelete}>
-							<Trash2 class="my-1 h-5 w-5" />
-						</button>
-					{/if}
+						{#if $topology}
+							<button class="btn-danger" onclick={handleDelete}>
+								<Trash2 class="my-1 h-5 w-5" />
+							</button>
+						{/if}
+					</div>
 				</div>
 			</svelte:fragment>
 		</TabHeader>
@@ -228,7 +248,7 @@
 				<InlineInfo
 					dismissableKey="topology-locked-info"
 					title={`Topology Locked ${lockedByUser ? `by ${lockedByUser.email}` : ''}`}
-					body="Data can't be refreshed while this topology is locked. Click the badge above to unlock and enable data refresh. You can still move and resize nodes and edges, but you won't be able to make any other changes."
+					body="Data can't be refreshed while this topology is locked. You can still move and resize nodes and edges, but you won't be able to make any other changes. Click the badge above to unlock and enable data refresh."
 				/>
 			{:else if stateConfig.type === 'stale_conflicts'}
 				<InlineDanger
