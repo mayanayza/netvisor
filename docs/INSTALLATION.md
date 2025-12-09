@@ -207,7 +207,7 @@ docker exec netvisor-daemon curl http://netvisor-server:60072/api/health
    ```bash
    docker network inspect bridge | grep Gateway
    ```
-   
+
 2. **Update compose file**: If gateway isn't `172.17.0.1`, update `NETVISOR_INTEGRATED_DAEMON_URL`
 
 3. **Check API key**: Ensure the integrated daemon has a valid API key in the database
@@ -230,6 +230,41 @@ netvisor-daemon --concurrent-scans 10 ...
 ```
 
 See [CONFIGURATION.md](CONFIGURATION.md#concurrent-scans) for recommended values.
+
+### "Too Many Open Files" Error
+
+**Symptoms**: `Critical error scanning: Too many open files (os error 24)` in daemon logs
+
+**Causes**: System file descriptor limit is too low for the configured concurrent scans.
+
+**Solutions**:
+
+1. **Reduce concurrent scans** (easiest):
+   ```yaml
+   environment:
+     - NETVISOR_CONCURRENT_SCANS=10
+   ```
+
+2. **Increase system file descriptor limit**:
+   ```bash
+   # Check current limit
+   ulimit -n
+
+   # Increase temporarily
+   ulimit -n 65535
+
+   # Increase permanently (add to /etc/security/limits.conf)
+   * soft nofile 65535
+   * hard nofile 65535
+   ```
+
+3. **For Docker**: Add to your daemon container:
+   ```yaml
+   ulimits:
+     nofile:
+       soft: 65535
+       hard: 65535
+   ```
 
 ### Port Already in Use
 
@@ -254,6 +289,56 @@ newgrp docker
 ```
 
 Log out and back in for changes to take effect.
+
+### Browser Shows "SSL Protocol Error"
+
+**Symptoms**: Browser displays "ERR_SSL_PROTOCOL_ERROR" or "SSL protocol is too long" when accessing NetVisor
+
+**Cause**: Attempting to access the HTTP server using HTTPS.
+
+**Solution**: Use `http://` (not `https://`) to access NetVisor directly:
+```
+http://your-server:60072
+```
+
+If you need HTTPS, configure a reverse proxy (Traefik, Nginx, Caddy) in front of NetVisor to handle TLS termination.
+
+### PostgreSQL "Could not create any Unix-domain sockets" (Proxmox)
+
+**Symptoms**: PostgreSQL container fails to start on Proxmox host with socket creation error
+
+**Cause**: AppArmor security policy blocking socket creation.
+
+**Solution**: Add to both PostgreSQL and NetVisor services in docker-compose.yml:
+
+```yaml
+security_opt:
+  - apparmor:unconfined
+```
+
+See [issue #87](https://github.com/mayanayza/netvisor/issues/87) for details.
+
+### Discovery Takes Extremely Long (Hours)
+
+**Symptoms**: Network discovery takes 10+ hours to complete
+
+**Causes**:
+1. Large Docker bridge networks (e.g., /16) being fully scanned
+2. Multiple large subnets selected for a single discovery
+
+**Solutions**:
+
+1. **Check selected subnets**: In your Network Scan discovery, verify you haven't selected large Docker bridge networks (like 172.17.0.0/16)
+
+2. **Use Docker discovery separately**: Run Docker discovery to discover containers, rather than scanning Docker bridge networks via Network Scan
+
+3. **Reduce subnet scope**: Only select subnets that contain hosts you want to discover
+
+### Daemon Stops When Terminal Closes
+
+**Symptoms**: Daemon runs in foreground and stops when SSH session ends
+
+**Solution**: Install as a systemd service (see [Systemd Service](#systemd-service-linux) above), or run with a process manager like `screen` or `tmux`.
 
 ## Uninstalling
 
