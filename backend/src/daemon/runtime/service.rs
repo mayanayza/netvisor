@@ -122,7 +122,7 @@ impl DaemonRuntimeService {
             let path = format!("/api/daemons/{}/heartbeat", daemon_id);
             match self
                 .api_client
-                .post_no_data::<_, ()>(
+                .post_no_data::<_>(
                     &path,
                     &DaemonHeartbeatPayload {
                         url: url.clone(),
