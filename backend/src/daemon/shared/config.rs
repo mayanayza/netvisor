@@ -94,8 +94,7 @@ pub struct AppConfig {
     pub server_port: Option<u16>,
 
     // Daemon settings
-    #[serde(alias = "daemon_port")]
-    pub port: u16,
+    pub daemon_port: u16,
     pub name: String,
     pub log_level: String,
     pub heartbeat_interval: u64,
@@ -109,7 +108,7 @@ pub struct AppConfig {
     #[serde(default)]
     pub host_id: Option<Uuid>,
     #[serde(default, alias = "daemon_api_key")]
-    pub api_key: Option<String>,
+    pub daemon_api_key: Option<String>,
     #[serde(default)]
     pub docker_proxy: Option<String>,
     #[serde(default)]
@@ -130,7 +129,7 @@ impl Default for AppConfig {
         Self {
             server_url: None,
             network_id: None,
-            port: 60073,
+            daemon_port: 60073,
             bind_address: "0.0.0.0".to_string(),
             name: "netvisor-daemon".to_string(),
             log_level: "info".to_string(),
@@ -138,7 +137,7 @@ impl Default for AppConfig {
             id: Uuid::new_v4(),
             last_heartbeat: None,
             host_id: None,
-            api_key: None,
+            daemon_api_key: None,
             concurrent_scans: 15,
             docker_proxy: None,
             mode: DaemonMode::Push,
@@ -183,7 +182,7 @@ impl AppConfig {
             figment = figment.merge(("network_id", network_id));
         }
         if let Some(port) = cli_args.daemon_port {
-            figment = figment.merge(("port", port));
+            figment = figment.merge(("daemon_port", port));
         }
         if let Some(name) = cli_args.name {
             figment = figment.merge(("name", name));
@@ -201,7 +200,7 @@ impl AppConfig {
             figment = figment.merge(("concurrent_scans", concurrent_scans));
         }
         if let Some(api_key) = cli_args.daemon_api_key {
-            figment = figment.merge(("api_key", api_key));
+            figment = figment.merge(("daemon_api_key", api_key));
         }
         if let Some(docker_proxy) = cli_args.docker_proxy {
             figment = figment.merge(("docker_proxy", docker_proxy));
@@ -318,12 +317,12 @@ impl ConfigStore {
 
     pub async fn get_api_key(&self) -> Result<Option<String>> {
         let config = self.config.read().await;
-        Ok(config.api_key.clone())
+        Ok(config.daemon_api_key.clone())
     }
 
     pub async fn set_api_key(&self, api_key: String) -> Result<()> {
         let mut config = self.config.write().await;
-        config.api_key = Some(api_key);
+        config.daemon_api_key = Some(api_key);
         self.save(&config.clone()).await
     }
 
@@ -340,12 +339,12 @@ impl ConfigStore {
 
     pub async fn get_port(&self) -> Result<u16> {
         let config = self.config.read().await;
-        Ok(config.port)
+        Ok(config.daemon_port)
     }
 
     pub async fn set_port(&self, port: u16) -> Result<()> {
         let mut config = self.config.write().await;
-        config.port = port;
+        config.daemon_port = port;
         self.save(&config.clone()).await
     }
 
@@ -468,7 +467,7 @@ mod tests {
 
             // Verify required fields exist
             assert!(!config.name.is_empty(), "Config name is empty");
-            assert!(config.port > 0, "Config port is invalid");
+            assert!(config.daemon_port > 0, "Config port is invalid");
         } else {
             println!(
                 "⚠️  No daemon config fixture found at {}",

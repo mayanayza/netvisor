@@ -76,7 +76,7 @@ async fn async_main() -> anyhow::Result<()> {
             ),
     );
 
-    let bind_addr = format!("{}:{}", config.bind_address, config.port);
+    let bind_addr = format!("{}:{}", config.bind_address, config.daemon_port);
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
 
     // Spawn server in background
