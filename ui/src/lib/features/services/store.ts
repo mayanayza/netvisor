@@ -52,8 +52,7 @@ export async function updateService(data: Service) {
 export function createDefaultService(
 	serviceType: string,
 	host_id: string,
-	host_network_id: string,
-	serviceName?: string
+	host_network_id: string
 ): Service {
 	return {
 		id: uuidv4Sentinel,
@@ -63,7 +62,7 @@ export function createDefaultService(
 		host_id,
 		is_gateway: false,
 		service_definition: serviceType,
-		name: serviceName || serviceType,
+		name: serviceType,
 		bindings: [],
 		virtualization: null,
 		source: {
