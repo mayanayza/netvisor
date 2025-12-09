@@ -12,9 +12,7 @@
 	// Event handlers
 	export let onReorder: (fromIndex: number, toIndex: number) => void = () => {};
 	export let onChange: (item: TItem, index: number) => void = () => {};
-	export let onItemAdded: (newIndex: number) => void = (newIndex) => {
-		selectedIndex = newIndex;
-	};
+	export let onItemSelect: (item: TItem, index: number) => void = () => {};
 
 	// Internal state
 	let selectedIndex: number = -1;
@@ -27,7 +25,7 @@
 	$: {
 		if (items.length > previousItemsLength) {
 			// Items were added, select the last one
-			onItemAdded(items.length - 1);
+			selectedIndex = items.length - 1;
 		} else if (items.length === 1 && selectedIndex === -1) {
 			// Auto-select the first (and only) item when there's exactly one item
 			selectedIndex = 0;
@@ -93,7 +91,9 @@
 					onEdit={handleEdit}
 					onMoveUp={handleMoveUp}
 					onMoveDown={handleMoveDown}
+					{onItemSelect}
 					highlightedIndex={selectedIndex}
+					highlightedItem={selectedItem}
 				>
 					<!-- Default slot content if no list slot provided -->
 					<div class="text-danger">No list component provided</div>

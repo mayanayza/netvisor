@@ -1,55 +1,109 @@
-<!-- T: Item type, V: Dropdown option type, C: type of context passed to item -->
-<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
 <script lang="ts" generics="T, V, C">
-	import { ArrowUp, ArrowDown, Trash2, Plus, Edit } from 'lucide-svelte';
+	import { ArrowUp, ArrowDown, Trash2, Plus, Edit, Square, CheckSquare } from 'lucide-svelte';
 	import RichSelect from './RichSelect.svelte';
 	import ListSelectItem from './ListSelectItem.svelte';
 	import type { EntityDisplayComponent } from './types';
 	import type { FormApi } from '../types';
+	import type { Snippet } from 'svelte';
 
-	// Global
-	export let label: string;
-	export let helpText: string = '';
-	export let placeholder: string = 'Select an item to add';
-	export let required: boolean = false;
-	export let allowReorder: boolean = true;
-	export let allowAddFromOptions: boolean = true;
-	export let allowCreateNew: boolean = false;
-	export let disableCreateNewButton: boolean = false;
-	export let createNewLabel: string = 'Create New';
-	export let highlightedIndex: number = -1;
-	export let emptyMessage: string = '';
-	export let error: string = '';
+	interface Props {
+		// Global
+		label: string;
+		helpText?: string;
+		placeholder?: string;
+		required?: boolean;
+		allowReorder?: boolean;
+		allowAddFromOptions?: boolean;
+		allowCreateNew?: boolean;
+		allowSelection?: boolean;
+		disableCreateNewButton?: boolean;
+		createNewLabel?: string;
+		highlightedIndex?: number;
+		emptyMessage?: string;
+		error?: string;
 
-	// Options (dropdown)
-	export let options: V[] = [];
-	export let optionDisplayComponent: EntityDisplayComponent<V, C>;
-	export let showSearch: boolean = false;
+		// Options (dropdown)
+		options?: V[];
+		optionDisplayComponent: EntityDisplayComponent<V, C>;
+		showSearch?: boolean;
 
-	// Items
-	export let items: T[] = [];
-	export let itemDisplayComponent: EntityDisplayComponent<T, C>;
-	export let getItemContext: (item: T, index: number) => C = () => new Object() as C;
-	export let formApi: FormApi;
+		// Items
+		items?: T[];
+		itemDisplayComponent: EntityDisplayComponent<T, C>;
+		getItemContext?: (item: T, index: number) => C;
+		formApi: FormApi;
 
-	// Item interaction
-	export let allowDuplicates: boolean = false;
-	export let allowItemEdit: (item: T) => boolean = () => true;
-	export let allowItemRemove: (item: T) => boolean = () => true;
+		// Item interaction
+		allowDuplicates?: boolean;
+		itemClickAction?: 'edit' | 'select' | null;
+		allowItemEdit?: (item: T) => boolean;
+		allowItemRemove?: (item: T) => boolean;
+		selectedItems?: T[];
 
-	// Interaction handlers
-	export let onCreateNew: (() => void) | null = null;
-	export let onEdit: (item: T, index: number) => void = () => {};
-	export let onAdd: (selectOptionId: string) => void = () => {};
-	export let onMoveUp: (fromIndex: number, toIndex: number) => void = () => {};
-	export let onMoveDown: (fromIndex: number, toIndex: number) => void = () => {};
-	export let onRemove: (index: number) => void = () => {};
+		// Interaction handlers
+		onCreateNew?: (() => void) | null;
+		onEdit?: (item: T, index: number) => void;
+		onAdd?: (selectOptionId: string) => void;
+		onMoveUp?: (fromIndex: number, toIndex: number) => void;
+		onMoveDown?: (fromIndex: number, toIndex: number) => void;
+		onRemove?: (index: number) => void;
+		onClick?: (item: T, index: number) => void;
+
+		// Snippets (slots)
+		itemSnippet?: Snippet<[{ item: T; index: number }]>;
+	}
+
+	let {
+		// Global
+		label,
+		helpText = '',
+		placeholder = 'Select an item to add',
+		required = false,
+		allowReorder = true,
+		allowAddFromOptions = true,
+		allowCreateNew = false,
+		allowSelection = false,
+		disableCreateNewButton = false,
+		createNewLabel = 'Create New',
+		highlightedIndex = -1,
+		emptyMessage = '',
+		error = '',
+
+		// Options (dropdown)
+		options = [] as V[],
+		optionDisplayComponent,
+		showSearch = false,
+
+		// Items
+		items = [] as T[],
+		itemDisplayComponent,
+		getItemContext = () => ({}) as C,
+		formApi,
+		selectedItems = $bindable([]),
+
+		// Item interaction
+		allowDuplicates = false,
+		itemClickAction = null,
+		allowItemEdit = () => true,
+		allowItemRemove = () => true,
+
+		// Interaction handlers
+		onCreateNew = null,
+		onEdit = () => {},
+		onAdd = () => {},
+		onMoveUp = () => {},
+		onMoveDown = () => {},
+		onRemove = () => {},
+		onClick = () => {},
+
+		itemSnippet
+	}: Props = $props();
 
 	// Internal state
-	let selectedOptionId = '';
-	let editingIndex: number = -1;
+	let selectedOptionId = $state('');
+	let editingIndex: number = $state(-1);
 
-	$: computedEmptyMessage = emptyMessage || `No ${label.toLowerCase()} added yet`;
+	let computedEmptyMessage = $derived(emptyMessage || `No ${label.toLowerCase()} added yet`);
 
 	function addItem() {
 		if (selectedOptionId) {
@@ -93,11 +147,35 @@
 		}
 	}
 
-	function handleSelectChange(value: string) {
+	function handleDropdownSelectChange(value: string) {
 		selectedOptionId = value;
 		if (value) {
 			addItem();
 		}
+	}
+
+	function isItemSelected(item: T): boolean {
+		const itemId = itemDisplayComponent.getId(item);
+		return selectedItems.some((selected) => itemDisplayComponent.getId(selected) === itemId);
+	}
+
+	function toggleItemSelection(item: T) {
+		const itemId = itemDisplayComponent.getId(item);
+		const isCurrentlySelected = isItemSelected(item);
+
+		if (isCurrentlySelected) {
+			selectedItems = selectedItems.filter((s) => itemDisplayComponent.getId(s) !== itemId);
+		} else {
+			selectedItems = [...selectedItems, item];
+		}
+	}
+
+	function selectAll() {
+		selectedItems = [...items];
+	}
+
+	function selectNone() {
+		selectedItems = [];
 	}
 </script>
 
@@ -115,11 +193,28 @@
 			{/if}
 		</div>
 
+		{#if allowSelection && items.length > 0}
+			{@const anySelected = selectedItems.length > 0}
+			<button
+				onclick={anySelected ? selectNone : selectAll}
+				class="btn-secondary flex items-center gap-2"
+				type="button"
+				title={anySelected ? 'Deselect all' : 'Select all'}
+			>
+				{#if anySelected}
+					<Square class="h-4 w-4" />
+				{:else}
+					<CheckSquare class="h-4 w-4" />
+				{/if}
+				{anySelected ? 'None' : 'All'}
+			</button>
+		{/if}
+
 		{#if allowCreateNew && onCreateNew}
 			<button
 				type="button"
 				disabled={disableCreateNewButton}
-				on:click={() => onCreateNew()}
+				onclick={() => onCreateNew()}
 				class="btn-primary"
 			>
 				<Plus size={16} />
@@ -139,7 +234,7 @@
 						{showSearch}
 						{options}
 						{placeholder}
-						onSelect={handleSelectChange}
+						onSelect={handleDropdownSelectChange}
 						displayComponent={optionDisplayComponent}
 					/>
 				</div>
@@ -153,21 +248,41 @@
 			{#each items as item, index (index)}
 				{@const isHighlighted = highlightedIndex === index}
 
-				<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 				<div
-					class="flex items-center gap-3 rounded-lg border p-3 transition-all {allowItemEdit(item)
-						? 'cursor-pointer'
-						: ''} {isHighlighted
-						? 'border-blue-500 bg-blue-900/20 hover:border-blue-400 hover:bg-blue-900/30'
-						: 'card'}"
-					on:click={() =>
-						allowItemEdit(item) && !itemDisplayComponent.supportsInlineEdit && onEdit(item, index)}
-					tabindex={allowItemEdit(item) ? 0 : -1}
-					role={allowItemEdit(item) ? 'button' : undefined}
+					class="
+						card flex items-center gap-3 rounded-lg border p-3 transition-all
+						{itemClickAction != null ? 'cursor-pointer' : ''} 
+						{isHighlighted ? 'card-focused' : isItemSelected(item) ? 'card-selected' : ''}"
+					onclick={() => {
+						onClick(item, index);
+						if (allowSelection && itemClickAction == 'select') {
+							toggleItemSelection(item);
+						} else if (allowItemEdit(item) && !itemDisplayComponent.supportsInlineEdit) {
+							onEdit(item, index);
+						}
+					}}
+					tabindex={allowItemEdit(item) || allowSelection ? 0 : -1}
+					role={allowSelection ? 'checkbox' : allowItemEdit(item) ? 'button' : undefined}
+					aria-checked={allowSelection ? isItemSelected(item) : undefined}
 				>
+					<!-- Selection checkbox -->
+					{#if allowSelection && itemClickAction != 'select'}
+						<div class="flex-shrink-0">
+							<input
+								type="checkbox"
+								checked={isItemSelected(item)}
+								onclick={() => toggleItemSelection(item)}
+								class="checkbox-card h-4 w-4"
+							/>
+						</div>
+					{/if}
+
 					<!-- Use slot if provided, otherwise check for inline editing -->
-					<slot name="item" {item} {index}>
-						{#if editingIndex === index && itemDisplayComponent.supportsInlineEdit && itemDisplayComponent.renderInlineEdit}
+					<div class="min-w-0 flex-1 overflow-hidden">
+						{#if itemSnippet}
+							{@render itemSnippet({ item, index })}
+						{:else if editingIndex === index && itemDisplayComponent.supportsInlineEdit && itemDisplayComponent.renderInlineEdit}
 							{@const context = getItemContext(item, index)}
 							{@const inlineEditConfig = itemDisplayComponent.renderInlineEdit(
 								item,
@@ -178,20 +293,21 @@
 								formApi,
 								context
 							)}
-							<svelte:component this={inlineEditConfig.component} {...inlineEditConfig.props} />
+							<inlineEditConfig.component {...inlineEditConfig.props} />
 						{:else}
 							{@const context = getItemContext(item, index)}
 							<ListSelectItem {item} {context} displayComponent={itemDisplayComponent} />
 						{/if}
-					</slot>
+					</div>
 
 					<!-- Action Buttons -->
 					<div class="flex items-center gap-1">
-						{#if allowItemEdit(item)}
+						{#if allowItemEdit(item) && itemClickAction != 'edit'}
 							{#if itemDisplayComponent.supportsInlineEdit}
 								<button
 									type="button"
-									on:click|stopPropagation={() => {
+									onclick={(e) => {
+										e.stopPropagation();
 										editingIndex = editingIndex === index ? -1 : index;
 									}}
 									class="btn-icon"
@@ -202,7 +318,10 @@
 							{:else}
 								<button
 									type="button"
-									on:click|stopPropagation={() => onEdit(item, index)}
+									onclick={(e) => {
+										e.stopPropagation();
+										onEdit(item, index);
+									}}
 									class="btn-icon"
 									title="Edit"
 								>
@@ -214,7 +333,10 @@
 						{#if allowReorder}
 							<button
 								type="button"
-								on:click|stopPropagation={() => moveItemUp(index)}
+								onclick={(e) => {
+									e.stopPropagation();
+									moveItemUp(index);
+								}}
 								disabled={index === 0}
 								class="btn-icon"
 								title="Move up"
@@ -224,7 +346,10 @@
 
 							<button
 								type="button"
-								on:click|stopPropagation={() => moveItemDown(index)}
+								onclick={(e) => {
+									e.stopPropagation();
+									moveItemDown(index);
+								}}
 								disabled={index === items.length - 1}
 								class="btn-icon"
 								title="Move down"
@@ -236,7 +361,10 @@
 						{#if allowItemRemove(item)}
 							<button
 								type="button"
-								on:click|stopPropagation={() => removeItem(index)}
+								onclick={(e) => {
+									e.stopPropagation();
+									removeItem(index);
+								}}
 								class="btn-icon-danger"
 								title="Remove"
 							>

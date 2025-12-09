@@ -262,6 +262,10 @@ When a device appears on multiple VLANs or through different discovery methods, 
 
 The primary host will gain all interfaces, services, and properties from the merged hosts.
 
+### Unclaimed Open Ports
+
+Any ports that the host has open which were not used to match a specific service will be assigned to an "Unclaimed Open Ports" placeholder service. You can transfer ports from this service to other by selecting the port bindings, then clicking "Transfer Ports" on the service you want to transfer them to.
+
 ### Host Virtualization
 
 If a host runs Proxmox or Docker, NetVisor tracks which VMs or containers run on it.

@@ -27,6 +27,7 @@
 				emptyMessage="No virtualization services on this host."
 				{items}
 				{formApi}
+				itemClickAction="edit"
 				allowItemRemove={() => false}
 				allowReorder={false}
 				allowAddFromOptions={false}

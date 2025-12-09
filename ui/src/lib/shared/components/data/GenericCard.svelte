@@ -52,9 +52,9 @@
 </script>
 
 <div
-	class="card flex {viewMode === 'list' ? 'flex-row items-center gap-4 p-4' : 'h-full flex-col'}"
-	class:ring-2={selected}
-	class:ring-blue-500={selected}
+	class="card flex {viewMode === 'list'
+		? 'flex-row items-center gap-4 p-4'
+		: 'h-full flex-col'} {selected ? 'card-selected' : ''}"
 >
 	<!-- Checkbox (shown when selectable) -->
 	{#if selectable}
@@ -64,7 +64,7 @@
 				checked={selected}
 				onchange={handleCheckboxChange}
 				onclick={(e) => e.stopPropagation()}
-				class="h-5 w-5 cursor-pointer rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500"
+				class="checkbox-card h-5 w-5"
 			/>
 		</div>
 	{/if}
@@ -216,8 +216,6 @@
 		</div>
 	{/if}
 
-	<!-- Action Buttons - Fixed width in list view -->
-	<!-- Action Buttons - Fixed width in list view -->
 	<!-- Action Buttons - Fixed width in list view -->
 	{#if actions.length > 0}
 		<div
