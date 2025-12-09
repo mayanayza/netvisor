@@ -1,3 +1,4 @@
+use crate::server::daemons::r#impl::api::DaemonHeartbeatPayload;
 use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::{
     auth::middleware::auth::{AuthenticatedDaemon, AuthenticatedEntity},
@@ -59,10 +60,12 @@ async fn register_daemon(
 ) -> ApiResult<Json<ApiResponse<DaemonRegistrationResponse>>> {
     let service = &state.services.daemon_service;
 
+    tracing::info!("{:?}", request);
+
     // Create a dummy host to return a host_id to the daemon
     let mut dummy_host = Host::new(HostBase::default());
     dummy_host.base.network_id = request.network_id;
-    dummy_host.base.name = request.daemon_ip.to_string();
+    dummy_host.base.name = request.name.clone();
 
     let (host, _) = state
         .services
@@ -73,11 +76,11 @@ async fn register_daemon(
     let mut daemon = Daemon::new(DaemonBase {
         host_id: host.id,
         network_id: request.network_id,
-        ip: request.daemon_ip,
-        port: request.daemon_port,
+        url: request.url.clone(),
         capabilities: request.capabilities.clone(),
         last_seen: Utc::now(),
         mode: request.mode,
+        name: request.name,
     });
 
     daemon.id = request.daemon_id;
@@ -122,6 +125,8 @@ async fn register_daemon(
 
     let discovery_service = state.services.discovery_service.clone();
 
+    let self_report_discovery_type = DiscoveryType::SelfReport { host_id: host.id };
+
     let self_report_discovery = discovery_service
         .create_discovery(
             Discovery::new(DiscoveryBase {
@@ -130,8 +135,8 @@ async fn register_daemon(
                     last_run: None,
                     enabled: true,
                 },
-                discovery_type: DiscoveryType::SelfReport { host_id: host.id },
-                name: format!("Self Report @ {}", request.daemon_ip),
+                discovery_type: self_report_discovery_type.clone(),
+                name: self_report_discovery_type.to_string(),
                 daemon_id: request.daemon_id,
                 network_id: request.network_id,
             }),
@@ -144,6 +149,11 @@ async fn register_daemon(
         .await?;
 
     if request.capabilities.has_docker_socket {
+        let docker_discovery_type = DiscoveryType::Docker {
+            host_id: host.id,
+            host_naming_fallback: HostNamingFallback::BestService,
+        };
+
         let docker_discovery = discovery_service
             .create_discovery(
                 Discovery::new(DiscoveryBase {
@@ -152,11 +162,8 @@ async fn register_daemon(
                         last_run: None,
                         enabled: true,
                     },
-                    discovery_type: DiscoveryType::Docker {
-                        host_id: host.id,
-                        host_naming_fallback: HostNamingFallback::BestService,
-                    },
-                    name: format!("Docker @ {}", request.daemon_ip),
+                    discovery_type: docker_discovery_type.clone(),
+                    name: docker_discovery_type.to_string(),
                     daemon_id: request.daemon_id,
                     network_id: request.network_id,
                 }),
@@ -169,6 +176,11 @@ async fn register_daemon(
             .await?;
     }
 
+    let network_discovery_type = DiscoveryType::Network {
+        subnet_ids: None,
+        host_naming_fallback: HostNamingFallback::BestService,
+    };
+
     let network_discovery = discovery_service
         .create_discovery(
             Discovery::new(DiscoveryBase {
@@ -177,11 +189,8 @@ async fn register_daemon(
                     last_run: None,
                     enabled: true,
                 },
-                discovery_type: DiscoveryType::Network {
-                    subnet_ids: None,
-                    host_naming_fallback: HostNamingFallback::BestService,
-                },
-                name: format!("Network Scan @ {}", request.daemon_ip),
+                discovery_type: network_discovery_type.clone(),
+                name: network_discovery_type.to_string(),
                 daemon_id: request.daemon_id,
                 network_id: request.network_id,
             }),
@@ -230,6 +239,7 @@ async fn receive_heartbeat(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,
     Path(id): Path<Uuid>,
+    Json(request): Json<DaemonHeartbeatPayload>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = &state.services.daemon_service;
 
@@ -240,6 +250,9 @@ async fn receive_heartbeat(
         .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
 
     daemon.base.last_seen = Utc::now();
+    daemon.base.url = request.url;
+    daemon.base.name = request.name;
+    daemon.base.mode = request.mode;
 
     service
         .update(&mut daemon, auth_daemon.into())
@@ -252,18 +265,21 @@ async fn receive_heartbeat(
 async fn receive_work_request(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,
-    Path(id): Path<Uuid>,
-    Json(daemon_id): Json<Uuid>,
+    Path(daemon_id): Path<Uuid>,
+    Json(request): Json<DaemonHeartbeatPayload>,
 ) -> ApiResult<Json<ApiResponse<(Option<DiscoveryUpdatePayload>, bool)>>> {
     let service = &state.services.daemon_service;
 
     let mut daemon = service
-        .get_by_id(&id)
+        .get_by_id(&daemon_id)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to get daemon: {}", e)))?
-        .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Daemon '{}' not found", &daemon_id)))?;
 
     daemon.base.last_seen = Utc::now();
+    daemon.base.url = request.url;
+    daemon.base.name = request.name;
+    daemon.base.mode = request.mode;
 
     service
         .update(&mut daemon, auth_daemon.into())

@@ -16,6 +16,7 @@ use net_route::Handle;
 use pnet::ipnetwork::IpNetwork;
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
@@ -121,12 +122,31 @@ pub trait DaemonUtils {
     async fn new_local_docker_client(
         &self,
         docker_proxy: Result<Option<String>, Error>,
+        docker_proxy_ssl_info: Result<Option<(String, String, String)>, Error>,
     ) -> Result<Docker, Error> {
         tracing::debug!("Connecting to Docker");
 
         let client = if let Ok(Some(docker_proxy)) = docker_proxy {
-            Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
+            if docker_proxy.contains("https://")
+                && let Ok(Some((key, cert, chain))) = docker_proxy_ssl_info
+            {
+                let key_path = PathBuf::from(key);
+                let cert_path = PathBuf::from(cert);
+                let chain_path = PathBuf::from(chain);
+
+                Docker::connect_with_ssl(
+                    &docker_proxy,
+                    &key_path,
+                    &cert_path,
+                    &chain_path,
+                    4,
+                    API_DEFAULT_VERSION,
+                )
                 .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+            } else {
+                Docker::connect_with_http(&docker_proxy, 4, API_DEFAULT_VERSION)
+                    .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?
+            }
         } else {
             Docker::connect_with_local_defaults()
                 .map_err(|e| anyhow::anyhow!("Failed to connect to Docker: {}", e))?

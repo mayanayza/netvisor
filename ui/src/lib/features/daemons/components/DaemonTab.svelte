@@ -24,7 +24,7 @@
 	let daemon: Daemon | null = null;
 
 	function handleDeleteDaemon(daemon: Daemon) {
-		if (confirm(`Are you sure you want to delete daemon @"${daemon.ip}"?`)) {
+		if (confirm(`Are you sure you want to delete daemon @"${daemon.name}"?`)) {
 			deleteDaemon(daemon.id);
 		}
 	}

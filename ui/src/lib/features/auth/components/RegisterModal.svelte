@@ -41,6 +41,8 @@
 		subscribed: true
 	});
 
+	const subscribedField = field('subscribed', true, []);
+
 	// Create form fields with validation
 	const email = field('email', '', [required(), emailValidator()]);
 
@@ -174,8 +176,11 @@
 			{#if enableEmailOptIn}
 				<div class="flex flex-grow items-center justify-center">
 					<Checkbox
-						bind:field={formData.subscribed}
-						title="Sign up for product updates via email"
+						field={subscribedField}
+						label="Subscribe"
+						{formApi}
+						id="subscribe"
+						helpText="Sign up for product updates via email"
 					/>
 				</div>
 			{/if}

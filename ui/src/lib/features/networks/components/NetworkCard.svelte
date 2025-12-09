@@ -35,7 +35,7 @@
 				value: networkDaemons.map((d) => {
 					return {
 						id: d.id,
-						label: d.ip,
+						label: d.name,
 						color: entities.getColorHelper('Daemon').string
 					};
 				})

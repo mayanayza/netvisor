@@ -1,33 +1,35 @@
-<script lang="ts" generics="T">
-	export let field: string[];
-	export let getOptionLabel: (option: T) => string = (option: T) => option as string;
-	export let getOptionValue: (option: T) => string = (option: T) => option as string;
-	export let options: T[];
-	export let onChange: (event: Event) => void;
-	export let title: string;
-	export let description: string;
+<script lang="ts">
+	import type { FormApi, MultiSelectFieldType } from '../types';
+	import FormField from './FormField.svelte';
+
+	export let label: string;
+	export let formApi: FormApi;
+	export let field: MultiSelectFieldType;
+	export let helpText: string;
+	export let id: string;
+	export let options: {
+		value: string;
+		label: string;
+		id?: string;
+		disabled?: boolean;
+		description?: string;
+	}[];
 </script>
 
-<div class="space-y-1.5">
-	<label for="infra-categories" class="text-primary block text-sm font-medium">
-		{title}
-	</label>
-	<p class="text-tertiary text-xs leading-tight">
-		{description}
-	</p>
+<FormField {label} {formApi} {field} {helpText} {id}>
 	<select
-		id="infra-categories"
+		{id}
 		multiple
-		on:change={onChange}
+		bind:value={$field.value}
 		class="text-primary w-full rounded-md border border-gray-600 bg-gray-700 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 	>
-		{#each options as option (getOptionValue(option))}
-			<option value={getOptionValue(option)} selected={field.includes(getOptionValue(option))}>
-				{getOptionLabel(option)}
+		{#each options as option (option?.id ? option.id : option.value)}
+			<option value={option.value} selected={$field.value.includes(option.value)}>
+				{option.label}
 			</option>
 		{/each}
 	</select>
-</div>
+</FormField>
 
 <style>
 	/* Style multi-select options */

@@ -56,8 +56,10 @@
 	/>
 
 	<Checkbox
-		bind:field={formData.is_enabled}
-		title="Enable API Key"
-		description="Manually enable or disable API Key. Will be auto-disabled if used in a request after expiry date passes."
+		field={is_enabled}
+		{formApi}
+		label="Enable API Key"
+		helpText="Manually enable or disable API Key. Will be auto-disabled if used in a request after expiry date passes."
+		id="enableApiKey"
 	/>
 </div>

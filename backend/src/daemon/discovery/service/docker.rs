@@ -91,11 +91,12 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
             .ok_or_else(|| anyhow::anyhow!("Network ID not set"))?;
 
         let docker_proxy = self.as_ref().config_store.get_docker_proxy().await;
+        let docker_proxy_ssl_info = self.as_ref().config_store.get_docker_proxy_ssl_info().await;
 
         let docker = self
             .as_ref()
             .utils
-            .new_local_docker_client(docker_proxy)
+            .new_local_docker_client(docker_proxy, docker_proxy_ssl_info)
             .await?;
         self.domain
             .docker_client

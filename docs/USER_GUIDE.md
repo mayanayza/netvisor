@@ -474,15 +474,9 @@ Path: Internet → Cloudflare → Traefik → Application
 
 Daemons are lightweight agents that perform network discovery.
 
-### Daemon Properties
+### Daemon Configuration
 
-- **IP Address**: Where the daemon is reachable
-- **Port**: Daemon API port (default 60073)
-- **Network**: Which network this daemon scans
-- **Host**: The underlying host running the daemon
-- **Mode**: Whether the daemon will pull work (discovery sessions to run or cancel) from the server, or the server will push work to the daemon
-- **Created**: When the daemon was registered
-- **Last Seen**: Timestamp of last successful heartbeat
+See [CONFIGURATION.md](CONFIGURATION.md#daemon-configuration) for a full list of daemon config properties.
 
 ### Daemon Capabilities
 
@@ -511,6 +505,14 @@ Each daemon reports its capabilities:
 5. Run it on your target host
 
 See [INSTALLATION.md](INSTALLATION.md#additional-daemons) for deployment instructions.
+
+**Updating daemon properties**: 
+
+You can update all daemon properties after creation; however, you'll need to restart the daemon for property updates to take effect.
+
+Name, Mode, and URL will be propagated to the server if changed. All other properties are local to the daemon and not stored on the server.
+
+To update daemon capabilities (docker socket integration and interfaced subnets), you'll need to run a SelfReport discovery to report the new capabilities to the server.
 
 **Deleting a daemon**: Click the delete icon. You'll also need to uninstall the daemon from the host it's running on.
 

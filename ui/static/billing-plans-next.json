@@ -1,0 +1,326 @@
+{
+  "billing_plans": [
+    {
+      "category": null,
+      "color": "blue",
+      "description": "Automatically create living documentation of your network",
+      "icon": "ThumbsUp",
+      "id": "Starter",
+      "metadata": {
+        "base_cents": 1499,
+        "features": {
+          "api_access": false,
+          "audit_logs": false,
+          "commercial_license": false,
+          "dedicated_support_channel": false,
+          "onboarding_call": false,
+          "remove_created_with": false,
+          "share_views": false
+        },
+        "included_networks": 1,
+        "included_seats": 1,
+        "is_commercial": false,
+        "network_cents": null,
+        "rate": "Month",
+        "seat_cents": null,
+        "trial_days": 0
+      },
+      "name": "Starter"
+    },
+    {
+      "category": null,
+      "color": "yellow",
+      "description": "Visualize multiple networks and share network diagrams",
+      "icon": "Zap",
+      "id": "Pro",
+      "metadata": {
+        "base_cents": 2499,
+        "features": {
+          "api_access": false,
+          "audit_logs": false,
+          "commercial_license": false,
+          "dedicated_support_channel": false,
+          "onboarding_call": false,
+          "remove_created_with": false,
+          "share_views": true
+        },
+        "included_networks": 3,
+        "included_seats": 1,
+        "is_commercial": false,
+        "network_cents": null,
+        "rate": "Month",
+        "seat_cents": null,
+        "trial_days": 7
+      },
+      "name": "Pro"
+    },
+    {
+      "category": null,
+      "color": "orange",
+      "description": "Collaborate on infrastructure documentation with your team",
+      "icon": "Users",
+      "id": "Team",
+      "metadata": {
+        "base_cents": 7999,
+        "features": {
+          "api_access": false,
+          "audit_logs": false,
+          "commercial_license": true,
+          "dedicated_support_channel": true,
+          "onboarding_call": true,
+          "remove_created_with": true,
+          "share_views": true
+        },
+        "included_networks": 5,
+        "included_seats": 5,
+        "is_commercial": true,
+        "network_cents": 800,
+        "rate": "Month",
+        "seat_cents": 1000,
+        "trial_days": 7
+      },
+      "name": "Team"
+    },
+    {
+      "category": null,
+      "color": "brown",
+      "description": "Manage multi-site and multi-customer documentation with advanced features",
+      "icon": "Briefcase",
+      "id": "Business",
+      "metadata": {
+        "base_cents": 14999,
+        "features": {
+          "api_access": true,
+          "audit_logs": true,
+          "commercial_license": true,
+          "dedicated_support_channel": true,
+          "onboarding_call": true,
+          "remove_created_with": true,
+          "share_views": true
+        },
+        "included_networks": 25,
+        "included_seats": 10,
+        "is_commercial": true,
+        "network_cents": 500,
+        "rate": "Month",
+        "seat_cents": 800,
+        "trial_days": 14
+      },
+      "name": "Business"
+    },
+    {
+      "category": null,
+      "color": "gray",
+      "description": "Deploy NetVisor with enterprise-grade features and functionality",
+      "icon": "Building",
+      "id": "Enterprise",
+      "metadata": {
+        "base_cents": 0,
+        "features": {
+          "api_access": true,
+          "audit_logs": true,
+          "commercial_license": true,
+          "dedicated_support_channel": true,
+          "onboarding_call": true,
+          "remove_created_with": true,
+          "share_views": true
+        },
+        "included_networks": null,
+        "included_seats": null,
+        "is_commercial": true,
+        "network_cents": null,
+        "rate": "Month",
+        "seat_cents": null,
+        "trial_days": 14
+      },
+      "name": "Enterprise"
+    },
+    {
+      "category": null,
+      "color": "blue",
+      "description": "Automatically create living documentation of your network",
+      "icon": "ThumbsUp",
+      "id": "Starter",
+      "metadata": {
+        "base_cents": 14400,
+        "features": {
+          "api_access": false,
+          "audit_logs": false,
+          "commercial_license": false,
+          "dedicated_support_channel": false,
+          "onboarding_call": false,
+          "remove_created_with": false,
+          "share_views": false
+        },
+        "included_networks": 1,
+        "included_seats": 1,
+        "is_commercial": false,
+        "network_cents": null,
+        "rate": "Year",
+        "seat_cents": null,
+        "trial_days": 0
+      },
+      "name": "Starter"
+    },
+    {
+      "category": null,
+      "color": "yellow",
+      "description": "Visualize multiple networks and share network diagrams",
+      "icon": "Zap",
+      "id": "Pro",
+      "metadata": {
+        "base_cents": 24000,
+        "features": {
+          "api_access": false,
+          "audit_logs": false,
+          "commercial_license": false,
+          "dedicated_support_channel": false,
+          "onboarding_call": false,
+          "remove_created_with": false,
+          "share_views": true
+        },
+        "included_networks": 3,
+        "included_seats": 1,
+        "is_commercial": false,
+        "network_cents": null,
+        "rate": "Year",
+        "seat_cents": null,
+        "trial_days": 7
+      },
+      "name": "Pro"
+    },
+    {
+      "category": null,
+      "color": "orange",
+      "description": "Collaborate on infrastructure documentation with your team",
+      "icon": "Users",
+      "id": "Team",
+      "metadata": {
+        "base_cents": 76800,
+        "features": {
+          "api_access": false,
+          "audit_logs": false,
+          "commercial_license": true,
+          "dedicated_support_channel": true,
+          "onboarding_call": true,
+          "remove_created_with": true,
+          "share_views": true
+        },
+        "included_networks": 5,
+        "included_seats": 5,
+        "is_commercial": true,
+        "network_cents": 7700,
+        "rate": "Year",
+        "seat_cents": 9600,
+        "trial_days": 7
+      },
+      "name": "Team"
+    },
+    {
+      "category": null,
+      "color": "brown",
+      "description": "Manage multi-site and multi-customer documentation with advanced features",
+      "icon": "Briefcase",
+      "id": "Business",
+      "metadata": {
+        "base_cents": 144000,
+        "features": {
+          "api_access": true,
+          "audit_logs": true,
+          "commercial_license": true,
+          "dedicated_support_channel": true,
+          "onboarding_call": true,
+          "remove_created_with": true,
+          "share_views": true
+        },
+        "included_networks": 25,
+        "included_seats": 10,
+        "is_commercial": true,
+        "network_cents": 4800,
+        "rate": "Year",
+        "seat_cents": 7700,
+        "trial_days": 14
+      },
+      "name": "Business"
+    }
+  ],
+  "features": [
+    {
+      "category": "Features",
+      "color": null,
+      "description": "Share live network diagrams with others",
+      "icon": null,
+      "id": "share_views",
+      "metadata": {
+        "is_coming_soon": false
+      },
+      "name": "Share Views"
+    },
+    {
+      "category": "Support & Licensing",
+      "color": null,
+      "description": "30 minute onboarding call to ensure you're getting the most out of NetVisor",
+      "icon": null,
+      "id": "onboarding_call",
+      "metadata": {
+        "is_coming_soon": false
+      },
+      "name": "Onboarding Call"
+    },
+    {
+      "category": "Support & Licensing",
+      "color": null,
+      "description": "A dedicated discord channel for support and questions",
+      "icon": null,
+      "id": "dedicated_support_channel",
+      "metadata": {
+        "is_coming_soon": false
+      },
+      "name": "Dedicated Discord Channel"
+    },
+    {
+      "category": "Support & Licensing",
+      "color": null,
+      "description": "Use NetVisor under a commercial license",
+      "icon": null,
+      "id": "commercial_license",
+      "metadata": {
+        "is_coming_soon": false
+      },
+      "name": "Commercial License"
+    },
+    {
+      "category": "Features",
+      "color": null,
+      "description": "Comprehensive logs of all access and data modification actions performed in NetVisor",
+      "icon": null,
+      "id": "audit_logs",
+      "metadata": {
+        "is_coming_soon": true
+      },
+      "name": "Audit Logs"
+    },
+    {
+      "category": "Features",
+      "color": null,
+      "description": "Access NetVisor APIs programmatically to bring your data into other applications",
+      "icon": null,
+      "id": "api_access",
+      "metadata": {
+        "is_coming_soon": true
+      },
+      "name": "API Access"
+    },
+    {
+      "category": "Features",
+      "color": null,
+      "description": "Remove 'Created using netvisor.io' in bottom right corner of visualization",
+      "icon": null,
+      "id": "remove_created_with",
+      "metadata": {
+        "is_coming_soon": false
+      },
+      "name": "Remove 'Powered By'"
+    }
+  ]
+}

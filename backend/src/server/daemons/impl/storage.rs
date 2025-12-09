@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
-use std::net::IpAddr;
 use uuid::Uuid;
 
 use crate::server::{
@@ -59,11 +58,11 @@ impl StorableEntity for Daemon {
                 Self::BaseData {
                     network_id,
                     host_id,
-                    ip,
-                    port,
                     capabilities,
                     last_seen,
                     mode,
+                    url,
+                    name,
                 },
         } = self.clone();
 
@@ -76,8 +75,8 @@ impl StorableEntity for Daemon {
                 "network_id",
                 "host_id",
                 "capabilities",
-                "port",
-                "ip",
+                "url",
+                "name",
                 "mode",
             ],
             vec![
@@ -88,17 +87,14 @@ impl StorableEntity for Daemon {
                 SqlValue::Uuid(network_id),
                 SqlValue::Uuid(host_id),
                 SqlValue::DaemonCapabilities(capabilities),
-                SqlValue::U16(port),
-                SqlValue::IpAddr(ip),
+                SqlValue::String(url),
+                SqlValue::String(name),
                 SqlValue::DaemonMode(mode),
             ],
         ))
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        let ip: IpAddr = serde_json::from_str(&row.get::<String, _>("ip"))
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize ip: {}", e))?;
-
         let mode: DaemonMode = serde_json::from_str(&row.get::<String, _>("mode"))
             .map_err(|e| anyhow::anyhow!("Failed to deserialize mode: {}", e))?;
 
@@ -111,11 +107,11 @@ impl StorableEntity for Daemon {
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             base: DaemonBase {
-                ip,
-                port: row.get::<i32, _>("port").try_into().unwrap(),
+                url: row.get("url"),
                 last_seen: row.get("last_seen"),
                 host_id: row.get("host_id"),
                 network_id: row.get("network_id"),
+                name: row.get("name"),
                 mode,
                 capabilities,
             },

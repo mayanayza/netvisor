@@ -158,8 +158,8 @@ pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
     Daemon::new(DaemonBase {
         host_id: *host_id,
         network_id: *network_id,
-        ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 50)),
-        port: 60073,
+        name: "daemon".to_string(),
+        url: "http://192.168.1.50:60073".to_string(),
         last_seen: Utc::now(),
         mode: DaemonMode::Push,
         capabilities: DaemonCapabilities {

@@ -518,7 +518,7 @@ impl DiscoveryService {
                 base: crate::server::discovery::r#impl::base::DiscoveryBase {
                     daemon_id: session.daemon_id,
                     network_id: session.network_id,
-                    name: "Discovery Run".to_string(),
+                    name: session.discovery_type.to_string(),
                     discovery_type: session.discovery_type.clone(),
                     run_type: RunType::Historical {
                         results: session.clone(),
