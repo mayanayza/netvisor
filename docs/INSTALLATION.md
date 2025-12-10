@@ -45,7 +45,7 @@ This is the easiest way to get started with NetVisor.
 ### 1. Download the Docker Compose File
 
 ```bash
-curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/docker-compose.yml
 ```
 
 ### 2. Review Configuration
@@ -107,7 +107,7 @@ security_opt:
 
 If running in an LXC, you may need to change `NETVISOR_INTEGRATED_DAEMON_URL` to `172.31.0.1`.
 
-See [issue #87](https://github.com/mayanayza/netvisor/issues/87) for more details.
+See [issue #87](https://github.com/netvisor-io/netvisor/issues/87) for more details.
 
 ## Additional Daemons
 
@@ -124,7 +124,7 @@ To scan multiple VLANs or remote networks, deploy additional daemons.
 
 **Manual Installation:**
 
-Download the appropriate binary from the [releases page](https://github.com/mayanayza/netvisor/releases/latest):
+Download the appropriate binary from the [releases page](https://github.com/netvisor-io/netvisor/releases/latest):
 
 - Linux x86_64: `netvisor-daemon-linux-amd64`
 - Linux ARM64: `netvisor-daemon-linux-arm64`
@@ -158,7 +158,7 @@ For automatic startup, the install script offers to set up a systemd service.
 1. Download the service file:
 
 ```bash
-curl -o netvisor-daemon.service https://raw.githubusercontent.com/mayanayza/netvisor/main/netvisor-daemon.service
+curl -o netvisor-daemon.service https://raw.githubusercontent.com/netvisor-io/netvisor/main/netvisor-daemon.service
 ```
 
 2. Edit the service file with your configuration:
@@ -316,7 +316,7 @@ security_opt:
   - apparmor:unconfined
 ```
 
-See [issue #87](https://github.com/mayanayza/netvisor/issues/87) for details.
+See [issue #87](https://github.com/netvisor-io/netvisor/issues/87) for details.
 
 ### Discovery Takes Extremely Long (Hours)
 

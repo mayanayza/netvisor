@@ -8,10 +8,10 @@
 
 NetVisor scans your network, identifies hosts and services, and generates an interactive visualization showing how everything connects, letting you easily create and maintain network documentation.<br>
 <br>
-![Docker Pulls](https://img.shields.io/docker/pulls/mayanayza/netvisor-server?style=for-the-badge&logo=docker)  ![Github Stars](https://img.shields.io/github/stars/mayanayza/netvisor?style=for-the-badge&logo=github
+![Docker Pulls](https://img.shields.io/docker/pulls/netvisor-io/netvisor-server?style=for-the-badge&logo=docker)  ![Github Stars](https://img.shields.io/github/stars/netvisor-io/netvisor?style=for-the-badge&logo=github
 )
-![License](https://img.shields.io/github/license/mayanayza/netvisor?style=for-the-badge)  ![GitHub release](https://img.shields.io/github/v/release/mayanayza/netvisor?style=for-the-badge)<br>
-![Daemon](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/daemon-ci.yml?label=daemon-ci&style=for-the-badge)  ![Server](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/server-ci.yml?label=server-ci&style=for-the-badge)  ![UI](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/ui-ci.yml?label=ui-ci&style=for-the-badge)<br>
+![License](https://img.shields.io/github/license/netvisor-io/netvisor?style=for-the-badge)  ![GitHub release](https://img.shields.io/github/v/release/netvisor-io/netvisor?style=for-the-badge)<br>
+![Daemon](https://img.shields.io/github/actions/workflow/status/netvisor-io/netvisor/daemon-ci.yml?label=daemon-ci&style=for-the-badge)  ![Server](https://img.shields.io/github/actions/workflow/status/netvisor-io/netvisor/server-ci.yml?label=server-ci&style=for-the-badge)  ![UI](https://img.shields.io/github/actions/workflow/status/netvisor-io/netvisor/ui-ci.yml?label=ui-ci&style=for-the-badge)<br>
 [![Discord](https://img.shields.io/discord/1432872786828726392?logo=discord&label=discord&labelColor=white&color=7289da&style=for-the-badge)](https://discord.gg/b7ffQr8AcZ)
 
 > 💡 **Prefer not to self-host?** [Get early access](https://netvisor.io) to NetVisor Cloud
@@ -91,7 +91,7 @@ For commercial licensing inquiries: **licensing@netvisor.io**
     **Docker Compose**
     
     ```bash
-    curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
+    curl -O https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
     ```
     
     **Proxmox**
@@ -139,7 +139,7 @@ NetVisor automatically detects **200+ common services** including:
 
 For the complete list, see the [service definitions directory](./docs/SERVICES.md).
 
-**Missing a service?** [Request it](https://github.com/mayanayza/netvisor/issues/new?template=missing-service-detection.md) or [contribute a definition](contributing.md#adding-service-definitions)!
+**Missing a service?** [Request it](https://github.com/netvisor-io/netvisor/issues/new?template=missing-service-detection.md) or [contribute a definition](contributing.md#adding-service-definitions)!
 
 ## 🛠️ Technology Stack
 
@@ -165,8 +165,8 @@ See our [contributing guide](contributing.md) for details.
 
 - **Documentation**: You're reading it! Check the [User Guide](USER_GUIDE.md) for detailed features
 - **Discord**: [Join our Discord](https://discord.gg/b7ffQr8AcZ) for help and discussions
-- **Issues**: [Report bugs or request features](https://github.com/mayanayza/netvisor/issues/new)
-- **Discussions**: [GitHub Discussions](https://github.com/mayanayza/netvisor/discussions)
+- **Issues**: [Report bugs or request features](https://github.com/netvisor-io/netvisor/issues/new)
+- **Discussions**: [GitHub Discussions](https://github.com/netvisor-io/netvisor/discussions)
 
 ## 📋 FAQ
 
