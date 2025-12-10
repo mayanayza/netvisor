@@ -10,11 +10,17 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
+	import { currentUser } from '$lib/features/auth/store';
+	import { permissions } from '$lib/shared/stores/metadata';
 
 	let showTagEditor = false;
 	let editingTag: Tag | null = null;
 
 	const loading = loadData([getTags]);
+
+	$: allowBulkDelete = $currentUser
+		? permissions.getMetadata($currentUser.permissions).manage_org_entities
+		: false;
 
 	function handleCreateTag() {
 		editingTag = null;
@@ -117,6 +123,7 @@
 		<DataControls
 			items={$tags}
 			fields={tagFields}
+			{allowBulkDelete}
 			storageKey="netvisor-tags-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}

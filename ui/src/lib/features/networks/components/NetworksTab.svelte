@@ -22,11 +22,17 @@
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
 	import { tags } from '$lib/features/tags/store';
+	import { currentUser } from '$lib/features/auth/store';
+	import { permissions } from '$lib/shared/stores/metadata';
 
 	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
 	let showCreateNetworkModal = false;
 	let editingNetwork: Network | null = null;
+
+	$: allowBulkDelete = $currentUser
+		? permissions.getMetadata($currentUser.permissions).manage_org_entities
+		: false;
 
 	function handleDeleteNetwork(network: Network) {
 		if (
@@ -128,6 +134,7 @@
 			items={$networks}
 			fields={networkFields}
 			onBulkDelete={handleBulkDelete}
+			{allowBulkDelete}
 			storageKey="netvisor-networks-table-state"
 			getItemId={(item) => item.id}
 		>
