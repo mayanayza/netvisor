@@ -21,6 +21,7 @@
 		fields = $bindable([]),
 		storageKey = null,
 		onBulkDelete = null,
+		allowBulkDelete = true,
 		children,
 		getItemId
 	}: {
@@ -28,6 +29,7 @@
 		fields: FieldConfig<T>[];
 		storageKey?: string | null;
 		onBulkDelete?: ((ids: string[]) => Promise<void>) | null;
+		allowBulkDelete?: boolean;
 		children: Snippet<[T, 'card' | 'list', boolean, (selected: boolean) => void]>;
 		getItemId: (item: T) => string;
 	} = $props();
@@ -490,6 +492,7 @@
 
 	// Handle bulk delete
 	async function handleBulkDelete() {
+		if (!allowBulkDelete) return;
 		if (!onBulkDelete || selectedIds.size === 0) return;
 
 		try {
@@ -654,10 +657,12 @@
 					Clear selection
 				</button>
 			</div>
-			<button onclick={handleBulkDelete} class="btn-danger flex items-center gap-2">
-				<Trash2 class="h-4 w-4" />
-				Delete Selected
-			</button>
+			{#if allowBulkDelete}
+				<button onclick={handleBulkDelete} class="btn-danger flex items-center gap-2">
+					<Trash2 class="h-4 w-4" />
+					Delete Selected
+				</button>
+			{/if}
 		</div>
 	{/if}
 
