@@ -1,7 +1,7 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { User } from '../types';
-	import { Trash2 } from 'lucide-svelte';
+	import { Edit, Trash2 } from 'lucide-svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { entities, permissions, metadata } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
@@ -12,12 +12,14 @@
 		user,
 		viewMode,
 		selected,
-		onSelectionChange
+		onSelectionChange,
+		onEdit
 	}: {
 		user: User;
 		viewMode: 'card' | 'list';
 		selected: boolean;
 		onSelectionChange: (selected: boolean) => void;
+		onEdit?: (user: User) => void;
 	} = $props();
 
 	// Force Svelte to track metadata reactivity
@@ -30,6 +32,9 @@
 		if (confirm(`Are you sure you want to delete this user?`)) {
 			deleteUser(user.id);
 		}
+	}
+	function handleEditUser() {
+		onEdit?.(user);
 	}
 
 	let canManage = $derived(
@@ -96,17 +101,30 @@
 			// 	})
 			// },
 		],
-		actions: canManage
-			? [
-					{
-						label: 'Delete',
-						icon: Trash2,
-						onClick: () => handleDeleteUser(),
-						class: 'btn-icon-danger'
-					}
-				]
-			: []
+		actions:
+			canManage && user.id != $currentUser?.id
+				? [
+						{
+							label: 'Delete',
+							icon: Trash2,
+							onClick: () => handleDeleteUser(),
+							class: 'btn-icon-danger'
+						},
+						{
+							label: 'Edit',
+							icon: Edit,
+							onClick: () => handleEditUser(),
+							class: 'btn-icon'
+						}
+					]
+				: []
 	});
 </script>
 
-<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
+<GenericCard
+	{...cardData}
+	{viewMode}
+	{selected}
+	{onSelectionChange}
+	selectable={user.id != $currentUser?.id}
+/>

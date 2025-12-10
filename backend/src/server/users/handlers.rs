@@ -1,7 +1,7 @@
 use crate::server::auth::middleware::auth::AuthenticatedUser;
 use crate::server::auth::middleware::permissions::{RequireAdmin, RequireMember};
 use crate::server::shared::handlers::traits::{
-    CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
+    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
 };
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::ApiError;
@@ -25,9 +25,10 @@ pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_all_users))
         .route("/{id}", put(update_user))
+        .route("/{id}/admin", put(admin_update_user))
         .route("/{id}", delete(delete_user))
         .route("/{id}", get(get_by_id_handler::<User>))
-        .route("/bulk-delete", post(bulk_delete_handler::<User>))
+        .route("/bulk-delete", post(bulk_delete_users))
 }
 
 pub async fn get_all_users(
@@ -42,7 +43,11 @@ pub async fn get_all_users(
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
         .iter()
-        .filter(|u| u.base.permissions < user.permissions || u.id == user.user_id)
+        .filter(|u| {
+            user.permissions == UserOrgPermissions::Owner
+                || u.base.permissions < user.permissions
+                || u.id == user.user_id
+        })
         .cloned()
         .collect();
 
@@ -119,4 +124,97 @@ pub async fn update_user(
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 
     Ok(Json(ApiResponse::success(updated)))
+}
+
+pub async fn admin_update_user(
+    State(state): State<Arc<AppState>>,
+    RequireAdmin(admin): RequireAdmin,
+    Path(id): Path<Uuid>,
+    Json(mut request): Json<User>,
+) -> ApiResult<Json<ApiResponse<User>>> {
+    let service = User::get_service(&state);
+
+    // Verify target user exists
+    let existing = service
+        .get_by_id(&id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?
+        .ok_or_else(|| ApiError::not_found(format!("User '{}' not found", id)))?;
+
+    // Cannot edit yourself through this endpoint
+    if admin.user_id == id {
+        return Err(ApiError::forbidden(
+            "Use the regular update endpoint to edit your own user",
+        ));
+    }
+
+    // Can only edit users with lower permissions than yourself
+    if existing.base.permissions >= admin.permissions {
+        return Err(ApiError::forbidden(
+            "You can only edit users with lower permissions than you",
+        ));
+    }
+
+    // Cannot promote user to same or higher level than yourself
+    if admin.permissions != UserOrgPermissions::Owner
+        && request.base.permissions >= admin.permissions
+    {
+        return Err(ApiError::forbidden(
+            "You cannot promote a user to your permission level or higher",
+        ));
+    }
+
+    // Cannot change organization
+    if request.base.organization_id != existing.base.organization_id {
+        return Err(ApiError::forbidden(
+            "You cannot change a user's organization",
+        ));
+    }
+
+    // Preserve fields that shouldn't be changed via this endpoint
+    request.base.email = existing.base.email.clone();
+    request.base.oidc_provider = existing.base.oidc_provider.clone();
+    request.base.oidc_subject = existing.base.oidc_subject.clone();
+    request.base.oidc_linked_at = existing.base.oidc_linked_at;
+
+    let updated = service
+        .update(&mut request, admin.into())
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+    Ok(Json(ApiResponse::success(updated)))
+}
+
+pub async fn bulk_delete_users(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(ids): Json<Vec<Uuid>>,
+) -> ApiResult<Json<ApiResponse<BulkDeleteResponse>>> {
+    let user_filter = EntityFilter::unfiltered().entity_ids(&ids);
+    let users = state.services.user_service.get_all(user_filter).await?;
+
+    if users.iter().any(|u| u.base.permissions > user.permissions) {
+        return Err(ApiError::unauthorized(
+            "You can only delete users with lower permissions than you".to_string(),
+        ));
+    }
+
+    let owners = state
+        .services
+        .user_service
+        .get_organization_owners(&user.organization_id)
+        .await?;
+
+    if owners.iter().all(|o| users.contains(o)) {
+        return Err(ApiError::unauthorized(
+            "Can't delete all of an organization's owners".to_string(),
+        ));
+    }
+
+    bulk_delete_handler::<User>(
+        axum::extract::State(state),
+        RequireMember(user),
+        axum::extract::Json(ids),
+    )
+    .await
 }
