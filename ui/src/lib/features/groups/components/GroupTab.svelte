@@ -19,6 +19,7 @@
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { networks } from '$lib/features/networks/store';
 	import { Plus } from 'lucide-svelte';
+	import { tags } from '$lib/features/tags/store';
 
 	const loading = loadData([getServices, getGroups]);
 
@@ -111,6 +112,20 @@
 			sortable: false,
 			getValue(item) {
 				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+			}
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'array',
+			searchable: true,
+			filterable: true,
+			sortable: false,
+			getValue: (entity) => {
+				// Return tag names for search/filter display
+				return entity.tags
+					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.filter((name): name is string => !!name);
 			}
 		}
 	];

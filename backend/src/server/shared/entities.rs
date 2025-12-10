@@ -1,10 +1,10 @@
-use crate::server::groups::r#impl::base::Group;
 use crate::server::hosts::r#impl::interfaces::Interface;
 use crate::server::hosts::r#impl::ports::Port;
 use crate::server::organizations::r#impl::invites::Invite;
 use crate::server::services::r#impl::base::Service;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::base::Topology;
+use crate::server::{groups::r#impl::base::Group, tags::r#impl::base::Tag};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
@@ -43,6 +43,8 @@ pub enum Entity {
     Network(Network),
     ApiKey(ApiKey),
     User(User),
+    Tag(Tag),
+
     Discovery(Discovery),
     Daemon(Daemon),
 
@@ -72,6 +74,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::ApiKey => "yellow",
             EntityDiscriminants::User => "blue",
             EntityDiscriminants::Invite => "green",
+            EntityDiscriminants::Tag => "yellow",
 
             EntityDiscriminants::Host => "blue",
             EntityDiscriminants::Service => "purple",
@@ -89,6 +92,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Organization => "Building",
             EntityDiscriminants::Network => "Globe",
             EntityDiscriminants::User => "User",
+            EntityDiscriminants::Tag => "Tag",
             EntityDiscriminants::Invite => "UserPlus",
             EntityDiscriminants::ApiKey => "Key",
             EntityDiscriminants::Daemon => "SatelliteDish",
@@ -185,5 +189,11 @@ impl From<Group> for Entity {
 impl From<Topology> for Entity {
     fn from(value: Topology) -> Self {
         Self::Topology(value)
+    }
+}
+
+impl From<Tag> for Entity {
+    fn from(value: Tag) -> Self {
+        Self::Tag(value)
     }
 }

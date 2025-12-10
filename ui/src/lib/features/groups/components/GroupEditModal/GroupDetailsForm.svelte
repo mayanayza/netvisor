@@ -8,6 +8,7 @@
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
 	import { groupTypes } from '$lib/shared/stores/metadata';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Group;
@@ -56,4 +57,6 @@
 		placeholder="Describe the data flow or purpose of this group..."
 		field={description}
 	/>
+
+	<TagPicker bind:selectedTagIds={formData.tags} />
 </div>

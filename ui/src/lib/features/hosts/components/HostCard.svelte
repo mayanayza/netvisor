@@ -7,6 +7,7 @@
 	import type { Group } from '$lib/features/groups/types/base';
 	import { getServiceById, getServicesForHost } from '$lib/features/services/store';
 	import { daemons } from '$lib/features/daemons/store';
+	import { tags } from '$lib/features/tags/store';
 
 	let {
 		host,
@@ -151,6 +152,15 @@
 						};
 					}),
 					emptyText: 'No interfaces'
+				},
+				{
+					label: 'Tags',
+					value: host.tags.map((t) => {
+						const tag = $tags.find((tag) => tag.id == t);
+						return tag
+							? { id: tag.id, color: tag.color, label: tag.name }
+							: { id: t, color: 'gray', label: 'Unknown Tag' };
+					})
 				}
 			],
 			actions: [

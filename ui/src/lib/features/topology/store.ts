@@ -291,6 +291,7 @@ export function createEmptyTopologyFormData(): Topology {
 		removed_subnets: [],
 		locked_at: null,
 		locked_by: null,
-		parent_id: null
+		parent_id: null,
+		tags: []
 	};
 }

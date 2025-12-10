@@ -81,6 +81,7 @@ async fn register_daemon(
         last_seen: Utc::now(),
         mode: request.mode,
         name: request.name,
+        tags: Vec::new(),
     });
 
     daemon.id = request.daemon_id;
@@ -139,6 +140,7 @@ async fn register_daemon(
                 name: self_report_discovery_type.to_string(),
                 daemon_id: request.daemon_id,
                 network_id: request.network_id,
+                tags: Vec::new(),
             }),
             AuthenticatedEntity::System,
         )
@@ -166,6 +168,7 @@ async fn register_daemon(
                     name: docker_discovery_type.to_string(),
                     daemon_id: request.daemon_id,
                     network_id: request.network_id,
+                    tags: Vec::new(),
                 }),
                 AuthenticatedEntity::System,
             )
@@ -193,6 +196,7 @@ async fn register_daemon(
                 name: network_discovery_type.to_string(),
                 daemon_id: request.daemon_id,
                 network_id: request.network_id,
+                tags: Vec::new(),
             }),
             AuthenticatedEntity::System,
         )

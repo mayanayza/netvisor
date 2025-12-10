@@ -16,6 +16,7 @@ Complete guide to using NetVisor's features for network discovery, organization,
 - [Daemons](#daemons)
 - [API Keys](#api-keys)
 - [Discovery](#discovery)
+- [Tags](#tags)
 - [Topology Visualization](#topology-visualization)
 - [Multi-VLAN Setup](#multi-vlan-setup)
 - [FAQ](#faq)
@@ -681,6 +682,125 @@ When discovering hosts, NetVisor determines names using this priority:
 3. If option 2 didn't produce a name, will use the remaining fallback (ie **IP** if **BestService** was set)
 
 Configure this per-discovery in the discovery type settings.
+
+## Tags
+
+Tags provide organization-wide labels for categorizing and filtering entities. Apply tags to hosts, services, subnets, networks, groups, and daemons to create custom taxonomies that work across your entire infrastructure.
+
+### What Tags Are For
+
+- Categorizing infrastructure by environment (production, staging, development)
+- Marking criticality levels (critical, high, medium, low)
+- Identifying ownership (team-a, team-b, contractor)
+- Tracking lifecycle status (deprecated, migrating, new)
+- Custom organization-specific classifications
+
+### Tag Properties
+
+- **Name**: Display name for the tag (unique within organization)
+- **Description**: Optional notes about when to use this tag
+- **Color**: Visual color for the tag chip
+
+### Tag Scope
+
+Tags are defined at the **organization level**, meaning:
+- The same tag can be applied to entities across all networks
+- Tag definitions are shared by all users in the organization
+- Deleting a tag removes it from all entities that had it applied
+
+### Managing Tags
+
+**Viewing tags**:
+- Navigate to **Manage > Tags**
+- See all organization tags with their colors
+- Filter and search by name
+
+**Creating a tag**:
+1. Navigate to **Manage > Tags**
+2. Click **"Create Tag"**
+3. Enter name and optional description
+4. Select a color
+5. Save
+
+**Creating a tag inline**:
+1. While editing any entity (host, service, subnet, etc.)
+2. Type a new tag name in the tag picker
+3. Click **"Create [tag name]"** (requires Admin or Owner role)
+4. The tag is created and automatically applied
+
+**Editing a tag**:
+1. Click on a tag card
+2. Modify name, description, or color
+3. Save changes
+
+**Deleting a tag**: Click the delete icon. The tag is removed from all entities that had it applied.
+
+<p align="center">
+  <img src="../media/tags_tab.png" width="800" alt="Tags Tab">
+</p>
+
+### Applying Tags to Entities
+
+Tags can be applied to any entity that supports them:
+
+**From the entity edit modal**:
+1. Open any host, service, subnet, network, group, or daemon
+2. Find the **Tags** field
+3. Click to open the tag picker
+4. Type to filter or select from available tags
+5. Press Enter or click to add
+6. Save the entity
+
+**Removing tags**:
+- Click the **X** on any tag chip to remove it
+- Save the entity to persist changes
+
+<p align="center">
+  <img src="../media/tag_picker.png" width="500" alt="Tag Picker">
+</p>
+
+### Filtering by Tags
+
+Use tags to filter entity lists:
+
+1. Navigate to any entity list (Hosts, Services, Subnets, etc.)
+2. Click **"Filters"**
+3. Select one or more tags from the Tags filter
+4. Items matching **any** selected tag are shown
+
+### Permissions
+
+| Action | Minimum Role |
+|--------|-------------|
+| View tags | Visualizer |
+| Apply/remove tags on entities | Member |
+| Create, edit, delete tags | Admin |
+
+### Use Cases
+
+**Environment classification**:
+```
+Tags: production, staging, development, testing
+Apply to: Hosts, Services, Networks
+```
+
+**Criticality tracking**:
+```
+Tags: critical, high-priority, standard, low-priority
+Apply to: Hosts, Services
+```
+
+**Team ownership**:
+```
+Tags: platform-team, frontend-team, data-team, external
+Apply to: Hosts, Services, Groups
+```
+
+**Compliance and auditing**:
+```
+Tags: pci-scope, hipaa, gdpr, internal-only
+Apply to: Hosts, Subnets, Services
+```
 
 ## Topology Visualization
 

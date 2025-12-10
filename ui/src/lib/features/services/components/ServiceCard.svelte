@@ -8,6 +8,7 @@
 	import { formatInterface } from '$lib/features/hosts/store';
 	import { matchConfidenceColor, matchConfidenceLabel } from '$lib/shared/types';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { tags } from '$lib/features/tags/store';
 
 	export let service: Service;
 	export let host: Host;
@@ -92,6 +93,15 @@
 					}
 				],
 				emptyText: 'Confidence value unavailable'
+			},
+			{
+				label: 'Tags',
+				value: service.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 		actions: [

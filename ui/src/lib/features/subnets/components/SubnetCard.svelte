@@ -6,6 +6,7 @@
 	import { isContainerSubnet } from '../store';
 	import type { Subnet } from '../types/base';
 	import { get } from 'svelte/store';
+	import { tags } from '$lib/features/tags/store';
 
 	export let subnet: Subnet;
 	export let onEdit: (subnet: Subnet) => void = () => {};
@@ -40,33 +41,6 @@
 				],
 				emptyText: 'No type specified'
 			},
-			// {
-			// 	label: 'DNS Resolvers',
-			// 	value: dnsLabels.map(({ id, label }) => ({
-			// 		id,
-			// 		label,
-			// 		color: entities.getColorString('Dns')
-			// 	})),
-			// 	emptyText: 'No DNS resolvers'
-			// },
-			// {
-			// 	label: 'Gateways',
-			// 	value: gatewayLabels.map(({ id, label }) => ({
-			// 		id,
-			// 		label,
-			// 		color: entities.getColorString('Gateway')
-			// 	})),
-			// 	emptyText: 'No gateways'
-			// },
-			// {
-			// 	label: 'Reverse Proxies',
-			// 	value: reverseProxyLabels.map(({ id, label }) => ({
-			// 		id,
-			// 		label,
-			// 		color: entities.getColorString('ReverseProxy')
-			// 	})),
-			// 	emptyText: 'No reverse proxies'
-			// },
 			{
 				label: 'Services',
 				value: serviceLabels.map(({ id, label }) => ({
@@ -75,6 +49,15 @@
 					color: entities.getColorString('Service')
 				})),
 				emptyText: 'No services'
+			},
+			{
+				label: 'Tags',
+				value: subnet.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 

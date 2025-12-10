@@ -61,6 +61,7 @@ export function createDefaultService(
 		network_id: host_network_id,
 		host_id,
 		is_gateway: false,
+		tags: [],
 		service_definition: serviceType,
 		name: serviceType,
 		bindings: [],

@@ -3,16 +3,21 @@ use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::discovery::r#impl::types::DiscoveryType;
+use netvisor::server::groups::r#impl::base::{Group, GroupBase};
 use netvisor::server::networks::r#impl::Network;
 use netvisor::server::organizations::r#impl::base::Organization;
 
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
 use netvisor::server::shared::handlers::factory::OnboardingRequest;
+use netvisor::server::shared::storage::traits::StorableEntity;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
+use netvisor::server::tags::r#impl::base::{Tag, TagBase};
 use netvisor::server::users::r#impl::base::User;
+use serde::Serialize;
 use std::process::{Child, Command};
+use uuid::Uuid;
 
 const BASE_URL: &str = "http://localhost:60072";
 const TEST_PASSWORD: &str = "TestPassword123!";
@@ -153,6 +158,24 @@ impl TestClient {
         let response = self
             .client
             .get(format!("{}{}", BASE_URL, path))
+            .send()
+            .await
+            .map_err(|e| format!("GET {} failed: {}", path, e))?;
+
+        self.parse_response(response, &format!("GET {}", path))
+            .await
+    }
+
+    /// Generic POST request
+    async fn post<T: serde::de::DeserializeOwned + Serialize>(
+        &self,
+        path: &str,
+        body: T,
+    ) -> Result<T, String> {
+        let response = self
+            .client
+            .post(format!("{}{}", BASE_URL, path))
+            .json(&body)
             .send()
             .await
             .map_err(|e| format!("GET {} failed: {}", path, e))?;
@@ -402,6 +425,38 @@ async fn verify_home_assistant_discovered(client: &TestClient) -> Result<Service
     .await
 }
 
+async fn create_group(client: &TestClient, network_id: Uuid) -> Result<Group, String> {
+    println!("\n=== Creating Group ===");
+
+    let mut group = Group::new(GroupBase::default());
+    group.base.network_id = network_id;
+
+    retry("create Group", 10, 3, || async {
+        let created_group = client.post("/api/groups", group.clone()).await?;
+
+        println!("✅ Created group");
+
+        Ok(created_group)
+    })
+    .await
+}
+
+async fn create_tag(client: &TestClient, organization_id: Uuid) -> Result<Tag, String> {
+    println!("\n=== Creating Tag ===");
+
+    let mut tag = Tag::new(TagBase::default());
+    tag.base.organization_id = organization_id;
+
+    retry("create Tag", 10, 3, || async {
+        let created_tag = client.post("/api/tags", tag.clone()).await?;
+
+        println!("✅ Created Tag");
+
+        Ok(created_tag)
+    })
+    .await
+}
+
 #[tokio::test]
 async fn test_full_integration() {
     // Start containers
@@ -451,6 +506,13 @@ async fn test_full_integration() {
     let _service = verify_home_assistant_discovered(&client)
         .await
         .expect("Failed to find Home Assistant");
+
+    let _group = create_group(&client, network.id)
+        .await
+        .expect("Failed to create group");
+    let _tag = create_tag(&client, organization.id)
+        .await
+        .expect("Failed to create tag");
 
     #[cfg(feature = "generate-fixtures")]
     {

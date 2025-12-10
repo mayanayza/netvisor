@@ -32,6 +32,8 @@ pub struct ServiceBase {
     pub bindings: Vec<Binding>,
     pub virtualization: Option<ServiceVirtualization>,
     pub source: EntitySource,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 impl Default for ServiceBase {
@@ -44,6 +46,7 @@ impl Default for ServiceBase {
             bindings: Vec::new(),
             virtualization: None,
             source: EntitySource::Unknown,
+            tags: Vec::new(),
         }
     }
 }
@@ -412,6 +415,7 @@ impl Service {
                 service_definition,
                 name,
                 virtualization: virtualization.clone(),
+                tags: Vec::new(),
                 bindings,
                 source: EntitySource::DiscoveryWithMatch {
                     metadata: vec![discovery_metadata],

@@ -9,6 +9,7 @@
 	import { getHostFromId } from '$lib/features/hosts/store';
 	import { Trash2 } from 'lucide-svelte';
 	import { subnets } from '$lib/features/subnets/store';
+	import { tags } from '$lib/features/tags/store';
 
 	export let daemon: Daemon;
 	export let onDelete: (daemon: Daemon) => void = () => {};
@@ -83,7 +84,17 @@
 									label: 'No subnet interfaces',
 									color: 'gray'
 								}
-							]
+							],
+				emptyText: 'No subnet interfaces'
+			},
+			{
+				label: 'Tags',
+				value: daemon.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 		actions: [

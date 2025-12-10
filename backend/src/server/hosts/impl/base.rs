@@ -36,6 +36,8 @@ pub struct HostBase {
     pub source: EntitySource,
     pub virtualization: Option<HostVirtualization>,
     pub hidden: bool,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 impl Default for HostBase {
@@ -52,6 +54,7 @@ impl Default for HostBase {
             source: EntitySource::Unknown,
             virtualization: None,
             hidden: false,
+            tags: Vec::new(),
         }
     }
 }

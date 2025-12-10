@@ -38,7 +38,7 @@
 	// Filter state
 	interface FilterState {
 		[key: string]: {
-			type: 'string' | 'boolean';
+			type: 'string' | 'boolean' | 'array';
 			values: SvelteSet<string>;
 			showTrue?: boolean;
 			showFalse?: boolean;
@@ -73,7 +73,7 @@
 		searchQuery: string;
 		filterState: {
 			[key: string]: {
-				type: 'string' | 'boolean';
+				type: 'string' | 'boolean' | 'array';
 				values: string[];
 				showTrue?: boolean;
 				showFalse?: boolean;
@@ -175,6 +175,11 @@
 						showTrue: true,
 						showFalse: true
 					};
+				} else if (field.type === 'array') {
+					filterState[field.key] = {
+						type: 'array',
+						values: new SvelteSet()
+					};
 				} else {
 					filterState[field.key] = {
 						type: 'string',
@@ -217,7 +222,10 @@
 	});
 
 	// Get value from item using field config
-	function getFieldValue(item: T, field: FieldConfig<T>): string | boolean | Date | null {
+	function getFieldValue(
+		item: T,
+		field: FieldConfig<T>
+	): string | boolean | Date | string[] | null {
 		if (field.getValue) {
 			return field.getValue(item);
 		}
@@ -225,19 +233,27 @@
 		return (item as any)[field.key] ?? null;
 	}
 
-	// Get unique string values for a field
+	// Get unique string values for a field (handles arrays by flattening)
 	function getUniqueValues(field: FieldConfig<T>): string[] {
 		const values = new SvelteSet<string>();
 		items.forEach((item) => {
 			const value = getFieldValue(item, field);
-			if (value !== null && value !== undefined && value !== '') {
+			if (value === null || value === undefined) return;
+
+			if (field.type === 'array' && Array.isArray(value)) {
+				value.forEach((v) => {
+					if (v !== null && v !== undefined && v !== '') {
+						values.add(String(v));
+					}
+				});
+			} else if (value !== '') {
 				values.add(String(value));
 			}
 		});
 		return Array.from(values).sort();
 	}
 
-	// Get groupable fields (only string type fields)
+	// Get groupable fields (only string type fields, not arrays)
 	let groupableFields = $derived(
 		fields.filter((f) => f.type === 'string' && f.filterable !== false)
 	);
@@ -252,6 +268,12 @@
 				const matchesQ = searchableFields.some((field) => {
 					const value = getFieldValue(item, field);
 					if (value === null || value === undefined) return false;
+
+					// Handle array values in search
+					if (field.type === 'array' && Array.isArray(value)) {
+						return value.some((v) => String(v).toLowerCase().includes(q));
+					}
+
 					return String(value).toLowerCase().includes(q);
 				});
 				if (!matchesQ) return false;
@@ -272,6 +294,11 @@
 					if (boolValue && !filterConfig.showTrue) return false;
 					if (!boolValue && !filterConfig.showFalse) return false;
 					return true;
+				} else if (field.type === 'array') {
+					// Array filter: item matches if ANY of its values are in the filter set
+					if (filterConfig.values.size === 0) return true;
+					if (!Array.isArray(value) || value.length === 0) return false;
+					return value.some((v) => filterConfig.values.has(String(v)));
 				} else if (field.type === 'string') {
 					if (filterConfig.values.size === 0) return true;
 					if (value === null || value === undefined) return false;
@@ -304,6 +331,17 @@
 						comparison = aDate.getTime() - bDate.getTime();
 					} else if (field.type === 'boolean') {
 						comparison = (aVal ? 1 : 0) - (bVal ? 1 : 0);
+					} else if (field.type === 'array') {
+						// Sort arrays by length, then by first element
+						const aArr = aVal as string[];
+						const bArr = bVal as string[];
+						comparison = aArr.length - bArr.length;
+						if (comparison === 0 && aArr.length > 0 && bArr.length > 0) {
+							comparison = aArr[0].localeCompare(bArr[0], undefined, {
+								sensitivity: 'base',
+								numeric: true
+							});
+						}
 					} else {
 						// String comparison
 						comparison = String(aVal).localeCompare(String(bVal), undefined, {
@@ -362,10 +400,10 @@
 		}
 	}
 
-	// Toggle string filter value
+	// Toggle string/array filter value
 	function toggleStringFilter(fieldKey: string, value: string) {
 		const filter = filterState[fieldKey];
-		if (!filter || filter.type !== 'string') return;
+		if (!filter || (filter.type !== 'string' && filter.type !== 'array')) return;
 
 		const newValues = new SvelteSet(filter.values);
 		if (newValues.has(value)) {
@@ -409,6 +447,11 @@
 						values: new SvelteSet(),
 						showTrue: true,
 						showFalse: true
+					};
+				} else if (field.type === 'array') {
+					newFilterState[field.key] = {
+						type: 'array',
+						values: new SvelteSet()
 					};
 				} else {
 					newFilterState[field.key] = {

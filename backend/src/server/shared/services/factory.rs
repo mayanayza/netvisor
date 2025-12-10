@@ -14,6 +14,7 @@ use crate::server::{
     services::service::ServiceService,
     shared::{events::bus::EventBus, storage::factory::StorageFactory},
     subnets::service::SubnetService,
+    tags::service::TagService,
     topology::service::main::TopologyService,
     users::service::UserService,
 };
@@ -38,6 +39,7 @@ pub struct ServiceFactory {
     pub email_service: Option<Arc<EmailService>>,
     pub event_bus: Arc<EventBus>,
     pub logging_service: Arc<LoggingService>,
+    pub tag_service: Arc<TagService>,
 }
 
 impl ServiceFactory {
@@ -59,6 +61,8 @@ impl ServiceFactory {
             storage.organizations.clone(),
             event_bus.clone(),
         ));
+
+        let tag_service = Arc::new(TagService::new(storage.tags.clone(), event_bus.clone()));
 
         // Already implements Arc internally due to scheduler + sessions
         let discovery_service = DiscoveryService::new(
@@ -202,6 +206,7 @@ impl ServiceFactory {
             email_service,
             event_bus,
             logging_service,
+            tag_service,
         })
     }
 }

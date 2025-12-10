@@ -5,6 +5,7 @@
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import type { Network } from '../types';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Network;
@@ -38,4 +39,6 @@
 		placeholder="Describe the data flow or purpose of this service chain..."
 		field={description}
 	/> -->
+
+	<TagPicker bind:selectedTagIds={formData.tags} />
 </div>
