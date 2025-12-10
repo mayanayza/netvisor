@@ -120,6 +120,7 @@
 				{loading}
 				{deleting}
 				{actualDisableSave}
+				{formApi}
 			/>
 		{:else}
 			<!-- Default footer -->

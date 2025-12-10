@@ -135,7 +135,7 @@
 	</div>
 
 	<!-- Custom footer -->
-	<svelte:fragment slot="footer">
+	<svelte:fragment slot="footer" let:formApi>
 		<div class="flex w-full flex-col gap-4">
 			<!-- Create Account Button -->
 			<button
@@ -177,10 +177,10 @@
 				<div class="flex flex-grow items-center justify-center">
 					<Checkbox
 						field={subscribedField}
-						label="Subscribe"
+						label="Sign up for product updates via email"
 						{formApi}
 						id="subscribe"
-						helpText="Sign up for product updates via email"
+						helpText=""
 					/>
 				</div>
 			{/if}
