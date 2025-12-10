@@ -16,7 +16,6 @@ jobs:
           RELEASE_URL: ${{ github.event.release.html_url }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          # Truncate body if too long for Discord (max 4096 for embed description)
           BODY="${RELEASE_BODY:0:4000}"
           if [ ${#RELEASE_BODY} -gt 4000 ]; then
             BODY="${BODY}...\n\n[Read full release notes](${RELEASE_URL})"
