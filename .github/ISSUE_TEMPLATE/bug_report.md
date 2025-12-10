@@ -33,4 +33,4 @@ If applicable, add screenshots to help explain your problem.
 Add any other context about the problem here.
 
 **Before submitting**
-[ ] I have reviewed [Troubleshooting](https://github.com/mayanayza/netvisor#troubleshooting) in the readme
+[ ] I have reviewed [Troubleshooting](https://github.com/netvisor-io/netvisor#troubleshooting) in the readme

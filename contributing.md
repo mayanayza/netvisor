@@ -34,7 +34,7 @@ Service definitions are small, focused additions that help NetVisor discover and
 
 ### 2. Bug Reports
 
-Found a bug? [Please open an issue!](https://github.com/mayanayza/netvisor/issues/new?template=bug_report.md)
+Found a bug? [Please open an issue!](https://github.com/netvisor-io/netvisor/issues/new?template=bug_report.md)
 
 ### 3. Documentation
 
@@ -75,7 +75,7 @@ For larger features or bug fixes:
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/mayanayza/netvisor.git
+   git clone https://github.com/netvisor-io/netvisor.git
    cd netvisor
    ```
 

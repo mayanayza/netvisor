@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="mayanayza/netvisor"
+REPO="netvisor-io/netvisor"
 PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 

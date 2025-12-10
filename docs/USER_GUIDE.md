@@ -1057,7 +1057,7 @@ Not currently. IPv6 support is planned for future releases:
 **Not planned**:
 - Full IPv6 subnet scanning (would take too long for /64 networks)
 
-If you need IPv6 support sooner, [open an issue](https://github.com/mayanayza/netvisor/issues/new) describing your use case.
+If you need IPv6 support sooner, [open an issue](https://github.com/netvisor-io/netvisor/issues/new) describing your use case.
 
 ### What services can NetVisor discover?
 
@@ -1077,8 +1077,8 @@ NetVisor automatically detects **200+ common services** including:
 For the complete list, see the [service definitions directory](SERVICES.md).
 
 **Service not detected?**
-- Report it: [Service detection issue](https://github.com/mayanayza/netvisor/issues/new?template=service-detection-issue.md)
-- Request it: [Missing service](https://github.com/mayanayza/netvisor/issues/new?template=missing-service-detection.md)
+- Report it: [Service detection issue](https://github.com/netvisor-io/netvisor/issues/new?template=service-detection-issue.md)
+- Request it: [Missing service](https://github.com/netvisor-io/netvisor/issues/new?template=missing-service-detection.md)
 - Contribute: [Service definition guide](contributing.md#adding-service-definitions)
 
 ### How do I contribute?
@@ -1133,4 +1133,4 @@ See [INSTALLATION.md](INSTALLATION.md#troubleshooting) for more troubleshooting 
 
 ---
 
-**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/mayanayza/netvisor/issues/new).
+**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/netvisor-io/netvisor/issues/new).

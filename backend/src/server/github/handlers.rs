@@ -26,7 +26,7 @@ pub async fn get_stars(
     // Cache miss - fetch from GitHub
     let client = reqwest::Client::new();
     let request = client
-        .get("https://api.github.com/repos/mayanayza/netvisor")
+        .get("https://api.github.com/repos/netvisor-io/netvisor")
         .header("User-Agent", "NetVisor");
 
     match request.send().await {
