@@ -43,24 +43,23 @@ fn get_default_plans() -> Vec<BillingPlan> {
     ]
 }
 
-fn get_enterprise_plan() -> BillingPlan {
-    BillingPlan::Enterprise(PlanConfig {
-        base_cents: 0,
-        rate: BillingRate::Month,
-        trial_days: 14,
-        seat_cents: None,
-        network_cents: None,
-        included_seats: None,
-        included_networks: None,
-    })
-}
+// fn get_enterprise_plan() -> BillingPlan {
+//     BillingPlan::Enterprise(PlanConfig {
+//         base_cents: 0,
+//         rate: BillingRate::Month,
+//         trial_days: 14,
+//         seat_cents: None,
+//         network_cents: None,
+//         included_seats: None,
+//         included_networks: None,
+//     })
+// }
 
 /// Returns both monthly and yearly versions of all plans.
 /// Yearly plans get a 20% discount.
 pub fn get_all_plans() -> Vec<BillingPlan> {
     let monthly_plans = get_default_plans();
     let mut all_plans = monthly_plans.clone();
-    all_plans.push(get_enterprise_plan());
 
     // Add yearly versions with 20% discount
     for plan in monthly_plans {
