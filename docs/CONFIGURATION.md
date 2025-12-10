@@ -229,55 +229,243 @@ netvisor-server:
 
 ## OIDC Setup
 
-NetVisor supports OpenID Connect (OIDC) for enterprise authentication with providers like Authentik, Keycloak, Auth0, Okta, and others.
+NetVisor supports OpenID Connect (OIDC) for enterprise authentication with providers like Authentik, Keycloak, Auth0, Okta, PocketID, and others.
 
-To get started, refer to oidc.toml.example. You can set up multiple OIDC providers by adding entries with a `[[oidc_providers]]` header and the listd fields. Create a copy of the file named oidc.toml and fill the fields for your provider(s).
+### Quick Start
 
-### Provider Configuration
+1. Copy `oidc.toml.example` to `oidc.toml`
+2. Configure your provider settings (see examples below)
+3. Mount the file in docker-compose (see [Docker Compose Setup](#oidc-with-docker-compose))
+4. Restart the server
 
-**Callback URL**: Configure this in your OIDC provider:
+### Configuration File Format
+
+```toml
+[[oidc_providers]]
+name = "Provider Name"           # Display name in UI
+slug = "provider-slug"           # Used in callback URL (lowercase, no spaces)
+logo = "https://..."             # Optional: logo URL for UI
+issuer_url = "https://..."       # Provider's OIDC issuer URL
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+```
+
+You can configure multiple providers by adding multiple `[[oidc_providers]]` sections.
+
+### Callback URL Format
+
+Configure this URL in your OIDC provider's redirect/callback settings:
 
 ```
-http://your-netvisor-domain:60072/api/auth/oidc/callback
+http://your-netvisor-domain:60072/api/auth/oidc/{slug}/callback
 ```
 
-Or with HTTPS:
+Replace `{slug}` with the slug value from your oidc.toml. For example, if `slug = "authentik"`:
 
 ```
-https://your-netvisor-domain/api/auth/oidc/callback
+http://netvisor.local:60072/api/auth/oidc/authentik/callback
 ```
 
-**Required scopes**:
-
-- `openid` - OIDC standard
-- `email` - For user email address
-- `profile` - For user display name (optional)
+**Required scopes**: `openid`, `email`, `profile` (profile is optional but recommended)
 
 ### OIDC with Docker Compose
 
-If you want to use OIDC with NetVisor's docker compose deployment, you'll need to add the following volume mount:
+Add the following volume mount to your `netvisor-server` service:
 
+```yaml
+services:
+  netvisor-server:
+    image: mayanayza/netvisor-server:latest
+    volumes:
+      - ./oidc.toml:/oidc.toml:ro
+    # ... rest of config
 ```
-volumes:
-  - ./oidc.toml:/oidc.toml:ro
-```
 
-### Example: Authentik
+### Provider-Specific Examples
 
-1. **Create Application** in Authentik:
-   - Name: NetVisor
-   - Provider: OAuth2/OpenID Provider
+#### Authentik
+
+1. **Create Application** in Authentik Admin → Applications → Create:
+   - Name: `NetVisor`
+   - Slug: `netvisor`
+   - Provider: Create a new OAuth2/OpenID Provider
 
 2. **Configure Provider**:
-   - Redirect URI: `http://netvisor.local:60072/api/auth/oidc/authentik/callback`
-      - Note: the value you use in place of `authentik` in this url for your provider needs to match the `slug` field in oidc.toml.
-   - Scopes: `openid email profile`
-   - Client Type: Confidential
-   - Copy Client ID and Client Secret
+   - Name: `NetVisor OIDC`
+   - Authorization flow: `default-provider-authorization-implicit-consent`
+   - Client type: `Confidential`
+   - Redirect URIs: `http://your-netvisor:60072/api/auth/oidc/authentik/callback`
+   - Copy the Client ID and Client Secret
 
-3. **Set Variables in oidc.toml**
+3. **Find your Issuer URL**:
+   - Go to Providers → your provider → OpenID Configuration Issuer
+   - Usually: `https://auth.yourdomain.com/application/o/netvisor/`
+   - **Important**: Remove trailing slash if present (see [Common Issues](#common-oidc-issues))
 
-4. **Restart server** and test login
+4. **Configure oidc.toml**:
+
+```toml
+[[oidc_providers]]
+name = "Authentik"
+slug = "authentik"
+logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg"
+issuer_url = "https://auth.yourdomain.com/application/o/netvisor"
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+```
+
+#### Keycloak
+
+1. **Create Client** in Keycloak Admin → Clients → Create:
+   - Client ID: `netvisor`
+   - Client type: `OpenID Connect`
+   - Client authentication: `On`
+
+2. **Configure Client Settings**:
+   - Valid redirect URIs: `http://your-netvisor:60072/api/auth/oidc/keycloak/callback`
+   - Web origins: `http://your-netvisor:60072`
+
+3. **Get Credentials**:
+   - Go to Credentials tab
+   - Copy Client Secret
+
+4. **Configure oidc.toml**:
+
+```toml
+[[oidc_providers]]
+name = "Keycloak"
+slug = "keycloak"
+logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/keycloak.svg"
+issuer_url = "https://keycloak.yourdomain.com/realms/your-realm"
+client_id = "netvisor"
+client_secret = "your-client-secret"
+```
+
+#### PocketID
+
+1. **Create OIDC Client** in PocketID:
+   - Go to OIDC Clients → Add Client
+   - Name: `NetVisor`
+   - Callback URLs: `http://your-netvisor:60072/api/auth/oidc/pocketid/callback`
+
+2. **Copy Credentials**:
+   - Client ID
+   - Client Secret
+
+3. **Configure oidc.toml**:
+
+```toml
+[[oidc_providers]]
+name = "PocketID"
+slug = "pocketid"
+logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/pocketid.svg"
+issuer_url = "https://pocketid.yourdomain.com"
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+```
+
+#### Auth0
+
+1. **Create Application** in Auth0 Dashboard → Applications → Create:
+   - Type: `Regular Web Application`
+   - Name: `NetVisor`
+
+2. **Configure Application Settings**:
+   - Allowed Callback URLs: `http://your-netvisor:60072/api/auth/oidc/auth0/callback`
+   - Allowed Web Origins: `http://your-netvisor:60072`
+
+3. **Configure oidc.toml**:
+
+```toml
+[[oidc_providers]]
+name = "Auth0"
+slug = "auth0"
+logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/auth0.svg"
+issuer_url = "https://your-tenant.auth0.com"
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+```
+
+#### Okta
+
+1. **Create App Integration** in Okta Admin → Applications → Create:
+   - Sign-in method: `OIDC - OpenID Connect`
+   - Application type: `Web Application`
+
+2. **Configure Settings**:
+   - Sign-in redirect URIs: `http://your-netvisor:60072/api/auth/oidc/okta/callback`
+   - Sign-out redirect URIs: `http://your-netvisor:60072`
+
+3. **Configure oidc.toml**:
+
+```toml
+[[oidc_providers]]
+name = "Okta"
+slug = "okta"
+logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/okta.svg"
+issuer_url = "https://your-org.okta.com"
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+```
+
+### Common OIDC Issues
+
+#### "Unexpected issuer URI" error
+
+```
+Failed to generate auth URL: Validation error: unexpected issuer URI
+`https://auth.example.com/app/` (expected `https://auth.example.com/app`)
+```
+
+**Cause**: Trailing slash mismatch between your config and what the provider returns.
+
+**Solution**: Try both with and without trailing slash in `issuer_url`. The value must exactly match what your provider returns in its `.well-known/openid-configuration`.
+
+To check what your provider expects:
+```bash
+curl https://your-provider/.well-known/openid-configuration | jq .issuer
+```
+
+#### "Invalid redirect URI" error
+
+**Cause**: The callback URL in your provider doesn't match what NetVisor sends.
+
+**Solution**: Ensure the redirect URI in your provider exactly matches:
+```
+http://your-netvisor:60072/api/auth/oidc/{slug}/callback
+```
+
+Common mistakes:
+- Wrong protocol (http vs https)
+- Wrong port
+- Wrong slug (must match oidc.toml)
+- Missing `/callback` at the end
+
+#### OIDC button not appearing in UI
+
+**Causes**:
+1. oidc.toml file not mounted in Docker
+2. oidc.toml has syntax errors
+3. Server not restarted after adding config
+
+**Solution**:
+1. Verify the volume mount exists in docker-compose.yml
+2. Validate TOML syntax (use a TOML validator)
+3. Restart with `docker compose restart netvisor-server`
+4. Check server logs: `docker logs netvisor-server`
+
+#### "Connection refused" when authenticating
+
+**Cause**: NetVisor server can't reach your OIDC provider.
+
+**Solutions**:
+1. Ensure the provider URL is reachable from the server container
+2. If provider is internal, ensure Docker can resolve the hostname
+3. Add provider to Docker's extra_hosts if needed:
+   ```yaml
+   extra_hosts:
+     - "auth.internal:192.168.1.100"
+   ```
 
 ## Session Security
 
