@@ -7,7 +7,8 @@
 		BackgroundVariant,
 		type EdgeMarkerType,
 		useNodesInitialized,
-		type Connection
+		type Connection,
+		useSvelteFlow
 	} from '@xyflow/svelte';
 	import { type Node, type Edge } from '@xyflow/svelte';
 	import '@xyflow/svelte/dist/style.css';
@@ -28,6 +29,34 @@
 	import CustomEdge from './CustomEdge.svelte';
 	import { EdgeHandle, type TopologyEdge } from '../../types/base';
 	import { updateConnectedNodes, toggleEdgeHover, getEdgeDisplayState } from '../../interactions';
+	import { onMount } from 'svelte';
+
+	const { fitView } = useSvelteFlow();
+	let containerElement: HTMLDivElement;
+
+	export function triggerFitView() {
+		requestAnimationFrame(() => fitView());
+	}
+
+	onMount(() => {
+		const { fitView } = useSvelteFlow();
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting) {
+					requestAnimationFrame(() => fitView());
+					observer.disconnect();
+				}
+			},
+			{ threshold: 0.1 }
+		);
+
+		if (containerElement) {
+			observer.observe(containerElement);
+		}
+
+		return () => observer.disconnect();
+	});
 
 	// Define node types
 	const nodeTypes = {
@@ -247,7 +276,10 @@
 	}
 </script>
 
-<div class="h-[calc(100vh-150px)] w-full overflow-hidden rounded-2xl border border-gray-700">
+<div
+	class="h-[calc(100vh-150px)] w-full overflow-hidden rounded-2xl border border-gray-700"
+	bind:this={containerElement}
+>
 	<SvelteFlow
 		nodes={$nodes}
 		edges={$edges}

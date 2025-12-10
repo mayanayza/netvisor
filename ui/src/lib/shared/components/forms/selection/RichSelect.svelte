@@ -2,7 +2,7 @@
 	import { ChevronDown } from 'lucide-svelte';
 	import ListSelectItem from './ListSelectItem.svelte';
 	import type { EntityDisplayComponent } from './types';
-	import { tick } from 'svelte';
+	import { tick, onMount } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 
 	export let label: string = '';
@@ -24,6 +24,36 @@
 	let dropdownPosition = { top: 0, left: 0, width: 0 };
 	let openUpward = false;
 	let filterText = '';
+
+	// Portal container for escaping transform contexts (e.g., SvelteFlow)
+	let portalContainer: HTMLDivElement | null = null;
+
+	onMount(() => {
+		portalContainer = document.createElement('div');
+		portalContainer.style.position = 'absolute';
+		portalContainer.style.top = '0';
+		portalContainer.style.left = '0';
+		portalContainer.style.width = '0';
+		portalContainer.style.height = '0';
+		document.body.appendChild(portalContainer);
+
+		return () => {
+			portalContainer?.remove();
+		};
+	});
+
+	// Portal action to move element to body, escaping any transform contexts
+	function portal(node: HTMLElement) {
+		if (portalContainer) {
+			portalContainer.appendChild(node);
+		}
+		return {
+			destroy() {
+				// Node will be removed when portalContainer is cleaned up
+				// or when Svelte removes it from the DOM
+			}
+		};
+	}
 
 	$: selectedItem = options.find((i) => displayComponent.getId(i) === selectedValue);
 
@@ -201,10 +231,11 @@
 	{/if}
 </div>
 
-<!-- Portal dropdown - positioned once, no scroll tracking -->
-{#if isOpen && !disabled}
+<!-- Portal dropdown to body - escapes SvelteFlow transform context -->
+{#if isOpen && !disabled && portalContainer}
 	<div
 		bind:this={dropdownElement}
+		use:portal
 		class="fixed z-[9999] max-h-96 overflow-hidden scroll-smooth rounded-md border border-gray-600 bg-gray-700 shadow-lg"
 		style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px; width: {dropdownPosition.width}px;
            {openUpward ? 'transform: translateY(-100%);' : ''}"
