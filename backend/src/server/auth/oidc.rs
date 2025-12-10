@@ -1,6 +1,6 @@
 use anyhow::{Error, Result, anyhow};
 use bad_email::is_email_unwanted;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use email_address::EmailAddress;
 use std::{collections::HashMap, net::IpAddr, str::FromStr, sync::Arc};
 use uuid::Uuid;
@@ -91,6 +91,8 @@ impl OidcService {
         provider_slug: &str,
         code: &str,
         pending_auth: OidcPendingAuth,
+        subscribed: bool,
+        terms_accepted_at: Option<DateTime<Utc>>,
         params: LoginRegisterParams,
     ) -> Result<User> {
         let provider = self
@@ -103,7 +105,6 @@ impl OidcService {
             ip,
             user_agent,
             network_ids,
-            subscribed,
         } = params;
 
         // Exchange code for user info using provider
@@ -149,7 +150,7 @@ impl OidcService {
                 org_id,
                 permissions,
                 network_ids,
-                subscribed,
+                terms_accepted_at,
             })
             .await?;
 
@@ -166,7 +167,8 @@ impl OidcService {
                 metadata: serde_json::json!({
                     "method": "oidc",
                     "provider": provider.slug,
-                    "provider_name": provider.name
+                    "provider_name": provider.name,
+                    "subscribed": subscribed
                 }),
                 authentication: user.clone().into(),
             })

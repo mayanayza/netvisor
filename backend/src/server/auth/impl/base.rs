@@ -1,4 +1,5 @@
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
+use chrono::{DateTime, Utc};
 use email_address::EmailAddress;
 use std::net::IpAddr;
 use uuid::Uuid;
@@ -9,7 +10,6 @@ pub struct LoginRegisterParams {
     pub ip: IpAddr,
     pub user_agent: Option<String>,
     pub network_ids: Vec<Uuid>,
-    pub subscribed: bool,
 }
 
 pub struct ProvisionUserParams {
@@ -20,5 +20,5 @@ pub struct ProvisionUserParams {
     pub org_id: Option<Uuid>,
     pub permissions: Option<UserOrgPermissions>,
     pub network_ids: Vec<Uuid>,
-    pub subscribed: bool,
+    pub terms_accepted_at: Option<DateTime<Utc>>,
 }

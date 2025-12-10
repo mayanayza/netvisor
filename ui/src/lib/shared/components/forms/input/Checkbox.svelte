@@ -7,9 +7,10 @@
 	export let formApi: FormApi;
 	export let field: BooleanFieldType;
 	export let id: string;
+	export let required: boolean = false;
 </script>
 
-<FormField {label} {formApi} {field} {helpText} {id} inline={true}>
+<FormField {label} {formApi} {field} {helpText} {id} inline={true} {required}>
 	<input
 		type="checkbox"
 		{id}

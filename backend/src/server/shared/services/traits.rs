@@ -105,6 +105,10 @@ where
         let created = self.storage().create(&entity).await?;
         let trigger_stale = created.triggers_staleness(None);
 
+        let metadata = serde_json::json!({
+            "trigger_stale": trigger_stale
+        });
+
         self.event_bus()
             .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
@@ -114,9 +118,7 @@ where
                 entity_type: created.clone().into(),
                 operation: EntityOperation::Created,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({
-                    "trigger_stale": trigger_stale
-                }),
+                metadata,
                 authentication,
             })
             .await?;
