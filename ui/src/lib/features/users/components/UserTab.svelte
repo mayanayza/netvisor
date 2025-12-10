@@ -15,9 +15,10 @@
 		organization
 	} from '$lib/features/organizations/store';
 	import { UserPlus } from 'lucide-svelte';
-	import { isUser, type UserOrInvite } from '../types';
+	import { isUser, type User, type UserOrInvite } from '../types';
 	import InviteModal from './InviteModal.svelte';
 	import { billingPlans, metadata } from '$lib/shared/stores/metadata';
+	import UserEditModal from './UserEditModal.svelte';
 
 	// Force Svelte to track metadata reactivity
 	$effect(() => {
@@ -28,6 +29,8 @@
 	const loading = loadData([getUsers, getInvites, getOrganization]);
 
 	let showInviteModal = $state(false);
+	let showEditModal = $state(false);
+	let editingUser = $state<User | null>(null);
 
 	// Combine users and invites into single array
 	let combinedItems = $derived([
@@ -55,6 +58,16 @@
 		if (confirm(`Are you sure you want to delete ${ids.length} Users?`)) {
 			await bulkDeleteUsers(ids);
 		}
+	}
+
+	function handleEditUser(user: User) {
+		editingUser = user;
+		showEditModal = true;
+	}
+
+	function handleCloseEditModal() {
+		showEditModal = false;
+		editingUser = null;
 	}
 
 	// Only define fields for users (invites won't be filtered/sorted)
@@ -129,7 +142,13 @@
 				onSelectionChange: (selected: boolean) => void
 			)}
 				{#if isUser(item)}
-					<UserCard user={item.data} {viewMode} selected={isSelected} {onSelectionChange} />
+					<UserCard
+						user={item.data}
+						{viewMode}
+						selected={isSelected}
+						{onSelectionChange}
+						onEdit={handleEditUser}
+					/>
 				{:else}
 					<InviteCard invite={item.data} {viewMode} />
 				{/if}
@@ -139,3 +158,4 @@
 </div>
 
 <InviteModal isOpen={showInviteModal} onClose={handleCloseInviteModal} />
+<UserEditModal isOpen={showEditModal} user={editingUser} onClose={handleCloseEditModal} />

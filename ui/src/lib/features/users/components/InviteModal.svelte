@@ -43,6 +43,11 @@
 	let generatingInvite = $state(false);
 	let invite = $state<OrganizationInvite | null>(null);
 
+	const networksNotNeeded: string[] = permissions
+		.getItems()
+		.filter((p) => p.metadata.network_permissions)
+		.map((p) => p.id);
+
 	// Make permission options reactive to metadata and currentUser changes
 	let permissionOptions = $derived(
 		permissions
@@ -63,8 +68,6 @@
 	let ctaText = $derived(usingEmail ? 'Send Invite Link' : 'Generate Invite Link');
 	let ctaLoadingText = $derived(usingEmail ? 'Sending...' : 'Generating...');
 	let CtaIcon = $derived(usingEmail ? Send : RotateCcw);
-
-	const networksNotNeeded: UserOrgPermissions[] = ['Admin', 'Owner'];
 
 	let selectedNetworks: Network[] = $state([]);
 
@@ -210,6 +213,12 @@
 				itemDisplayComponent={NetworkDisplay}
 				{formApi}
 			/>
+		{:else}
+			<div class="card card-static">
+				<p class="text-secondary text-sm">
+					Users with {$permissionsField.value} permissions have access to all networks.
+				</p>
+			</div>
 		{/if}
 
 		{#if enableEmail}
