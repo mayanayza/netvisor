@@ -3,15 +3,17 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
-	import type { Network } from '../types';
+	import type { CreateNetworkRequest, Network } from '../types';
 	import { createEmptyNetworkFormData } from '../store';
 	import NetworkDetailsForm from './NetworkDetailsForm.svelte';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { organization } from '$lib/features/organizations/store';
+	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
+	import { field } from 'svelte-forms';
 
 	export let network: Network | null = null;
 	export let isOpen = false;
-	export let onCreate: (data: Network) => Promise<void> | void;
+	export let onCreate: (data: CreateNetworkRequest) => Promise<void> | void;
 	export let onUpdate: (id: string, data: Network) => Promise<void> | void;
 	export let onClose: () => void;
 	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
@@ -48,7 +50,10 @@
 				if (isEditing && network) {
 					await onUpdate(network.id, networkData);
 				} else {
-					await onCreate(networkData);
+					await onCreate({
+						network: networkData,
+						seed_baseline_data: $seedDataField.value
+					});
 				}
 			} finally {
 				loading = false;
@@ -72,6 +77,8 @@
 
 	// Dynamic labels based on create/edit mode
 	$: saveLabel = isEditing ? 'Update Network' : 'Create Network';
+
+	const seedDataField = field('seedData', true, []);
 
 	let colorHelper = entities.getColorHelper('Network');
 </script>
@@ -99,6 +106,19 @@
 		<div class="flex-1 overflow-y-auto">
 			<div class="space-y-8 p-6">
 				<NetworkDetailsForm {formApi} bind:formData />
+
+				{#if !isEditing}
+					<Checkbox
+						label="Populate with baseline data"
+						helpText="NetVisor will create two subnets - one representing a remote network, one representing
+									the internet - to help you organize services which are not discoverable on your own
+									network, and three hosts with example services to help you understand how NetVisor
+									works. You can delete this data at any time."
+						id="seedData"
+						field={seedDataField}
+						{formApi}
+					/>
+				{/if}
 
 				{#if isEditing}
 					<EntityMetadataSection entities={[network]} />

@@ -6,3 +6,8 @@ export interface Network {
 	is_default: boolean;
 	organization_id: string;
 }
+
+export interface CreateNetworkRequest {
+	network: Network;
+	seed_baseline_data: boolean;
+}
