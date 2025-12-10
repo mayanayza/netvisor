@@ -911,6 +911,13 @@
   },
   {
     "category": "Virtualization",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
+  },
+  {
+    "category": "Virtualization",
     "description": "A generic docker container",
     "discovery_pattern": "All of: (Service is running in a docker container, A custom match pattern evaluated at runtime)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
@@ -1468,12 +1475,5 @@
     "discovery_pattern": "67/udp is open",
     "logo_url": "",
     "name": "Dhcp Server"
-  },
-  {
-    "category": "Virtualization",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
   }
 ]
