@@ -36,7 +36,7 @@
 	// Permission levels that don't need network assignment
 	const networksNotNeeded: string[] = permissions
 		.getItems()
-		.filter((p) => p.metadata.network_permissions)
+		.filter((p) => p.metadata.manage_org_entities)
 		.map((p) => p.id);
 
 	// Create form field for permissions
@@ -53,7 +53,7 @@
 				if (!$currentUser) return false;
 				const canManage = permissions
 					.getMetadata($currentUser.permissions)
-					.can_manage.includes(p.id);
+					.can_manage_user_permissions.includes(p.id);
 				return canManage;
 			})
 			.map((p) => ({ value: p.id, label: p.name, description: p.description }))

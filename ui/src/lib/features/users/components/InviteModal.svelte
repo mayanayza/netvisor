@@ -45,7 +45,7 @@
 
 	const networksNotNeeded: string[] = permissions
 		.getItems()
-		.filter((p) => p.metadata.network_permissions)
+		.filter((p) => p.metadata.manage_org_entities)
 		.map((p) => p.id);
 
 	// Make permission options reactive to metadata and currentUser changes
