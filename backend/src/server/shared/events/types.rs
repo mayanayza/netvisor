@@ -12,6 +12,45 @@ pub enum Event {
     Telemetry(TelemetryEvent),
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub enum EventOperation {
+    EntityOperation(EntityOperation),
+    AuthOperation(AuthOperation),
+    TelemetryOperation(TelemetryOperation),
+}
+
+impl Display for EventOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            EventOperation::EntityOperation(entity_operation) => entity_operation.to_string(),
+            EventOperation::AuthOperation(auth_operation) => auth_operation.to_string(),
+            EventOperation::TelemetryOperation(telemetry_operation) => {
+                telemetry_operation.to_string()
+            }
+        };
+
+        write!(f, "{}", string)
+    }
+}
+
+impl From<EntityOperation> for EventOperation {
+    fn from(value: EntityOperation) -> Self {
+        Self::EntityOperation(value)
+    }
+}
+
+impl From<AuthOperation> for EventOperation {
+    fn from(value: AuthOperation) -> Self {
+        Self::AuthOperation(value)
+    }
+}
+
+impl From<TelemetryOperation> for EventOperation {
+    fn from(value: TelemetryOperation) -> Self {
+        Self::TelemetryOperation(value)
+    }
+}
+
 impl Event {
     pub fn id(&self) -> Uuid {
         match self {
@@ -42,6 +81,22 @@ impl Event {
             Event::Auth(e) => e.metadata.clone(),
             Event::Entity(e) => e.metadata.clone(),
             Event::Telemetry(e) => e.metadata.clone(),
+        }
+    }
+
+    pub fn authentication(&self) -> AuthenticatedEntity {
+        match self {
+            Event::Auth(e) => e.authentication.clone(),
+            Event::Entity(e) => e.authentication.clone(),
+            Event::Telemetry(e) => e.authentication.clone(),
+        }
+    }
+
+    pub fn operation(&self) -> EventOperation {
+        match self {
+            Event::Auth(e) => e.operation.clone().into(),
+            Event::Entity(e) => e.operation.clone().into(),
+            Event::Telemetry(e) => e.operation.clone().into(),
         }
     }
 

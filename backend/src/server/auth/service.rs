@@ -81,7 +81,6 @@ impl AuthService {
             ip,
             user_agent,
             network_ids,
-            subscribed,
         } = params;
 
         request
@@ -98,6 +97,12 @@ impl AuthService {
             return Err(anyhow!("Email address already taken"));
         }
 
+        let terms_accepted_at = if request.terms_accepted {
+            Some(Utc::now())
+        } else {
+            None
+        };
+
         // Provision user with password
         let user = self
             .provision_user(ProvisionUserParams {
@@ -108,7 +113,7 @@ impl AuthService {
                 org_id,
                 permissions,
                 network_ids,
-                subscribed,
+                terms_accepted_at,
             })
             .await?;
 
@@ -123,6 +128,7 @@ impl AuthService {
                 user_agent,
                 metadata: serde_json::json!({
                     "method": "password",
+                    "subscribed": request.subscribed
                 }),
                 authentication: user.clone().into(),
             })
@@ -141,103 +147,78 @@ impl AuthService {
             org_id,
             permissions,
             network_ids,
-            subscribed,
+            terms_accepted_at,
         } = params;
-
-        let all_users = self
-            .user_service
-            .get_all(EntityFilter::unfiltered())
-            .await?;
-
-        // Find seed user (only exists if NO users have been created yet)
-        let seed_user: Option<User> = all_users
-            .iter()
-            .find(|u| u.base.password_hash.is_none() && u.base.oidc_subject.is_none())
-            .cloned();
 
         let mut is_new_org = false;
 
-        let user = if let Some(mut seed_user) = seed_user {
-            // First user ever - claim seed user
-            tracing::info!("First user registration - claiming seed user");
-            seed_user.base.email = email;
-
-            if let Some(hash) = password_hash {
-                seed_user.set_password(hash);
-            }
-
-            if let Some(subject) = oidc_subject {
-                seed_user.base.oidc_subject = Some(subject);
-                seed_user.base.oidc_provider = oidc_provider;
-                seed_user.base.oidc_linked_at = Some(chrono::Utc::now());
-            }
-
+        // If being invited, use provied org ID, otherwise create a new one
+        let organization_id = if let Some(org_id) = org_id {
+            org_id
+        } else {
             is_new_org = true;
 
-            self.user_service
-                .update(&mut seed_user, AuthenticatedEntity::System)
-                .await
-        } else {
-            // If being invited, use provied org ID, otherwise create a new one
-            let organization_id = if let Some(org_id) = org_id {
-                org_id
-            } else {
-                is_new_org = true;
-
-                // Create new organization for this user
-                let organization = self
-                    .organization_service
-                    .create(
-                        Organization::new(OrganizationBase {
-                            stripe_customer_id: None,
-                            name: "My Organization".to_string(),
-                            plan: None,
-                            plan_status: None,
-                            onboarding: vec![],
-                        }),
-                        AuthenticatedEntity::System,
-                    )
-                    .await?;
-                organization.id
-            };
-
-            // If being invited, will have permissions; otherwise, new user and should be owner of org
-            let permissions = permissions.unwrap_or(UserOrgPermissions::Owner);
-
-            // Create user based on auth method
-            if let Some(hash) = password_hash {
-                self.user_service
-                    .create(
-                        User::new(UserBase::new_password(
-                            email,
-                            hash,
-                            organization_id,
-                            permissions,
-                            network_ids,
-                        )),
-                        AuthenticatedEntity::System,
-                    )
-                    .await
-            } else if let Some(oidc_subject) = oidc_subject {
-                self.user_service
-                    .create(
-                        User::new(UserBase::new_oidc(
-                            email,
-                            oidc_subject,
-                            oidc_provider,
-                            organization_id,
-                            permissions,
-                            network_ids,
-                        )),
-                        AuthenticatedEntity::System,
-                    )
-                    .await
-            } else {
-                Err(anyhow!("Must provide either password or OIDC credentials"))
-            }
+            // Create new organization for this user
+            let organization = self
+                .organization_service
+                .create(
+                    Organization::new(OrganizationBase {
+                        stripe_customer_id: None,
+                        name: "My Organization".to_string(),
+                        plan: None,
+                        plan_status: None,
+                        onboarding: vec![],
+                    }),
+                    AuthenticatedEntity::System,
+                )
+                .await?;
+            organization.id
         };
 
-        if is_new_org && let Ok(user) = &user {
+        // If being invited, will have permissions (default to None in case permissions were lost for some reason); otherwise, new user and should be owner of org
+        let permissions = if is_new_org {
+            UserOrgPermissions::Owner
+        } else {
+            permissions.unwrap_or(UserOrgPermissions::None)
+        };
+
+        // Create user based on auth method
+        let user = if let Some(hash) = password_hash {
+            Ok(self
+                .user_service
+                .create(
+                    User::new(UserBase::new_password(
+                        email,
+                        hash,
+                        organization_id,
+                        permissions,
+                        network_ids,
+                        terms_accepted_at,
+                    )),
+                    AuthenticatedEntity::System,
+                )
+                .await?)
+        } else if let Some(oidc_subject) = oidc_subject {
+            Ok(self
+                .user_service
+                .create(
+                    User::new(UserBase::new_oidc(
+                        email,
+                        oidc_subject,
+                        oidc_provider,
+                        organization_id,
+                        permissions,
+                        network_ids,
+                        terms_accepted_at,
+                    )),
+                    AuthenticatedEntity::System,
+                )
+                .await?)
+        } else {
+            Err(anyhow!("Must provide either password or OIDC credentials"))
+        }?;
+
+        if is_new_org {
             self.event_bus
                 .publish_telemetry(TelemetryEvent {
                     id: Uuid::new_v4(),
@@ -245,14 +226,12 @@ impl AuthService {
                     organization_id: user.base.organization_id,
                     operation: TelemetryOperation::OrgCreated,
                     timestamp: Utc::now(),
-                    metadata: serde_json::json!({
-                        "subscribed": subscribed
-                    }),
+                    metadata: serde_json::json!({}),
                 })
                 .await?;
         }
 
-        user
+        Ok(user)
     }
 
     /// Login with username and password

@@ -8,19 +8,10 @@ use axum::{
 use axum_client_ip::ClientIpSource;
 use clap::Parser;
 use netvisor::server::{
-    auth::middleware::{
-        auth::AuthenticatedEntity, logging::request_logging_middleware,
-        rate_limit::rate_limit_middleware,
-    },
+    auth::middleware::{logging::request_logging_middleware, rate_limit::rate_limit_middleware},
     billing::plans::get_all_plans,
     config::{AppState, ServerCli, ServerConfig},
-    organizations::r#impl::base::{Organization, OrganizationBase},
-    shared::{
-        handlers::{cache::AppCache, factory::create_router},
-        services::traits::CrudService,
-        storage::{filter::EntityFilter, traits::StorableEntity},
-    },
-    users::r#impl::base::{User, UserBase},
+    shared::handlers::{cache::AppCache, factory::create_router},
 };
 use reqwest::header;
 use tower::ServiceBuilder;
@@ -55,7 +46,6 @@ async fn main() -> anyhow::Result<()> {
 
     // Create app state
     let state = AppState::new(config).await?;
-    let user_service = state.services.user_service.clone();
     let discovery_service = state.services.discovery_service.clone();
     let organization_service = state.services.organization_service.clone();
     let billing_service = state.services.billing_service.clone();
@@ -204,33 +194,8 @@ async fn main() -> anyhow::Result<()> {
     // Start cron for discovery scheduler
     discovery_service.start_scheduler().await?;
 
-    let all_users = user_service.get_all(EntityFilter::unfiltered()).await?;
-
     if let Some(billing_service) = billing_service {
         billing_service.initialize_products(get_all_plans()).await?;
-    }
-
-    // First load - populate user and org
-    if all_users.is_empty() {
-        let organization = organization_service
-            .create(
-                Organization::new(OrganizationBase {
-                    stripe_customer_id: None,
-                    plan: None,
-                    plan_status: None,
-                    name: "My Organization".to_string(),
-                    onboarding: vec![],
-                }),
-                AuthenticatedEntity::System,
-            )
-            .await?;
-
-        user_service
-            .create(
-                User::new(UserBase::new_seed(organization.id)),
-                AuthenticatedEntity::System,
-            )
-            .await?;
     }
 
     tokio::signal::ctrl_c().await?;

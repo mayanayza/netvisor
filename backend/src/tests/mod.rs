@@ -82,7 +82,9 @@ pub fn organization() -> Organization {
 }
 
 pub fn user(organization_id: &Uuid) -> User {
-    User::new(UserBase::new_seed(*organization_id))
+    let mut user = User::new(UserBase::default());
+    user.base.organization_id = *organization_id;
+    user
 }
 
 pub fn network(organization_id: &Uuid) -> Network {

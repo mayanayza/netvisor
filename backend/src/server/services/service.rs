@@ -94,9 +94,9 @@ impl CrudService<Service> for ServiceService {
                     || service.id == existing_service.id =>
             {
                 tracing::warn!(
-                    "Duplicate service for {} found, {} - upserting discovery data...",
-                    service,
-                    existing_service,
+                    service = %service,
+                    existing_service = %existing_service,
+                    "Duplicate service found, upserting discovery data...",
                 );
                 self.upsert_service(existing_service, service, authentication)
                     .await?

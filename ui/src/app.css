@@ -263,6 +263,10 @@
 		@apply text-gray-600;
 	}
 
+	.text-link {
+		@apply font-medium text-blue-400 hover:text-blue-300;
+	}
+
 	/* Semantic text colors for status/actions */
 	.text-success {
 		@apply text-green-400;
@@ -282,6 +286,33 @@
 
 	.text-accent {
 		@apply text-purple-400;
+	}
+
+	/* Scrollbars */
+
+	/* Scrollbar styling for dark theme */
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: #374151 transparent;
+	}
+
+	/* Webkit browsers (Chrome, Safari, Edge) */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background-color: #374151;
+		border-radius: 4px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background-color: #4b5563;
 	}
 }
 

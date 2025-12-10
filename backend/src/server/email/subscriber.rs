@@ -3,7 +3,7 @@ use crate::server::{
     email::traits::EmailService,
     shared::events::{
         bus::{EventFilter, EventSubscriber},
-        types::Event,
+        types::{AuthOperation, Event},
     },
 };
 use anyhow::Error;
@@ -14,8 +14,12 @@ use std::collections::HashMap;
 #[async_trait]
 impl EventSubscriber for EmailService {
     fn event_filter(&self) -> EventFilter {
-        // All telemetry events
-        EventFilter::telemetry_only(None)
+        EventFilter {
+            entity_operations: Some(HashMap::new()),
+            auth_operations: Some(vec![AuthOperation::Register]),
+            telemetry_operations: None,
+            network_ids: Some(vec![]),
+        }
     }
 
     async fn handle_events(&self, events: Vec<Event>) -> Result<(), Error> {
@@ -24,10 +28,11 @@ impl EventSubscriber for EmailService {
         }
 
         for event in events {
-            if let Event::Telemetry(e) = event
-                && let AuthenticatedEntity::User { email, .. } = e.authentication
-            {
-                let mut metadata_map: HashMap<String, Value> = serde_json::from_value(e.metadata)?;
+            if let AuthenticatedEntity::User { email, .. } = event.authentication() {
+                let metadata = event.metadata();
+                let operation = event.operation();
+
+                let mut metadata_map: HashMap<String, Value> = serde_json::from_value(metadata)?;
 
                 let subscribed = metadata_map
                     .remove("subscribed")
@@ -37,13 +42,13 @@ impl EventSubscriber for EmailService {
                 let metadata = serde_json::to_value(metadata_map)?;
 
                 self.track_event(
-                    e.operation.to_string().to_lowercase(),
+                    operation.to_string().to_lowercase(),
                     email,
                     subscribed,
                     metadata,
                 )
                 .await?;
-            }
+            };
         }
 
         Ok(())
