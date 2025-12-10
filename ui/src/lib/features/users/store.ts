@@ -30,3 +30,12 @@ export async function bulkDeleteUsers(ids: string[]) {
 
 	return result;
 }
+
+export async function updateUserAsAdmin(user: User) {
+	return await api.request<User, User[]>(
+		`/users/${user.id}/admin`,
+		users,
+		(updatedUser, current) => current.map((u) => (u.id === user.id ? updatedUser : u)),
+		{ method: 'PUT', body: JSON.stringify(user) }
+	);
+}
