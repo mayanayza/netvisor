@@ -4,6 +4,7 @@
 	import type { Group } from '../types/base';
 	import { entities, groupTypes } from '$lib/shared/stores/metadata';
 	import { formatServiceLabels, getServicesForGroup } from '$lib/features/services/store';
+	import { tags } from '$lib/features/tags/store';
 
 	export let group: Group;
 	export let onEdit: (group: Group) => void = () => {};
@@ -70,6 +71,15 @@
 					};
 				}),
 				emptyText: 'No services in group'
+			},
+			{
+				label: 'Tags',
+				value: group.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 

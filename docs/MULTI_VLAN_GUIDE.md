@@ -141,4 +141,4 @@ Server initiates scan requests. Daemon must be reachable.
 
 For troubleshooting daemon and discovery issues, see [INSTALLATION.md - Troubleshooting](INSTALLATION.md#troubleshooting).
 
-**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/mayanayza/netvisor/issues/new).
+**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/netvisor-io/netvisor/issues/new).

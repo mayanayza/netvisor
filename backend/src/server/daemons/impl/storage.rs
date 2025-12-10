@@ -63,6 +63,7 @@ impl StorableEntity for Daemon {
                     mode,
                     url,
                     name,
+                    tags,
                 },
         } = self.clone();
 
@@ -78,6 +79,7 @@ impl StorableEntity for Daemon {
                 "url",
                 "name",
                 "mode",
+                "tags",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -90,6 +92,7 @@ impl StorableEntity for Daemon {
                 SqlValue::String(url),
                 SqlValue::String(name),
                 SqlValue::DaemonMode(mode),
+                SqlValue::UuidArray(tags),
             ],
         ))
     }
@@ -114,6 +117,7 @@ impl StorableEntity for Daemon {
                 name: row.get("name"),
                 mode,
                 capabilities,
+                tags: row.get("tags"),
             },
         })
     }

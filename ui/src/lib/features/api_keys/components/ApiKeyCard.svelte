@@ -4,6 +4,7 @@
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import type { ApiKey } from '../types/base';
+	import { tags } from '$lib/features/tags/store';
 
 	export let apiKey: ApiKey;
 	export let onDelete: (apiKey: ApiKey) => void = () => {};
@@ -37,6 +38,15 @@
 			{
 				label: 'Enabled',
 				value: apiKey.is_enabled ? 'Yes' : 'No'
+			},
+			{
+				label: 'Tags',
+				value: apiKey.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 		actions: [

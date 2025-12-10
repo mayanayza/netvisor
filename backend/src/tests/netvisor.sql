@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict To8uLaMtcCa4oIqv1GcTN6UUfAmjxFPBndZkddlJPTypnxNzOq1Xht45gezkDY1
+\restrict y1GJXLS7vTkQfpscfUSdR6J3aQGEFxSjRbxLPKjla9ta2nsdVQjCMnmPzeKWNXm
 
 -- Dumped from database version 17.7
 -- Dumped by pg_dump version 17.7
@@ -21,6 +21,7 @@ SET row_security = off;
 
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_organization_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.topologies DROP CONSTRAINT IF EXISTS topologies_network_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.tags DROP CONSTRAINT IF EXISTS tags_organization_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.subnets DROP CONSTRAINT IF EXISTS subnets_network_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.services DROP CONSTRAINT IF EXISTS services_network_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.services DROP CONSTRAINT IF EXISTS services_host_id_fkey;
@@ -36,6 +37,8 @@ DROP INDEX IF EXISTS public.idx_users_oidc_provider_subject;
 DROP INDEX IF EXISTS public.idx_users_network_ids;
 DROP INDEX IF EXISTS public.idx_users_email_lower;
 DROP INDEX IF EXISTS public.idx_topologies_network;
+DROP INDEX IF EXISTS public.idx_tags_organization;
+DROP INDEX IF EXISTS public.idx_tags_org_name;
 DROP INDEX IF EXISTS public.idx_subnets_network;
 DROP INDEX IF EXISTS public.idx_services_network;
 DROP INDEX IF EXISTS public.idx_services_host_id;
@@ -52,6 +55,7 @@ DROP INDEX IF EXISTS public.idx_api_keys_key;
 ALTER TABLE IF EXISTS ONLY tower_sessions.session DROP CONSTRAINT IF EXISTS session_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.topologies DROP CONSTRAINT IF EXISTS topologies_pkey;
+ALTER TABLE IF EXISTS ONLY public.tags DROP CONSTRAINT IF EXISTS tags_pkey;
 ALTER TABLE IF EXISTS ONLY public.subnets DROP CONSTRAINT IF EXISTS subnets_pkey;
 ALTER TABLE IF EXISTS ONLY public.services DROP CONSTRAINT IF EXISTS services_pkey;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
@@ -66,6 +70,7 @@ ALTER TABLE IF EXISTS ONLY public._sqlx_migrations DROP CONSTRAINT IF EXISTS _sq
 DROP TABLE IF EXISTS tower_sessions.session;
 DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.topologies;
+DROP TABLE IF EXISTS public.tags;
 DROP TABLE IF EXISTS public.subnets;
 DROP TABLE IF EXISTS public.services;
 DROP TABLE IF EXISTS public.organizations;
@@ -119,7 +124,8 @@ CREATE TABLE public.api_keys (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     last_used timestamp with time zone,
     expires_at timestamp with time zone,
-    is_enabled boolean DEFAULT true NOT NULL
+    is_enabled boolean DEFAULT true NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -139,7 +145,8 @@ CREATE TABLE public.daemons (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     mode text DEFAULT '"Push"'::text,
     url text NOT NULL,
-    name text
+    name text,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -157,7 +164,8 @@ CREATE TABLE public.discovery (
     discovery_type jsonb NOT NULL,
     name text NOT NULL,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -177,7 +185,8 @@ CREATE TABLE public.groups (
     updated_at timestamp with time zone NOT NULL,
     source jsonb NOT NULL,
     color text NOT NULL,
-    edge_style text DEFAULT '"SmoothStep"'::text
+    edge_style text DEFAULT '"SmoothStep"'::text,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -201,7 +210,8 @@ CREATE TABLE public.hosts (
     virtualization jsonb,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    hidden boolean DEFAULT false
+    hidden boolean DEFAULT false,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -217,7 +227,8 @@ CREATE TABLE public.networks (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     is_default boolean NOT NULL,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -276,7 +287,8 @@ CREATE TABLE public.services (
     bindings jsonb,
     service_definition text NOT NULL,
     virtualization jsonb,
-    source jsonb NOT NULL
+    source jsonb NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -295,11 +307,29 @@ CREATE TABLE public.subnets (
     name text NOT NULL,
     description text,
     subnet_type text NOT NULL,
-    source jsonb NOT NULL
+    source jsonb NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
 ALTER TABLE public.subnets OWNER TO postgres;
+
+--
+-- Name: tags; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tags (
+    id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    name text NOT NULL,
+    description text,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    color text NOT NULL
+);
+
+
+ALTER TABLE public.tags OWNER TO postgres;
 
 --
 -- Name: topologies; Type: TABLE; Schema: public; Owner: postgres
@@ -327,7 +357,8 @@ CREATE TABLE public.topologies (
     removed_groups uuid[],
     parent_id uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -348,7 +379,8 @@ CREATE TABLE public.users (
     email text NOT NULL,
     organization_id uuid NOT NULL,
     permissions text DEFAULT 'Member'::text NOT NULL,
-    network_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL
+    network_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    tags uuid[] DEFAULT '{}'::uuid[] NOT NULL
 );
 
 
@@ -386,32 +418,33 @@ ALTER TABLE tower_sessions.session OWNER TO postgres;
 --
 
 COPY public._sqlx_migrations (version, description, installed_on, success, checksum, execution_time) FROM stdin;
-20251006215000	users	2025-12-10 01:03:06.072427+00	t	\\x4f13ce14ff67ef0b7145987c7b22b588745bf9fbb7b673450c26a0f2f9a36ef8ca980e456c8d77cfb1b2d7a4577a64d7	3890269
-20251006215100	networks	2025-12-10 01:03:06.077131+00	t	\\xeaa5a07a262709f64f0c59f31e25519580c79e2d1a523ce72736848946a34b17dd9adc7498eaf90551af6b7ec6d4e0e3	4097356
-20251006215151	create hosts	2025-12-10 01:03:06.081735+00	t	\\x6ec7487074c0724932d21df4cf1ed66645313cf62c159a7179e39cbc261bcb81a24f7933a0e3cf58504f2a90fc5c1962	3976380
-20251006215155	create subnets	2025-12-10 01:03:06.08611+00	t	\\xefb5b25742bd5f4489b67351d9f2494a95f307428c911fd8c5f475bfb03926347bdc269bbd048d2ddb06336945b27926	6530405
-20251006215201	create groups	2025-12-10 01:03:06.093103+00	t	\\x0a7032bf4d33a0baf020e905da865cde240e2a09dda2f62aa535b2c5d4b26b20be30a3286f1b5192bd94cd4a5dbb5bcd	3971961
-20251006215204	create daemons	2025-12-10 01:03:06.097557+00	t	\\xcfea93403b1f9cf9aac374711d4ac72d8a223e3c38a1d2a06d9edb5f94e8a557debac3668271f8176368eadc5105349f	4264909
-20251006215212	create services	2025-12-10 01:03:06.102222+00	t	\\xd5b07f82fc7c9da2782a364d46078d7d16b5c08df70cfbf02edcfe9b1b24ab6024ad159292aeea455f15cfd1f4740c1d	5031509
-20251029193448	user-auth	2025-12-10 01:03:06.107611+00	t	\\xfde8161a8db89d51eeade7517d90a41d560f19645620f2298f78f116219a09728b18e91251ae31e46a47f6942d5a9032	3804339
-20251030044828	daemon api	2025-12-10 01:03:06.111778+00	t	\\x181eb3541f51ef5b038b2064660370775d1b364547a214a20dde9c9d4bb95a1c273cd4525ef29e61fa65a3eb4fee0400	1556264
-20251030170438	host-hide	2025-12-10 01:03:06.113739+00	t	\\x87c6fda7f8456bf610a78e8e98803158caa0e12857c5bab466a5bb0004d41b449004a68e728ca13f17e051f662a15454	1288044
-20251102224919	create discovery	2025-12-10 01:03:06.115265+00	t	\\xb32a04abb891aba48f92a059fae7341442355ca8e4af5d109e28e2a4f79ee8e11b2a8f40453b7f6725c2dd6487f26573	9928707
-20251106235621	normalize-daemon-cols	2025-12-10 01:03:06.125587+00	t	\\x5b137118d506e2708097c432358bf909265b3cf3bacd662b02e2c81ba589a9e0100631c7801cffd9c57bb10a6674fb3b	1949258
-20251107034459	api keys	2025-12-10 01:03:06.127862+00	t	\\x3133ec043c0c6e25b6e55f7da84cae52b2a72488116938a2c669c8512c2efe72a74029912bcba1f2a2a0a8b59ef01dde	7455051
-20251107222650	oidc-auth	2025-12-10 01:03:06.135658+00	t	\\xd349750e0298718cbcd98eaff6e152b3fb45c3d9d62d06eedeb26c75452e9ce1af65c3e52c9f2de4bd532939c2f31096	20933411
-20251110181948	orgs-billing	2025-12-10 01:03:06.157033+00	t	\\x5bbea7a2dfc9d00213bd66b473289ddd66694eff8a4f3eaab937c985b64c5f8c3ad2d64e960afbb03f335ac6766687aa	10626139
-20251113223656	group-enhancements	2025-12-10 01:03:06.168022+00	t	\\xbe0699486d85df2bd3edc1f0bf4f1f096d5b6c5070361702c4d203ec2bb640811be88bb1979cfe51b40805ad84d1de65	1039039
-20251117032720	daemon-mode	2025-12-10 01:03:06.169349+00	t	\\xdd0d899c24b73d70e9970e54b2c748d6b6b55c856ca0f8590fe990da49cc46c700b1ce13f57ff65abd6711f4bd8a6481	1168340
-20251118143058	set-default-plan	2025-12-10 01:03:06.170908+00	t	\\xd19142607aef84aac7cfb97d60d29bda764d26f513f2c72306734c03cec2651d23eee3ce6cacfd36ca52dbddc462f917	1190311
-20251118225043	save-topology	2025-12-10 01:03:06.172562+00	t	\\x011a594740c69d8d0f8b0149d49d1b53cfbf948b7866ebd84403394139cb66a44277803462846b06e762577adc3e61a3	8999583
-20251123232748	network-permissions	2025-12-10 01:03:06.181908+00	t	\\x161be7ae5721c06523d6488606f1a7b1f096193efa1183ecdd1c2c9a4a9f4cad4884e939018917314aaf261d9a3f97ae	2776752
-20251125001342	billing-updates	2025-12-10 01:03:06.184984+00	t	\\xa235d153d95aeb676e3310a52ccb69dfbd7ca36bba975d5bbca165ceeec7196da12119f23597ea5276c364f90f23db1e	1027487
-20251128035448	org-onboarding-status	2025-12-10 01:03:06.186323+00	t	\\x1d7a7e9bf23b5078250f31934d1bc47bbaf463ace887e7746af30946e843de41badfc2b213ed64912a18e07b297663d8	1724859
-20251129180942	nfs-consolidate	2025-12-10 01:03:06.188361+00	t	\\xb38f41d30699a475c2b967f8e43156f3b49bb10341bddbde01d9fb5ba805f6724685e27e53f7e49b6c8b59e29c74f98e	1339650
-20251206052641	discovery-progress	2025-12-10 01:03:06.190057+00	t	\\x9d433b7b8c58d0d5437a104497e5e214febb2d1441a3ad7c28512e7497ed14fb9458e0d4ff786962a59954cb30da1447	1450827
-20251206202200	plan-fix	2025-12-10 01:03:06.191841+00	t	\\x242f6699dbf485cf59a8d1b8cd9d7c43aeef635a9316be815a47e15238c5e4af88efaa0daf885be03572948dc0c9edac	943390
-20251207061341	daemon-url	2025-12-10 01:03:06.193094+00	t	\\x01172455c4f2d0d57371d18ef66d2ab3b7a8525067ef8a86945c616982e6ce06f5ea1e1560a8f20dadcd5be2223e6df1	2149140
+20251006215000	users	2025-12-10 07:27:15.754082+00	t	\\x4f13ce14ff67ef0b7145987c7b22b588745bf9fbb7b673450c26a0f2f9a36ef8ca980e456c8d77cfb1b2d7a4577a64d7	3435210
+20251006215100	networks	2025-12-10 07:27:15.75846+00	t	\\xeaa5a07a262709f64f0c59f31e25519580c79e2d1a523ce72736848946a34b17dd9adc7498eaf90551af6b7ec6d4e0e3	4614130
+20251006215151	create hosts	2025-12-10 07:27:15.763393+00	t	\\x6ec7487074c0724932d21df4cf1ed66645313cf62c159a7179e39cbc261bcb81a24f7933a0e3cf58504f2a90fc5c1962	3882173
+20251006215155	create subnets	2025-12-10 07:27:15.767657+00	t	\\xefb5b25742bd5f4489b67351d9f2494a95f307428c911fd8c5f475bfb03926347bdc269bbd048d2ddb06336945b27926	3647787
+20251006215201	create groups	2025-12-10 07:27:15.771637+00	t	\\x0a7032bf4d33a0baf020e905da865cde240e2a09dda2f62aa535b2c5d4b26b20be30a3286f1b5192bd94cd4a5dbb5bcd	3679575
+20251006215204	create daemons	2025-12-10 07:27:15.775655+00	t	\\xcfea93403b1f9cf9aac374711d4ac72d8a223e3c38a1d2a06d9edb5f94e8a557debac3668271f8176368eadc5105349f	4059745
+20251006215212	create services	2025-12-10 07:27:15.780032+00	t	\\xd5b07f82fc7c9da2782a364d46078d7d16b5c08df70cfbf02edcfe9b1b24ab6024ad159292aeea455f15cfd1f4740c1d	4660627
+20251029193448	user-auth	2025-12-10 07:27:15.784997+00	t	\\xfde8161a8db89d51eeade7517d90a41d560f19645620f2298f78f116219a09728b18e91251ae31e46a47f6942d5a9032	5882175
+20251030044828	daemon api	2025-12-10 07:27:15.791196+00	t	\\x181eb3541f51ef5b038b2064660370775d1b364547a214a20dde9c9d4bb95a1c273cd4525ef29e61fa65a3eb4fee0400	1586840
+20251030170438	host-hide	2025-12-10 07:27:15.793098+00	t	\\x87c6fda7f8456bf610a78e8e98803158caa0e12857c5bab466a5bb0004d41b449004a68e728ca13f17e051f662a15454	1071239
+20251102224919	create discovery	2025-12-10 07:27:15.7945+00	t	\\xb32a04abb891aba48f92a059fae7341442355ca8e4af5d109e28e2a4f79ee8e11b2a8f40453b7f6725c2dd6487f26573	10290672
+20251106235621	normalize-daemon-cols	2025-12-10 07:27:15.805112+00	t	\\x5b137118d506e2708097c432358bf909265b3cf3bacd662b02e2c81ba589a9e0100631c7801cffd9c57bb10a6674fb3b	1706524
+20251107034459	api keys	2025-12-10 07:27:15.807092+00	t	\\x3133ec043c0c6e25b6e55f7da84cae52b2a72488116938a2c669c8512c2efe72a74029912bcba1f2a2a0a8b59ef01dde	7792270
+20251107222650	oidc-auth	2025-12-10 07:27:15.815172+00	t	\\xd349750e0298718cbcd98eaff6e152b3fb45c3d9d62d06eedeb26c75452e9ce1af65c3e52c9f2de4bd532939c2f31096	27728587
+20251110181948	orgs-billing	2025-12-10 07:27:15.843304+00	t	\\x5bbea7a2dfc9d00213bd66b473289ddd66694eff8a4f3eaab937c985b64c5f8c3ad2d64e960afbb03f335ac6766687aa	10675680
+20251113223656	group-enhancements	2025-12-10 07:27:15.854303+00	t	\\xbe0699486d85df2bd3edc1f0bf4f1f096d5b6c5070361702c4d203ec2bb640811be88bb1979cfe51b40805ad84d1de65	1008442
+20251117032720	daemon-mode	2025-12-10 07:27:15.8556+00	t	\\xdd0d899c24b73d70e9970e54b2c748d6b6b55c856ca0f8590fe990da49cc46c700b1ce13f57ff65abd6711f4bd8a6481	1063414
+20251118143058	set-default-plan	2025-12-10 07:27:15.85695+00	t	\\xd19142607aef84aac7cfb97d60d29bda764d26f513f2c72306734c03cec2651d23eee3ce6cacfd36ca52dbddc462f917	1138044
+20251118225043	save-topology	2025-12-10 07:27:15.858367+00	t	\\x011a594740c69d8d0f8b0149d49d1b53cfbf948b7866ebd84403394139cb66a44277803462846b06e762577adc3e61a3	8685747
+20251123232748	network-permissions	2025-12-10 07:27:15.867368+00	t	\\x161be7ae5721c06523d6488606f1a7b1f096193efa1183ecdd1c2c9a4a9f4cad4884e939018917314aaf261d9a3f97ae	2663791
+20251125001342	billing-updates	2025-12-10 07:27:15.870324+00	t	\\xa235d153d95aeb676e3310a52ccb69dfbd7ca36bba975d5bbca165ceeec7196da12119f23597ea5276c364f90f23db1e	868631
+20251128035448	org-onboarding-status	2025-12-10 07:27:15.87149+00	t	\\x1d7a7e9bf23b5078250f31934d1bc47bbaf463ace887e7746af30946e843de41badfc2b213ed64912a18e07b297663d8	1372340
+20251129180942	nfs-consolidate	2025-12-10 07:27:15.873141+00	t	\\xb38f41d30699a475c2b967f8e43156f3b49bb10341bddbde01d9fb5ba805f6724685e27e53f7e49b6c8b59e29c74f98e	1185833
+20251206052641	discovery-progress	2025-12-10 07:27:15.874628+00	t	\\x9d433b7b8c58d0d5437a104497e5e214febb2d1441a3ad7c28512e7497ed14fb9458e0d4ff786962a59954cb30da1447	1791021
+20251206202200	plan-fix	2025-12-10 07:27:15.87689+00	t	\\x242f6699dbf485cf59a8d1b8cd9d7c43aeef635a9316be815a47e15238c5e4af88efaa0daf885be03572948dc0c9edac	916220
+20251207061341	daemon-url	2025-12-10 07:27:15.87807+00	t	\\x01172455c4f2d0d57371d18ef66d2ab3b7a8525067ef8a86945c616982e6ce06f5ea1e1560a8f20dadcd5be2223e6df1	2278922
+20251210045929	tags	2025-12-10 07:27:15.880677+00	t	\\xe3dde83d39f8552b5afcdc1493cddfeffe077751bf55472032bc8b35fc8fc2a2caa3b55b4c2354ace7de03c3977982db	8627338
 \.
 
 
@@ -419,8 +452,8 @@ COPY public._sqlx_migrations (version, description, installed_on, success, check
 -- Data for Name: api_keys; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.api_keys (id, key, network_id, name, created_at, updated_at, last_used, expires_at, is_enabled) FROM stdin;
-5b342516-d04c-41c8-aa73-ca40c561311a	5c0a66db23934457bd21e96f31769fa4	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	Integrated Daemon API Key	2025-12-10 01:03:07.497214+00	2025-12-10 01:04:45.923642+00	2025-12-10 01:04:45.922883+00	\N	t
+COPY public.api_keys (id, key, network_id, name, created_at, updated_at, last_used, expires_at, is_enabled, tags) FROM stdin;
+cc279cce-99fa-4c2e-8f1f-d0ac4efe72a9	fff0b861c63048d4938a6e01710020e9	40846f9a-fe66-4922-b89e-115493c8633e	Integrated Daemon API Key	2025-12-10 07:27:18.923271+00	2025-12-10 07:28:55.155472+00	2025-12-10 07:28:55.154706+00	\N	t	{}
 \.
 
 
@@ -428,8 +461,8 @@ COPY public.api_keys (id, key, network_id, name, created_at, updated_at, last_us
 -- Data for Name: daemons; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.daemons (id, network_id, host_id, created_at, last_seen, capabilities, updated_at, mode, url, name) FROM stdin;
-c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	bb7abcf3-5540-42e5-a7ae-ce2821300ed0	2025-12-10 01:03:07.587538+00	2025-12-10 01:04:22.637018+00	{"has_docker_socket": false, "interfaced_subnet_ids": ["03f8d2db-5fd7-408f-a897-defadec9cb2a"]}	2025-12-10 01:04:22.63762+00	"Push"	http://172.25.0.4:60073	netvisor-daemon
+COPY public.daemons (id, network_id, host_id, created_at, last_seen, capabilities, updated_at, mode, url, name, tags) FROM stdin;
+06057b2e-9b19-4bbb-9c86-a1288af0509d	40846f9a-fe66-4922-b89e-115493c8633e	c42206f4-652f-4302-befa-55ac6db5fa96	2025-12-10 07:27:19.025474+00	2025-12-10 07:28:36.888536+00	{"has_docker_socket": false, "interfaced_subnet_ids": ["ecf81549-0b7d-4ad5-ba39-c54a00a19b1a"]}	2025-12-10 07:28:36.889158+00	"Push"	http://172.25.0.4:60073	netvisor-daemon	{}
 \.
 
 
@@ -437,11 +470,11 @@ c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	bb7abc
 -- Data for Name: discovery; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.discovery (id, network_id, daemon_id, run_type, discovery_type, name, created_at, updated_at) FROM stdin;
-4e4af240-b7b5-4f5f-a92b-1a7ff40e5e23	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f	{"type": "Scheduled", "enabled": true, "last_run": null, "cron_schedule": "0 0 0 * * *"}	{"type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0"}	Self Report	2025-12-10 01:03:07.594557+00	2025-12-10 01:03:07.594557+00
-3093bb5f-e428-4d31-b374-a35efa344777	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f	{"type": "Scheduled", "enabled": true, "last_run": null, "cron_schedule": "0 0 0 * * *"}	{"type": "Network", "subnet_ids": null, "host_naming_fallback": "BestService"}	Network Discovery	2025-12-10 01:03:07.60161+00	2025-12-10 01:03:07.60161+00
-83edeebb-deaf-4389-9dbd-73ad7423a490	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f	{"type": "Historical", "results": {"error": null, "phase": "Complete", "progress": 100, "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "session_id": "eca1956e-9af9-4d0d-bc90-53dc24ab34ac", "started_at": "2025-12-10T01:03:07.601207820Z", "finished_at": "2025-12-10T01:03:07.749224200Z", "discovery_type": {"type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0"}}}	{"type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0"}	Self Report	2025-12-10 01:03:07.601207+00	2025-12-10 01:03:07.752993+00
-d802b1ad-0ea0-4abf-805f-caf0d9b1284a	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f	{"type": "Historical", "results": {"error": null, "phase": "Complete", "progress": 100, "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "session_id": "8721b03c-8f3f-4bb1-95c6-e7e06da62adc", "started_at": "2025-12-10T01:03:07.766564228Z", "finished_at": "2025-12-10T01:04:45.920493770Z", "discovery_type": {"type": "Network", "subnet_ids": null, "host_naming_fallback": "BestService"}}}	{"type": "Network", "subnet_ids": null, "host_naming_fallback": "BestService"}	Network Discovery	2025-12-10 01:03:07.766564+00	2025-12-10 01:04:45.923204+00
+COPY public.discovery (id, network_id, daemon_id, run_type, discovery_type, name, created_at, updated_at, tags) FROM stdin;
+bfc2d1ed-5ea6-4dd9-ab32-6d1237848056	40846f9a-fe66-4922-b89e-115493c8633e	06057b2e-9b19-4bbb-9c86-a1288af0509d	{"type": "Scheduled", "enabled": true, "last_run": null, "cron_schedule": "0 0 0 * * *"}	{"type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96"}	Self Report	2025-12-10 07:27:19.033886+00	2025-12-10 07:27:19.033886+00	{}
+91b134b2-a4c3-4597-bf18-ba3a2b0fd1b1	40846f9a-fe66-4922-b89e-115493c8633e	06057b2e-9b19-4bbb-9c86-a1288af0509d	{"type": "Scheduled", "enabled": true, "last_run": null, "cron_schedule": "0 0 0 * * *"}	{"type": "Network", "subnet_ids": null, "host_naming_fallback": "BestService"}	Network Discovery	2025-12-10 07:27:19.04083+00	2025-12-10 07:27:19.04083+00	{}
+bfbdcccf-90fa-4db7-af61-a10fa09580bf	40846f9a-fe66-4922-b89e-115493c8633e	06057b2e-9b19-4bbb-9c86-a1288af0509d	{"type": "Historical", "results": {"error": null, "phase": "Complete", "progress": 100, "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "session_id": "1f51e395-e613-4c64-b45b-17db527e3856", "started_at": "2025-12-10T07:27:19.040459947Z", "finished_at": "2025-12-10T07:27:19.152791736Z", "discovery_type": {"type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96"}}}	{"type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96"}	Self Report	2025-12-10 07:27:19.040459+00	2025-12-10 07:27:19.157053+00	{}
+06cfd03f-edb7-4c48-a519-023526b54dd2	40846f9a-fe66-4922-b89e-115493c8633e	06057b2e-9b19-4bbb-9c86-a1288af0509d	{"type": "Historical", "results": {"error": null, "phase": "Complete", "progress": 100, "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "session_id": "9b1a2c57-5689-47dc-9d3a-bd61d4effda2", "started_at": "2025-12-10T07:27:19.170763342Z", "finished_at": "2025-12-10T07:28:55.151968069Z", "discovery_type": {"type": "Network", "subnet_ids": null, "host_naming_fallback": "BestService"}}}	{"type": "Network", "subnet_ids": null, "host_naming_fallback": "BestService"}	Network Discovery	2025-12-10 07:27:19.170763+00	2025-12-10 07:28:55.154995+00	{}
 \.
 
 
@@ -449,7 +482,8 @@ d802b1ad-0ea0-4abf-805f-caf0d9b1284a	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	c5a3cc
 -- Data for Name: groups; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.groups (id, network_id, name, description, group_type, created_at, updated_at, source, color, edge_style) FROM stdin;
+COPY public.groups (id, network_id, name, description, group_type, created_at, updated_at, source, color, edge_style, tags) FROM stdin;
+0bffebcd-16b1-4fe0-8e95-0c81272c202a	40846f9a-fe66-4922-b89e-115493c8633e		\N	{"group_type": "RequestPath", "service_bindings": []}	2025-12-10 07:28:55.166314+00	2025-12-10 07:28:55.166314+00	{"type": "System"}		"SmoothStep"	{}
 \.
 
 
@@ -457,15 +491,15 @@ COPY public.groups (id, network_id, name, description, group_type, created_at, u
 -- Data for Name: hosts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.hosts (id, network_id, name, hostname, description, target, interfaces, services, ports, source, virtualization, created_at, updated_at, hidden) FROM stdin;
-3a33db1c-2e3b-4b6b-bc8f-8e39638e6d5c	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	Cloudflare DNS	\N	\N	{"type": "ServiceBinding", "config": "5d9cbf64-5163-4def-83df-425ff3192e36"}	[{"id": "03daa8f0-9ad6-4948-92e7-5d44614314d2", "name": "Internet", "subnet_id": "2855b565-53ad-490b-9f64-f093984c9bde", "ip_address": "1.1.1.1", "mac_address": null}]	{ed4da82f-f328-4b88-8d46-047d233c98ed}	[{"id": "b4bc6837-bb99-4ad4-b530-f4987706abd1", "type": "DnsUdp", "number": 53, "protocol": "Udp"}]	{"type": "System"}	null	2025-12-10 01:03:07.471506+00	2025-12-10 01:03:07.480768+00	f
-3b0e6ac7-12af-4502-b7d6-f6eaf2a12904	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	Google.com	\N	\N	{"type": "ServiceBinding", "config": "5021e758-c326-4668-9efd-255d57802976"}	[{"id": "7a5617da-3a5f-4503-b021-0906c3f61437", "name": "Internet", "subnet_id": "2855b565-53ad-490b-9f64-f093984c9bde", "ip_address": "203.0.113.81", "mac_address": null}]	{b276a233-1b35-4835-8991-a65a7307a47a}	[{"id": "c1eaa434-136e-42be-9e3b-b432515a60d1", "type": "Https", "number": 443, "protocol": "Tcp"}]	{"type": "System"}	null	2025-12-10 01:03:07.471531+00	2025-12-10 01:03:07.485841+00	f
-7748aa0f-167f-46fc-94c6-5ee24a956c5d	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	Mobile Device	\N	A mobile device connecting from a remote network	{"type": "ServiceBinding", "config": "28eecd70-6451-46c6-905a-8b18be165baf"}	[{"id": "0a6bb021-deb6-4fcc-a69d-f1557b5119fa", "name": "Remote Network", "subnet_id": "95d592b7-1595-4369-ba3e-451dbff8244b", "ip_address": "203.0.113.128", "mac_address": null}]	{4bdfd90e-41ed-40e8-a117-3f8271e14d09}	[{"id": "2313bd26-7920-461c-83db-53f2014224a3", "type": "Custom", "number": 0, "protocol": "Tcp"}]	{"type": "System"}	null	2025-12-10 01:03:07.471542+00	2025-12-10 01:03:07.489763+00	f
-211d3053-c9ca-4bc6-bc71-c613f6b9c074	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	netvisor-server-1.netvisor_netvisor-dev	netvisor-server-1.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "38e0ff71-228f-4f90-b890-6ec72110a2ed", "name": null, "subnet_id": "03f8d2db-5fd7-408f-a897-defadec9cb2a", "ip_address": "172.25.0.3", "mac_address": "E6:25:24:C2:B3:A9"}]	{be2e813e-5521-48b2-988c-7ea3ecfe2d54}	[{"id": "0b0ee6f0-072f-4f9f-bba5-804b839a7bc7", "type": "Custom", "number": 60072, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T01:03:56.090023316Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 01:03:56.090026+00	2025-12-10 01:04:11.339057+00	f
-bb7abcf3-5540-42e5-a7ae-ce2821300ed0	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	netvisor-daemon	f86c053fafc1	NetVisor daemon	{"type": "None"}	[{"id": "74fef0d8-2c38-41a6-8926-4085b1bafa15", "name": "eth0", "subnet_id": "03f8d2db-5fd7-408f-a897-defadec9cb2a", "ip_address": "172.25.0.4", "mac_address": "0A:DE:C4:39:5D:5E"}]	{5a7b1602-4760-4d8d-b6b0-fd7feaeb4f78}	[{"id": "5c46fdd2-c5a3-4913-8c51-8168e6d66c1b", "type": "Custom", "number": 60073, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T01:03:07.622325457Z", "type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f"}]}	null	2025-12-10 01:03:07.584373+00	2025-12-10 01:03:07.746157+00	f
-376019ad-5b42-48bd-991e-b573a5d36a9f	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	netvisor-postgres-dev-1.netvisor_netvisor-dev	netvisor-postgres-dev-1.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "9671ff31-ad21-4207-9817-773a12f276fc", "name": null, "subnet_id": "03f8d2db-5fd7-408f-a897-defadec9cb2a", "ip_address": "172.25.0.6", "mac_address": "12:FB:48:7C:49:56"}]	{47e9a07d-4da9-4e69-afeb-296509011ac4}	[{"id": "fc7f355c-02da-4035-8715-2bdcc0f6d361", "type": "PostgreSQL", "number": 5432, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T01:03:40.668729700Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 01:03:40.668733+00	2025-12-10 01:03:56.012808+00	f
-654d854b-9273-462c-9c9f-e06811887134	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	homeassistant-discovery.netvisor_netvisor-dev	homeassistant-discovery.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "b3caffda-dd45-4b66-904d-2be026447885", "name": null, "subnet_id": "03f8d2db-5fd7-408f-a897-defadec9cb2a", "ip_address": "172.25.0.5", "mac_address": "BA:D5:6D:70:24:71"}]	{691ac06e-147b-4aec-bf24-a45a89af6362}	[{"id": "ce6f7cbf-0ed2-4586-84d2-cf513d29c1d4", "type": "Custom", "number": 8123, "protocol": "Tcp"}, {"id": "fb03d1b5-9131-46e7-8057-acbe720ea775", "type": "Custom", "number": 18555, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T01:04:11.342996067Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 01:04:11.342998+00	2025-12-10 01:04:26.610775+00	f
-73afa08c-12f2-4e10-92f3-54f05566bfc6	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	runnervmoqczp	runnervmoqczp	\N	{"type": "Hostname"}	[{"id": "7bde7730-9d13-422e-a414-8abf54745405", "name": null, "subnet_id": "03f8d2db-5fd7-408f-a897-defadec9cb2a", "ip_address": "172.25.0.1", "mac_address": "7A:CD:93:14:67:CA"}]	{6732017d-2f0b-4742-a3fa-04ec8f0fca18,1000a958-d772-4125-a45d-8fd2ad28fd14,defa03f3-c78a-4a8d-a422-05c1a8c9d24b,58f63d68-9492-4123-aa4d-62c848a3269a}	[{"id": "729bf3ec-c409-499d-b1f0-7c0c2c300de0", "type": "Custom", "number": 60072, "protocol": "Tcp"}, {"id": "ff4436d1-6fe5-4381-90ee-2dbd872aae5b", "type": "Custom", "number": 8123, "protocol": "Tcp"}, {"id": "4f051c04-aa13-4390-9633-c672973aff2b", "type": "Ssh", "number": 22, "protocol": "Tcp"}, {"id": "1dfff040-6fa4-4280-8de9-7b32833c8268", "type": "Custom", "number": 5435, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T01:04:30.665398433Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 01:04:30.665402+00	2025-12-10 01:04:45.914218+00	f
+COPY public.hosts (id, network_id, name, hostname, description, target, interfaces, services, ports, source, virtualization, created_at, updated_at, hidden, tags) FROM stdin;
+d6eba617-e1d2-4bc5-8c9f-398845abc9be	40846f9a-fe66-4922-b89e-115493c8633e	Cloudflare DNS	\N	\N	{"type": "ServiceBinding", "config": "61054003-a7c1-4b8c-abcd-5fa8f023f11f"}	[{"id": "30a55814-0eed-4130-b044-20e0c570d80d", "name": "Internet", "subnet_id": "98a16647-31fa-4468-92c6-2e7439751720", "ip_address": "1.1.1.1", "mac_address": null}]	{1f582214-833b-4129-a548-1fc44f8e562a}	[{"id": "c75a3e3f-2abb-418e-bb45-214173a576a1", "type": "DnsUdp", "number": 53, "protocol": "Udp"}]	{"type": "System"}	null	2025-12-10 07:27:18.897649+00	2025-12-10 07:27:18.906982+00	f	{}
+9a8acd9b-6281-412a-95c8-c8eb0e45a3bf	40846f9a-fe66-4922-b89e-115493c8633e	Google.com	\N	\N	{"type": "ServiceBinding", "config": "c6382f4e-81c5-4d46-b54c-24cc91b2b409"}	[{"id": "4f5ee499-215f-47e2-8eb3-d3f88b80d884", "name": "Internet", "subnet_id": "98a16647-31fa-4468-92c6-2e7439751720", "ip_address": "203.0.113.195", "mac_address": null}]	{4540d984-3e11-4a74-a3c4-cbf0ef8e34b7}	[{"id": "03502289-44a9-46db-881b-eafbf8a856e3", "type": "Https", "number": 443, "protocol": "Tcp"}]	{"type": "System"}	null	2025-12-10 07:27:18.897655+00	2025-12-10 07:27:18.912143+00	f	{}
+73d2c20c-73c9-42ca-b9bf-826a9ec846c6	40846f9a-fe66-4922-b89e-115493c8633e	Mobile Device	\N	A mobile device connecting from a remote network	{"type": "ServiceBinding", "config": "3b00305a-832b-4295-952b-53848c51bc42"}	[{"id": "83b5b799-47e3-4854-8496-b8c00e2db591", "name": "Remote Network", "subnet_id": "f50e2b61-458c-45c6-8964-478a3914dba3", "ip_address": "203.0.113.208", "mac_address": null}]	{7b993025-a94f-4843-8153-4ec3422e2b3e}	[{"id": "72dc2a17-84eb-4292-ae1d-9f03d0b5fd11", "type": "Custom", "number": 0, "protocol": "Tcp"}]	{"type": "System"}	null	2025-12-10 07:27:18.89766+00	2025-12-10 07:27:18.916064+00	f	{}
+9e455635-61f1-49db-8f22-0f9fd96b3416	40846f9a-fe66-4922-b89e-115493c8633e	netvisor-server-1.netvisor_netvisor-dev	netvisor-server-1.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "38893f00-ef8c-4cf8-8296-b44ea3d053d0", "name": null, "subnet_id": "ecf81549-0b7d-4ad5-ba39-c54a00a19b1a", "ip_address": "172.25.0.3", "mac_address": "DA:6C:BA:15:18:0B"}]	{828002cd-7811-4060-9ea1-b60563e63228}	[{"id": "e595a346-7cc8-4959-837d-5fd596e958fc", "type": "Custom", "number": 60072, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T07:28:06.473419396Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 07:28:06.473422+00	2025-12-10 07:28:21.49054+00	f	{}
+c42206f4-652f-4302-befa-55ac6db5fa96	40846f9a-fe66-4922-b89e-115493c8633e	netvisor-daemon	73961b4ae7a7	NetVisor daemon	{"type": "None"}	[{"id": "fa08ba62-bfb8-43ed-8ae1-fb15ab9dd9ba", "name": "eth0", "subnet_id": "ecf81549-0b7d-4ad5-ba39-c54a00a19b1a", "ip_address": "172.25.0.4", "mac_address": "72:94:FF:DF:F1:64"}]	{53c1918c-d51b-45af-bacf-74f099f27140}	[{"id": "8e0a25be-4632-4cd5-bb59-5861353abb24", "type": "Custom", "number": 60073, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T07:27:19.134672299Z", "type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d"}]}	null	2025-12-10 07:27:18.975098+00	2025-12-10 07:27:19.150473+00	f	{}
+340ff763-21d7-45e2-949e-4213031b72eb	40846f9a-fe66-4922-b89e-115493c8633e	homeassistant-discovery.netvisor_netvisor-dev	homeassistant-discovery.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "07b3c44a-385b-4aad-837a-30a482a9f641", "name": null, "subnet_id": "ecf81549-0b7d-4ad5-ba39-c54a00a19b1a", "ip_address": "172.25.0.5", "mac_address": "96:F9:DD:8D:6A:0B"}]	{eebf0406-da71-438c-b29a-67c83aabd828,695810dc-2349-4adb-83f4-784053b87b1b}	[{"id": "16c2f381-79ab-4b86-b9aa-2203b43b8709", "type": "Custom", "number": 8123, "protocol": "Tcp"}, {"id": "0b1ce39a-f3da-41af-8f50-8058aadf8f4c", "type": "Custom", "number": 18555, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T07:27:51.552029543Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 07:27:51.552033+00	2025-12-10 07:28:06.394118+00	f	{}
+6717bd41-5062-4053-b620-a3189ee96950	40846f9a-fe66-4922-b89e-115493c8633e	netvisor-postgres-dev-1.netvisor_netvisor-dev	netvisor-postgres-dev-1.netvisor_netvisor-dev	\N	{"type": "Hostname"}	[{"id": "0d002bf5-0dc5-4dec-825b-80e2d69cdea7", "name": null, "subnet_id": "ecf81549-0b7d-4ad5-ba39-c54a00a19b1a", "ip_address": "172.25.0.6", "mac_address": "F2:9D:42:55:81:2E"}]	{9619922a-c28f-4c0b-86a5-b294863a1419}	[{"id": "140a1c13-8817-4951-ac13-0e37dc6a6980", "type": "PostgreSQL", "number": 5432, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T07:28:21.481597485Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 07:28:21.4816+00	2025-12-10 07:28:36.200324+00	f	{}
+6712f02b-dc9b-49f3-bb6a-c1e00f26ceb5	40846f9a-fe66-4922-b89e-115493c8633e	runnervmoqczp	runnervmoqczp	\N	{"type": "Hostname"}	[{"id": "d750692d-445f-4706-872e-0c710b48ac32", "name": null, "subnet_id": "ecf81549-0b7d-4ad5-ba39-c54a00a19b1a", "ip_address": "172.25.0.1", "mac_address": "0A:FE:45:BA:2E:4A"}]	{09359e66-6ff8-4f02-be13-df302f4299b5,cb8ad773-5f65-46e4-b721-71e483b77e81,73144175-1298-496a-9f00-54d6565e4cb8,aba31e57-7cd7-4845-8571-2516b56ed9ab}	[{"id": "b8090a17-d5ea-4a06-9782-1d264790ccb1", "type": "Custom", "number": 60072, "protocol": "Tcp"}, {"id": "21561661-474d-4492-909c-4d8a164ef1b9", "type": "Custom", "number": 8123, "protocol": "Tcp"}, {"id": "3e04a1dd-8cf0-4ac6-b78b-9a052681c996", "type": "Ssh", "number": 22, "protocol": "Tcp"}, {"id": "4592efb8-977c-4c4d-a7cb-1e472d04690b", "type": "Custom", "number": 5435, "protocol": "Tcp"}]	{"type": "Discovery", "metadata": [{"date": "2025-12-10T07:28:40.249293222Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	null	2025-12-10 07:28:40.249296+00	2025-12-10 07:28:55.144782+00	f	{}
 \.
 
 
@@ -473,8 +507,8 @@ bb7abcf3-5540-42e5-a7ae-ce2821300ed0	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	netvis
 -- Data for Name: networks; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.networks (id, name, created_at, updated_at, is_default, organization_id) FROM stdin;
-abff052f-ddc1-4046-8f2b-d1b8640ef6ab	My Network	2025-12-10 01:03:07.470036+00	2025-12-10 01:03:07.470036+00	f	9d4e52ed-5e9e-466b-b99f-23a114619823
+COPY public.networks (id, name, created_at, updated_at, is_default, organization_id, tags) FROM stdin;
+40846f9a-fe66-4922-b89e-115493c8633e	My Network	2025-12-10 07:27:18.896322+00	2025-12-10 07:27:18.896322+00	f	1d894c08-e310-43ae-951c-3b775fe0bb7d	{}
 \.
 
 
@@ -483,7 +517,7 @@ abff052f-ddc1-4046-8f2b-d1b8640ef6ab	My Network	2025-12-10 01:03:07.470036+00	20
 --
 
 COPY public.organizations (id, name, stripe_customer_id, plan, plan_status, created_at, updated_at, onboarding) FROM stdin;
-9d4e52ed-5e9e-466b-b99f-23a114619823	My Organization	\N	{"rate": "Month", "type": "Community", "base_cents": 0, "seat_cents": null, "trial_days": 0, "network_cents": null, "included_seats": null, "included_networks": null}	\N	2025-12-10 01:03:06.256654+00	2025-12-10 01:03:07.593458+00	["OnboardingModalCompleted", "FirstDaemonRegistered"]
+1d894c08-e310-43ae-951c-3b775fe0bb7d	My Organization	\N	{"rate": "Month", "type": "Community", "base_cents": 0, "seat_cents": null, "trial_days": 0, "network_cents": null, "included_seats": null, "included_networks": null}	\N	2025-12-10 07:27:15.944059+00	2025-12-10 07:27:19.032066+00	["OnboardingModalCompleted", "FirstDaemonRegistered"]
 \.
 
 
@@ -491,18 +525,19 @@ COPY public.organizations (id, name, stripe_customer_id, plan, plan_status, crea
 -- Data for Name: services; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.services (id, network_id, created_at, updated_at, name, host_id, bindings, service_definition, virtualization, source) FROM stdin;
-ed4da82f-f328-4b88-8d46-047d233c98ed	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.471508+00	2025-12-10 01:03:07.471508+00	Cloudflare DNS	3a33db1c-2e3b-4b6b-bc8f-8e39638e6d5c	[{"id": "5d9cbf64-5163-4def-83df-425ff3192e36", "type": "Port", "port_id": "b4bc6837-bb99-4ad4-b530-f4987706abd1", "interface_id": "03daa8f0-9ad6-4948-92e7-5d44614314d2"}]	"Dns Server"	null	{"type": "System"}
-b276a233-1b35-4835-8991-a65a7307a47a	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.471533+00	2025-12-10 01:03:07.471533+00	Google.com	3b0e6ac7-12af-4502-b7d6-f6eaf2a12904	[{"id": "5021e758-c326-4668-9efd-255d57802976", "type": "Port", "port_id": "c1eaa434-136e-42be-9e3b-b432515a60d1", "interface_id": "7a5617da-3a5f-4503-b021-0906c3f61437"}]	"Web Service"	null	{"type": "System"}
-4bdfd90e-41ed-40e8-a117-3f8271e14d09	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.471544+00	2025-12-10 01:03:07.471544+00	Mobile Device	7748aa0f-167f-46fc-94c6-5ee24a956c5d	[{"id": "28eecd70-6451-46c6-905a-8b18be165baf", "type": "Port", "port_id": "2313bd26-7920-461c-83db-53f2014224a3", "interface_id": "0a6bb021-deb6-4fcc-a69d-f1557b5119fa"}]	"Client"	null	{"type": "System"}
-5a7b1602-4760-4d8d-b6b0-fd7feaeb4f78	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.622343+00	2025-12-10 01:03:07.622343+00	NetVisor Daemon API	bb7abcf3-5540-42e5-a7ae-ce2821300ed0	[{"id": "cb5f7b0e-67b5-46ea-8d89-e55e79c35b46", "type": "Port", "port_id": "5c46fdd2-c5a3-4913-8c51-8168e6d66c1b", "interface_id": "74fef0d8-2c38-41a6-8926-4085b1bafa15"}]	"NetVisor Daemon API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "NetVisor Daemon self-report", "type": "reason"}, "confidence": "Certain"}, "metadata": [{"date": "2025-12-10T01:03:07.622342860Z", "type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f"}]}
-47e9a07d-4da9-4e69-afeb-296509011ac4	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:55.998071+00	2025-12-10 01:03:55.998071+00	PostgreSQL	376019ad-5b42-48bd-991e-b573a5d36a9f	[{"id": "628dfda6-7572-4518-804c-a93b0a5c5603", "type": "Port", "port_id": "fc7f355c-02da-4035-8715-2bdcc0f6d361", "interface_id": "9671ff31-ad21-4207-9817-773a12f276fc"}]	"PostgreSQL"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Port 5432/tcp is open", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T01:03:55.998053798Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
-be2e813e-5521-48b2-988c-7ea3ecfe2d54	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:59.946968+00	2025-12-10 01:03:59.946968+00	NetVisor Server API	211d3053-c9ca-4bc6-bc71-c613f6b9c074	[{"id": "1949118d-c70e-4e76-8724-0a39cd0ed604", "type": "Port", "port_id": "0b0ee6f0-072f-4f9f-bba5-804b839a7bc7", "interface_id": "38e0ff71-228f-4f90-b890-6ec72110a2ed"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.3:60072/api/health contained \\"netvisor\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T01:03:59.946949123Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
-691ac06e-147b-4aec-bf24-a45a89af6362	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:04:26.601139+00	2025-12-10 01:04:26.601139+00	Unclaimed Open Ports	654d854b-9273-462c-9c9f-e06811887134	[{"id": "9738b319-31ca-44fa-8557-17c040994a58", "type": "Port", "port_id": "ce6f7cbf-0ed2-4586-84d2-cf513d29c1d4", "interface_id": "b3caffda-dd45-4b66-904d-2be026447885"}, {"id": "787973e4-4a4b-4915-9fc2-613b95db46e4", "type": "Port", "port_id": "fb03d1b5-9131-46e7-8057-acbe720ea775", "interface_id": "b3caffda-dd45-4b66-904d-2be026447885"}]	"Unclaimed Open Ports"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Has unbound open ports", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T01:04:26.601117204Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
-6732017d-2f0b-4742-a3fa-04ec8f0fca18	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:04:34.477918+00	2025-12-10 01:04:34.477918+00	NetVisor Server API	73afa08c-12f2-4e10-92f3-54f05566bfc6	[{"id": "07cfa9b5-9c71-424e-ba6c-75c53afdc385", "type": "Port", "port_id": "729bf3ec-c409-499d-b1f0-7c0c2c300de0", "interface_id": "7bde7730-9d13-422e-a414-8abf54745405"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.1:60072/api/health contained \\"netvisor\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T01:04:34.477900872Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
-1000a958-d772-4125-a45d-8fd2ad28fd14	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:04:39.815941+00	2025-12-10 01:04:39.815941+00	Home Assistant	73afa08c-12f2-4e10-92f3-54f05566bfc6	[{"id": "82d5f9a8-7243-46ab-905f-a3ceaca407f0", "type": "Port", "port_id": "ff4436d1-6fe5-4381-90ee-2dbd872aae5b", "interface_id": "7bde7730-9d13-422e-a414-8abf54745405"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.1:8123/ contained \\"home assistant\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T01:04:39.815917028Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
-defa03f3-c78a-4a8d-a422-05c1a8c9d24b	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:04:45.900715+00	2025-12-10 01:04:45.900715+00	SSH	73afa08c-12f2-4e10-92f3-54f05566bfc6	[{"id": "40a852cf-949e-4601-ad43-9a6b5a150ed0", "type": "Port", "port_id": "4f051c04-aa13-4390-9633-c672973aff2b", "interface_id": "7bde7730-9d13-422e-a414-8abf54745405"}]	"SSH"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Port 22/tcp is open", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T01:04:45.900697630Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
-58f63d68-9492-4123-aa4d-62c848a3269a	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:04:45.901042+00	2025-12-10 01:04:45.901042+00	Unclaimed Open Ports	73afa08c-12f2-4e10-92f3-54f05566bfc6	[{"id": "f303b5f8-5ed9-4069-9bd8-b6963986bec1", "type": "Port", "port_id": "1dfff040-6fa4-4280-8de9-7b32833c8268", "interface_id": "7bde7730-9d13-422e-a414-8abf54745405"}]	"Unclaimed Open Ports"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Has unbound open ports", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T01:04:45.901032775Z", "type": "Network", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f", "subnet_ids": null, "host_naming_fallback": "BestService"}]}
+COPY public.services (id, network_id, created_at, updated_at, name, host_id, bindings, service_definition, virtualization, source, tags) FROM stdin;
+1f582214-833b-4129-a548-1fc44f8e562a	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:18.897651+00	2025-12-10 07:27:18.897651+00	Cloudflare DNS	d6eba617-e1d2-4bc5-8c9f-398845abc9be	[{"id": "61054003-a7c1-4b8c-abcd-5fa8f023f11f", "type": "Port", "port_id": "c75a3e3f-2abb-418e-bb45-214173a576a1", "interface_id": "30a55814-0eed-4130-b044-20e0c570d80d"}]	"Dns Server"	null	{"type": "System"}	{}
+4540d984-3e11-4a74-a3c4-cbf0ef8e34b7	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:18.897656+00	2025-12-10 07:27:18.897656+00	Google.com	9a8acd9b-6281-412a-95c8-c8eb0e45a3bf	[{"id": "c6382f4e-81c5-4d46-b54c-24cc91b2b409", "type": "Port", "port_id": "03502289-44a9-46db-881b-eafbf8a856e3", "interface_id": "4f5ee499-215f-47e2-8eb3-d3f88b80d884"}]	"Web Service"	null	{"type": "System"}	{}
+7b993025-a94f-4843-8153-4ec3422e2b3e	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:18.897661+00	2025-12-10 07:27:18.897661+00	Mobile Device	73d2c20c-73c9-42ca-b9bf-826a9ec846c6	[{"id": "3b00305a-832b-4295-952b-53848c51bc42", "type": "Port", "port_id": "72dc2a17-84eb-4292-ae1d-9f03d0b5fd11", "interface_id": "83b5b799-47e3-4854-8496-b8c00e2db591"}]	"Client"	null	{"type": "System"}	{}
+53c1918c-d51b-45af-bacf-74f099f27140	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:19.134691+00	2025-12-10 07:27:19.134691+00	NetVisor Daemon API	c42206f4-652f-4302-befa-55ac6db5fa96	[{"id": "a022b82e-cace-4a1f-a005-0835539d6c92", "type": "Port", "port_id": "8e0a25be-4632-4cd5-bb59-5861353abb24", "interface_id": "fa08ba62-bfb8-43ed-8ae1-fb15ab9dd9ba"}]	"NetVisor Daemon API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "NetVisor Daemon self-report", "type": "reason"}, "confidence": "Certain"}, "metadata": [{"date": "2025-12-10T07:27:19.134690633Z", "type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d"}]}	{}
+695810dc-2349-4adb-83f4-784053b87b1b	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:06.376484+00	2025-12-10 07:28:06.376484+00	Unclaimed Open Ports	340ff763-21d7-45e2-949e-4213031b72eb	[{"id": "e140931b-48c3-4f12-a313-31a4730b8452", "type": "Port", "port_id": "0b1ce39a-f3da-41af-8f50-8058aadf8f4c", "interface_id": "07b3c44a-385b-4aad-837a-30a482a9f641"}]	"Unclaimed Open Ports"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Has unbound open ports", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T07:28:06.376467700Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+eebf0406-da71-438c-b29a-67c83aabd828	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:05.642994+00	2025-12-10 07:28:05.642994+00	Home Assistant	340ff763-21d7-45e2-949e-4213031b72eb	[{"id": "a695e56c-24ff-4be6-944a-35d82c5692ae", "type": "Port", "port_id": "16c2f381-79ab-4b86-b9aa-2203b43b8709", "interface_id": "07b3c44a-385b-4aad-837a-30a482a9f641"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.5:8123/ contained \\"home assistant\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T07:28:05.642976702Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+828002cd-7811-4060-9ea1-b60563e63228	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:09.502076+00	2025-12-10 07:28:09.502076+00	NetVisor Server API	9e455635-61f1-49db-8f22-0f9fd96b3416	[{"id": "6571c0a7-6aec-46dd-8a08-a041c815d213", "type": "Port", "port_id": "e595a346-7cc8-4959-837d-5fd596e958fc", "interface_id": "38893f00-ef8c-4cf8-8296-b44ea3d053d0"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.3:60072/api/health contained \\"netvisor\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T07:28:09.502057490Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+9619922a-c28f-4c0b-86a5-b294863a1419	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:36.190326+00	2025-12-10 07:28:36.190326+00	PostgreSQL	6717bd41-5062-4053-b620-a3189ee96950	[{"id": "84f3949f-78fd-4be8-9183-dcd0ba40ff79", "type": "Port", "port_id": "140a1c13-8817-4951-ac13-0e37dc6a6980", "interface_id": "0d002bf5-0dc5-4dec-825b-80e2d69cdea7"}]	"PostgreSQL"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Port 5432/tcp is open", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T07:28:36.190307552Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+09359e66-6ff8-4f02-be13-df302f4299b5	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:43.25822+00	2025-12-10 07:28:43.25822+00	NetVisor Server API	6712f02b-dc9b-49f3-bb6a-c1e00f26ceb5	[{"id": "1419f897-80d9-4384-a58f-882c511fdb40", "type": "Port", "port_id": "b8090a17-d5ea-4a06-9782-1d264790ccb1", "interface_id": "d750692d-445f-4706-872e-0c710b48ac32"}]	"NetVisor Server API"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.1:60072/api/health contained \\"netvisor\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T07:28:43.258202321Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+cb8ad773-5f65-46e4-b721-71e483b77e81	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:54.402671+00	2025-12-10 07:28:54.402671+00	Home Assistant	6712f02b-dc9b-49f3-bb6a-c1e00f26ceb5	[{"id": "c3f4817a-222b-4cca-a9ee-e23589fd8583", "type": "Port", "port_id": "21561661-474d-4492-909c-4d8a164ef1b9", "interface_id": "d750692d-445f-4706-872e-0c710b48ac32"}]	"Home Assistant"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": "Response for 172.25.0.1:8123/ contained \\"home assistant\\" in body", "type": "reason"}, "confidence": "High"}, "metadata": [{"date": "2025-12-10T07:28:54.402656723Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+73144175-1298-496a-9f00-54d6565e4cb8	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:55.129868+00	2025-12-10 07:28:55.129868+00	SSH	6712f02b-dc9b-49f3-bb6a-c1e00f26ceb5	[{"id": "220c9dcd-3afb-4cc8-b2f0-09f8435ce11e", "type": "Port", "port_id": "3e04a1dd-8cf0-4ac6-b78b-9a052681c996", "interface_id": "d750692d-445f-4706-872e-0c710b48ac32"}]	"SSH"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Port 22/tcp is open", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T07:28:55.129853685Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
+aba31e57-7cd7-4845-8571-2516b56ed9ab	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:28:55.130111+00	2025-12-10 07:28:55.130111+00	Unclaimed Open Ports	6712f02b-dc9b-49f3-bb6a-c1e00f26ceb5	[{"id": "071b7903-b689-44c1-8dc1-3e685ceb1d48", "type": "Port", "port_id": "4592efb8-977c-4c4d-a7cb-1e472d04690b", "interface_id": "d750692d-445f-4706-872e-0c710b48ac32"}]	"Unclaimed Open Ports"	null	{"type": "DiscoveryWithMatch", "details": {"reason": {"data": ["Generic service", [{"data": "Has unbound open ports", "type": "reason"}]], "type": "container"}, "confidence": "NotApplicable"}, "metadata": [{"date": "2025-12-10T07:28:55.130102509Z", "type": "Network", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d", "subnet_ids": null, "host_naming_fallback": "BestService"}]}	{}
 \.
 
 
@@ -510,10 +545,19 @@ defa03f3-c78a-4a8d-a422-05c1a8c9d24b	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-1
 -- Data for Name: subnets; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.subnets (id, network_id, created_at, updated_at, cidr, name, description, subnet_type, source) FROM stdin;
-2855b565-53ad-490b-9f64-f093984c9bde	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.471446+00	2025-12-10 01:03:07.471446+00	"0.0.0.0/0"	Internet	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for services running on the internet (e.g., public DNS servers, cloud services, etc.).	"Internet"	{"type": "System"}
-95d592b7-1595-4369-ba3e-451dbff8244b	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.471449+00	2025-12-10 01:03:07.471449+00	"0.0.0.0/0"	Remote Network	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for hosts on remote networks (e.g., mobile connections, friend's networks, public WiFi, etc.).	"Remote"	{"type": "System"}
-03f8d2db-5fd7-408f-a897-defadec9cb2a	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	2025-12-10 01:03:07.601362+00	2025-12-10 01:03:07.601362+00	"172.25.0.0/28"	172.25.0.0/28	\N	"Lan"	{"type": "Discovery", "metadata": [{"date": "2025-12-10T01:03:07.601360816Z", "type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f"}]}
+COPY public.subnets (id, network_id, created_at, updated_at, cidr, name, description, subnet_type, source, tags) FROM stdin;
+98a16647-31fa-4468-92c6-2e7439751720	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:18.897599+00	2025-12-10 07:27:18.897599+00	"0.0.0.0/0"	Internet	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for services running on the internet (e.g., public DNS servers, cloud services, etc.).	"Internet"	{"type": "System"}	{}
+f50e2b61-458c-45c6-8964-478a3914dba3	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:18.897602+00	2025-12-10 07:27:18.897602+00	"0.0.0.0/0"	Remote Network	This subnet uses the 0.0.0.0/0 CIDR as an organizational container for hosts on remote networks (e.g., mobile connections, friend's networks, public WiFi, etc.).	"Remote"	{"type": "System"}	{}
+ecf81549-0b7d-4ad5-ba39-c54a00a19b1a	40846f9a-fe66-4922-b89e-115493c8633e	2025-12-10 07:27:19.040622+00	2025-12-10 07:27:19.040622+00	"172.25.0.0/28"	172.25.0.0/28	\N	"Lan"	{"type": "Discovery", "metadata": [{"date": "2025-12-10T07:27:19.040620887Z", "type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d"}]}	{}
+\.
+
+
+--
+-- Data for Name: tags; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tags (id, organization_id, name, description, created_at, updated_at, color) FROM stdin;
+6fb369cb-f21c-43dc-a6ef-4f5e79bc8e9c	1d894c08-e310-43ae-951c-3b775fe0bb7d	New Tag	\N	2025-12-10 07:28:55.173258+00	2025-12-10 07:28:55.173258+00	yellow
 \.
 
 
@@ -521,8 +565,8 @@ COPY public.subnets (id, network_id, created_at, updated_at, cidr, name, descrip
 -- Data for Name: topologies; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.topologies (id, network_id, name, edges, nodes, options, hosts, subnets, services, groups, is_stale, last_refreshed, is_locked, locked_at, locked_by, removed_hosts, removed_services, removed_subnets, removed_groups, parent_id, created_at, updated_at) FROM stdin;
-5ed1e006-15f4-4fe9-919a-573e10edd816	abff052f-ddc1-4046-8f2b-d1b8640ef6ab	My Topology	[]	[{"id": "95d592b7-1595-4369-ba3e-451dbff8244b", "size": {"x": 350, "y": 200}, "header": null, "position": {"x": 950, "y": 125}, "node_type": "SubnetNode", "infra_width": 0}, {"id": "2855b565-53ad-490b-9f64-f093984c9bde", "size": {"x": 700, "y": 200}, "header": null, "position": {"x": 125, "y": 125}, "node_type": "SubnetNode", "infra_width": 350}, {"id": "0a6bb021-deb6-4fcc-a69d-f1557b5119fa", "size": {"x": 250, "y": 100}, "header": null, "host_id": "7748aa0f-167f-46fc-94c6-5ee24a956c5d", "is_infra": false, "position": {"x": 50, "y": 50}, "node_type": "InterfaceNode", "subnet_id": "95d592b7-1595-4369-ba3e-451dbff8244b", "interface_id": "0a6bb021-deb6-4fcc-a69d-f1557b5119fa"}, {"id": "03daa8f0-9ad6-4948-92e7-5d44614314d2", "size": {"x": 250, "y": 100}, "header": null, "host_id": "3a33db1c-2e3b-4b6b-bc8f-8e39638e6d5c", "is_infra": true, "position": {"x": 50, "y": 50}, "node_type": "InterfaceNode", "subnet_id": "2855b565-53ad-490b-9f64-f093984c9bde", "interface_id": "03daa8f0-9ad6-4948-92e7-5d44614314d2"}, {"id": "7a5617da-3a5f-4503-b021-0906c3f61437", "size": {"x": 250, "y": 100}, "header": null, "host_id": "3b0e6ac7-12af-4502-b7d6-f6eaf2a12904", "is_infra": false, "position": {"x": 400, "y": 50}, "node_type": "InterfaceNode", "subnet_id": "2855b565-53ad-490b-9f64-f093984c9bde", "interface_id": "7a5617da-3a5f-4503-b021-0906c3f61437"}]	{"local": {"no_fade_edges": false, "hide_edge_types": [], "left_zone_title": "Infrastructure", "hide_resize_handles": false}, "request": {"hide_ports": false, "hide_service_categories": [], "show_gateway_in_left_zone": true, "group_docker_bridges_by_host": false, "left_zone_service_categories": ["DNS", "ReverseProxy"], "hide_vm_title_on_docker_container": false}}	[{"id": "3a33db1c-2e3b-4b6b-bc8f-8e39638e6d5c", "name": "Cloudflare DNS", "ports": [{"id": "b4bc6837-bb99-4ad4-b530-f4987706abd1", "type": "DnsUdp", "number": 53, "protocol": "Udp"}], "hidden": false, "source": {"type": "System"}, "target": {"type": "ServiceBinding", "config": "5d9cbf64-5163-4def-83df-425ff3192e36"}, "hostname": null, "services": ["ed4da82f-f328-4b88-8d46-047d233c98ed"], "created_at": "2025-12-10T01:03:07.471506Z", "interfaces": [{"id": "03daa8f0-9ad6-4948-92e7-5d44614314d2", "name": "Internet", "subnet_id": "2855b565-53ad-490b-9f64-f093984c9bde", "ip_address": "1.1.1.1", "mac_address": null}], "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.480768Z", "description": null, "virtualization": null}, {"id": "3b0e6ac7-12af-4502-b7d6-f6eaf2a12904", "name": "Google.com", "ports": [{"id": "c1eaa434-136e-42be-9e3b-b432515a60d1", "type": "Https", "number": 443, "protocol": "Tcp"}], "hidden": false, "source": {"type": "System"}, "target": {"type": "ServiceBinding", "config": "5021e758-c326-4668-9efd-255d57802976"}, "hostname": null, "services": ["b276a233-1b35-4835-8991-a65a7307a47a"], "created_at": "2025-12-10T01:03:07.471531Z", "interfaces": [{"id": "7a5617da-3a5f-4503-b021-0906c3f61437", "name": "Internet", "subnet_id": "2855b565-53ad-490b-9f64-f093984c9bde", "ip_address": "203.0.113.81", "mac_address": null}], "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.485841Z", "description": null, "virtualization": null}, {"id": "7748aa0f-167f-46fc-94c6-5ee24a956c5d", "name": "Mobile Device", "ports": [{"id": "2313bd26-7920-461c-83db-53f2014224a3", "type": "Custom", "number": 0, "protocol": "Tcp"}], "hidden": false, "source": {"type": "System"}, "target": {"type": "ServiceBinding", "config": "28eecd70-6451-46c6-905a-8b18be165baf"}, "hostname": null, "services": ["4bdfd90e-41ed-40e8-a117-3f8271e14d09"], "created_at": "2025-12-10T01:03:07.471542Z", "interfaces": [{"id": "0a6bb021-deb6-4fcc-a69d-f1557b5119fa", "name": "Remote Network", "subnet_id": "95d592b7-1595-4369-ba3e-451dbff8244b", "ip_address": "203.0.113.128", "mac_address": null}], "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.489763Z", "description": "A mobile device connecting from a remote network", "virtualization": null}]	[{"id": "2855b565-53ad-490b-9f64-f093984c9bde", "cidr": "0.0.0.0/0", "name": "Internet", "source": {"type": "System"}, "created_at": "2025-12-10T01:03:07.471446Z", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.471446Z", "description": "This subnet uses the 0.0.0.0/0 CIDR as an organizational container for services running on the internet (e.g., public DNS servers, cloud services, etc.).", "subnet_type": "Internet"}, {"id": "95d592b7-1595-4369-ba3e-451dbff8244b", "cidr": "0.0.0.0/0", "name": "Remote Network", "source": {"type": "System"}, "created_at": "2025-12-10T01:03:07.471449Z", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.471449Z", "description": "This subnet uses the 0.0.0.0/0 CIDR as an organizational container for hosts on remote networks (e.g., mobile connections, friend's networks, public WiFi, etc.).", "subnet_type": "Remote"}, {"id": "03f8d2db-5fd7-408f-a897-defadec9cb2a", "cidr": "172.25.0.0/28", "name": "172.25.0.0/28", "source": {"type": "Discovery", "metadata": [{"date": "2025-12-10T01:03:07.601360816Z", "type": "SelfReport", "host_id": "bb7abcf3-5540-42e5-a7ae-ce2821300ed0", "daemon_id": "c5a3ccaf-d54a-4c00-8623-18f0e6d54c6f"}]}, "created_at": "2025-12-10T01:03:07.601362Z", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.601362Z", "description": null, "subnet_type": "Lan"}]	[{"id": "ed4da82f-f328-4b88-8d46-047d233c98ed", "name": "Cloudflare DNS", "source": {"type": "System"}, "host_id": "3a33db1c-2e3b-4b6b-bc8f-8e39638e6d5c", "bindings": [{"id": "5d9cbf64-5163-4def-83df-425ff3192e36", "type": "Port", "port_id": "b4bc6837-bb99-4ad4-b530-f4987706abd1", "interface_id": "03daa8f0-9ad6-4948-92e7-5d44614314d2"}], "created_at": "2025-12-10T01:03:07.471508Z", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.471508Z", "virtualization": null, "service_definition": "Dns Server"}, {"id": "b276a233-1b35-4835-8991-a65a7307a47a", "name": "Google.com", "source": {"type": "System"}, "host_id": "3b0e6ac7-12af-4502-b7d6-f6eaf2a12904", "bindings": [{"id": "5021e758-c326-4668-9efd-255d57802976", "type": "Port", "port_id": "c1eaa434-136e-42be-9e3b-b432515a60d1", "interface_id": "7a5617da-3a5f-4503-b021-0906c3f61437"}], "created_at": "2025-12-10T01:03:07.471533Z", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.471533Z", "virtualization": null, "service_definition": "Web Service"}, {"id": "4bdfd90e-41ed-40e8-a117-3f8271e14d09", "name": "Mobile Device", "source": {"type": "System"}, "host_id": "7748aa0f-167f-46fc-94c6-5ee24a956c5d", "bindings": [{"id": "28eecd70-6451-46c6-905a-8b18be165baf", "type": "Port", "port_id": "2313bd26-7920-461c-83db-53f2014224a3", "interface_id": "0a6bb021-deb6-4fcc-a69d-f1557b5119fa"}], "created_at": "2025-12-10T01:03:07.471544Z", "network_id": "abff052f-ddc1-4046-8f2b-d1b8640ef6ab", "updated_at": "2025-12-10T01:03:07.471544Z", "virtualization": null, "service_definition": "Client"}]	[]	t	2025-12-10 01:03:07.494313+00	f	\N	\N	{}	{}	{}	{}	\N	2025-12-10 01:03:07.490546+00	2025-12-10 01:04:26.663941+00
+COPY public.topologies (id, network_id, name, edges, nodes, options, hosts, subnets, services, groups, is_stale, last_refreshed, is_locked, locked_at, locked_by, removed_hosts, removed_services, removed_subnets, removed_groups, parent_id, created_at, updated_at, tags) FROM stdin;
+e4d99fdc-dd83-44f7-933f-8bee80987e3d	40846f9a-fe66-4922-b89e-115493c8633e	My Topology	[]	[{"id": "98a16647-31fa-4468-92c6-2e7439751720", "size": {"x": 700, "y": 200}, "header": null, "position": {"x": 125, "y": 125}, "node_type": "SubnetNode", "infra_width": 350}, {"id": "f50e2b61-458c-45c6-8964-478a3914dba3", "size": {"x": 350, "y": 200}, "header": null, "position": {"x": 950, "y": 125}, "node_type": "SubnetNode", "infra_width": 0}, {"id": "30a55814-0eed-4130-b044-20e0c570d80d", "size": {"x": 250, "y": 100}, "header": null, "host_id": "d6eba617-e1d2-4bc5-8c9f-398845abc9be", "is_infra": true, "position": {"x": 50, "y": 50}, "node_type": "InterfaceNode", "subnet_id": "98a16647-31fa-4468-92c6-2e7439751720", "interface_id": "30a55814-0eed-4130-b044-20e0c570d80d"}, {"id": "4f5ee499-215f-47e2-8eb3-d3f88b80d884", "size": {"x": 250, "y": 100}, "header": null, "host_id": "9a8acd9b-6281-412a-95c8-c8eb0e45a3bf", "is_infra": false, "position": {"x": 400, "y": 50}, "node_type": "InterfaceNode", "subnet_id": "98a16647-31fa-4468-92c6-2e7439751720", "interface_id": "4f5ee499-215f-47e2-8eb3-d3f88b80d884"}, {"id": "83b5b799-47e3-4854-8496-b8c00e2db591", "size": {"x": 250, "y": 100}, "header": null, "host_id": "73d2c20c-73c9-42ca-b9bf-826a9ec846c6", "is_infra": false, "position": {"x": 50, "y": 50}, "node_type": "InterfaceNode", "subnet_id": "f50e2b61-458c-45c6-8964-478a3914dba3", "interface_id": "83b5b799-47e3-4854-8496-b8c00e2db591"}]	{"local": {"no_fade_edges": false, "hide_edge_types": [], "left_zone_title": "Infrastructure", "hide_resize_handles": false}, "request": {"hide_ports": false, "hide_service_categories": [], "show_gateway_in_left_zone": true, "group_docker_bridges_by_host": false, "left_zone_service_categories": ["DNS", "ReverseProxy"], "hide_vm_title_on_docker_container": false}}	[{"id": "d6eba617-e1d2-4bc5-8c9f-398845abc9be", "name": "Cloudflare DNS", "tags": [], "ports": [{"id": "c75a3e3f-2abb-418e-bb45-214173a576a1", "type": "DnsUdp", "number": 53, "protocol": "Udp"}], "hidden": false, "source": {"type": "System"}, "target": {"type": "ServiceBinding", "config": "61054003-a7c1-4b8c-abcd-5fa8f023f11f"}, "hostname": null, "services": ["1f582214-833b-4129-a548-1fc44f8e562a"], "created_at": "2025-12-10T07:27:18.897649Z", "interfaces": [{"id": "30a55814-0eed-4130-b044-20e0c570d80d", "name": "Internet", "subnet_id": "98a16647-31fa-4468-92c6-2e7439751720", "ip_address": "1.1.1.1", "mac_address": null}], "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.906982Z", "description": null, "virtualization": null}, {"id": "9a8acd9b-6281-412a-95c8-c8eb0e45a3bf", "name": "Google.com", "tags": [], "ports": [{"id": "03502289-44a9-46db-881b-eafbf8a856e3", "type": "Https", "number": 443, "protocol": "Tcp"}], "hidden": false, "source": {"type": "System"}, "target": {"type": "ServiceBinding", "config": "c6382f4e-81c5-4d46-b54c-24cc91b2b409"}, "hostname": null, "services": ["4540d984-3e11-4a74-a3c4-cbf0ef8e34b7"], "created_at": "2025-12-10T07:27:18.897655Z", "interfaces": [{"id": "4f5ee499-215f-47e2-8eb3-d3f88b80d884", "name": "Internet", "subnet_id": "98a16647-31fa-4468-92c6-2e7439751720", "ip_address": "203.0.113.195", "mac_address": null}], "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.912143Z", "description": null, "virtualization": null}, {"id": "73d2c20c-73c9-42ca-b9bf-826a9ec846c6", "name": "Mobile Device", "tags": [], "ports": [{"id": "72dc2a17-84eb-4292-ae1d-9f03d0b5fd11", "type": "Custom", "number": 0, "protocol": "Tcp"}], "hidden": false, "source": {"type": "System"}, "target": {"type": "ServiceBinding", "config": "3b00305a-832b-4295-952b-53848c51bc42"}, "hostname": null, "services": ["7b993025-a94f-4843-8153-4ec3422e2b3e"], "created_at": "2025-12-10T07:27:18.897660Z", "interfaces": [{"id": "83b5b799-47e3-4854-8496-b8c00e2db591", "name": "Remote Network", "subnet_id": "f50e2b61-458c-45c6-8964-478a3914dba3", "ip_address": "203.0.113.208", "mac_address": null}], "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.916064Z", "description": "A mobile device connecting from a remote network", "virtualization": null}]	[{"id": "98a16647-31fa-4468-92c6-2e7439751720", "cidr": "0.0.0.0/0", "name": "Internet", "tags": [], "source": {"type": "System"}, "created_at": "2025-12-10T07:27:18.897599Z", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.897599Z", "description": "This subnet uses the 0.0.0.0/0 CIDR as an organizational container for services running on the internet (e.g., public DNS servers, cloud services, etc.).", "subnet_type": "Internet"}, {"id": "f50e2b61-458c-45c6-8964-478a3914dba3", "cidr": "0.0.0.0/0", "name": "Remote Network", "tags": [], "source": {"type": "System"}, "created_at": "2025-12-10T07:27:18.897602Z", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.897602Z", "description": "This subnet uses the 0.0.0.0/0 CIDR as an organizational container for hosts on remote networks (e.g., mobile connections, friend's networks, public WiFi, etc.).", "subnet_type": "Remote"}, {"id": "ecf81549-0b7d-4ad5-ba39-c54a00a19b1a", "cidr": "172.25.0.0/28", "name": "172.25.0.0/28", "tags": [], "source": {"type": "Discovery", "metadata": [{"date": "2025-12-10T07:27:19.040620887Z", "type": "SelfReport", "host_id": "c42206f4-652f-4302-befa-55ac6db5fa96", "daemon_id": "06057b2e-9b19-4bbb-9c86-a1288af0509d"}]}, "created_at": "2025-12-10T07:27:19.040622Z", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:19.040622Z", "description": null, "subnet_type": "Lan"}]	[{"id": "1f582214-833b-4129-a548-1fc44f8e562a", "name": "Cloudflare DNS", "tags": [], "source": {"type": "System"}, "host_id": "d6eba617-e1d2-4bc5-8c9f-398845abc9be", "bindings": [{"id": "61054003-a7c1-4b8c-abcd-5fa8f023f11f", "type": "Port", "port_id": "c75a3e3f-2abb-418e-bb45-214173a576a1", "interface_id": "30a55814-0eed-4130-b044-20e0c570d80d"}], "created_at": "2025-12-10T07:27:18.897651Z", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.897651Z", "virtualization": null, "service_definition": "Dns Server"}, {"id": "4540d984-3e11-4a74-a3c4-cbf0ef8e34b7", "name": "Google.com", "tags": [], "source": {"type": "System"}, "host_id": "9a8acd9b-6281-412a-95c8-c8eb0e45a3bf", "bindings": [{"id": "c6382f4e-81c5-4d46-b54c-24cc91b2b409", "type": "Port", "port_id": "03502289-44a9-46db-881b-eafbf8a856e3", "interface_id": "4f5ee499-215f-47e2-8eb3-d3f88b80d884"}], "created_at": "2025-12-10T07:27:18.897656Z", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.897656Z", "virtualization": null, "service_definition": "Web Service"}, {"id": "7b993025-a94f-4843-8153-4ec3422e2b3e", "name": "Mobile Device", "tags": [], "source": {"type": "System"}, "host_id": "73d2c20c-73c9-42ca-b9bf-826a9ec846c6", "bindings": [{"id": "3b00305a-832b-4295-952b-53848c51bc42", "type": "Port", "port_id": "72dc2a17-84eb-4292-ae1d-9f03d0b5fd11", "interface_id": "83b5b799-47e3-4854-8496-b8c00e2db591"}], "created_at": "2025-12-10T07:27:18.897661Z", "network_id": "40846f9a-fe66-4922-b89e-115493c8633e", "updated_at": "2025-12-10T07:27:18.897661Z", "virtualization": null, "service_definition": "Client"}]	[]	t	2025-12-10 07:27:18.920524+00	f	\N	\N	{}	{}	{}	{}	\N	2025-12-10 07:27:18.916808+00	2025-12-10 07:28:36.352235+00	{}
 \.
 
 
@@ -530,8 +574,8 @@ COPY public.topologies (id, network_id, name, edges, nodes, options, hosts, subn
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.users (id, created_at, updated_at, password_hash, oidc_provider, oidc_subject, oidc_linked_at, email, organization_id, permissions, network_ids) FROM stdin;
-56644239-f060-4075-8038-8bd3525b9b39	2025-12-10 01:03:06.258713+00	2025-12-10 01:03:07.451746+00	$argon2id$v=19$m=19456,t=2,p=1$k9iEGdOlm+++qm5VgzcKYQ$v12DS+vmV+Nl9CeyPP0++GdMu9WrNH82QfbYpNHOTWQ	\N	\N	\N	user@gmail.com	9d4e52ed-5e9e-466b-b99f-23a114619823	Owner	{}
+COPY public.users (id, created_at, updated_at, password_hash, oidc_provider, oidc_subject, oidc_linked_at, email, organization_id, permissions, network_ids, tags) FROM stdin;
+f2670baf-6072-4a4a-b41d-efb722942b00	2025-12-10 07:27:15.945931+00	2025-12-10 07:27:18.878046+00	$argon2id$v=19$m=19456,t=2,p=1$S85/gqE731tJMkpeSQrI0A$OESI2TKcShNddBvvetrzHWpv5E+V4Lof9LayLmQkN/c	\N	\N	\N	user@gmail.com	1d894c08-e310-43ae-951c-3b775fe0bb7d	Owner	{}	{}
 \.
 
 
@@ -540,7 +584,7 @@ COPY public.users (id, created_at, updated_at, password_hash, oidc_provider, oid
 --
 
 COPY tower_sessions.session (id, data, expiry_date) FROM stdin;
-SyP4NuuTGj-5Ju4R6Y16ug	\\x93c410ba7a8de911ee26b93f1a93eb36f8234b81a7757365725f6964d92435363634343233392d663036302d343037352d383033382d38626433353235623962333999cd07ea09010307ce1b15d739000000	2026-01-09 01:03:07.454416+00
+PB_QtxN8POQyPFkbIujylQ	\\x93c41095f2e8221b593c32e43c7c13b7d01f3c81a7757365725f6964d92466323637306261662d363037322d346134612d623431642d65666237323239343262303099cd07ea09071b12ce34819a73000000	2026-01-09 07:27:18.880908+00
 \.
 
 
@@ -630,6 +674,14 @@ ALTER TABLE ONLY public.services
 
 ALTER TABLE ONLY public.subnets
     ADD CONSTRAINT subnets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_pkey PRIMARY KEY (id);
 
 
 --
@@ -748,6 +800,20 @@ CREATE INDEX idx_subnets_network ON public.subnets USING btree (network_id);
 
 
 --
+-- Name: idx_tags_org_name; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX idx_tags_org_name ON public.tags USING btree (organization_id, name);
+
+
+--
+-- Name: idx_tags_organization; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_tags_organization ON public.tags USING btree (organization_id);
+
+
+--
 -- Name: idx_topologies_network; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -863,6 +929,14 @@ ALTER TABLE ONLY public.subnets
 
 
 --
+-- Name: tags tags_organization_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tags
+    ADD CONSTRAINT tags_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+--
 -- Name: topologies topologies_network_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -882,5 +956,5 @@ ALTER TABLE ONLY public.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict To8uLaMtcCa4oIqv1GcTN6UUfAmjxFPBndZkddlJPTypnxNzOq1Xht45gezkDY1
+\unrestrict y1GJXLS7vTkQfpscfUSdR6J3aQGEFxSjRbxLPKjla9ta2nsdVQjCMnmPzeKWNXm
 

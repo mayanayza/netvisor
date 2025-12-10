@@ -28,6 +28,14 @@ pub enum GroupType {
     },
 }
 
+impl Default for GroupType {
+    fn default() -> Self {
+        Self::RequestPath {
+            service_bindings: Vec::new(),
+        }
+    }
+}
+
 impl HasId for GroupTypeDiscriminants {
     fn id(&self) -> &'static str {
         self.into()

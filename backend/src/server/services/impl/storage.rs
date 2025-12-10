@@ -68,6 +68,7 @@ impl StorableEntity for Service {
                     virtualization,
                     bindings,
                     source,
+                    tags,
                 },
         } = self.clone();
 
@@ -83,6 +84,7 @@ impl StorableEntity for Service {
                 "virtualization",
                 "bindings",
                 "source",
+                "tags",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -95,6 +97,7 @@ impl StorableEntity for Service {
                 SqlValue::OptionalServiceVirtualization(virtualization),
                 SqlValue::Bindings(bindings),
                 SqlValue::EntitySource(source),
+                SqlValue::UuidArray(tags),
             ],
         ))
     }
@@ -124,6 +127,7 @@ impl StorableEntity for Service {
                 service_definition,
                 virtualization,
                 bindings,
+                tags: row.get("tags"),
                 source,
             },
         })

@@ -110,33 +110,6 @@
     },
     {
       "category": null,
-      "color": "gray",
-      "description": "Deploy NetVisor with enterprise-grade features and functionality",
-      "icon": "Building",
-      "id": "Enterprise",
-      "metadata": {
-        "base_cents": 0,
-        "features": {
-          "api_access": true,
-          "audit_logs": true,
-          "commercial_license": true,
-          "dedicated_support_channel": true,
-          "onboarding_call": true,
-          "remove_created_with": true,
-          "share_views": true
-        },
-        "included_networks": null,
-        "included_seats": null,
-        "is_commercial": true,
-        "network_cents": null,
-        "rate": "Month",
-        "seat_cents": null,
-        "trial_days": 14
-      },
-      "name": "Enterprise"
-    },
-    {
-      "category": null,
       "color": "blue",
       "description": "Automatically create living documentation of your network",
       "icon": "ThumbsUp",

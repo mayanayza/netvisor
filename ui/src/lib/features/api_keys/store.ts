@@ -83,7 +83,8 @@ export function createEmptyApiKeyFormData(): ApiKey {
 		last_used: null,
 		network_id: get(networks)[0].id || '',
 		key: '',
-		is_enabled: true
+		is_enabled: true,
+		tags: []
 	};
 }
 

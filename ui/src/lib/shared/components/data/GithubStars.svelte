@@ -47,7 +47,7 @@
 
 {#if !loading && !error && $stars != null && $stars != undefined}
 	<a
-		href="https://github.com/mayanayza/netvisor"
+		href="https://github.com/netvisor-io/netvisor"
 		target="_blank"
 		rel="noopener noreferrer"
 		class="inline-flex items-center gap-1.5 rounded-md border border-gray-600 bg-gray-700/50 px-3 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:border-gray-500 hover:bg-gray-700 {className}"

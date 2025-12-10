@@ -16,6 +16,8 @@ pub struct DiscoveryBase {
     pub name: String,
     pub daemon_id: Uuid,
     pub network_id: Uuid,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]

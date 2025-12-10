@@ -203,6 +203,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             hostname,
             network_id,
             description: Some("NetVisor daemon".to_string()),
+            tags: Vec::new(),
             target: HostTarget::Hostname,
             services: Vec::new(),
             interfaces: interfaces.clone(),
@@ -229,6 +230,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         let daemon_service = Service::new(ServiceBase {
             name: ServiceDefinition::name(&daemon_service_definition).to_string(),
             service_definition: Box::new(daemon_service_definition),
+            tags: Vec::new(),
             network_id,
             bindings: daemon_service_bound_interfaces
                 .iter()

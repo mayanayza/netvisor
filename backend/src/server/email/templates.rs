@@ -32,7 +32,7 @@ pub const EMAIL_FOOTER: &str = r#"                    <!-- Footer -->
                                         </a>
                                     </td>
                                     <td style="padding: 0 10px;">
-                                        <a href="https://github.com/mayanayza/netvisor" style="display: inline-block;">
+                                        <a href="https://github.com/netvisor-io/netvisor" style="display: inline-block;">
                                             <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@master/png/github.png" alt="GitHub" style="width: 24px; height: 24px; display: block;">
                                         </a>
                                     </td>

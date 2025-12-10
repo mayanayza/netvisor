@@ -36,6 +36,7 @@
 	import ApiKeyTab from '$lib/features/api_keys/components/ApiKeyTab.svelte';
 	import UserTab from '$lib/features/users/components/UserTab.svelte';
 	import OrganizationSettingsModal from '$lib/features/organizations/OrganizationSettingsModal.svelte';
+	import TagTab from '$lib/features/tags/components/TagTab.svelte';
 
 	let {
 		activeTab = $bindable('topology'),
@@ -179,6 +180,13 @@
 					label: 'Users',
 					icon: entities.getIconComponent('User'),
 					component: UserTab,
+					requiredPermissions: ['Member', 'Admin', 'Owner']
+				},
+				{
+					id: 'tags',
+					label: 'Tags',
+					icon: entities.getIconComponent('Tag'),
+					component: TagTab,
 					requiredPermissions: ['Member', 'Admin', 'Owner']
 				}
 			]

@@ -129,16 +129,17 @@ impl TypeMetadataProvider for UserOrgPermissions {
     }
 
     fn metadata(&self) -> serde_json::Value {
-        let can_manage: Vec<UserOrgPermissions> = match self {
+        let can_manage_user_permissions: Vec<UserOrgPermissions> = match self {
             UserOrgPermissions::Owner => UserOrgPermissions::iter().collect(),
             _ => UserOrgPermissions::iter().filter(|p| p < self).collect(),
         };
 
-        let network_permissions: bool =
+        let manage_org_entities: bool =
             matches!(self, UserOrgPermissions::Owner | UserOrgPermissions::Admin);
+
         serde_json::json!({
-            "can_manage": can_manage,
-            "network_permissions": network_permissions,
+            "can_manage_user_permissions": can_manage_user_permissions,
+            "manage_org_entities": manage_org_entities,
             "counts_towards_seats": self.counts_towards_seats()
         })
     }

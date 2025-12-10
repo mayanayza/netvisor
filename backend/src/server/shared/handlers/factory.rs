@@ -28,8 +28,8 @@ use crate::server::{
     groups::handlers as group_handlers, hosts::handlers as host_handlers,
     networks::handlers as network_handlers, organizations::handlers as organization_handlers,
     services::handlers as service_handlers, shared::types::api::ApiResponse,
-    subnets::handlers as subnet_handlers, topology::handlers as topology_handlers,
-    users::handlers as user_handlers,
+    subnets::handlers as subnet_handlers, tags::handlers as tag_handlers,
+    topology::handlers as topology_handlers, users::handlers as user_handlers,
 };
 use anyhow::anyhow;
 use axum::extract::State;
@@ -58,6 +58,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .nest("/api/billing", billing_handlers::create_router())
         .nest("/api/auth", auth_handlers::create_router())
         .nest("/api/organizations", organization_handlers::create_router())
+        .nest("/api/tags", tag_handlers::create_router())
         .route("/api/health", get(get_health))
         .route("/api/onboarding", post(onboarding))
         // Group cacheable routes together
@@ -207,6 +208,7 @@ pub async fn onboarding(
                     expires_at: None,
                     network_id: network.id,
                     is_enabled: true,
+                    tags: Vec::new(),
                 }),
                 AuthenticatedEntity::System,
             )

@@ -224,4 +224,4 @@ Technical overview of NetVisor's system design, components, and technology stack
 ```
 ---
 
-**For implementation details**, see the [source code](https://github.com/mayanayza/netvisor).
+**For implementation details**, see the [source code](https://github.com/netvisor-io/netvisor).

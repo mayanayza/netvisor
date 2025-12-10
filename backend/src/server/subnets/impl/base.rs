@@ -28,6 +28,8 @@ pub struct SubnetBase {
     pub description: Option<String>,
     pub subnet_type: SubnetType,
     pub source: EntitySource,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 impl Default for SubnetBase {
@@ -39,6 +41,7 @@ impl Default for SubnetBase {
             description: None,
             subnet_type: SubnetType::Unknown,
             source: EntitySource::Manual,
+            tags: Vec::new(),
         }
     }
 }
@@ -93,6 +96,7 @@ impl Subnet {
                     cidr,
                     network_id,
                     description: None,
+                    tags: Vec::new(),
                     name: cidr.to_string(),
                     subnet_type,
                     source: EntitySource::Discovery {

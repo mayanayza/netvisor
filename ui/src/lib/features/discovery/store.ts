@@ -56,6 +56,7 @@ export function createEmptyDiscoveryFormData(daemon: Daemon | null): Discovery {
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
+		tags: [],
 		discovery_type: {
 			type: 'Network',
 			subnet_ids: daemon ? daemon.capabilities.interfaced_subnet_ids : [],

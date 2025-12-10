@@ -82,7 +82,8 @@ export function createEmptyGroupFormData(): Group {
 		},
 		network_id: get(networks)[0].id || '',
 		color: entities.getColorHelper('Group').string,
-		edge_style: 'Straight'
+		edge_style: 'Straight',
+		tags: []
 	};
 }
 
