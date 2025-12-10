@@ -161,6 +161,12 @@ This document lists all services that NetVisor can automatically discover and id
 <td style="padding: 12px; color: #d1d5db;">Video conferencing</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8443/ contains "jitsilogo.png"</code></td>
 </tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailcow.svg" alt="mailcow" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">mailcow</td>
+<td style="padding: 12px; color: #d1d5db;">Open-source mail server suite (Dockerized)</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:443/api/v1/get/status contains "mailcow"</code></td>
+</tr>
 </tbody>
 </table>
 

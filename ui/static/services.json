@@ -323,6 +323,13 @@
   },
   {
     "category": "Communication",
+    "description": "Open-source mail server suite (Dockerized)",
+    "discovery_pattern": "Endpoint response body from <ip>:443/api/v1/get/status contains \"mailcow\"",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailcow.svg",
+    "name": "mailcow"
+  },
+  {
+    "category": "Communication",
     "description": "Video conferencing",
     "discovery_pattern": "Endpoint response body from <ip>:8443/ contains \"jitsilogo.png\"",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jitsi-meet.svg",
