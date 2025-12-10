@@ -86,7 +86,7 @@ jobs:
       
       - name: Send Discord Notification
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_CHANNEL_WEBHOOK: ${{ secrets.RELEASE_CHANNEL_WEBHOOK }}
           RELEASE_NAME: ${{ steps.release.outputs.release_name }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASE_URL: ${{ steps.release.outputs.release_url }}
