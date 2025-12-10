@@ -341,7 +341,7 @@
 										helpText={def.helpText}
 									/>
 								{:else if def.type === 'boolean'}
-									<div class="flex items-end pb-2">
+									<div class="flex items-center pb-2">
 										<Checkbox
 											field={formFields[def.id] as BooleanFieldType}
 											id={def.id}

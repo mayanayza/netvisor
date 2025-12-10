@@ -21,7 +21,7 @@ class TopologySSEManager extends BaseSSEManager<Topology> {
 				if (get(autoRebuild)) {
 					const currentTopo = get(topology);
 					if (currentTopo && currentTopo.id === update.id && !currentTopo.is_locked) {
-						rebuildTopology(currentTopo);
+						rebuildTopology(update);
 					}
 					return;
 				}
