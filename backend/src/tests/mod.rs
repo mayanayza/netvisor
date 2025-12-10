@@ -102,6 +102,7 @@ pub fn host(network_id: &Uuid) -> Host {
         source: EntitySource::System,
         virtualization: None,
         hidden: false,
+        tags: Vec::new(),
     })
 }
 
@@ -122,6 +123,7 @@ pub fn subnet(network_id: &Uuid) -> Subnet {
         cidr: IpCidr::V4(Ipv4Cidr::new(Ipv4Addr::new(192, 168, 1, 0), 24).unwrap()),
         subnet_type: SubnetType::Lan,
         source: EntitySource::System,
+        tags: Vec::new(),
     })
 }
 
@@ -137,6 +139,7 @@ pub fn service(network_id: &Uuid, host_id: &Uuid) -> Service {
         service_definition: service_def,
         virtualization: None,
         source: EntitySource::System,
+        tags: Vec::new(),
     })
 }
 
@@ -151,6 +154,7 @@ pub fn group(network_id: &Uuid) -> Group {
         },
         source: EntitySource::System,
         edge_style: EdgeStyle::Bezier,
+        tags: Vec::new(),
     })
 }
 
@@ -158,6 +162,7 @@ pub fn daemon(network_id: &Uuid, host_id: &Uuid) -> Daemon {
     Daemon::new(DaemonBase {
         host_id: *host_id,
         network_id: *network_id,
+        tags: Vec::new(),
         name: "daemon".to_string(),
         url: "http://192.168.1.50:60073".to_string(),
         last_seen: Utc::now(),

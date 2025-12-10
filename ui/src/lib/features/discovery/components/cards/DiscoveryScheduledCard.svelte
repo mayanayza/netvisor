@@ -6,6 +6,7 @@
 	import { daemons } from '$lib/features/daemons/store';
 	import { parseCronToHours } from '../../store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
+	import { tags } from '$lib/features/tags/store';
 
 	export let viewMode: 'card' | 'list';
 	export let discovery: Discovery;
@@ -41,6 +42,15 @@
 					discovery.run_type.type != 'Historical' && discovery.run_type.last_run
 						? formatTimestamp(discovery.run_type.last_run)
 						: 'Never'
+			},
+			{
+				label: 'Tags',
+				value: discovery.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 		actions: [

@@ -14,6 +14,7 @@ export interface Service {
 	virtualization: ServiceVirtualization | null;
 	source: EntitySource;
 	network_id: string;
+	tags: string[];
 }
 
 export type ServiceWithVMs = Omit<Service, 'vms'> & {

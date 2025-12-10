@@ -273,6 +273,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             service_definition: Box::new(docker_service_definition),
             bindings: vec![],
             host_id,
+            tags: Vec::new(),
             network_id,
             virtualization: None,
             source: EntitySource::DiscoveryWithMatch {

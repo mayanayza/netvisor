@@ -18,7 +18,9 @@
 	}
 
 	$: canManage = $currentUser
-		? permissions.getMetadata($currentUser.permissions).can_manage.includes(invite.permissions)
+		? permissions
+				.getMetadata($currentUser.permissions)
+				.can_manage_user_permissions.includes(invite.permissions)
 		: false;
 
 	// Build card data

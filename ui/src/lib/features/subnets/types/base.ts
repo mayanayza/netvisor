@@ -10,4 +10,5 @@ export interface Subnet {
 	network_id: string;
 	source: EntitySource;
 	subnet_type: string;
+	tags: string[];
 }

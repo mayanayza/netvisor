@@ -14,6 +14,7 @@ interface BaseGroup {
 	network_id: string;
 	color: string;
 	edge_style: 'Straight' | 'SmoothStep' | 'Step' | 'Bezier' | 'SimpleBezier';
+	tags: string[];
 }
 
 export interface RequestPathGroup extends BaseGroup {

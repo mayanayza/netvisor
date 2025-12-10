@@ -28,6 +28,7 @@ export interface Topology {
 	removed_subnets: string[];
 	removed_groups: string[];
 	parent_id: string | null;
+	tags: string[];
 }
 
 export interface NodeBase {

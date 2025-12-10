@@ -8,6 +8,7 @@
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import type { ApiKey } from '../types/base';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
 	export let formData: ApiKey;
@@ -45,6 +46,8 @@
 	/>
 
 	<SelectNetwork bind:selectedNetworkId disabled={isEditing} />
+
+	<TagPicker bind:selectedTagIds={formData.tags} />
 
 	<DateInput
 		label="Expiration Date (Optional)"

@@ -67,6 +67,7 @@ export function createEmptySubnetFormData(): Subnet {
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
+		tags: [],
 		name: '',
 		network_id: get(networks)[0].id || '',
 		cidr: '',

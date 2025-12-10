@@ -59,6 +59,7 @@ impl StorableEntity for ApiKey {
                     expires_at,
                     network_id,
                     is_enabled,
+                    tags,
                 },
         } = self.clone();
 
@@ -73,6 +74,7 @@ impl StorableEntity for ApiKey {
                 "name",
                 "is_enabled",
                 "key",
+                "tags",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -84,6 +86,7 @@ impl StorableEntity for ApiKey {
                 SqlValue::String(name),
                 SqlValue::Bool(is_enabled),
                 SqlValue::String(key),
+                SqlValue::UuidArray(tags),
             ],
         ))
     }
@@ -100,6 +103,7 @@ impl StorableEntity for ApiKey {
                 key: row.get("key"),
                 is_enabled: row.get("is_enabled"),
                 network_id: row.get("network_id"),
+                tags: row.get("tags"),
             },
         })
     }

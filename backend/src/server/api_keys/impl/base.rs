@@ -15,6 +15,8 @@ pub struct ApiKeyBase {
     pub expires_at: Option<DateTime<Utc>>,
     pub network_id: Uuid,
     pub is_enabled: bool,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 fn serialize_api_key_status<S>(_key: &String, serializer: S) -> Result<S::Ok, S::Error>

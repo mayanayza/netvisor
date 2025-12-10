@@ -59,8 +59,8 @@ export interface ServicedDefinitionMetadata {
 }
 
 export interface PermissionsMetadata {
-	can_manage: string[];
-	network_permissions: boolean;
+	can_manage_user_permissions: string[];
+	manage_org_entities: boolean;
 	counts_towards_seats: boolean;
 }
 

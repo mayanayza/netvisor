@@ -9,6 +9,7 @@ export interface Discovery {
 	name: string;
 	daemon_id: string;
 	network_id: string;
+	tags: string[];
 }
 
 export type RunType = HistoricalRun | ScheduledRun | AdHocRun;

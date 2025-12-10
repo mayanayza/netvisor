@@ -8,6 +8,7 @@
 	import { DaemonDisplay } from '$lib/shared/components/forms/selection/display/DaemonDisplay.svelte';
 	import type { Discovery } from '../../types/base';
 	import type { Daemon } from '$lib/features/daemons/types/base';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Discovery;
@@ -54,4 +55,6 @@
 		/>
 		<p class="text-tertiary text-xs">The daemon that will execute this discovery</p>
 	</div>
+
+	<TagPicker bind:selectedTagIds={formData.tags} />
 </div>

@@ -10,10 +10,19 @@
 	import type { Network } from '$lib/features/networks/types';
 	import type { Discovery } from '$lib/features/discovery/types/base';
 	import type { ApiKey } from '$lib/features/api_keys/types/base';
+	import type { Tag } from '$lib/features/tags/types/base';
 
-	export let entities: (Group | Host | Subnet | Service | Network | Discovery | ApiKey | null)[] = [
-		null
-	];
+	export let entities: (
+		| Group
+		| Host
+		| Subnet
+		| Service
+		| Network
+		| Discovery
+		| ApiKey
+		| Tag
+		| null
+	)[] = [null];
 	export let showSummary: boolean = true;
 
 	let id = entities.length == 1 ? entities[0]?.id : null;

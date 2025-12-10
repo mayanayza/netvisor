@@ -20,6 +20,8 @@ pub struct DaemonBase {
     pub capabilities: DaemonCapabilities,
     pub mode: DaemonMode,
     pub name: String,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]

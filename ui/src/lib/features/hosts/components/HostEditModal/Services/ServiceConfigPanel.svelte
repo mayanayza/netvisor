@@ -16,6 +16,7 @@
 	import MatchDetails from './MatchDetails.svelte';
 	import type { Host } from '$lib/features/hosts/types/base';
 	import { get, readable, type Readable } from 'svelte/store';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
 	export let host: Host;
@@ -301,6 +302,8 @@
 					field={nameField}
 				/>
 			{/if}
+
+			<TagPicker bind:selectedTagIds={service.tags} />
 		</div>
 
 		<div>

@@ -387,6 +387,7 @@ pub trait DiscoversNetworkedEntities:
             name: "Unknown Device".to_string(),
             hostname: hostname.clone(),
             target: HostTarget::None,
+            tags: Vec::new(),
             network_id,
             description: None,
             interfaces: vec![interface.clone()],

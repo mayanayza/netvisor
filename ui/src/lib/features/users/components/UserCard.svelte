@@ -34,7 +34,9 @@
 
 	let canManage = $derived(
 		$currentUser
-			? permissions.getMetadata($currentUser.permissions).can_manage.includes(user.permissions)
+			? permissions
+					.getMetadata($currentUser.permissions)
+					.can_manage_user_permissions.includes(user.permissions)
 			: false
 	);
 
@@ -86,6 +88,13 @@
 								color: entities.getColorHelper('Network').string
 							}))
 			}
+			// {
+			// 	label: 'Tags',
+			// 	value: user.tags.map(t => {
+			// 		const tag = $tags.find(tag => tag.id == t)
+			// 		return tag ? { id: tag.id, color: tag.color, label: tag.name} : { id: t, color: "gray", label: "Unknown Tag"}
+			// 	})
+			// },
 		],
 		actions: canManage
 			? [

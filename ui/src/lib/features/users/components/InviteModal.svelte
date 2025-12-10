@@ -49,7 +49,9 @@
 			.getItems()
 			.filter((p) =>
 				$currentUser
-					? permissions.getMetadata($currentUser.permissions).can_manage.includes(p.id)
+					? permissions
+							.getMetadata($currentUser.permissions)
+							.can_manage_user_permissions.includes(p.id)
 					: false
 			)
 			.map((p) => ({ value: p.id, label: p.name, description: p.description }))
