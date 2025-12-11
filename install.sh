@@ -102,7 +102,7 @@ if [ "$PLATFORM" = "linux" ] && command -v systemctl &> /dev/null; then
             echo "  sudo nano /etc/systemd/system/netvisor-daemon.service"
             echo ""
             echo "Add your daemon arguments to the ExecStart line:"
-            echo "  ExecStart=/usr/local/bin/netvisor-daemon --server-target http://YOUR_SERVER --server-port 60072 --network-id YOUR_NETWORK_ID --daemon-api-key YOUR_API_KEY"
+            echo "  ExecStart=/usr/local/bin/netvisor-daemon --server-url http://YOUR_SERVER --server-port 60072 --network-id YOUR_NETWORK_ID --daemon-api-key YOUR_API_KEY"
             echo ""
             echo "Then enable and start the service:"
             echo "  sudo systemctl daemon-reload"
