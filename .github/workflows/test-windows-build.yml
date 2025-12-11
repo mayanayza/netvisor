@@ -1,0 +1,33 @@
+name: Test Windows Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows-daemon:
+    name: Build Daemon (Windows)
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.90.0
+        with:
+          targets: x86_64-pc-windows-msvc
+      
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+          key: x86_64-pc-windows-msvc
+      
+      - name: Build daemon
+        working-directory: backend
+        run: cargo build --release --bin daemon --target x86_64-pc-windows-msvc
+      
+      - name: Verify binary exists
+        shell: bash
+        run: |
+          ls -la backend/target/x86_64-pc-windows-msvc/release/daemon.exe
+          echo "✅ Windows build successful"
