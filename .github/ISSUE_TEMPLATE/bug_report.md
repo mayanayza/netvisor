@@ -36,4 +36,4 @@ Add any other context about the problem here.
 If you have logs from the daemon or server, pleae provide them here.
 
 **Before submitting**
-[ ] I have reviewed [Troubleshooting](https://github.com/mayanayza/netvisor#troubleshooting) in the readme
+[ ] I have reviewed [Troubleshooting](https://github.com/netvisor-io/netvisor#troubleshooting) in the readme

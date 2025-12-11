@@ -323,6 +323,13 @@
   },
   {
     "category": "Communication",
+    "description": "Open-source mail server suite (Dockerized)",
+    "discovery_pattern": "Endpoint response body from <ip>:443/api/v1/get/status contains \"mailcow\"",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailcow.svg",
+    "name": "mailcow"
+  },
+  {
+    "category": "Communication",
     "description": "Video conferencing",
     "discovery_pattern": "Endpoint response body from <ip>:8443/ contains \"jitsilogo.png\"",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jitsi-meet.svg",
@@ -911,6 +918,13 @@
   },
   {
     "category": "Virtualization",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
+  },
+  {
+    "category": "Virtualization",
     "description": "A generic docker container",
     "discovery_pattern": "All of: (Service is running in a docker container, A custom match pattern evaluated at runtime)",
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
@@ -1468,12 +1482,5 @@
     "discovery_pattern": "67/udp is open",
     "logo_url": "",
     "name": "Dhcp Server"
-  },
-  {
-    "category": "Virtualization",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
   }
 ]

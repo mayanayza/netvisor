@@ -22,6 +22,7 @@
 	import DiscoveryRunCard from '../cards/DiscoveryScheduledCard.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
+	import { tags } from '$lib/features/tags/store';
 
 	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
 
@@ -87,6 +88,20 @@
 			filterable: true,
 			sortable: true,
 			getValue: (item) => item.run_type.type
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'array',
+			searchable: true,
+			filterable: true,
+			sortable: false,
+			getValue: (entity) => {
+				// Return tag names for search/filter display
+				return entity.tags
+					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.filter((name): name is string => !!name);
+			}
 		}
 	];
 </script>

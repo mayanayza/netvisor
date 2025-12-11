@@ -23,7 +23,6 @@ export const fieldDefs: FieldDef[] = [
 		id: 'name',
 		label: 'Name',
 		type: 'string',
-		defaultValue: 'netvisor-daemon',
 		cliFlag: '--name',
 		envVar: 'NETVISOR_NAME',
 		helpText: 'Name for this daemon',

@@ -19,6 +19,8 @@ pub struct NetworkBase {
     pub name: String,
     pub is_default: bool,
     pub organization_id: Uuid,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 impl NetworkBase {
@@ -27,6 +29,7 @@ impl NetworkBase {
             name: "My Network".to_string(),
             is_default: false,
             organization_id,
+            tags: Vec::new(),
         }
     }
 }
@@ -107,6 +110,7 @@ impl StorableEntity for Network {
                     name,
                     organization_id,
                     is_default,
+                    tags,
                 },
         } = self.clone();
 
@@ -118,6 +122,7 @@ impl StorableEntity for Network {
                 "name",
                 "organization_id",
                 "is_default",
+                "tags",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -126,6 +131,7 @@ impl StorableEntity for Network {
                 SqlValue::String(name),
                 SqlValue::Uuid(organization_id),
                 SqlValue::Bool(is_default),
+                SqlValue::UuidArray(tags),
             ],
         ))
     }
@@ -139,6 +145,7 @@ impl StorableEntity for Network {
                 name: row.get("name"),
                 organization_id: row.get("organization_id"),
                 is_default: row.get("is_default"),
+                tags: row.get("tags"),
             },
         })
     }

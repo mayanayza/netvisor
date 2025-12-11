@@ -44,6 +44,8 @@ pub struct TopologyBase {
     pub removed_services: Vec<Uuid>,
     pub removed_groups: Vec<Uuid>,
     pub parent_id: Option<Uuid>,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 impl TopologyBase {
@@ -68,6 +70,7 @@ impl TopologyBase {
             removed_services: vec![],
             removed_groups: vec![],
             parent_id: None,
+            tags: vec![],
         }
     }
 }

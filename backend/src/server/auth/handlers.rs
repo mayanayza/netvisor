@@ -29,6 +29,7 @@ use axum::{
 use axum_client_ip::ClientIp;
 use axum_extra::{TypedHeader, headers::UserAgent};
 use bad_email::is_email_unwanted;
+use chrono::{DateTime, Utc};
 use std::{net::IpAddr, sync::Arc};
 use tower_sessions::Session;
 use url::Url;
@@ -61,13 +62,19 @@ async fn register(
         return Err(ApiError::forbidden("User registration is disabled"));
     }
 
+    let billing_enabled = state.config.stripe_secret.is_some();
+
+    if billing_enabled && !request.terms_accepted {
+        return Err(ApiError::bad_request(
+            "Please accept terms and conditions to proceed",
+        ));
+    }
+
     if is_email_unwanted(request.email.as_str()) {
         return Err(ApiError::conflict(
             "Email address uses a disposable domain. Please register with a non-disposable email address.",
         ));
     }
-
-    let subscribed = request.subscribed;
 
     let user_agent = user_agent.map(|u| u.to_string());
 
@@ -95,7 +102,6 @@ async fn register(
                 ip,
                 user_agent,
                 network_ids,
-                subscribed,
             },
         )
         .await?;
@@ -270,6 +276,14 @@ async fn oidc_authorize(
     session: Session,
     Query(params): Query<OidcAuthorizeParams>,
 ) -> ApiResult<Redirect> {
+    let billing_enabled = state.config.stripe_secret.is_some();
+
+    if billing_enabled && !params.terms_accepted {
+        return Err(ApiError::bad_request(
+            "Please accept terms and conditions to proceed",
+        ));
+    }
+
     let oidc_service = state
         .services
         .oidc_service
@@ -284,7 +298,13 @@ async fn oidc_authorize(
     // Parse and validate flow parameter
     let flow = match params.flow.as_deref() {
         Some("login") => OidcFlow::Login,
-        Some("register") => OidcFlow::Register,
+        Some("register") => {
+            if state.config.disable_registration {
+                return Err(ApiError::forbidden("User registration is disabled"));
+            }
+
+            OidcFlow::Register
+        }
         Some("link") => OidcFlow::Link,
         Some(other) => {
             return Err(ApiError::bad_request(&format!(
@@ -325,6 +345,13 @@ async fn oidc_authorize(
         .insert("oidc_return_url", return_url)
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to save return URL: {}", e)))?;
+
+    session
+        .insert("oidc_terms_accepted", params.terms_accepted)
+        .await
+        .map_err(|e| {
+            ApiError::internal_error(&format!("Failed to save terms_accepted_at: {}", e))
+        })?;
 
     // Store subscribed flag if present
     if let Some(subscribed) = params.subscribed {
@@ -423,14 +450,6 @@ async fn oidc_callback(
         )));
     }
 
-    // Get subscribed flag from session
-    let subscribed: bool = session
-        .get("oidc_subscribed")
-        .await
-        .ok()
-        .flatten()
-        .unwrap_or(false);
-
     // Parse return URL for error handling
     let return_url_parsed = Url::parse(&return_url).map_err(|_| {
         Redirect::to(&format!(
@@ -468,9 +487,32 @@ async fn oidc_callback(
             .await
         }
         OidcFlow::Register => {
+            // Get subscribed flag from session
+            let subscribed: bool = session
+                .get("oidc_subscribed")
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or(false);
+
+            // Get terms_accepted_at flag from session
+            let terms_accepted: bool = session
+                .get("oidc_terms_accepted")
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or(false);
+
+            let terms_accepted_at = if terms_accepted {
+                Some(Utc::now())
+            } else {
+                None
+            };
+
             handle_register_flow(
                 state.clone(),
                 subscribed,
+                terms_accepted_at,
                 HandleLinkFlowParams {
                     oidc_service,
                     slug: &slug,
@@ -604,6 +646,7 @@ async fn handle_login_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect,
 async fn handle_register_flow(
     state: Arc<AppState>,
     subscribed: bool,
+    terms_accepted_at: Option<DateTime<Utc>>,
     params: HandleLinkFlowParams<'_>,
 ) -> Result<Redirect, Redirect> {
     let HandleLinkFlowParams {
@@ -638,13 +681,14 @@ async fn handle_register_flow(
             slug,
             code,
             pending_auth,
+            subscribed,
+            terms_accepted_at,
             LoginRegisterParams {
                 org_id,
                 permissions,
                 ip,
                 user_agent,
                 network_ids,
-                subscribed,
             },
         )
         .await
@@ -665,6 +709,7 @@ async fn handle_register_flow(
             let _ = session.remove::<String>("oidc_provider_slug").await;
             let _ = session.remove::<String>("oidc_return_url").await;
             let _ = session.remove::<bool>("oidc_subscribed").await;
+            let _ = session.remove::<bool>("oidc_terms_accepted").await;
 
             Ok(Redirect::to(return_url.as_str()))
         }

@@ -5,4 +5,10 @@ export interface Network {
 	name: string;
 	is_default: boolean;
 	organization_id: string;
+	tags: string[];
+}
+
+export interface CreateNetworkRequest {
+	network: Network;
+	seed_baseline_data: boolean;
 }

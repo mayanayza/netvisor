@@ -42,7 +42,7 @@
 	}));
 
 	// Track which sections are expanded
-	let expandedSections: Record<string, boolean> = {};
+	let advancedExpanded = false;
 
 	// Create form fields dynamically
 	const formFields: Record<string, TextFieldType | NumberFieldType | BooleanFieldType> = {};
@@ -101,7 +101,7 @@
 		}
 	}
 
-	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/install.sh)"`;
+	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/install.sh)"`;
 
 	$: runCommand = buildRunCommand(serverUrl, selectedNetworkId, key, $values, daemon);
 	$: dockerCompose = key
@@ -208,10 +208,6 @@
 		return lines.join('\n');
 	}
 
-	function toggleSection(sectionName: string) {
-		expandedSections[sectionName] = !expandedSections[sectionName];
-	}
-
 	let colorHelper = entities.getColorHelper('Daemon');
 </script>
 
@@ -288,74 +284,71 @@
 
 		<!-- Advanced Configuration -->
 		<div class="border-tertiary border-t pt-4">
-			<div
+			<button
+				type="button"
 				class="text-secondary hover:text-primary flex w-full items-center gap-2 text-sm font-medium"
+				on:click={() => (advancedExpanded = !advancedExpanded)}
 			>
+				{#if advancedExpanded}
+					<ChevronDown class="h-4 w-4" />
+				{:else}
+					<ChevronRight class="h-4 w-4" />
+				{/if}
 				Advanced Configuration
-			</div>
+			</button>
 
-			<div class="mt-4 space-y-3">
-				{#each advancedSections as section (section.name)}
-					<button
-						type="button"
-						class="text-secondary hover:text-primary flex w-full items-center gap-2 px-3 py-2 text-sm font-medium"
-						on:click={() => toggleSection(section.name)}
-					>
-						{#if expandedSections[section.name]}
-							<ChevronDown class="h-4 w-4" />
-						{:else}
-							<ChevronRight class="h-4 w-4" />
-						{/if}
-						{section.name}
-					</button>
-
-					{#if expandedSections[section.name]}
-						<div class="grid grid-cols-2 gap-4 px-3 pb-3">
-							{#each section.fields as def (def.id)}
-								{#if def.type === 'string'}
-									<TextInput
-										label={def.label}
-										id={def.id}
-										{formApi}
-										field={formFields[def.id] as TextFieldType}
-										placeholder={(def.placeholder as string) ?? ''}
-										helpText={def.helpText}
-									/>
-								{:else if def.type === 'number'}
-									<TextInput
-										label={def.label}
-										id={def.id}
-										{formApi}
-										field={formFields[def.id] as NumberFieldType}
-										type="number"
-										placeholder={(def.placeholder as string) ?? ''}
-										helpText={def.helpText}
-									/>
-								{:else if def.type === 'select'}
-									<SelectInput
-										label={def.label}
-										id={def.id}
-										{formApi}
-										field={formFields[def.id] as TextFieldType}
-										options={def.options ?? []}
-										helpText={def.helpText}
-									/>
-								{:else if def.type === 'boolean'}
-									<div class="flex items-center pb-2">
-										<Checkbox
-											field={formFields[def.id] as BooleanFieldType}
+			{#if advancedExpanded}
+				<div class="mt-4 space-y-6">
+					{#each advancedSections as section (section.name)}
+						<div class="card card-static">
+							<div class="text-secondary text-m mb-3 font-medium">{section.name}</div>
+							<div class="grid grid-cols-2 gap-4">
+								{#each section.fields as def (def.id)}
+									{#if def.type === 'string'}
+										<TextInput
+											label={def.label}
 											id={def.id}
 											{formApi}
-											label={def.label}
+											field={formFields[def.id] as TextFieldType}
+											placeholder={(def.placeholder as string) ?? ''}
 											helpText={def.helpText}
 										/>
-									</div>
-								{/if}
-							{/each}
+									{:else if def.type === 'number'}
+										<TextInput
+											label={def.label}
+											id={def.id}
+											{formApi}
+											field={formFields[def.id] as NumberFieldType}
+											type="number"
+											placeholder={(def.placeholder as string) ?? ''}
+											helpText={def.helpText}
+										/>
+									{:else if def.type === 'select'}
+										<SelectInput
+											label={def.label}
+											id={def.id}
+											{formApi}
+											field={formFields[def.id] as TextFieldType}
+											options={def.options ?? []}
+											helpText={def.helpText}
+										/>
+									{:else if def.type === 'boolean'}
+										<div class="flex items-center pb-2">
+											<Checkbox
+												field={formFields[def.id] as BooleanFieldType}
+												id={def.id}
+												{formApi}
+												label={def.label}
+												helpText={def.helpText}
+											/>
+										</div>
+									{/if}
+								{/each}
+							</div>
 						</div>
-					{/if}
-				{/each}
-			</div>
+					{/each}
+				</div>
+			{/if}
 		</div>
 
 		{#if !daemon && key}

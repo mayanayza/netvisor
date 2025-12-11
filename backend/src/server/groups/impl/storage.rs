@@ -67,6 +67,7 @@ impl StorableEntity for Group {
                     source,
                     color,
                     edge_style,
+                    tags,
                 },
         } = self.clone();
 
@@ -82,6 +83,7 @@ impl StorableEntity for Group {
                 "group_type",
                 "color",
                 "edge_style",
+                "tags",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -94,6 +96,7 @@ impl StorableEntity for Group {
                 SqlValue::GroupType(group_type),
                 SqlValue::String(color),
                 SqlValue::String(serde_json::to_string(&edge_style)?),
+                SqlValue::UuidArray(tags),
             ],
         ))
     }
@@ -122,6 +125,7 @@ impl StorableEntity for Group {
                 edge_style,
                 group_type,
                 color: row.get("color"),
+                tags: row.get("tags"),
             },
         })
     }

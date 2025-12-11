@@ -43,13 +43,20 @@
 	let generatingInvite = $state(false);
 	let invite = $state<OrganizationInvite | null>(null);
 
+	const networksNotNeeded: string[] = permissions
+		.getItems()
+		.filter((p) => p.metadata.manage_org_entities)
+		.map((p) => p.id);
+
 	// Make permission options reactive to metadata and currentUser changes
 	let permissionOptions = $derived(
 		permissions
 			.getItems()
 			.filter((p) =>
 				$currentUser
-					? permissions.getMetadata($currentUser.permissions).can_manage.includes(p.id)
+					? permissions
+							.getMetadata($currentUser.permissions)
+							.can_manage_user_permissions.includes(p.id)
 					: false
 			)
 			.map((p) => ({ value: p.id, label: p.name, description: p.description }))
@@ -63,8 +70,6 @@
 	let ctaText = $derived(usingEmail ? 'Send Invite Link' : 'Generate Invite Link');
 	let ctaLoadingText = $derived(usingEmail ? 'Sending...' : 'Generating...');
 	let CtaIcon = $derived(usingEmail ? Send : RotateCcw);
-
-	const networksNotNeeded: UserOrgPermissions[] = ['Admin', 'Owner'];
 
 	let selectedNetworks: Network[] = $state([]);
 
@@ -168,7 +173,7 @@
 	showCancel={true}
 	cancelLabel="Close"
 	onCancel={handleClose}
-	size="md"
+	size="xl"
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
@@ -210,6 +215,12 @@
 				itemDisplayComponent={NetworkDisplay}
 				{formApi}
 			/>
+		{:else}
+			<div class="card card-static">
+				<p class="text-secondary text-sm">
+					Users with {$permissionsField.value} permissions have access to all networks.
+				</p>
+			</div>
 		{/if}
 
 		{#if enableEmail}

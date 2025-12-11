@@ -3,7 +3,7 @@ use crate::server::{
     config::AppState,
     shared::{
         entities::{ChangeTriggersTopologyStaleness, Entity},
-        services::traits::CrudService,
+        services::traits::{CrudService, EventBusService},
         storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
     },
@@ -59,13 +59,13 @@ where
 pub async fn create_handler<T>(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Json(request): Json<T>,
+    Json(entity): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
     Entity: From<T>,
 {
-    if let Err(err) = request.validate() {
+    if let Err(err) = entity.validate() {
         tracing::warn!(
             entity_type = T::table_name(),
             user_id = %user.user_id,
@@ -80,8 +80,25 @@ where
     }
 
     let service = T::get_service(&state);
+
+    if let Some(network_id) = service.get_network_id(&entity)
+        && !user.network_ids.contains(&network_id)
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to create entities on this network".to_string(),
+        ));
+    }
+
+    if let Some(organization_id) = service.get_organization_id(&entity)
+        && user.organization_id != organization_id
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to create entities for this organization".to_string(),
+        ));
+    }
+
     let created = service
-        .create(request, user.clone().into())
+        .create(entity, user.clone().into())
         .await
         .map_err(|e| {
             tracing::error!(
@@ -107,6 +124,7 @@ where
     let network_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
 
     let service = T::get_service(&state);
+
     let entities = service.get_all(network_filter).await.map_err(|e| {
         tracing::error!(
             entity_type = T::table_name(),
@@ -153,6 +171,22 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
+    if let Some(network_id) = service.get_network_id(&entity)
+        && !user.network_ids.contains(&network_id)
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to access entities on this network".to_string(),
+        ));
+    }
+
+    if let Some(organization_id) = service.get_organization_id(&entity)
+        && user.organization_id != organization_id
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to access entities from this organization".to_string(),
+        ));
+    }
+
     Ok(Json(ApiResponse::success(entity)))
 }
 
@@ -160,13 +194,29 @@ pub async fn update_handler<T>(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     Path(id): Path<Uuid>,
-    Json(mut request): Json<T>,
+    Json(mut entity): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
     Entity: From<T>,
 {
     let service = T::get_service(&state);
+
+    if let Some(network_id) = service.get_network_id(&entity)
+        && !user.network_ids.contains(&network_id)
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to update entities on this network".to_string(),
+        ));
+    }
+
+    if let Some(organization_id) = service.get_organization_id(&entity)
+        && user.organization_id != organization_id
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to update entities for this organization".to_string(),
+        ));
+    }
 
     // Verify entity exists
     service
@@ -193,7 +243,7 @@ where
         })?;
 
     let updated = service
-        .update(&mut request, user.clone().into())
+        .update(&mut entity, user.clone().into())
         .await
         .map_err(|e| {
             tracing::error!(
@@ -221,7 +271,7 @@ where
     let service = T::get_service(&state);
 
     // Verify entity exists and log the deletion attempt
-    service
+    let entity = service
         .get_by_id(&id)
         .await
         .map_err(|e| {
@@ -241,6 +291,22 @@ where
             );
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
+
+    if let Some(network_id) = service.get_network_id(&entity)
+        && !user.network_ids.contains(&network_id)
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to delete entities on this network".to_string(),
+        ));
+    }
+
+    if let Some(organization_id) = service.get_organization_id(&entity)
+        && user.organization_id != organization_id
+    {
+        return Err(ApiError::unauthorized(
+            "You aren't allowed to delete entities for this organization".to_string(),
+        ));
+    }
 
     service.delete(&id, user.into()).await.map_err(|e| {
         tracing::error!(
@@ -269,6 +335,28 @@ where
     }
 
     let service = T::get_service(&state);
+
+    let entity_filter = EntityFilter::unfiltered().entity_ids(&ids);
+    let entities = service.get_all(entity_filter).await?;
+
+    for entity in entities {
+        if let Some(network_id) = service.get_network_id(&entity)
+            && !user.network_ids.contains(&network_id)
+        {
+            return Err(ApiError::unauthorized(
+                "You aren't allowed to delete entities on this network".to_string(),
+            ));
+        }
+
+        if let Some(organization_id) = service.get_organization_id(&entity)
+            && user.organization_id != organization_id
+        {
+            return Err(ApiError::unauthorized(
+                "You aren't allowed to delete entities for this organization".to_string(),
+            ));
+        }
+    }
+
     let deleted_count = service
         .delete_many(&ids, user.clone().into())
         .await

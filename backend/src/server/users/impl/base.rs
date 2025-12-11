@@ -33,6 +33,7 @@ pub struct UserBase {
     pub oidc_linked_at: Option<DateTime<Utc>>,
     #[serde(default)]
     pub network_ids: Vec<Uuid>,
+    pub terms_accepted_at: Option<DateTime<Utc>>,
 }
 
 impl Default for UserBase {
@@ -46,24 +47,12 @@ impl Default for UserBase {
             oidc_provider: None,
             oidc_subject: None,
             network_ids: vec![],
+            terms_accepted_at: None,
         }
     }
 }
 
 impl UserBase {
-    pub fn new_seed(organization_id: Uuid) -> Self {
-        Self {
-            email: EmailAddress::new_unchecked(format!("{}@netvisor.io", Uuid::new_v4())),
-            permissions: UserOrgPermissions::Owner,
-            organization_id,
-            password_hash: None,
-            oidc_linked_at: None,
-            oidc_provider: None,
-            oidc_subject: None,
-            network_ids: vec![],
-        }
-    }
-
     pub fn new_oidc(
         email: EmailAddress,
         oidc_subject: String,
@@ -71,6 +60,7 @@ impl UserBase {
         organization_id: Uuid,
         permissions: UserOrgPermissions,
         network_ids: Vec<Uuid>,
+        terms_accepted_at: Option<DateTime<Utc>>,
     ) -> Self {
         Self {
             email,
@@ -81,6 +71,7 @@ impl UserBase {
             oidc_provider,
             oidc_subject: Some(oidc_subject),
             network_ids,
+            terms_accepted_at,
         }
     }
 
@@ -90,6 +81,7 @@ impl UserBase {
         organization_id: Uuid,
         permissions: UserOrgPermissions,
         network_ids: Vec<Uuid>,
+        terms_accepted_at: Option<DateTime<Utc>>,
     ) -> Self {
         Self {
             email,
@@ -100,6 +92,7 @@ impl UserBase {
             oidc_provider: None,
             oidc_subject: None,
             network_ids,
+            terms_accepted_at,
         }
     }
 }
@@ -185,6 +178,7 @@ impl StorableEntity for User {
                     oidc_provider,
                     oidc_subject,
                     network_ids,
+                    terms_accepted_at,
                 },
         } = self.clone();
 
@@ -201,6 +195,7 @@ impl StorableEntity for User {
                 "permissions",
                 "organization_id",
                 "network_ids",
+                "terms_accepted_at",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -214,6 +209,7 @@ impl StorableEntity for User {
                 SqlValue::UserOrgPermissions(permissions),
                 SqlValue::Uuid(organization_id),
                 SqlValue::UuidArray(network_ids),
+                SqlValue::OptionTimestamp(terms_accepted_at),
             ],
         ))
     }
@@ -240,6 +236,7 @@ impl StorableEntity for User {
                 oidc_provider: row.get("oidc_provider"),
                 oidc_subject: row.get("oidc_subject"),
                 network_ids: row.get("network_ids"),
+                terms_accepted_at: row.get("terms_accepted_at"),
             },
         })
     }

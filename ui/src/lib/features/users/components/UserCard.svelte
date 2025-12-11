@@ -1,7 +1,7 @@
 <script lang="ts">
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { User } from '../types';
-	import { Trash2 } from 'lucide-svelte';
+	import { Edit, Trash2 } from 'lucide-svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import { entities, permissions, metadata } from '$lib/shared/stores/metadata';
 	import { currentUser } from '$lib/features/auth/store';
@@ -12,12 +12,14 @@
 		user,
 		viewMode,
 		selected,
-		onSelectionChange
+		onSelectionChange,
+		onEdit
 	}: {
 		user: User;
 		viewMode: 'card' | 'list';
 		selected: boolean;
 		onSelectionChange: (selected: boolean) => void;
+		onEdit?: (user: User) => void;
 	} = $props();
 
 	// Force Svelte to track metadata reactivity
@@ -31,10 +33,15 @@
 			deleteUser(user.id);
 		}
 	}
+	function handleEditUser() {
+		onEdit?.(user);
+	}
 
 	let canManage = $derived(
 		$currentUser
-			? permissions.getMetadata($currentUser.permissions).can_manage.includes(user.permissions)
+			? permissions
+					.getMetadata($currentUser.permissions)
+					.can_manage_user_permissions.includes(user.permissions)
 			: false
 	);
 
@@ -86,18 +93,38 @@
 								color: entities.getColorHelper('Network').string
 							}))
 			}
+			// {
+			// 	label: 'Tags',
+			// 	value: user.tags.map(t => {
+			// 		const tag = $tags.find(tag => tag.id == t)
+			// 		return tag ? { id: tag.id, color: tag.color, label: tag.name} : { id: t, color: "gray", label: "Unknown Tag"}
+			// 	})
+			// },
 		],
-		actions: canManage
-			? [
-					{
-						label: 'Delete',
-						icon: Trash2,
-						onClick: () => handleDeleteUser(),
-						class: 'btn-icon-danger'
-					}
-				]
-			: []
+		actions:
+			canManage && user.id != $currentUser?.id
+				? [
+						{
+							label: 'Delete',
+							icon: Trash2,
+							onClick: () => handleDeleteUser(),
+							class: 'btn-icon-danger'
+						},
+						{
+							label: 'Edit',
+							icon: Edit,
+							onClick: () => handleEditUser(),
+							class: 'btn-icon'
+						}
+					]
+				: []
 	});
 </script>
 
-<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
+<GenericCard
+	{...cardData}
+	{viewMode}
+	{selected}
+	{onSelectionChange}
+	selectable={user.id != $currentUser?.id}
+/>

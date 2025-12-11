@@ -11,7 +11,7 @@
 		networks,
 		updateNetwork
 	} from '$lib/features/networks/store';
-	import type { Network } from '../types';
+	import type { CreateNetworkRequest, Network } from '../types';
 	import NetworkCard from './NetworkCard.svelte';
 	import { getHosts } from '$lib/features/hosts/store';
 	import { getDaemons } from '$lib/features/daemons/store';
@@ -21,11 +21,22 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
+	import { tags } from '$lib/features/tags/store';
+	import { currentUser } from '$lib/features/auth/store';
+	import { permissions } from '$lib/shared/stores/metadata';
 
 	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
 
 	let showCreateNetworkModal = false;
 	let editingNetwork: Network | null = null;
+
+	$: allowBulkDelete = $currentUser
+		? permissions.getMetadata($currentUser.permissions).manage_org_entities
+		: false;
+
+	$: canManageNetworks =
+		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
+		false;
 
 	function handleDeleteNetwork(network: Network) {
 		if (
@@ -53,7 +64,7 @@
 		}
 	}
 
-	async function handleNetworkCreate(data: Network) {
+	async function handleNetworkCreate(data: CreateNetworkRequest) {
 		const result = await createNetwork(data);
 		if (result?.success) {
 			showCreateNetworkModal = false;
@@ -83,6 +94,20 @@
 			searchable: true,
 			filterable: false,
 			sortable: true
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'array',
+			searchable: true,
+			filterable: true,
+			sortable: false,
+			getValue: (entity) => {
+				// Return tag names for search/filter display
+				return entity.tags
+					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.filter((name): name is string => !!name);
+			}
 		}
 	];
 </script>
@@ -91,9 +116,11 @@
 	<!-- Header -->
 	<TabHeader title="Networks" subtitle="Manage networks">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
-				><Plus class="h-5 w-5" />Create Network</button
-			>
+			{#if canManageNetworks}
+				<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
+					><Plus class="h-5 w-5" />Create Network</button
+				>
+			{/if}
 		</svelte:fragment>
 	</TabHeader>
 
@@ -113,6 +140,7 @@
 			items={$networks}
 			fields={networkFields}
 			onBulkDelete={handleBulkDelete}
+			{allowBulkDelete}
 			storageKey="netvisor-networks-table-state"
 			getItemId={(item) => item.id}
 		>

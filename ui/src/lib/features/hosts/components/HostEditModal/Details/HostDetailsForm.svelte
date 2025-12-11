@@ -12,6 +12,7 @@
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let host: Host | null = null;
 	export let formApi: FormApi;
@@ -63,6 +64,8 @@
 		placeholder="Describe what this host does or its role in your infrastructure"
 		field={description}
 	/>
+
+	<TagPicker bind:selectedTagIds={formData.tags} />
 
 	<TargetConfigForm {form} {formData} />
 

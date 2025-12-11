@@ -23,6 +23,7 @@ export interface Host {
 	source: EntitySource;
 	network_id: string;
 	hidden: boolean;
+	tags: string[];
 }
 
 export interface ProxmoxVirtualization {

@@ -10,6 +10,7 @@
 	import type { Subnet } from '../../types/base';
 	import { get } from 'svelte/store';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
+	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Subnet;
@@ -75,4 +76,6 @@
 		placeholder="Describe the purpose of this subnet..."
 		field={description}
 	/>
+
+	<TagPicker bind:selectedTagIds={formData.tags} />
 </div>

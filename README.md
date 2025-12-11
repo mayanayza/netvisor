@@ -93,7 +93,7 @@ For commercial licensing inquiries: **licensing@netvisor.io**
     **Docker Compose**
     
     ```bash
-    curl -O https://raw.githubusercontent.com/mayanayza/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
+    curl -O https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/docker-compose.yml && docker compose up -d
     ```
     
     **Proxmox**
@@ -141,7 +141,7 @@ NetVisor automatically detects **200+ common services** including:
 
 For the complete list, see the [service definitions directory](./docs/SERVICES.md).
 
-**Missing a service?** [Request it](https://github.com/mayanayza/netvisor/issues/new?template=missing-service-detection.md) or [contribute a definition](contributing.md#adding-service-definitions)!
+**Missing a service?** [Request it](https://github.com/netvisor-io/netvisor/issues/new?template=missing-service-detection.md) or [contribute a definition](contributing.md#adding-service-definitions)!
 
 ## 🛠️ Technology Stack
 
@@ -167,8 +167,8 @@ See our [contributing guide](contributing.md) for details.
 
 - **Documentation**: You're reading it! Check the [User Guide](USER_GUIDE.md) for detailed features
 - **Discord**: [Join our Discord](https://discord.gg/b7ffQr8AcZ) for help and discussions
-- **Issues**: [Report bugs or request features](https://github.com/mayanayza/netvisor/issues/new)
-- **Discussions**: [GitHub Discussions](https://github.com/mayanayza/netvisor/discussions)
+- **Issues**: [Report bugs or request features](https://github.com/netvisor-io/netvisor/issues/new)
+- **Discussions**: [GitHub Discussions](https://github.com/netvisor-io/netvisor/discussions)
 
 ## 📋 FAQ
 

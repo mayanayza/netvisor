@@ -41,6 +41,8 @@
 
 	let isRefreshConflictsOpen = $state(false);
 
+	let topologyViewer: TopologyViewer | null = $state(null);
+
 	$effect(() => {
 		void $topology;
 		void $topologies;
@@ -81,6 +83,13 @@
 		}
 	}
 
+	async function handleAutoRebuildToggle() {
+		autoRebuild.set(!$autoRebuild);
+		if ($autoRebuild) {
+			await handleRefresh();
+		}
+	}
+
 	async function handleRefresh() {
 		if (!$topology) return;
 
@@ -97,6 +106,7 @@
 		} else {
 			// Safe to refresh directly
 			await rebuildTopology($topology);
+			topologyViewer?.triggerFitView();
 		}
 	}
 
@@ -106,10 +116,12 @@
 		resetTopology.nodes = [];
 		resetTopology.edges = [];
 		await rebuildTopology(resetTopology);
+		topologyViewer?.triggerFitView();
 	}
 
 	async function handleConfirmRefresh() {
 		await rebuildTopology($topology);
+		topologyViewer?.triggerFitView();
 		isRefreshConflictsOpen = false;
 	}
 
@@ -164,7 +176,7 @@
 									</button>
 
 									<button
-										onclick={() => autoRebuild.set(!$autoRebuild)}
+										onclick={handleAutoRebuildToggle}
 										type="button"
 										class={`text-xs ${$autoRebuild && !$topology.is_locked ? 'btn-icon-success' : 'btn-icon'}`}
 										disabled={$topology.is_locked}
@@ -219,7 +231,9 @@
 						{/if}
 					{/if}
 
-					<div class="card-divider-v self-stretch"></div>
+					{#if $topology}
+						<div class="card-divider-v self-stretch"></div>
+					{/if}
 
 					<div class="flex items-center gap-4 py-2">
 						{#if $topology}
@@ -271,7 +285,7 @@
 		{:else if $topology}
 			<div class="relative">
 				<TopologyOptionsPanel />
-				<TopologyViewer />
+				<TopologyViewer bind:this={topologyViewer} />
 			</div>
 		{:else}
 			<div class="card card-static text-secondary">

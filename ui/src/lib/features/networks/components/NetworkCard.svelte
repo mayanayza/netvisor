@@ -8,6 +8,7 @@
 	import { subnets } from '$lib/features/subnets/store';
 	import { groups } from '$lib/features/groups/store';
 	import { currentUser } from '$lib/features/auth/store';
+	import { tags } from '$lib/features/tags/store';
 
 	export let network: Network;
 	export let onDelete: (network: Network) => void = () => {};
@@ -22,7 +23,8 @@
 	$: networkGroups = $groups.filter((g) => g.network_id == network.id);
 
 	$: canManageNetworks =
-		$currentUser && permissions.getMetadata($currentUser.permissions).network_permissions;
+		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
+		false;
 
 	// Build card data
 	$: cardData = {
@@ -69,6 +71,15 @@
 						color: entities.getColorHelper('Group').string
 					};
 				})
+			},
+			{
+				label: 'Tags',
+				value: network.tags.map((t) => {
+					const tag = $tags.find((tag) => tag.id == t);
+					return tag
+						? { id: tag.id, color: tag.color, label: tag.name }
+						: { id: t, color: 'gray', label: 'Unknown Tag' };
+				})
 			}
 		],
 
@@ -92,4 +103,10 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
+<GenericCard
+	{...cardData}
+	{viewMode}
+	{selected}
+	{onSelectionChange}
+	selectable={canManageNetworks}
+/>

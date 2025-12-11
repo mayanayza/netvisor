@@ -73,6 +73,7 @@ impl StorableEntity for Host {
                     services,
                     ports,
                     virtualization,
+                    tags,
                 },
         } = self.clone();
 
@@ -92,6 +93,7 @@ impl StorableEntity for Host {
                 "ports",
                 "virtualization",
                 "interfaces",
+                "tags",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -108,6 +110,7 @@ impl StorableEntity for Host {
                 SqlValue::Ports(ports),
                 SqlValue::OptionalHostVirtualization(virtualization),
                 SqlValue::Interfaces(interfaces),
+                SqlValue::UuidArray(tags),
             ],
         ))
     }
@@ -144,6 +147,7 @@ impl StorableEntity for Host {
                 ports,
                 virtualization,
                 interfaces,
+                tags: row.get("tags"),
             },
         })
     }

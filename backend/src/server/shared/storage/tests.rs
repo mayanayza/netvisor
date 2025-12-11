@@ -3,7 +3,8 @@ use crate::server::{
     discovery::r#impl::base::Discovery, groups::r#impl::base::Group, hosts::r#impl::base::Host,
     networks::r#impl::Network, organizations::r#impl::base::Organization,
     services::r#impl::base::Service, shared::storage::traits::StorableEntity,
-    subnets::r#impl::base::Subnet, topology::types::base::Topology, users::r#impl::base::User,
+    subnets::r#impl::base::Subnet, tags::r#impl::base::Tag, topology::types::base::Topology,
+    users::r#impl::base::User,
 };
 use sqlx::postgres::PgRow;
 use std::collections::HashMap;
@@ -101,6 +102,14 @@ fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
         Topology::table_name(),
         Box::new(|row| {
             Topology::from_row(row)?;
+            Ok(())
+        }),
+    );
+
+    map.insert(
+        Tag::table_name(),
+        Box::new(|row| {
+            Tag::from_row(row)?;
             Ok(())
         }),
     );
@@ -203,6 +212,27 @@ pub async fn test_database_schema_backward_compatibility() {
         // Verify tables exist using the deserializers map
         let deserializers = get_entity_deserializers();
         for table_name in deserializers.keys() {
+            // Check if table exists in the old schema
+            let table_exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = $1
+                )",
+            )
+            .bind(table_name)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+            if !table_exists {
+                println!(
+                    "Table '{}' doesn't exist in old schema (new entity), skipping",
+                    table_name
+                );
+                continue;
+            }
+
             assert!(
                 sqlx::query(&format!("SELECT * FROM {}", table_name))
                     .fetch_all(&pool)

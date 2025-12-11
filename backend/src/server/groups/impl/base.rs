@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct GroupBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -25,6 +25,8 @@ pub struct GroupBase {
     pub color: String,
     #[serde(default)]
     pub edge_style: EdgeStyle,
+    #[serde(default)]
+    pub tags: Vec<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]

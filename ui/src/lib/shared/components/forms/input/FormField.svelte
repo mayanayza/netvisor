@@ -7,7 +7,7 @@
 		BooleanFieldType,
 		MultiSelectFieldType
 	} from '../types';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	export let label: string;
 	export let formApi: FormApi;
@@ -22,16 +22,26 @@
 	onMount(() => {
 		formApi.registerField(id, field);
 	});
+
+	onDestroy(() => {
+		formApi.unregisterField(id);
+	});
 </script>
 
 {#if inline}
 	<div class="space-y-2">
 		<label
 			for={id}
-			class="text-secondary flex cursor-pointer items-center gap-3 text-sm font-medium"
+			class="text-secondary flex flex-grow cursor-pointer items-center gap-2 text-sm font-medium"
 		>
 			<slot />
-			{label}
+			<div>
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html label}
+				{#if required}
+					<span class="text-danger">*</span>
+				{/if}
+			</div>
 		</label>
 
 		{#if showValidation && errors.length > 0}
@@ -42,13 +52,15 @@
 		{/if}
 
 		{#if helpText}
-			<p class="text-tertiary text-xs">{helpText}</p>
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+			<p class="text-tertiary text-xs">{@html helpText}</p>
 		{/if}
 	</div>
 {:else}
 	<div class="space-y-2">
 		<label for={id} class="text-secondary block text-sm font-medium">
-			{label}
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+			{@html label}
 			{#if required}
 				<span class="text-danger ml-1">*</span>
 			{/if}
@@ -64,7 +76,8 @@
 		{/if}
 
 		{#if helpText}
-			<p class="text-tertiary text-xs">{helpText}</p>
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+			<p class="text-tertiary text-xs">{@html helpText}</p>
 		{/if}
 	</div>
 {/if}

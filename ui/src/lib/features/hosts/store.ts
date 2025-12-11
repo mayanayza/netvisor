@@ -78,6 +78,7 @@ export function createEmptyHostFormData(): Host {
 		updated_at: utcTimeZoneSentinel,
 		name: '',
 		description: '',
+		tags: [],
 		hostname: '',
 		target: {
 			type: 'None'

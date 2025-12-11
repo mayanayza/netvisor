@@ -181,6 +181,7 @@ pub trait DaemonUtils {
                             return Some(Subnet::new(SubnetBase {
                                 cidr: IpCidr::from_str(cidr).ok()?,
                                 description: None,
+                                tags: Vec::new(),
                                 network_id,
                                 name: network_name.clone(),
                                 subnet_type: SubnetType::DockerBridge,

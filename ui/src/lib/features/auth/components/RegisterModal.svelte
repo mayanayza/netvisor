@@ -33,15 +33,18 @@
 	let oidcProviders = $derived($loading ? [] : ($config?.oidc_providers ?? []));
 	let hasOidcProviders = $derived(oidcProviders.length > 0);
 	let enableEmailOptIn = $derived($loading ? false : ($config?.has_email_opt_in ?? false));
+	let enableTermsCheckbox = $derived($loading ? false : ($config?.billing_enabled ?? false));
 
 	let formData: RegisterRequest & { confirmPassword: string } = $state({
 		email: '',
 		password: '',
 		confirmPassword: '',
-		subscribed: true
+		subscribed: true,
+		terms_accepted: false
 	});
 
 	const subscribedField = field('subscribed', true, []);
+	const termsField = field('terms', false, []);
 
 	// Create form fields with validation
 	const email = field('email', '', [required(), emailValidator()]);
@@ -61,7 +64,7 @@
 	function handleOidcRegister(providerSlug: string) {
 		const returnUrl = encodeURIComponent(window.location.origin);
 		const subscribed = formData.subscribed ? '&subscribed=true' : '';
-		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}${subscribed}`;
+		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}${subscribed}&terms_accepted=${enableTermsCheckbox && $termsField.value}`;
 	}
 
 	function resetForm() {
@@ -69,7 +72,8 @@
 			email: '',
 			password: '',
 			confirmPassword: '',
-			subscribed: true
+			subscribed: true,
+			terms_accepted: false
 		};
 	}
 
@@ -79,7 +83,8 @@
 			await onRegister({
 				email: formData.email,
 				password: formData.password,
-				subscribed: formData.subscribed
+				subscribed: formData.subscribed,
+				terms_accepted: enableTermsCheckbox && $termsField.value
 			});
 		} finally {
 			registering = false;
@@ -137,10 +142,23 @@
 	<!-- Custom footer -->
 	<svelte:fragment slot="footer" let:formApi>
 		<div class="flex w-full flex-col gap-4">
+			<div class="flex flex-grow flex-col items-center gap-2">
+				{#if enableTermsCheckbox}
+					<Checkbox
+						label="I agree to the <a class='text-link' target='_blank' href='https://netvisor.io/terms'>terms</a> and <a target='_blank' class='text-link'href='https://netvisor.io/privacy'>privacy policy</a>"
+						helpText=""
+						{formApi}
+						required={true}
+						field={termsField}
+						id="terms"
+					/>
+				{/if}
+			</div>
+
 			<!-- Create Account Button -->
 			<button
 				type="button"
-				disabled={registering}
+				disabled={registering || (enableTermsCheckbox && !$termsField.value)}
 				onclick={handleSubmit}
 				class="btn-primary w-full"
 			>
@@ -162,6 +180,7 @@
 					{#each oidcProviders as provider (provider.slug)}
 						<button
 							onclick={() => handleOidcRegister(provider.slug)}
+							disabled={enableTermsCheckbox && !$termsField.value}
 							class="btn-secondary flex w-full items-center justify-center gap-3"
 						>
 							{#if provider.logo}
@@ -173,8 +192,8 @@
 				</div>
 			{/if}
 
-			{#if enableEmailOptIn}
-				<div class="flex flex-grow items-center justify-center">
+			<div class="flex flex-grow flex-col items-center gap-2">
+				{#if enableEmailOptIn}
 					<Checkbox
 						field={subscribedField}
 						label="Sign up for product updates via email"
@@ -182,19 +201,15 @@
 						id="subscribe"
 						helpText=""
 					/>
-				</div>
-			{/if}
+				{/if}
+			</div>
 
 			<!-- Login Link -->
 			{#if onSwitchToLogin}
 				<div class="text-center">
 					<p class="text-sm text-gray-400">
 						Already have an account?
-						<button
-							type="button"
-							onclick={onSwitchToLogin}
-							class="font-medium text-blue-400 hover:text-blue-300"
-						>
+						<button type="button" onclick={onSwitchToLogin} class="text-link">
 							Sign in here
 						</button>
 					</p>

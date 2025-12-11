@@ -8,4 +8,5 @@ export interface ApiKey {
 	network_id: string;
 	name: string;
 	is_enabled: boolean;
+	tags: string[];
 }

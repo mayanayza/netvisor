@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
-import type { Network } from './types';
+import type { CreateNetworkRequest, Network } from './types';
 import { currentUser } from '../auth/store';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 
@@ -16,7 +16,7 @@ export async function getNetworks() {
 	}
 }
 
-export async function createNetwork(data: Network) {
+export async function createNetwork(data: CreateNetworkRequest) {
 	const result = await api.request<Network, Network[]>(
 		'/networks',
 		networks,
@@ -67,6 +67,7 @@ export function createEmptyNetworkFormData(): Network {
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		is_default: false,
-		organization_id: uuidv4Sentinel
+		organization_id: uuidv4Sentinel,
+		tags: []
 	};
 }

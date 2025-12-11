@@ -35,8 +35,8 @@
 		<div class="space-y-3">
 			<!-- Documentation -->
 			<button
-				on:click={() => handleCardClick('https://github.com/mayanayza/netvisor#readme')}
-				class="card card-static card-focused w-full text-left"
+				on:click={() => handleCardClick('https://github.com/netvisor-io/netvisor#readme')}
+				class="card card-focused w-full text-left"
 			>
 				<div class="flex items-center gap-3">
 					<div
@@ -55,9 +55,9 @@
 			<button
 				on:click={() =>
 					handleCardClick(
-						'https://github.com/mayanayza/netvisor/issues/new?template=service-detection-issue.md'
+						'https://github.com/netvisor-io/netvisor/issues/new?template=service-detection-issue.md'
 					)}
-				class="card card-static card-focused w-full text-left"
+				class="card card-focused w-full text-left"
 			>
 				<div class="flex items-center gap-3">
 					<div
@@ -76,9 +76,9 @@
 			<button
 				on:click={() =>
 					handleCardClick(
-						'https://github.com/mayanayza/netvisor/issues/new?template=feature_request.md'
+						'https://github.com/netvisor-io/netvisor/issues/new?template=feature_request.md'
 					)}
-				class="card card-static card-focused w-full text-left"
+				class="card card-focused w-full text-left"
 			>
 				<div class="flex items-center gap-3">
 					<div
@@ -97,9 +97,9 @@
 			<button
 				on:click={() =>
 					handleCardClick(
-						'https://github.com/mayanayza/netvisor/issues/new?template=bug_report.md'
+						'https://github.com/netvisor-io/netvisor/issues/new?template=bug_report.md'
 					)}
-				class="card card-static card-focused w-full text-left"
+				class="card card-focused w-full text-left"
 			>
 				<div class="flex items-center gap-3">
 					<div
@@ -117,7 +117,7 @@
 			<!-- Discord -->
 			<button
 				on:click={() => handleCardClick('https://discord.gg/b7ffQr8AcZ')}
-				class="card card-static card-focused w-full text-left"
+				class="card card-focused w-full text-left"
 			>
 				<div class="flex items-center gap-3">
 					<div

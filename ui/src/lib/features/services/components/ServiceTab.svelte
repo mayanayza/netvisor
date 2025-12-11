@@ -18,6 +18,7 @@
 	import ServiceCard from './ServiceCard.svelte';
 	import { matchConfidenceLabel } from '$lib/shared/types';
 	import ServiceEditModal from './ServiceEditModal.svelte';
+	import { tags } from '$lib/features/tags/store';
 
 	const loading = loadData([getServices, getHosts]);
 
@@ -127,13 +128,30 @@
 					? matchConfidenceLabel(item.source.details)
 					: 'N/A (Not a discovered service)';
 			}
+		},
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'array',
+			searchable: true,
+			filterable: true,
+			sortable: false,
+			getValue: (entity) => {
+				// Return tag names for search/filter display
+				return entity.tags
+					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.filter((name): name is string => !!name);
+			}
 		}
 	];
 </script>
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Services" subtitle="Manage services" />
+	<TabHeader
+		title="Services"
+		subtitle="Manage services. To create a service, add it to a host in the Hosts tab."
+	/>
 
 	<!-- Loading state -->
 	{#if $loading}

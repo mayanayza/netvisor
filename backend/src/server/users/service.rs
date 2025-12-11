@@ -62,6 +62,10 @@ impl CrudService<User> for UserService {
         let created = self.user_storage.create(&User::new(user.base)).await?;
         let trigger_stale = created.triggers_staleness(None);
 
+        let metadata = serde_json::json!({
+            "trigger_stale": trigger_stale
+        });
+
         self.event_bus()
             .publish_entity(EntityEvent {
                 id: Uuid::new_v4(),
@@ -71,9 +75,7 @@ impl CrudService<User> for UserService {
                 entity_type: created.clone().into(),
                 operation: EntityOperation::Created,
                 timestamp: Utc::now(),
-                metadata: serde_json::json!({
-                    "trigger_stale": trigger_stale
-                }),
+                metadata,
                 authentication,
             })
             .await?;

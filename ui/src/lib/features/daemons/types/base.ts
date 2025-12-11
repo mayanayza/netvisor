@@ -9,6 +9,7 @@ export interface DaemonBase {
 		has_docker_socket: boolean;
 		interfaced_subnet_ids: string[];
 	};
+	tags: string[];
 }
 
 export interface Daemon extends DaemonBase {
