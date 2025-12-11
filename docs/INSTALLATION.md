@@ -37,6 +37,7 @@ This guide covers installing NetVisor on various platforms and deployment scenar
 - **Linux**: Docker with host networking OR standalone binary
 - **macOS**: Standalone binary only (Docker Desktop lacks host networking)
 - **Windows**: Standalone binary only (Docker Desktop lacks host networking)
+  - **Additional Windows Requirements**: Install [Npcap](https://npcap.com/#download) to enable ARP-based host discovery. Without Npcap, the daemon will use port scanning as a fallback (slower, less reliable for detecting hosts without open ports).
 
 ## Docker Installation (Recommended)
 

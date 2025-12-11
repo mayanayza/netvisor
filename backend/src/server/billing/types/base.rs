@@ -118,7 +118,6 @@ pub struct BillingPlanFeatures {
     pub audit_logs: bool,
     pub api_access: bool,
     pub onboarding_call: bool,
-    pub dedicated_support_channel: bool,
     pub commercial_license: bool,
 }
 
@@ -203,7 +202,6 @@ impl BillingPlan {
             BillingPlan::Community { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                dedicated_support_channel: true,
                 api_access: true,
                 audit_logs: true,
                 commercial_license: false,
@@ -212,7 +210,6 @@ impl BillingPlan {
             BillingPlan::Starter { .. } => BillingPlanFeatures {
                 share_views: false,
                 onboarding_call: false,
-                dedicated_support_channel: false,
                 commercial_license: false,
                 api_access: false,
                 audit_logs: false,
@@ -221,7 +218,6 @@ impl BillingPlan {
             BillingPlan::Pro { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: false,
-                dedicated_support_channel: false,
                 commercial_license: false,
                 api_access: false,
                 audit_logs: false,
@@ -230,7 +226,6 @@ impl BillingPlan {
             BillingPlan::Team { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                dedicated_support_channel: true,
                 commercial_license: true,
                 api_access: false,
                 audit_logs: false,
@@ -239,7 +234,6 @@ impl BillingPlan {
             BillingPlan::Business { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                dedicated_support_channel: true,
                 commercial_license: true,
                 api_access: true,
                 audit_logs: true,
@@ -248,7 +242,6 @@ impl BillingPlan {
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
-                dedicated_support_channel: true,
                 commercial_license: true,
                 api_access: true,
                 audit_logs: true,
@@ -266,7 +259,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
         let BillingPlanFeatures {
             share_views,
             onboarding_call,
-            dedicated_support_channel,
             commercial_license,
             api_access,
             audit_logs,
@@ -279,10 +271,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
 
         if onboarding_call {
             features.push(Feature::OnboardingCall)
-        }
-
-        if dedicated_support_channel {
-            features.push(Feature::DedicatedSupportChannel)
         }
 
         if commercial_license {

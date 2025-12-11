@@ -67,6 +67,7 @@ jobs:
           mv ui/static/services-next.json ui/static/services.json
           mv docs/SERVICES-NEXT.md docs/SERVICES.md
           mv ui/static/billing-plans-next.json ui/static/billing-plans.json
+          mv ui/static/features-next.json ui/static/features.json
           echo "✅ Updated test fixtures"
       
       - name: Commit and push fixture updates
@@ -78,7 +79,7 @@ jobs:
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
 
            # Stage fixture updates
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json
+          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json ui/static/features.json
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
@@ -117,11 +118,18 @@ jobs:
             target: aarch64-apple-darwin
             binary: netvisor-daemon-darwin-arm64
             use_cross: false
+
+          # Windows - native builds
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: netvisor-daemon-windows-amd64.exe
+            use_cross: false
     
     steps:
       - uses: actions/checkout@v4
 
       - name: Pull latest changes
+        shell: bash
         run: |
           git fetch origin ${{ github.event.release.target_commitish }}
           git reset --hard origin/${{ github.event.release.target_commitish }}
@@ -134,6 +142,14 @@ jobs:
         uses: dtolnay/rust-toolchain@1.90.0
         with:
           targets: ${{ matrix.target }}
+
+      - name: Install Npcap SDK
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip"
+          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk"
+          echo "LIB=$env:TEMP\npcap-sdk\Lib\x64" >> $env:GITHUB_ENV
       
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -157,10 +173,14 @@ jobs:
         shell: bash
       
       - name: Prepare binary
-        run: |
-          cp backend/target/${{ matrix.target }}/release/daemon ${{ matrix.binary }}
-          chmod +x ${{ matrix.binary }}
         shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp backend/target/${{ matrix.target }}/release/daemon.exe ${{ matrix.binary }}
+          else
+            cp backend/target/${{ matrix.target }}/release/daemon ${{ matrix.binary }}
+            chmod +x ${{ matrix.binary }}
+          fi
       
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
