@@ -1,8 +1,6 @@
 name: Test Windows Build
-
 on:
   workflow_dispatch:
-
 jobs:
   build-windows-daemon:
     name: Build Daemon (Windows)
