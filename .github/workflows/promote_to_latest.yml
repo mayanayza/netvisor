@@ -9,12 +9,13 @@ on:
         type: string
 
 jobs:
-  retag-as-latest:
-    name: Retag Images as Latest
+  promote-to-latest:
+    name: Promote Release to Latest
     runs-on: ubuntu-latest
     
     steps:
-      - name: Validate release exists
+      - name: Validate release exists and get details
+        id: release
         run: |
           RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }}")
@@ -25,6 +26,27 @@ jobs:
           fi
           
           echo "Release found: ${{ inputs.release_tag }}"
+          
+          # Extract release details for later steps
+          echo "release_id=$(echo $RELEASE | jq -r '.id')" >> $GITHUB_OUTPUT
+          echo "release_name=$(echo $RELEASE | jq -r '.name')" >> $GITHUB_OUTPUT
+          echo "release_url=$(echo $RELEASE | jq -r '.html_url')" >> $GITHUB_OUTPUT
+          
+          # Handle multiline body
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "release_body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE" | jq -r '.body' >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+      
+      - name: Mark release as latest
+        run: |
+          curl -X PATCH \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.release.outputs.release_id }}" \
+            -d '{"make_latest": "true"}'
+          
+          echo "Marked ${{ inputs.release_tag }} as latest release"
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -61,3 +83,41 @@ jobs:
         run: |
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/daemon:latest \
             ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
+      
+      - name: Send Discord Notification
+        env:
+          RELEASE_CHANNEL_WEBHOOK: ${{ secrets.RELEASE_CHANNEL_WEBHOOK }}
+          RELEASE_NAME: ${{ steps.release.outputs.release_name }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_URL: ${{ steps.release.outputs.release_url }}
+          RELEASE_BODY: ${{ steps.release.outputs.release_body }}
+        run: |
+          # Truncate body if too long for Discord (max 4096 for embed description)
+          BODY="${RELEASE_BODY:0:4000}"
+          if [ ${#RELEASE_BODY} -gt 4000 ]; then
+            BODY="${BODY}...\n\n[Read full release notes](${RELEASE_URL})"
+          fi
+          
+          # Escape special characters for JSON
+          BODY=$(echo "$BODY" | jq -Rs .)
+          
+          # Send to Discord
+          curl -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"🚀 ${RELEASE_NAME}\",
+                \"url\": \"${RELEASE_URL}\",
+                \"description\": ${BODY},
+                \"color\": 5814783,
+                \"fields\": [{
+                  \"name\": \"Version\",
+                  \"value\": \"\`${RELEASE_TAG}\`\",
+                  \"inline\": true
+                }],
+                \"footer\": {
+                  \"text\": \"NetVisor Release\"
+                },
+                \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+              }]
+            }" \
+            "$RELEASE_CHANNEL_WEBHOOK"

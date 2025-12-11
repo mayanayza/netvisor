@@ -16,23 +16,6 @@ jobs:
         with:
           ref: ${{ github.event.release.target_commitish }}
           fetch-depth: 0  # Fetch all history so we can push
-
-      - name: Update version in Cargo.toml and package.json
-        run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          # Remove 'v' prefix if present (v0.3.0 -> 0.3.0)
-          VERSION="${VERSION#v}"
-          
-          # Update backend/Cargo.toml
-          sed -i.bak "s/^version = .*/version = \"$VERSION\"/" backend/Cargo.toml
-          echo "✅ Updated backend/Cargo.toml to version $VERSION"
-          
-          # Update ui/package.json
-          cd ui
-          npm version $VERSION --no-git-tag-version --allow-same-version
-          echo "✅ Updated ui/package.json to version $VERSION"
-          cd ..
-        shell: bash
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
