@@ -67,6 +67,7 @@ jobs:
           mv ui/static/services-next.json ui/static/services.json
           mv docs/SERVICES-NEXT.md docs/SERVICES.md
           mv ui/static/billing-plans-next.json ui/static/billing-plans.json
+          mv ui/static/features-next.json ui/static/features.json
           echo "✅ Updated test fixtures"
       
       - name: Commit and push fixture updates

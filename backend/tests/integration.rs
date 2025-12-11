@@ -530,8 +530,11 @@ async fn test_full_integration() {
 
 #[cfg(feature = "generate-fixtures")]
 use netvisor::server::{
-    services::{definitions::ServiceDefinitionRegistry, r#impl::definitions::ServiceDefinition},
-    shared::types::metadata::TypeMetadata,
+    services::{
+        definitions::ServiceDefinitionRegistry,
+        r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt},
+    },
+    shared::types::metadata::{EntityMetadataProvider, TypeMetadata},
 };
 
 #[cfg(feature = "generate-fixtures")]
@@ -650,14 +653,20 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
 async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions()
         .iter()
-        .map(|s| {
-            serde_json::json!({
-                "logo_url": s.logo_url(),
-                "name": s.name(),
-                "description": s.description(),
-                "discovery_pattern": s.discovery_pattern().to_string(),
-                "category": s.category()
-            })
+        .filter_map(|s| {
+            if s.can_be_manually_added() {
+                Some(serde_json::json!({
+                    "logo_url": s.logo_url(),
+                    "name": s.name(),
+                    "description": s.description(),
+                    "discovery_pattern": s.discovery_pattern().to_string(),
+                    "category": s.category(),
+                    "color": s.color(),
+                    "logo_needs_white_background": s.logo_needs_white_background()
+                }))
+            } else {
+                None
+            }
         })
         .collect();
 
@@ -772,16 +781,14 @@ async fn generate_billing_plans_json() -> Result<(), Box<dyn std::error::Error>>
     // Get all features metadata
     let feature_metadata: Vec<TypeMetadata> = Feature::iter().map(|f| f.to_metadata()).collect();
 
-    // Combine into a single structure
-    let fixture = serde_json::json!({
-        "billing_plans": plan_metadata,
-        "features": feature_metadata,
-    });
-
-    let json_string = serde_json::to_string_pretty(&fixture)?;
+    let json_string = serde_json::to_string_pretty(&plan_metadata)?;
     let path = std::path::Path::new("../ui/static/billing-plans-next.json");
     tokio::fs::write(path, json_string).await?;
 
-    println!("✅ Generated billing-plans-next.json");
+    let json_string = serde_json::to_string_pretty(&feature_metadata)?;
+    let path = std::path::Path::new("../ui/static/features-next.json");
+    tokio::fs::write(path, json_string).await?;
+
+    println!("✅ Generated billing-plans-next.json and features-next.json");
     Ok(())
 }

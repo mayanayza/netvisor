@@ -2,7 +2,7 @@
 use crate::daemon::utils::base::DaemonUtils;
 
 #[cfg(target_family = "windows")]
-use anyhow::{Result, anyhow};
+use anyhow::{Error, Result, anyhow};
 #[cfg(target_family = "windows")]
 use async_trait::async_trait;
 #[cfg(target_family = "windows")]
@@ -82,7 +82,7 @@ impl DaemonUtils for WindowsDaemonUtils {
 
         // First call to get required buffer size
         let mut size: u32 = 0;
-        let result = unsafe { GetIpNetTable(None, &mut size, true) };
+        let _result = unsafe { GetIpNetTable(None, &mut size, true) };
 
         if size == 0 {
             return Ok(None);

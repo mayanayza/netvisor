@@ -12,7 +12,6 @@ pub enum Feature {
     #[default]
     ShareViews,
     OnboardingCall,
-    DedicatedSupportChannel,
     CommercialLicense,
     AuditLogs,
     ApiAccess,
@@ -26,7 +25,6 @@ impl HasId for Feature {
             Feature::AuditLogs => "audit_logs",
             Feature::ShareViews => "share_views",
             Feature::OnboardingCall => "onboarding_call",
-            Feature::DedicatedSupportChannel => "dedicated_support_channel",
             Feature::CommercialLicense => "commercial_license",
             Feature::RemoveCreatedWith => "remove_created_with",
         }
@@ -46,9 +44,7 @@ impl EntityMetadataProvider for Feature {
 impl TypeMetadataProvider for Feature {
     fn category(&self) -> &'static str {
         match self {
-            Feature::OnboardingCall
-            | Feature::DedicatedSupportChannel
-            | Feature::CommercialLicense => "Support & Licensing",
+            Feature::OnboardingCall | Feature::CommercialLicense => "Support & Licensing",
             _ => "Features",
         }
     }
@@ -59,9 +55,8 @@ impl TypeMetadataProvider for Feature {
             Feature::ApiAccess => "API Access",
             Feature::ShareViews => "Share Views",
             Feature::OnboardingCall => "Onboarding Call",
-            Feature::DedicatedSupportChannel => "Dedicated Discord Channel",
             Feature::CommercialLicense => "Commercial License",
-            Feature::RemoveCreatedWith => "Remove 'Powered By'",
+            Feature::RemoveCreatedWith => "Remove Watermark",
         }
     }
 
@@ -76,9 +71,6 @@ impl TypeMetadataProvider for Feature {
             Feature::ShareViews => "Share live network diagrams with others",
             Feature::OnboardingCall => {
                 "30 minute onboarding call to ensure you're getting the most out of NetVisor"
-            }
-            Feature::DedicatedSupportChannel => {
-                "A dedicated discord channel for support and questions"
             }
             Feature::CommercialLicense => "Use NetVisor under a commercial license",
             Feature::RemoveCreatedWith => {
