@@ -54,7 +54,21 @@ pub async fn create_tag(
     admin: RequireAdmin,
     json: Json<Tag>,
 ) -> ApiResult<Json<ApiResponse<Tag>>> {
-    create_handler::<Tag>(state, admin.into(), json).await
+    let created = create_handler::<Tag>(state, admin.into(), json.clone()).await;
+
+    match created {
+        Ok(c) => Ok(c),
+        Err(e)
+            if e.message
+                .contains("violates unique constraint \"idx_tags_org_name\"") =>
+        {
+            Err(ApiError::conflict(&format!(
+                "Tag names must be unique; a tag named \"{}\" already exists",
+                json.base.name
+            )))
+        }
+        Err(e) => Err(e),
+    }
 }
 
 pub async fn delete_tag(

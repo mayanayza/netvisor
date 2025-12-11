@@ -88,7 +88,7 @@
 	onSave={handleSubmit}
 	onCancel={onClose}
 	onDelete={isEditing ? handleDelete : null}
-	size="md"
+	size="xl"
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">

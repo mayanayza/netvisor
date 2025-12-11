@@ -116,18 +116,22 @@
 	<div class="relative">
 		<!-- Input container with selected tags -->
 		<div
-			class="input-field flex h-[42px] items-center gap-2 overflow-hidden"
+			class="input-field flex h-[42px] items-center overflow-hidden p-0"
 			class:opacity-50={disabled}
 			class:cursor-not-allowed={disabled}
+			class:border-blue-500={isFocused}
+			class:outline-none={isFocused}
+			class:ring-2={isFocused}
+			class:ring-blue-500={isFocused}
 		>
 			<!-- Selected tags (horizontal scroll) -->
-			<div class="flex shrink-0 items-center gap-1.5 overflow-x-auto">
+			<div class="flex shrink-0 items-center overflow-x-auto">
 				{#each selectedTagIds as tagId (tagId)}
 					{@const tag = getTag(tagId)}
 					{#if tag}
 						{@const colorHelper = createColorHelper(tag.color)}
 						<span
-							class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {colorHelper.bg} {colorHelper.text}"
+							class="mx-1 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {colorHelper.bg} {colorHelper.text}"
 						>
 							{tag.name}
 							{#if !disabled}
@@ -166,7 +170,7 @@
 				type="text"
 				placeholder={selectedTagIds.length === 0 ? placeholder : ''}
 				{disabled}
-				class="min-w-[80px] flex-1 border-none bg-transparent text-sm text-white placeholder-gray-400 outline-none"
+				class="input-field border-0 bg-transparent ring-0"
 				style="--tw-ring-shadow: none; --tw-ring-color: none;"
 				onfocus={() => (isFocused = true)}
 				onblur={handleBlur}

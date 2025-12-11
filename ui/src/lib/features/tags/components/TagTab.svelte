@@ -16,6 +16,10 @@
 	let showTagEditor = false;
 	let editingTag: Tag | null = null;
 
+	$: canManageNetworks =
+		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
+		false;
+
 	const loading = loadData([getTags]);
 
 	$: allowBulkDelete = $currentUser
@@ -104,9 +108,11 @@
 <div class="space-y-6">
 	<TabHeader title="Tags" subtitle="Manage organization-wide tags for categorizing entities">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateTag}>
-				<Plus class="h-5 w-5" />Create Tag
-			</button>
+			{#if canManageNetworks}
+				<button class="btn-primary flex items-center" on:click={handleCreateTag}>
+					<Plus class="h-5 w-5" />Create Tag
+				</button>
+			{/if}
 		</svelte:fragment>
 	</TabHeader>
 

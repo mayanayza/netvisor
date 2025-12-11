@@ -173,7 +173,7 @@
 	showCancel={true}
 	cancelLabel="Close"
 	onCancel={handleClose}
-	size="md"
+	size="xl"
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">

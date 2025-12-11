@@ -34,6 +34,10 @@
 		? permissions.getMetadata($currentUser.permissions).manage_org_entities
 		: false;
 
+	$: canManageNetworks =
+		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
+		false;
+
 	function handleDeleteNetwork(network: Network) {
 		if (
 			confirm(
@@ -112,9 +116,11 @@
 	<!-- Header -->
 	<TabHeader title="Networks" subtitle="Manage networks">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
-				><Plus class="h-5 w-5" />Create Network</button
-			>
+			{#if canManageNetworks}
+				<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
+					><Plus class="h-5 w-5" />Create Network</button
+				>
+			{/if}
 		</svelte:fragment>
 	</TabHeader>
 

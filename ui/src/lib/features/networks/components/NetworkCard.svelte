@@ -23,7 +23,8 @@
 	$: networkGroups = $groups.filter((g) => g.network_id == network.id);
 
 	$: canManageNetworks =
-		$currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities;
+		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
+		false;
 
 	// Build card data
 	$: cardData = {
@@ -102,4 +103,10 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
+<GenericCard
+	{...cardData}
+	{viewMode}
+	{selected}
+	{onSelectionChange}
+	selectable={canManageNetworks}
+/>

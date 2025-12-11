@@ -148,7 +148,10 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Services" subtitle="Manage services" />
+	<TabHeader
+		title="Services"
+		subtitle="Manage services. To create a service, add it to a host in the Hosts tab."
+	/>
 
 	<!-- Loading state -->
 	{#if $loading}

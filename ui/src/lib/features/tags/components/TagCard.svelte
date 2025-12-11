@@ -17,7 +17,8 @@
 	$: colorHelper = createColorHelper(tag.color);
 
 	$: canManageNetworks =
-		$currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities;
+		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
+		false;
 
 	$: cardData = {
 		title: tag.name,
@@ -59,4 +60,10 @@
 	};
 </script>
 
-<GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />
+<GenericCard
+	{...cardData}
+	{viewMode}
+	{selected}
+	{onSelectionChange}
+	selectable={canManageNetworks}
+/>

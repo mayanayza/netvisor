@@ -83,6 +83,13 @@
 		}
 	}
 
+	async function handleAutoRebuildToggle() {
+		autoRebuild.set(!$autoRebuild);
+		if ($autoRebuild) {
+			await handleRefresh();
+		}
+	}
+
 	async function handleRefresh() {
 		if (!$topology) return;
 
@@ -169,7 +176,7 @@
 									</button>
 
 									<button
-										onclick={() => autoRebuild.set(!$autoRebuild)}
+										onclick={handleAutoRebuildToggle}
 										type="button"
 										class={`text-xs ${$autoRebuild && !$topology.is_locked ? 'btn-icon-success' : 'btn-icon'}`}
 										disabled={$topology.is_locked}

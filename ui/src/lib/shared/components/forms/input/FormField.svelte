@@ -7,7 +7,7 @@
 		BooleanFieldType,
 		MultiSelectFieldType
 	} from '../types';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	export let label: string;
 	export let formApi: FormApi;
@@ -21,6 +21,10 @@
 
 	onMount(() => {
 		formApi.registerField(id, field);
+	});
+
+	onDestroy(() => {
+		formApi.unregisterField(id);
 	});
 </script>
 

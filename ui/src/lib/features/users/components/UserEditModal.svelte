@@ -129,7 +129,7 @@
 	cancelLabel="Cancel"
 	onSave={handleSubmit}
 	onCancel={handleClose}
-	size="md"
+	size="xl"
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">

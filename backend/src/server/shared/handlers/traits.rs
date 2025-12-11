@@ -82,7 +82,7 @@ where
     let service = T::get_service(&state);
 
     if let Some(network_id) = service.get_network_id(&entity)
-        && user.network_ids.contains(&network_id)
+        && !user.network_ids.contains(&network_id)
     {
         return Err(ApiError::unauthorized(
             "You aren't allowed to create entities on this network".to_string(),
@@ -172,7 +172,7 @@ where
         })?;
 
     if let Some(network_id) = service.get_network_id(&entity)
-        && user.network_ids.contains(&network_id)
+        && !user.network_ids.contains(&network_id)
     {
         return Err(ApiError::unauthorized(
             "You aren't allowed to access entities on this network".to_string(),
@@ -203,7 +203,7 @@ where
     let service = T::get_service(&state);
 
     if let Some(network_id) = service.get_network_id(&entity)
-        && user.network_ids.contains(&network_id)
+        && !user.network_ids.contains(&network_id)
     {
         return Err(ApiError::unauthorized(
             "You aren't allowed to update entities on this network".to_string(),
@@ -293,7 +293,7 @@ where
         })?;
 
     if let Some(network_id) = service.get_network_id(&entity)
-        && user.network_ids.contains(&network_id)
+        && !user.network_ids.contains(&network_id)
     {
         return Err(ApiError::unauthorized(
             "You aren't allowed to delete entities on this network".to_string(),
@@ -341,7 +341,7 @@ where
 
     for entity in entities {
         if let Some(network_id) = service.get_network_id(&entity)
-            && user.network_ids.contains(&network_id)
+            && !user.network_ids.contains(&network_id)
         {
             return Err(ApiError::unauthorized(
                 "You aren't allowed to delete entities on this network".to_string(),
