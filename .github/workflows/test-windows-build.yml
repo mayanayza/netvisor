@@ -9,13 +9,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Npcap SDK
-        shell: pwsh
-        run: |
-          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip"
-          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk"
-          Copy-Item "$env:TEMP\npcap-sdk\Lib\x64\*" -Destination "C:\Users\runneradmin\.rustup\toolchains\1.90.0-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib\" -Force
-      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
         with:
