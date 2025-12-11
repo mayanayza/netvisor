@@ -19,6 +19,27 @@ pub enum EventOperation {
     TelemetryOperation(TelemetryOperation),
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub enum EventLogLevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl EventOperation {
+    pub fn log_level(&self) -> EventLogLevel {
+        match self {
+            EventOperation::EntityOperation(entity_operation) => entity_operation.log_level(),
+            EventOperation::AuthOperation(auth_operation) => auth_operation.log_level(),
+            EventOperation::TelemetryOperation(telemetry_operation) => {
+                telemetry_operation.log_level()
+            }
+        }
+    }
+}
+
 impl Display for EventOperation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let string = match self {
@@ -229,6 +250,15 @@ pub enum AuthOperation {
     RotateKey,
 }
 
+impl AuthOperation {
+    fn log_level(&self) -> EventLogLevel {
+        match self {
+            AuthOperation::LoginFailed => EventLogLevel::Error,
+            _ => EventLogLevel::Info,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AuthEvent {
     pub id: Uuid,
@@ -280,6 +310,12 @@ pub enum EntityOperation {
     DiscoveryCancelled,
 }
 
+impl EntityOperation {
+    fn log_level(&self) -> EventLogLevel {
+        EventLogLevel::Info
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Eq)]
 pub struct EntityEvent {
     pub id: Uuid,
@@ -324,9 +360,16 @@ pub enum TelemetryOperation {
     CommercialPlanSelected,
     FirstApiKeyCreated,
     FirstDaemonRegistered,
-    FirstTopologyRebuild, // FirstDiscoveryStarted,
-                          // FirstDiscoveryCompleted,
-                          // FirstHostDiscovered,
+    FirstTopologyRebuild,
+    // FirstDiscoveryStarted,
+    // FirstDiscoveryCompleted,
+    // FirstHostDiscovered,
+}
+
+impl TelemetryOperation {
+    fn log_level(&self) -> EventLogLevel {
+        EventLogLevel::Info
+    }
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]

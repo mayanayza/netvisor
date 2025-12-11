@@ -278,12 +278,6 @@ async fn oidc_authorize(
 ) -> ApiResult<Redirect> {
     let billing_enabled = state.config.stripe_secret.is_some();
 
-    if billing_enabled && !params.terms_accepted {
-        return Err(ApiError::bad_request(
-            "Please accept terms and conditions to proceed",
-        ));
-    }
-
     let oidc_service = state
         .services
         .oidc_service
@@ -301,6 +295,14 @@ async fn oidc_authorize(
         Some("register") => {
             if state.config.disable_registration {
                 return Err(ApiError::forbidden("User registration is disabled"));
+            }
+
+            let terms_accepted = params.terms_accepted.unwrap_or(false);
+
+            if billing_enabled && !terms_accepted {
+                return Err(ApiError::bad_request(
+                    "Please accept terms and conditions to proceed",
+                ));
             }
 
             OidcFlow::Register
@@ -346,14 +348,17 @@ async fn oidc_authorize(
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to save return URL: {}", e)))?;
 
-    session
-        .insert("oidc_terms_accepted", params.terms_accepted)
-        .await
-        .map_err(|e| {
-            ApiError::internal_error(&format!("Failed to save terms_accepted_at: {}", e))
-        })?;
+    // Store registration flags if present
 
-    // Store subscribed flag if present
+    if let Some(terms_accepted) = params.terms_accepted {
+        session
+            .insert("oidc_terms_accepted", terms_accepted)
+            .await
+            .map_err(|e| {
+                ApiError::internal_error(&format!("Failed to save terms_accepted_at: {}", e))
+            })?;
+    }
+
     if let Some(subscribed) = params.subscribed {
         session
             .insert("oidc_subscribed", subscribed)

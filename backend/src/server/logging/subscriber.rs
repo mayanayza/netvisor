@@ -5,7 +5,7 @@ use crate::server::{
     logging::service::LoggingService,
     shared::events::{
         bus::{EventFilter, EventSubscriber},
-        types::Event,
+        types::{Event, EventLogLevel},
     },
 };
 
@@ -25,7 +25,23 @@ impl EventSubscriber for LoggingService {
                 .unwrap_or(false);
 
             if !suppress_logs {
-                tracing::info!("{}", event);
+                match event.operation().log_level() {
+                    EventLogLevel::Error => {
+                        tracing::error!("{}", event);
+                    }
+                    EventLogLevel::Warn => {
+                        tracing::warn!("{}", event);
+                    }
+                    EventLogLevel::Info => {
+                        tracing::info!("{}", event);
+                    }
+                    EventLogLevel::Debug => {
+                        tracing::debug!("{}", event);
+                    }
+                    EventLogLevel::Trace => {
+                        tracing::trace!("{}", event);
+                    }
+                }
             }
         }
 

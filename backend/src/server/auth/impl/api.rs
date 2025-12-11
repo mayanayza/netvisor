@@ -68,7 +68,7 @@ pub struct OidcAuthorizeParams {
     pub flow: Option<String>, // "login", "register", or "link"
     pub return_url: Option<String>,
     pub subscribed: Option<bool>,
-    pub terms_accepted: bool,
+    pub terms_accepted: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
