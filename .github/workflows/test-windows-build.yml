@@ -1,8 +1,6 @@
 name: Test Windows Build
-
 on:
   workflow_dispatch:
-
 jobs:
   build-windows-daemon:
     name: Build Daemon (Windows)
@@ -15,6 +13,13 @@ jobs:
         uses: dtolnay/rust-toolchain@1.90.0
         with:
           targets: x86_64-pc-windows-msvc
+      
+      - name: Install Npcap SDK
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip"
+          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk"
+          echo "LIB=$env:TEMP\npcap-sdk\Lib\x64" >> $env:GITHUB_ENV
       
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
