@@ -194,24 +194,6 @@ impl BillingPlan {
         }
     }
 
-    pub fn custom_checkout_link(&self) -> Option<&str> {
-        match self {
-            BillingPlan::Enterprise(_) => Some("mailto:enterprise@netvisor.io"),
-            BillingPlan::CommercialSelfHosted(_) => Some("mailto:licensing@netvisor.io"),
-            BillingPlan::Community(_) => Some("https://github.com/netvisor-io/netvisor"),
-            _ => None,
-        }
-    }
-
-    pub fn custom_checkout_cta(&self) -> Option<&str> {
-        match self {
-            BillingPlan::Enterprise(_) => Some("Contact Us"),
-            BillingPlan::CommercialSelfHosted(_) => Some("Contact Us"),
-            BillingPlan::Community(_) => Some("View on GitHub"),
-            _ => None,
-        }
-    }
-
     pub fn custom_price(&self) -> Option<&str> {
         match self {
             BillingPlan::Enterprise(_) => Some("Custom"),
@@ -289,7 +271,7 @@ impl BillingPlan {
                 live_chat_support: false,
                 embeds: false,
                 email_support: true,
-                community_support: true,
+                community_support: false,
                 priority_support: false,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
@@ -306,7 +288,7 @@ impl BillingPlan {
                 live_chat_support: false,
                 embeds: true,
                 email_support: true,
-                community_support: true,
+                community_support: false,
                 priority_support: false,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
@@ -574,8 +556,6 @@ impl TypeMetadataProvider for BillingPlan {
             "features": self.features(),
             "is_commercial": self.is_commercial(),
             "hosting": self.hosting(),
-            "custom_checkout_link": self.custom_checkout_link(),
-            "custom_checkout_cta": self.custom_checkout_cta(),
             "custom_price": self.custom_price()
         })
     }

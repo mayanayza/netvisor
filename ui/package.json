@@ -40,6 +40,7 @@
 	"dependencies": {
 		"@tailwindcss/forms": "^0.5.10",
 		"@types/jquery": "^3.5.33",
+		"posthog-js": "^1.306.0",
 		"@xyflow/svelte": "^1.2.4",
 		"company-email-validator": "^1.2.0",
 		"deepmerge": "^4.3.1",
