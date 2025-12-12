@@ -73,6 +73,16 @@ jobs:
         run: |
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
             ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
+
+      - name: Create multi-arch manifest for Server (Docker Hub)
+        run: |
+          docker buildx imagetools create -t mayanayza/netvisor-server:latest \
+            mayanayza/netvisor-server-commercial:${{ inputs.release_tag }}
+      
+      - name: Create multi-arch manifest for Server (GHCR)
+        run: |
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
+            ghcr.io/${{ github.repository }}/server-commercial:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Daemon (Docker Hub)
         run: |
