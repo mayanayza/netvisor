@@ -43,7 +43,9 @@ Complete guide to using NetVisor's features for network discovery, organization,
   
 4. **Create and deploy your first daemon**
     - Go to the Daemons tab to create a Daemon. If you are using the Community edition with the default Docker Compose, a daemon is enabled by default.
-    - Install it on the host of your choice, taking into consideration your [multi-vlan strategy](https://github.com/netvisor-io/netvisor/blob/main/docs/MULTI_VLAN_GUIDE.md)
+    - Install it on the host of your choice
+       - If you are running the daemon on a network which is remote from the server, you will need to open and forward a port if using the Daemon in Push mode. You can also use Push mode if you prefer to not do any port forwarding.
+       - Take into consideration your [multi-vlan strategy](https://github.com/netvisor-io/netvisor/blob/main/docs/MULTI_VLAN_GUIDE.md)
     - The daemon will automatically run discovery
 
 5. **Monitor discovery**: Switch to **Discover > Sessions** to watch the scan progress
