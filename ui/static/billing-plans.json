@@ -1,299 +1,548 @@
-{
-  "billing_plans": [
-    {
-      "category": null,
-      "color": "blue",
-      "description": "Automatically create living documentation of your network",
-      "icon": "ThumbsUp",
-      "id": "Starter",
-      "metadata": {
-        "base_cents": 1499,
-        "features": {
-          "api_access": false,
-          "audit_logs": false,
-          "commercial_license": false,
-          "dedicated_support_channel": false,
-          "onboarding_call": false,
-          "remove_created_with": false,
-          "share_views": false
-        },
-        "included_networks": 1,
-        "included_seats": 1,
-        "is_commercial": false,
-        "network_cents": null,
-        "rate": "Month",
-        "seat_cents": null,
-        "trial_days": 0
+[
+  {
+    "id": "Starter",
+    "name": "Starter",
+    "description": "Automatically create living documentation of your network",
+    "category": null,
+    "icon": "ThumbsUp",
+    "color": "blue",
+    "metadata": {
+      "base_cents": 1499,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": false,
+        "commercial_license": false,
+        "community_support": true,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": false,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": false,
+        "priority_support": false,
+        "remove_created_with": false,
+        "share_views": false,
+        "webhooks": false,
+        "whitelabeling": false
       },
-      "name": "Starter"
-    },
-    {
-      "category": null,
-      "color": "yellow",
-      "description": "Visualize multiple networks and share network diagrams",
-      "icon": "Zap",
-      "id": "Pro",
-      "metadata": {
-        "base_cents": 2499,
-        "features": {
-          "api_access": false,
-          "audit_logs": false,
-          "commercial_license": false,
-          "dedicated_support_channel": false,
-          "onboarding_call": false,
-          "remove_created_with": false,
-          "share_views": true
-        },
-        "included_networks": 3,
-        "included_seats": 1,
-        "is_commercial": false,
-        "network_cents": null,
-        "rate": "Month",
-        "seat_cents": null,
-        "trial_days": 7
-      },
-      "name": "Pro"
-    },
-    {
-      "category": null,
-      "color": "orange",
-      "description": "Collaborate on infrastructure documentation with your team",
-      "icon": "Users",
-      "id": "Team",
-      "metadata": {
-        "base_cents": 7999,
-        "features": {
-          "api_access": false,
-          "audit_logs": false,
-          "commercial_license": true,
-          "dedicated_support_channel": true,
-          "onboarding_call": true,
-          "remove_created_with": true,
-          "share_views": true
-        },
-        "included_networks": 5,
-        "included_seats": 5,
-        "is_commercial": true,
-        "network_cents": 800,
-        "rate": "Month",
-        "seat_cents": 1000,
-        "trial_days": 7
-      },
-      "name": "Team"
-    },
-    {
-      "category": null,
-      "color": "brown",
-      "description": "Manage multi-site and multi-customer documentation with advanced features",
-      "icon": "Briefcase",
-      "id": "Business",
-      "metadata": {
-        "base_cents": 14999,
-        "features": {
-          "api_access": true,
-          "audit_logs": true,
-          "commercial_license": true,
-          "dedicated_support_channel": true,
-          "onboarding_call": true,
-          "remove_created_with": true,
-          "share_views": true
-        },
-        "included_networks": 25,
-        "included_seats": 10,
-        "is_commercial": true,
-        "network_cents": 500,
-        "rate": "Month",
-        "seat_cents": 800,
-        "trial_days": 14
-      },
-      "name": "Business"
-    },
-    {
-      "category": null,
-      "color": "blue",
-      "description": "Automatically create living documentation of your network",
-      "icon": "ThumbsUp",
-      "id": "Starter",
-      "metadata": {
-        "base_cents": 14400,
-        "features": {
-          "api_access": false,
-          "audit_logs": false,
-          "commercial_license": false,
-          "dedicated_support_channel": false,
-          "onboarding_call": false,
-          "remove_created_with": false,
-          "share_views": false
-        },
-        "included_networks": 1,
-        "included_seats": 1,
-        "is_commercial": false,
-        "network_cents": null,
-        "rate": "Year",
-        "seat_cents": null,
-        "trial_days": 0
-      },
-      "name": "Starter"
-    },
-    {
-      "category": null,
-      "color": "yellow",
-      "description": "Visualize multiple networks and share network diagrams",
-      "icon": "Zap",
-      "id": "Pro",
-      "metadata": {
-        "base_cents": 24000,
-        "features": {
-          "api_access": false,
-          "audit_logs": false,
-          "commercial_license": false,
-          "dedicated_support_channel": false,
-          "onboarding_call": false,
-          "remove_created_with": false,
-          "share_views": true
-        },
-        "included_networks": 3,
-        "included_seats": 1,
-        "is_commercial": false,
-        "network_cents": null,
-        "rate": "Year",
-        "seat_cents": null,
-        "trial_days": 7
-      },
-      "name": "Pro"
-    },
-    {
-      "category": null,
-      "color": "orange",
-      "description": "Collaborate on infrastructure documentation with your team",
-      "icon": "Users",
-      "id": "Team",
-      "metadata": {
-        "base_cents": 76800,
-        "features": {
-          "api_access": false,
-          "audit_logs": false,
-          "commercial_license": true,
-          "dedicated_support_channel": true,
-          "onboarding_call": true,
-          "remove_created_with": true,
-          "share_views": true
-        },
-        "included_networks": 5,
-        "included_seats": 5,
-        "is_commercial": true,
-        "network_cents": 7700,
-        "rate": "Year",
-        "seat_cents": 9600,
-        "trial_days": 7
-      },
-      "name": "Team"
-    },
-    {
-      "category": null,
-      "color": "brown",
-      "description": "Manage multi-site and multi-customer documentation with advanced features",
-      "icon": "Briefcase",
-      "id": "Business",
-      "metadata": {
-        "base_cents": 144000,
-        "features": {
-          "api_access": true,
-          "audit_logs": true,
-          "commercial_license": true,
-          "dedicated_support_channel": true,
-          "onboarding_call": true,
-          "remove_created_with": true,
-          "share_views": true
-        },
-        "included_networks": 25,
-        "included_seats": 10,
-        "is_commercial": true,
-        "network_cents": 4800,
-        "rate": "Year",
-        "seat_cents": 7700,
-        "trial_days": 14
-      },
-      "name": "Business"
+      "hosting": "Cloud",
+      "included_networks": 1,
+      "included_seats": 1,
+      "is_commercial": false,
+      "network_cents": null,
+      "rate": "Month",
+      "seat_cents": null,
+      "trial_days": 0
     }
-  ],
-  "features": [
-    {
-      "category": "Features",
-      "color": null,
-      "description": "Share live network diagrams with others",
-      "icon": null,
-      "id": "share_views",
-      "metadata": {
-        "is_coming_soon": false
+  },
+  {
+    "id": "Pro",
+    "name": "Pro",
+    "description": "Visualize multiple networks and share network diagrams",
+    "category": null,
+    "icon": "Zap",
+    "color": "yellow",
+    "metadata": {
+      "base_cents": 2499,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": false,
+        "commercial_license": false,
+        "community_support": true,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": false,
+        "priority_support": false,
+        "remove_created_with": false,
+        "share_views": true,
+        "webhooks": false,
+        "whitelabeling": false
       },
-      "name": "Share Views"
-    },
-    {
-      "category": "Support & Licensing",
-      "color": null,
-      "description": "30 minute onboarding call to ensure you're getting the most out of NetVisor",
-      "icon": null,
-      "id": "onboarding_call",
-      "metadata": {
-        "is_coming_soon": false
-      },
-      "name": "Onboarding Call"
-    },
-    {
-      "category": "Support & Licensing",
-      "color": null,
-      "description": "A dedicated discord channel for support and questions",
-      "icon": null,
-      "id": "dedicated_support_channel",
-      "metadata": {
-        "is_coming_soon": false
-      },
-      "name": "Dedicated Discord Channel"
-    },
-    {
-      "category": "Support & Licensing",
-      "color": null,
-      "description": "Use NetVisor under a commercial license",
-      "icon": null,
-      "id": "commercial_license",
-      "metadata": {
-        "is_coming_soon": false
-      },
-      "name": "Commercial License"
-    },
-    {
-      "category": "Features",
-      "color": null,
-      "description": "Comprehensive logs of all access and data modification actions performed in NetVisor",
-      "icon": null,
-      "id": "audit_logs",
-      "metadata": {
-        "is_coming_soon": true
-      },
-      "name": "Audit Logs"
-    },
-    {
-      "category": "Features",
-      "color": null,
-      "description": "Access NetVisor APIs programmatically to bring your data into other applications",
-      "icon": null,
-      "id": "api_access",
-      "metadata": {
-        "is_coming_soon": true
-      },
-      "name": "API Access"
-    },
-    {
-      "category": "Features",
-      "color": null,
-      "description": "Remove 'Created using netvisor.io' in bottom right corner of visualization",
-      "icon": null,
-      "id": "remove_created_with",
-      "metadata": {
-        "is_coming_soon": false
-      },
-      "name": "Remove 'Powered By'"
+      "hosting": "Cloud",
+      "included_networks": 3,
+      "included_seats": 1,
+      "is_commercial": false,
+      "network_cents": null,
+      "rate": "Month",
+      "seat_cents": null,
+      "trial_days": 7
     }
-  ]
-}
+  },
+  {
+    "id": "Team",
+    "name": "Team",
+    "description": "Collaborate on infrastructure documentation with your team",
+    "category": null,
+    "icon": "Users",
+    "color": "orange",
+    "metadata": {
+      "base_cents": 7999,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": false,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": false,
+        "whitelabeling": false
+      },
+      "hosting": "Cloud",
+      "included_networks": 5,
+      "included_seats": 5,
+      "is_commercial": true,
+      "network_cents": 800,
+      "rate": "Month",
+      "seat_cents": 1000,
+      "trial_days": 7
+    }
+  },
+  {
+    "id": "Business",
+    "name": "Business",
+    "description": "Manage multi-site and multi-customer documentation with advanced features",
+    "category": null,
+    "icon": "Briefcase",
+    "color": "indigo",
+    "metadata": {
+      "base_cents": 14999,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": true,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": true,
+        "whitelabeling": false
+      },
+      "hosting": "Cloud",
+      "included_networks": 25,
+      "included_seats": 10,
+      "is_commercial": true,
+      "network_cents": 500,
+      "rate": "Month",
+      "seat_cents": 800,
+      "trial_days": 14
+    }
+  },
+  {
+    "id": "Starter",
+    "name": "Starter",
+    "description": "Automatically create living documentation of your network",
+    "category": null,
+    "icon": "ThumbsUp",
+    "color": "blue",
+    "metadata": {
+      "base_cents": 14400,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": false,
+        "commercial_license": false,
+        "community_support": true,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": false,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": false,
+        "priority_support": false,
+        "remove_created_with": false,
+        "share_views": false,
+        "webhooks": false,
+        "whitelabeling": false
+      },
+      "hosting": "Cloud",
+      "included_networks": 1,
+      "included_seats": 1,
+      "is_commercial": false,
+      "network_cents": null,
+      "rate": "Year",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  },
+  {
+    "id": "Pro",
+    "name": "Pro",
+    "description": "Visualize multiple networks and share network diagrams",
+    "category": null,
+    "icon": "Zap",
+    "color": "yellow",
+    "metadata": {
+      "base_cents": 24000,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": false,
+        "commercial_license": false,
+        "community_support": true,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": false,
+        "priority_support": false,
+        "remove_created_with": false,
+        "share_views": true,
+        "webhooks": false,
+        "whitelabeling": false
+      },
+      "hosting": "Cloud",
+      "included_networks": 3,
+      "included_seats": 1,
+      "is_commercial": false,
+      "network_cents": null,
+      "rate": "Year",
+      "seat_cents": null,
+      "trial_days": 7
+    }
+  },
+  {
+    "id": "Team",
+    "name": "Team",
+    "description": "Collaborate on infrastructure documentation with your team",
+    "category": null,
+    "icon": "Users",
+    "color": "orange",
+    "metadata": {
+      "base_cents": 76800,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": false,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": false,
+        "whitelabeling": false
+      },
+      "hosting": "Cloud",
+      "included_networks": 5,
+      "included_seats": 5,
+      "is_commercial": true,
+      "network_cents": 7700,
+      "rate": "Year",
+      "seat_cents": 9600,
+      "trial_days": 7
+    }
+  },
+  {
+    "id": "Business",
+    "name": "Business",
+    "description": "Manage multi-site and multi-customer documentation with advanced features",
+    "category": null,
+    "icon": "Briefcase",
+    "color": "indigo",
+    "metadata": {
+      "base_cents": 144000,
+      "custom_checkout_cta": null,
+      "custom_checkout_link": null,
+      "custom_price": null,
+      "features": {
+        "audit_logs": true,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": false,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": true,
+        "whitelabeling": false
+      },
+      "hosting": "Cloud",
+      "included_networks": 25,
+      "included_seats": 10,
+      "is_commercial": true,
+      "network_cents": 4800,
+      "rate": "Year",
+      "seat_cents": 7700,
+      "trial_days": 14
+    }
+  },
+  {
+    "id": "Enterprise",
+    "name": "Enterprise",
+    "description": "Fully managed NetVisor with dedicated support and custom deployment",
+    "category": null,
+    "icon": "Building",
+    "color": "teal",
+    "metadata": {
+      "base_cents": 0,
+      "custom_checkout_cta": "Contact Us",
+      "custom_checkout_link": "mailto:enterprise@netvisor.io",
+      "custom_price": "Custom",
+      "features": {
+        "audit_logs": true,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": true,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": true,
+        "live_chat_support": true,
+        "managed_deployment": true,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": true,
+        "whitelabeling": true
+      },
+      "hosting": "Managed",
+      "included_networks": null,
+      "included_seats": null,
+      "is_commercial": true,
+      "network_cents": null,
+      "rate": "Month",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  },
+  {
+    "id": "Community",
+    "name": "Community",
+    "description": "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations",
+    "category": null,
+    "icon": "Heart",
+    "color": "pink",
+    "metadata": {
+      "base_cents": 0,
+      "custom_checkout_cta": "View on GitHub",
+      "custom_checkout_link": "https://github.com/netvisor-io/netvisor",
+      "custom_price": "Free",
+      "features": {
+        "audit_logs": false,
+        "commercial_license": false,
+        "community_support": true,
+        "custom_sso": false,
+        "email_support": false,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": false,
+        "priority_support": false,
+        "remove_created_with": false,
+        "share_views": true,
+        "webhooks": false,
+        "whitelabeling": false
+      },
+      "hosting": "Self-Hosted",
+      "included_networks": null,
+      "included_seats": null,
+      "is_commercial": false,
+      "network_cents": null,
+      "rate": "Month",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  },
+  {
+    "id": "CommercialSelfHosted",
+    "name": "Commercial Self-Hosted",
+    "description": "Commercial license for self-managed deployments — full control over configuration and integrations",
+    "category": null,
+    "icon": "ServerCog",
+    "color": "gray",
+    "metadata": {
+      "base_cents": 0,
+      "custom_checkout_cta": "Contact Us",
+      "custom_checkout_link": "mailto:licensing@netvisor.io",
+      "custom_price": "Custom",
+      "features": {
+        "audit_logs": true,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": true,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": true,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": true,
+        "whitelabeling": false
+      },
+      "hosting": "Self-Hosted",
+      "included_networks": null,
+      "included_seats": null,
+      "is_commercial": true,
+      "network_cents": null,
+      "rate": "Month",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  },
+  {
+    "id": "Enterprise",
+    "name": "Enterprise",
+    "description": "Fully managed NetVisor with dedicated support and custom deployment",
+    "category": null,
+    "icon": "Building",
+    "color": "teal",
+    "metadata": {
+      "base_cents": 0,
+      "custom_checkout_cta": "Contact Us",
+      "custom_checkout_link": "mailto:enterprise@netvisor.io",
+      "custom_price": "Custom",
+      "features": {
+        "audit_logs": true,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": true,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": true,
+        "live_chat_support": true,
+        "managed_deployment": true,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": true,
+        "whitelabeling": true
+      },
+      "hosting": "Managed",
+      "included_networks": null,
+      "included_seats": null,
+      "is_commercial": true,
+      "network_cents": null,
+      "rate": "Year",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  },
+  {
+    "id": "Community",
+    "name": "Community",
+    "description": "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations",
+    "category": null,
+    "icon": "Heart",
+    "color": "pink",
+    "metadata": {
+      "base_cents": 0,
+      "custom_checkout_cta": "View on GitHub",
+      "custom_checkout_link": "https://github.com/netvisor-io/netvisor",
+      "custom_price": "Free",
+      "features": {
+        "audit_logs": false,
+        "commercial_license": false,
+        "community_support": true,
+        "custom_sso": false,
+        "email_support": false,
+        "embeds": true,
+        "invoice_billing": false,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": false,
+        "priority_support": false,
+        "remove_created_with": false,
+        "share_views": true,
+        "webhooks": false,
+        "whitelabeling": false
+      },
+      "hosting": "Self-Hosted",
+      "included_networks": null,
+      "included_seats": null,
+      "is_commercial": false,
+      "network_cents": null,
+      "rate": "Year",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  },
+  {
+    "id": "CommercialSelfHosted",
+    "name": "Commercial Self-Hosted",
+    "description": "Commercial license for self-managed deployments — full control over configuration and integrations",
+    "category": null,
+    "icon": "ServerCog",
+    "color": "gray",
+    "metadata": {
+      "base_cents": 0,
+      "custom_checkout_cta": "Contact Us",
+      "custom_checkout_link": "mailto:licensing@netvisor.io",
+      "custom_price": "Custom",
+      "features": {
+        "audit_logs": true,
+        "commercial_license": true,
+        "community_support": false,
+        "custom_sso": true,
+        "email_support": true,
+        "embeds": true,
+        "invoice_billing": true,
+        "live_chat_support": false,
+        "managed_deployment": false,
+        "onboarding_call": true,
+        "priority_support": true,
+        "remove_created_with": true,
+        "share_views": true,
+        "webhooks": true,
+        "whitelabeling": false
+      },
+      "hosting": "Self-Hosted",
+      "included_networks": null,
+      "included_seats": null,
+      "is_commercial": true,
+      "network_cents": null,
+      "rate": "Year",
+      "seat_cents": null,
+      "trial_days": 0
+    }
+  }
+]
