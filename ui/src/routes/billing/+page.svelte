@@ -36,11 +36,12 @@
 				class="h-full w-full bg-cover bg-center bg-no-repeat"
 				style="background-image: url('/images/diagram.png')"
 			></div>
+			<div class="absolute inset-0 bg-black/70"></div>
 		</div>
 
 		<!-- Content (sits above background) -->
 		<div class="flex min-h-screen items-center justify-center">
-			<div class="relative z-10">
+			<div class="relative z-10 pt-10">
 				<BillingPlanForm
 					plans={$currentPlans}
 					billingPlanHelpers={billingPlans}

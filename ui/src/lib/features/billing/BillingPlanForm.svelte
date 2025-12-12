@@ -307,19 +307,6 @@
 		return billingPlanHelpers.getMetadata(plan.type)?.custom_price !== null;
 	}
 
-	function getHostingColor(hosting: string): string {
-		switch (hosting) {
-			case 'Cloud':
-				return 'sky';
-			case 'Managed':
-				return 'purple';
-			case 'Self-Hosted':
-				return 'green';
-			default:
-				return 'gray';
-		}
-	}
-
 	function anyPlanHasFeature(featureKey: string): boolean {
 		return getTruthyCount(featureKey) > 0;
 	}
@@ -474,23 +461,6 @@
 										</span>
 									{/if}
 								</div>
-							</td>
-						{/each}
-					</tr>
-
-					<!-- Hosting Row -->
-					<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
-						<td class="text-secondary border-r border-gray-700 p-4">
-							<div class="text-sm font-medium">Hosting</div>
-						</td>
-						{#each filteredPlans as plan (plan.type)}
-							{@const hosting = getHosting(plan)}
-							<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
-								{#if hosting}
-									<Tag label={hosting} color={getHostingColor(hosting)} />
-								{:else}
-									<span class="text-tertiary">—</span>
-								{/if}
 							</td>
 						{/each}
 					</tr>

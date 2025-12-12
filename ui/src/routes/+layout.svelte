@@ -20,24 +20,8 @@
 	import { getRoute } from '$lib/shared/utils/navigation';
 	import { apiKeys } from '$lib/features/api_keys/store';
 	import { daemons } from '$lib/features/daemons/store';
-
 	import posthog from 'posthog-js';
 	import { browser } from '$app/environment';
-
-	export const loadPh = async () => {
-		if (browser) {
-			posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
-				api_host: 'https://ph.netvisor.io',
-				ui_host: 'https://us.posthog.com',
-				defaults: '2025-11-30',
-				secure_cookie: true,
-				cookieless_mode: 'always',
-				person_profiles: 'always' // or 'always' to create profiles for anonymous users as well
-			});
-		}
-
-		return;
-	};
 
 	// Accept children as a snippet prop
 	let { children }: { children: Snippet } = $props();
@@ -125,7 +109,22 @@
 			}
 		}
 
-		loadPh();
+		const load = async () => {
+			if (browser) {
+				posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
+					api_host: 'https://ph.netvisor.io',
+					ui_host: 'https://us.posthog.com',
+					defaults: '2025-11-30',
+					secure_cookie: true,
+					cookieless_mode: 'always',
+					person_profiles: 'always' // or 'always' to create profiles for anonymous users as well
+				});
+			}
+
+			return;
+		};
+
+		load();
 	});
 </script>
 
