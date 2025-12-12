@@ -16,7 +16,7 @@ NetVisor scans your network, identifies hosts and services, and generates an int
 ![Daemon](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/daemon-ci.yml?label=daemon-ci&style=for-the-badge)  ![Server](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/server-ci.yml?label=server-ci&style=for-the-badge)  ![UI](https://img.shields.io/github/actions/workflow/status/mayanayza/netvisor/ui-ci.yml?label=ui-ci&style=for-the-badge)<br>
 [![Discord](https://img.shields.io/discord/1432872786828726392?logo=discord&label=discord&labelColor=white&color=7289da&style=for-the-badge)](https://discord.gg/b7ffQr8AcZ)
 
-> 💡 **Prefer not to self-host?** [Get early access](https://netvisor.io) to NetVisor Cloud
+> 💡 **Prefer not to self-host?** [Get a free trial](https://netvisor.io) of NetVisor Cloud
 > 
 <p align="center">
   <img src="./media/hero.png" width="1200" alt="Example Visualization">
@@ -41,7 +41,7 @@ Choose the right option for your use case:
 |----------|---------|------|----------|
 | **Personal/Home Use** | [AGPL-3.0](LICENSE.md) | Free | Home labs, personal networks, learning |
 | **Commercial Use** | [Commercial License](COMMERCIAL-LICENSE.md) | [Contact Us](mailto:licensing@netvisor.io) | Businesses, MSPs, proprietary integrations |
-| **Hosted Solution** | NetVisor Cloud | Subscription | Individuals and teams wanting NetVisor with zero infrastructure management |
+| **Hosted Solution** | [NetVisor Cloud](https://netvisor.io) | Subscription | Individuals and teams wanting NetVisor with zero infrastructure management |
 
 ### License Selection Guide
 
@@ -62,7 +62,7 @@ For commercial licensing inquiries: **licensing@netvisor.io**
 - Want a fully managed solution without infrastructure setup
 - Prefer subscription pricing over self-hosting
 
-**[Get NetVisor Cloud Early Access →](https://netvisor.io)**
+**[NetVisor Cloud Free Trial →](https://netvisor.io)**
 
 ## 🎯 Perfect For
 

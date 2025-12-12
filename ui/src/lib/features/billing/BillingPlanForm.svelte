@@ -204,9 +204,29 @@
 			groups.get(category)!.push(featureKey);
 		}
 
-		const sortedEntries = [...groups.entries()].sort(([a], [b]) => {
-			if (a === 'Features') return -1;
-			if (b === 'Features') return 1;
+		// Calculate category score: sum of truthy counts for all features in category
+		function getCategoryScore(categoryFeatures: string[]): number {
+			return categoryFeatures.reduce((sum, featureKey) => sum + getTruthyCount(featureKey), 0);
+		}
+
+		const sortedEntries = [...groups.entries()].sort(([a, aFeatures], [b, bFeatures]) => {
+			// Support always last
+			if (a === 'Support') return 1;
+			if (b === 'Support') return -1;
+
+			// Licensing & Billing second to last
+			if (a === 'Licensing & Billing') return 1;
+			if (b === 'Licensing & Billing') return -1;
+
+			// Enterprise third to last
+			if (a === 'Enterprise') return 1;
+			if (b === 'Enterprise') return -1;
+
+			// Sort by category score (most features available across plans first)
+			const scoreDiff = getCategoryScore(bFeatures) - getCategoryScore(aFeatures);
+			if (scoreDiff !== 0) return scoreDiff;
+
+			// Alphabetical as tiebreaker
 			return a.localeCompare(b);
 		});
 
