@@ -221,8 +221,9 @@ jobs:
       - name: Get release version
         id: version
         run: echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-
-      - name: Build and push Server+UI image
+      
+      # Server image (Community self-hosted)
+      - name: Build and push Server+UI image (Community)
         uses: docker/build-push-action@v5
         with:
           context: .  # Build from project root to access both backend/ and ui/
@@ -235,6 +236,24 @@ jobs:
           tags: |
             mayanayza/netvisor-server:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository }}/server:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      # Server image (Commercial self-hosted)
+      - name: Build and push Server+UI image (Commercial)
+        uses: docker/build-push-action@v5
+        with:
+          context: .  # Build from project root to access both backend/ and ui/
+          file: ./backend/Dockerfile  
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            PUBLIC_SERVER_HOSTNAME=default
+            PUBLIC_SERVER_PORT=60072
+            CARGO_FEATURES=commercial-selfhost
+          tags: |
+            mayanayza/netvisor-server-commercial:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository }}/server-commercial:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       

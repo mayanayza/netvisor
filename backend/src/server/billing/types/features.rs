@@ -14,20 +14,47 @@ pub enum Feature {
     OnboardingCall,
     CommercialLicense,
     AuditLogs,
-    ApiAccess,
+    Webhooks,
     RemoveCreatedWith,
+    CustomSso,
+    ManagedDeployment,
+    Whitelabeling,
+    InvoiceBilling,
+    CommunitySupport,
+    EmailSupport,
+    LiveChatSupport,
+    PrioritySupport,
+    Embeds,
 }
 
 impl HasId for Feature {
     fn id(&self) -> &'static str {
         match self {
-            Feature::ApiAccess => "api_access",
+            Feature::Webhooks => "webhooks",
             Feature::AuditLogs => "audit_logs",
             Feature::ShareViews => "share_views",
             Feature::OnboardingCall => "onboarding_call",
             Feature::CommercialLicense => "commercial_license",
             Feature::RemoveCreatedWith => "remove_created_with",
+            Feature::CustomSso => "custom_sso",
+            Feature::ManagedDeployment => "managed_deployment",
+            Feature::Whitelabeling => "whitelabeling",
+            Feature::InvoiceBilling => "invoice_billing",
+            Feature::LiveChatSupport => "live_chat_support",
+            Feature::Embeds => "embeds",
+            Feature::EmailSupport => "email_support",
+            Feature::CommunitySupport => "community_support",
+            Feature::PrioritySupport => "priority_support",
         }
+    }
+}
+
+impl Feature {
+    pub fn is_coming_soon(&self) -> bool {
+        matches!(
+            self,
+            Feature::Webhooks | Feature::AuditLogs | Feature::Embeds
+        )
     }
 }
 
@@ -44,7 +71,15 @@ impl EntityMetadataProvider for Feature {
 impl TypeMetadataProvider for Feature {
     fn category(&self) -> &'static str {
         match self {
-            Feature::OnboardingCall | Feature::CommercialLicense => "Support & Licensing",
+            Feature::OnboardingCall
+            | Feature::LiveChatSupport
+            | Feature::EmailSupport
+            | Feature::CommunitySupport
+            | Feature::PrioritySupport => "Support",
+            Feature::CommercialLicense | Feature::InvoiceBilling => "Licensing & Billing",
+            Feature::CustomSso | Feature::ManagedDeployment | Feature::Whitelabeling => {
+                "Deployment"
+            }
             _ => "Features",
         }
     }
@@ -52,11 +87,20 @@ impl TypeMetadataProvider for Feature {
     fn name(&self) -> &'static str {
         match self {
             Feature::AuditLogs => "Audit Logs",
-            Feature::ApiAccess => "API Access",
+            Feature::Webhooks => "Webhooks",
             Feature::ShareViews => "Share Views",
             Feature::OnboardingCall => "Onboarding Call",
             Feature::CommercialLicense => "Commercial License",
             Feature::RemoveCreatedWith => "Remove Watermark",
+            Feature::CustomSso => "Custom SSO",
+            Feature::ManagedDeployment => "Managed Deployment",
+            Feature::Whitelabeling => "Whitelabeling",
+            Feature::InvoiceBilling => "Invoice Billing",
+            Feature::LiveChatSupport => "Live Chat Support",
+            Feature::Embeds => "Embeds",
+            Feature::EmailSupport => "Email Support",
+            Feature::CommunitySupport => "Community Support",
+            Feature::PrioritySupport => "Priority Support",
         }
     }
 
@@ -65,8 +109,8 @@ impl TypeMetadataProvider for Feature {
             Feature::AuditLogs => {
                 "Comprehensive logs of all access and data modification actions performed in NetVisor"
             }
-            Feature::ApiAccess => {
-                "Access NetVisor APIs programmatically to bring your data into other applications"
+            Feature::Webhooks => {
+                "Push real-time events to external systems when hosts, services, or topology changes"
             }
             Feature::ShareViews => "Share live network diagrams with others",
             Feature::OnboardingCall => {
@@ -76,14 +120,25 @@ impl TypeMetadataProvider for Feature {
             Feature::RemoveCreatedWith => {
                 "Remove 'Created using netvisor.io' in bottom right corner of visualization"
             }
+            Feature::PrioritySupport => "Prioritized email support with faster response times",
+            Feature::Embeds => "Embed live network diagrams in wikis, dashboards, or documentation",
+            Feature::CustomSso => "Configure your own OIDC identity provider for single sign-on",
+            Feature::ManagedDeployment => {
+                "We deploy, configure, and manage NetVisor for you — on a dedicated instance or your own infrastructure"
+            }
+            Feature::EmailSupport => "Access to the NetVisor team via email support tickets",
+            Feature::Whitelabeling => "Custom domain with your branding",
+            Feature::InvoiceBilling => "Pay via invoice with net terms instead of credit card",
+            Feature::LiveChatSupport => {
+                "Access to the NetVisor team via live chat (Slack or Discord)"
+            }
+            Feature::CommunitySupport => "Community support via GitHub issues and discussions",
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
-        let is_coming_soon = matches!(self, Feature::ApiAccess | Feature::AuditLogs);
-
         serde_json::json!({
-            "is_coming_soon": is_coming_soon
+            "is_coming_soon": self.is_coming_soon()
         })
     }
 }

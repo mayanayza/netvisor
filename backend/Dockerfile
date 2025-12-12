@@ -48,7 +48,13 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build the server binary
 COPY backend/ .
-RUN cargo build --release --bin server
+
+ARG CARGO_FEATURES=""
+RUN if [ -n "$CARGO_FEATURES" ]; then \
+      cargo build --release --bin server --features "$CARGO_FEATURES"; \
+    else \
+      cargo build --release --bin server; \
+    fi
 
 # Verify binary exists
 RUN test -f /app/target/release/server || (echo "Server binary not found" && exit 1)

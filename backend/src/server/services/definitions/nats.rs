@@ -23,6 +23,9 @@ impl ServiceDefinition for NATS {
     fn logo_url(&self) -> &'static str {
         "https://simpleicons.org/icons/natsdotio.svg"
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<NATS>));

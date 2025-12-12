@@ -1,6 +1,6 @@
 [package]
 name = "netvisor-server"
-version = "0.11.6"
+version = "0.11.7"
 edition = "2024"
 description = "NetVisor HTTP API server"
 
@@ -182,3 +182,4 @@ comrak = "0.48.0"
 
 [features]
 generate-fixtures = []
+commercial-selfhost = []

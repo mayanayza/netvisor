@@ -26,6 +26,9 @@ impl ServiceDefinition for Kafka {
     fn is_generic(&self) -> bool {
         true
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<Kafka>));

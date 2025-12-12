@@ -40,19 +40,19 @@ Complete guide to using NetVisor's features for network discovery, organization,
 3. **Onboard**: 
     - Select the name of your organization and network
     - Decide whether NetVisor should create baseline data for your first network (recommended)
+  
+4. **Create and deploy your first daemon**
+    - Go to the Daemons tab to create a Daemon. If you are using the Community edition with the default Docker Compose, a daemon is enabled by default.
+    - Install it on the host of your choice, taking into consideration your [multi-vlan strategy](https://github.com/netvisor-io/netvisor/blob/main/docs/MULTI_VLAN_GUIDE.md)
+    - The daemon will automatically run discovery
 
-4. **Automatic initialization**: After onboarding, NetVisor automatically:
-   - Starts the integrated daemon (if using default docker-compose with integrated daemon)
-   - Begins initial discovery
-   - Schedules daily discovery
-
-4. **Monitor discovery**: Switch to **Discover > Sessions** to watch the scan progress
+5. **Monitor discovery**: Switch to **Discover > Sessions** to watch the scan progress
 
 <p align="center">
   <img src="../media/first_discovery.png" width="600" alt="First Discovery">
 </p>
 
-5. **View results**: Once complete (5-10+ minutes), navigate to **Topology** to see your network diagram
+5. **View results**: Once complete, navigate to **Topology** to see your network diagram
 
 ## Authentication
 
