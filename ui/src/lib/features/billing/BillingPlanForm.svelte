@@ -291,16 +291,16 @@
 		return filteredPlans.filter((p) => isTruthyValue(getFeatureValue(p.type, featureKey))).length;
 	}
 
-	function getCustomCheckoutLink(plan: BillingPlan): string | null {
-		return billingPlanHelpers.getMetadata(plan.type)?.custom_checkout_link ?? null;
-	}
-
-	function getCustomCheckoutCta(plan: BillingPlan): string {
-		return billingPlanHelpers.getMetadata(plan.type)?.custom_checkout_cta ?? 'Select';
-	}
-
 	function getHosting(plan: BillingPlan): string {
 		return billingPlanHelpers.getMetadata(plan.type)?.hosting ?? '';
+	}
+
+	function isCommercial(plan: BillingPlan): boolean {
+		return billingPlanHelpers.getMetadata(plan.type)?.is_commercial === true;
+	}
+
+	function hasTrial(plan: BillingPlan): boolean {
+		return plan.trial_days > 0;
 	}
 
 	function hasCustomPrice(plan: BillingPlan): boolean {
@@ -362,16 +362,16 @@
 			style="left: {stickyHeaderLeft}px; width: {stickyHeaderWidth}px;"
 		>
 			<div class="flex">
-				<div class="border-r border-gray-700 p-3" style="width: {columnWidth}"></div>
+				<div class="border-r border-gray-700 p-2 lg:p-3" style="width: {columnWidth}"></div>
 				{#each filteredPlans as plan (plan.type)}
 					{@const IconComponent = billingPlanHelpers.getIconComponent(plan.type)}
 					{@const colorHelper = billingPlanHelpers.getColorHelper(plan.type)}
 					<div
-						class="flex items-center justify-center gap-2 border-r border-gray-700 p-3 last:border-r-0"
+						class="flex items-center justify-center gap-1 overflow-hidden border-r border-gray-700 p-2 last:border-r-0 lg:gap-2 lg:p-3"
 						style="width: {columnWidth}"
 					>
-						<IconComponent class="{colorHelper.icon} h-5 w-5" />
-						<span class="text-primary font-semibold">
+						<IconComponent class="{colorHelper.icon} h-4 w-4 flex-shrink-0 lg:h-5 lg:w-5" />
+						<span class="text-primary truncate text-xs font-semibold lg:text-base">
 							{billingPlanHelpers.getName(plan.type)}
 						</span>
 					</div>
@@ -390,15 +390,20 @@
 							{@const description = billingPlanHelpers.getDescription(plan.type)}
 							{@const IconComponent = billingPlanHelpers.getIconComponent(plan.type)}
 							{@const colorHelper = billingPlanHelpers.getColorHelper(plan.type)}
-							<th class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
-								<div class="flex h-full min-h-[200px] flex-col justify-between space-y-3">
+							<th
+								class="overflow-hidden border-r border-gray-700 p-2 last:border-r-0 lg:p-4"
+								style="width: {columnWidth}"
+							>
+								<div
+									class="flex h-full min-h-[180px] flex-col justify-between space-y-2 lg:min-h-[200px] lg:space-y-3"
+								>
 									<!-- Top: Icon, Name -->
-									<div class="flex flex-col items-center space-y-2">
+									<div class="flex flex-col items-center space-y-1 lg:space-y-2">
 										<div class="flex justify-center">
-											<IconComponent class="{colorHelper.icon} h-8 w-8" />
+											<IconComponent class="{colorHelper.icon} h-6 w-6 lg:h-8 lg:w-8" />
 										</div>
 										<div class="flex items-center gap-2">
-											<span class="text-primary text-lg font-semibold">
+											<span class="text-primary text-sm font-semibold lg:text-lg">
 												{billingPlanHelpers.getName(plan.type)}
 											</span>
 										</div>
@@ -406,7 +411,9 @@
 
 									<!-- Center: Price -->
 									<div class="flex flex-col items-center space-y-1">
-										<div class="text-primary text-2xl font-bold">{formatBasePricing(plan)}</div>
+										<div class="text-primary text-lg font-bold lg:text-2xl">
+											{formatBasePricing(plan)}
+										</div>
 										{#if plan.trial_days > 0 && !hasCustomPrice(plan)}
 											<div class="text-xs font-medium text-success">
 												{plan.trial_days}-day free trial
@@ -559,20 +566,64 @@
 		<div class="sticky bottom-0 left-0 right-0 z-20">
 			<div class="card overflow-hidden rounded-t-none p-0">
 				<div class="flex">
-					<div class="border-r border-gray-700 p-4" style="width: {columnWidth}"></div>
+					<div class="border-r border-gray-700 p-2 lg:p-4" style="width: {columnWidth}"></div>
 					{#each filteredPlans as plan (plan.type)}
-						{@const customLink = getCustomCheckoutLink(plan)}
-						{@const ctaText = getCustomCheckoutCta(plan)}
-						<div class="border-r border-gray-700 p-4 last:border-r-0" style="width: {columnWidth}">
-							{#if customLink}
-								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-								<a href={customLink} class="btn-primary inline-block w-full text-center">
-									{ctaText}
-								</a>
-							{:else}
-								<button type="button" onclick={() => onPlanSelect(plan)} class="btn-primary w-full">
-									{ctaText}
+						{@const hosting = getHosting(plan)}
+						{@const commercial = isCommercial(plan)}
+						{@const trial = hasTrial(plan)}
+						<div
+							class="flex flex-col gap-1 border-r border-gray-700 p-2 last:border-r-0 lg:gap-2 lg:p-4"
+							style="width: {columnWidth}"
+						>
+							{#if hosting === 'Cloud'}
+								<button
+									type="button"
+									onclick={() => onPlanSelect(plan)}
+									class="btn-primary w-full whitespace-nowrap text-sm"
+								>
+									{trial ? 'Start Free Trial' : 'Get Started'}
 								</button>
+								{#if commercial}
+									<a
+										href="mailto:maya@netvisor.io"
+										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-sm"
+									>
+										Contact Us
+									</a>
+								{/if}
+							{:else if hosting === 'Self-Hosted'}
+								{#if commercial}
+									<a
+										href="mailto:maya@netvisor.io"
+										class="btn-primary inline-block w-full whitespace-nowrap text-center text-sm"
+									>
+										Contact Us
+									</a>
+									<a
+										href="https://github.com/netvisor-io/netvisor"
+										target="_blank"
+										rel="noopener noreferrer"
+										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-sm"
+									>
+										View on GitHub
+									</a>
+								{:else}
+									<a
+										href="https://github.com/netvisor-io/netvisor"
+										target="_blank"
+										rel="noopener noreferrer"
+										class="btn-primary inline-block w-full whitespace-nowrap text-center text-sm"
+									>
+										View on GitHub
+									</a>
+								{/if}
+							{:else if commercial}
+								<a
+									href="mailto:maya@netvisor.io"
+									class="btn-primary inline-block w-full whitespace-nowrap text-center text-sm"
+								>
+									Contact Us
+								</a>
 							{/if}
 						</div>
 					{/each}
