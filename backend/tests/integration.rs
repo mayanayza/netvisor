@@ -533,7 +533,7 @@ use netvisor::server::{
         definitions::ServiceDefinitionRegistry,
         r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt},
     },
-    shared::types::metadata::{EntityMetadataProvider},
+    shared::types::metadata::EntityMetadataProvider,
 };
 
 pub async fn generate_fixtures() {
@@ -553,8 +553,7 @@ pub async fn generate_fixtures() {
         .await
         .expect("Failed to generate services markdown");
 
-    generate_billing_plans_json()
-        .expect("Failed to generate billing and features json");
+    generate_billing_plans_json().expect("Failed to generate billing and features json");
 
     println!("✅ Generated test fixtures");
 }
