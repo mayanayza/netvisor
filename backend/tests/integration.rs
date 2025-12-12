@@ -528,16 +528,14 @@ async fn test_full_integration() {
     println!("   ✓ Home Assistant discovered");
 }
 
-#[cfg(feature = "generate-fixtures")]
 use netvisor::server::{
     services::{
         definitions::ServiceDefinitionRegistry,
         r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt},
     },
-    shared::types::metadata::{EntityMetadataProvider, TypeMetadata},
+    shared::types::metadata::{EntityMetadataProvider},
 };
 
-#[cfg(feature = "generate-fixtures")]
 pub async fn generate_fixtures() {
     generate_db_fixture()
         .await
@@ -556,13 +554,11 @@ pub async fn generate_fixtures() {
         .expect("Failed to generate services markdown");
 
     generate_billing_plans_json()
-        .await
         .expect("Failed to generate billing and features json");
 
     println!("✅ Generated test fixtures");
 }
 
-#[cfg(feature = "generate-fixtures")]
 async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
@@ -594,7 +590,6 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(feature = "generate-fixtures")]
 async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Error>> {
     // First, find the config file location in the container
     let find_output = std::process::Command::new("docker")
@@ -649,7 +644,6 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
-#[cfg(feature = "generate-fixtures")]
 async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     let services: Vec<serde_json::Value> = ServiceDefinitionRegistry::all_service_definitions()
         .iter()
@@ -678,7 +672,6 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(feature = "generate-fixtures")]
 async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> {
     use std::collections::HashMap;
 
@@ -765,7 +758,7 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-#[cfg(feature = "generate-fixtures")]
+#[tokio::test]
 async fn generate_billing_plans_json() -> Result<(), Box<dyn std::error::Error>> {
     use netvisor::server::billing::plans::get_website_fixture_plans;
     use netvisor::server::billing::types::features::Feature;

@@ -71,16 +71,22 @@ impl EntityMetadataProvider for Feature {
 impl TypeMetadataProvider for Feature {
     fn category(&self) -> &'static str {
         match self {
-            Feature::OnboardingCall
-            | Feature::LiveChatSupport
+            Feature::CommunitySupport
             | Feature::EmailSupport
-            | Feature::CommunitySupport
-            | Feature::PrioritySupport => "Support",
+            | Feature::LiveChatSupport
+            | Feature::PrioritySupport
+            | Feature::OnboardingCall => "Support",
+
             Feature::CommercialLicense | Feature::InvoiceBilling => "Licensing & Billing",
-            Feature::CustomSso | Feature::ManagedDeployment | Feature::Whitelabeling => {
-                "Deployment"
-            }
-            _ => "Features",
+
+            Feature::CustomSso
+            | Feature::ManagedDeployment
+            | Feature::Whitelabeling
+            | Feature::AuditLogs => "Enterprise",
+
+            Feature::Webhooks => "Integrations",
+
+            Feature::Embeds | Feature::ShareViews | Feature::RemoveCreatedWith => "Sharing",
         }
     }
 
