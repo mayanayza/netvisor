@@ -558,11 +558,7 @@ pub async fn generate_fixtures() {
     generate_billing_plans_json()
         .await
         .expect("Failed to generate billing and features json");
-
-    generate_roadmap_json()
-        .await
-        .expect("Failed to generate roadmap json");
-
+    
     println!("✅ Generated test fixtures");
 }
 
