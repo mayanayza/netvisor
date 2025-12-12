@@ -36,7 +36,7 @@ export async function checkout(plan: BillingPlan): Promise<string | null> {
 
 export async function openCustomerPortal(): Promise<string | null> {
 	const result = await api.request<string>(`/billing/portal`, null, null, {
-		method: 'GET',
+		method: 'POST',
 		body: JSON.stringify(window.location.origin)
 	});
 

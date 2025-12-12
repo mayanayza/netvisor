@@ -308,6 +308,12 @@ impl BillingService {
             .await?
             .ok_or_else(|| anyhow!("Could not find base price for selected plan"))?;
 
+        let trial_days = if plan.config().trial_days == 0 {
+            None
+        } else {
+            Some(plan.config().trial_days)
+        };
+
         let create_checkout_session = CreateCheckoutSession::new()
             .customer(customer_id)
             .success_url(success_url)
@@ -336,6 +342,7 @@ impl BillingService {
             }])
             .metadata([("organization_id".to_string(), organization_id.to_string())])
             .subscription_data(CreateCheckoutSessionSubscriptionData {
+                trial_period_days: trial_days,
                 metadata: Some(
                     [
                         ("organization_id".to_string(), organization_id.to_string()),
@@ -565,9 +572,13 @@ impl BillingService {
 
         match event.type_ {
             EventType::CustomerSubscriptionCreated | EventType::CustomerSubscriptionUpdated => {
-                if let EventObject::CustomerSubscriptionCreated(sub) = event.data.object {
-                    self.handle_subscription_update(sub).await?;
-                } else if let EventObject::CustomerSubscriptionUpdated(sub) = event.data.object {
+                let sub = match event.data.object {
+                    EventObject::CustomerSubscriptionCreated(sub) => Some(sub),
+                    EventObject::CustomerSubscriptionUpdated(sub) => Some(sub),
+                    _ => None,
+                };
+
+                if let Some(sub) = sub {
                     self.handle_subscription_update(sub).await?;
                 }
             }
@@ -692,6 +703,7 @@ impl BillingService {
             }
         }
 
+        // Downgrade permissions if needed
         match plan {
             BillingPlan::Community { .. } => {}
             BillingPlan::Starter { .. } => {
@@ -725,6 +737,8 @@ impl BillingService {
             BillingPlan::Team { .. } => {}
             BillingPlan::Business { .. } => {}
             BillingPlan::Enterprise { .. } => {}
+            BillingPlan::Demo { .. } => {}
+            BillingPlan::CommercialSelfHosted { .. } => {}
         }
 
         organization.base.plan_status = Some(sub.status.to_string());
@@ -760,6 +774,7 @@ impl BillingService {
             .await?;
 
         organization.base.plan_status = Some(SubscriptionStatus::Canceled.to_string());
+        organization.base.plan = None;
 
         self.organization_service
             .update(&mut organization, AuthenticatedEntity::System)

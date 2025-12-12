@@ -40,15 +40,26 @@ export interface MetadataRegistry {
 
 export interface BillingPlanMetadata {
 	features: {
-		api_access: boolean;
-		audit_logs: boolean;
 		share_views: boolean;
-		onboarding_call: boolean;
-		dedicated_support_channel: boolean;
-		commercial_license: boolean;
 		remove_created_with: boolean;
+		audit_logs: boolean;
+		api_access: boolean;
+		onboarding_call: boolean;
+		commercial_license: boolean;
+		custom_sso: boolean;
+		dedicated_instance: boolean;
+		on_premise_installation: boolean;
+		whitelabeling: boolean;
+		invoice_billing: boolean;
+		live_chat_support: boolean;
+		embeds: boolean;
+		email_support: boolean;
 	};
 	is_commercial: boolean;
+	hosting: string;
+	custom_price: string | null;
+	custom_checkout_cta: string | null;
+	custom_checkout_link: string | null;
 }
 
 export interface ServicedDefinitionMetadata {

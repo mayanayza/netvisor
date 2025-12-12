@@ -559,6 +559,10 @@ pub async fn generate_fixtures() {
         .await
         .expect("Failed to generate billing and features json");
 
+    generate_roadmap_json()
+        .await
+        .expect("Failed to generate roadmap json");
+
     println!("✅ Generated test fixtures");
 }
 
@@ -767,13 +771,13 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
 
 #[cfg(feature = "generate-fixtures")]
 async fn generate_billing_plans_json() -> Result<(), Box<dyn std::error::Error>> {
-    use netvisor::server::billing::plans::get_all_plans;
+    use netvisor::server::billing::plans::get_website_fixture_plans;
     use netvisor::server::billing::types::features::Feature;
-    use netvisor::server::shared::types::metadata::MetadataProvider;
+    use netvisor::server::shared::types::metadata::{MetadataProvider, TypeMetadata};
     use strum::IntoEnumIterator;
 
     // Get all plans (monthly + yearly)
-    let plans = get_all_plans();
+    let plans = get_website_fixture_plans();
 
     // Convert to metadata format (same as API returns)
     let plan_metadata: Vec<TypeMetadata> = plans.iter().map(|p| p.to_metadata()).collect();

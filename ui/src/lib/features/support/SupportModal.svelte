@@ -1,28 +1,97 @@
 <script lang="ts">
-	import { Bug, AlertTriangle, Lightbulb, LifeBuoy, BookOpen } from 'lucide-svelte';
-	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
+	import { Bug, AlertTriangle, Lightbulb, LifeBuoy, BookOpen, Mail } from 'lucide-svelte';
+	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { VERSION } from '$lib/version';
-	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import { createColorHelper, type AvailableColor } from '$lib/shared/utils/styling';
+	import type { IconComponent } from '$lib/shared/utils/types';
+	import { organization } from '../organizations/store';
+	import { billingPlans } from '$lib/shared/stores/metadata';
+	import { currentUser } from '$lib/features/auth/store';
+	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
+	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
 
-	export let isOpen = false;
-	export let onClose: () => void;
+	type SupportOption = {
+		title: string;
+		description: string;
+		url: string;
+		color: AvailableColor;
+		icon: IconComponent | string;
+	};
+
+	let {
+		isOpen = false,
+		onClose
+	}: {
+		isOpen: boolean;
+		onClose: () => void;
+	} = $props();
+
+	let hasEmailSupport = $derived.by(() => {
+		if (!$organization || !$organization.plan) return false;
+
+		let features = billingPlans.getMetadata($organization.plan.type).features;
+		return features.email_support;
+	});
+
+	let supportOptions = $derived.by(() => {
+		const options: SupportOption[] = [
+			{
+				title: 'User Guide',
+				description: 'Read the full documentation and guides',
+				url: 'https://github.com/netvisor-io/netvisor/blob/main/docs/USER_GUIDE.md',
+				color: 'gray',
+				icon: BookOpen
+			},
+			{
+				title: 'Incorrect Service Detection',
+				description: 'Report a service that was incorrectly identified',
+				url: 'https://github.com/netvisor-io/netvisor/issues/new?template=service-detection-issue.md',
+				color: 'yellow',
+				icon: AlertTriangle
+			},
+			{
+				title: 'Request a Feature',
+				description: 'Suggest a new feature or improvement',
+				url: 'https://github.com/netvisor-io/netvisor/issues/new?template=feature_request.md',
+				color: 'green',
+				icon: Lightbulb
+			},
+			{
+				title: 'Report a Bug',
+				description: 'Found an issue? Let us know so we can fix it',
+				url: 'https://github.com/netvisor-io/netvisor/issues/new?template=bug_report.md',
+				color: 'red',
+				icon: Bug
+			},
+			{
+				title: 'Discord',
+				description: 'Join our community for help and discussions',
+				url: 'https://discord.gg/b7ffQr8AcZ',
+				color: 'indigo',
+				icon: 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/discord.svg'
+			}
+		];
+
+		if (hasEmailSupport) {
+			options.push({
+				title: 'Email',
+				description: 'Email the NetVisor team directly',
+				url: 'mailto:support@netvisor.io',
+				color: 'blue',
+				icon: Mail
+			});
+		}
+
+		return options;
+	});
 
 	function handleCardClick(url: string) {
 		window.open(url, '_blank', 'noopener,noreferrer');
 	}
 </script>
 
-<EditModal
-	{isOpen}
-	title="Support & Help"
-	loading={false}
-	showSave={false}
-	showCancel={true}
-	cancelLabel="Close"
-	onCancel={onClose}
-	size="md"
->
+<GenericModal {isOpen} title="Support & Help" {onClose} size="xl">
 	<svelte:fragment slot="header-icon">
 		<ModalHeaderIcon Icon={LifeBuoy} color="blue" />
 	</svelte:fragment>
@@ -32,111 +101,40 @@
 			Need help with NetVisor? Choose one of the options below to get support.
 		</p>
 
-		<div class="space-y-3">
-			<!-- Documentation -->
-			<button
-				on:click={() => handleCardClick('https://github.com/netvisor-io/netvisor#readme')}
-				class="card card-focused w-full text-left"
-			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/10"
-					>
-						<BookOpen class="h-5 w-5 text-blue-500" />
+		<div class="grid grid-cols-2 gap-3">
+			{#each supportOptions as option (option.description)}
+				{@const colors = createColorHelper(option.color)}
+				<button onclick={() => handleCardClick(option.url)} class="card w-full text-left">
+					<div class="flex items-center gap-3">
+						<div
+							class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg {colors.bg}"
+						>
+							{#if typeof option.icon === 'string'}
+								<img src={option.icon} alt={option.title} class="h-5 w-5" />
+							{:else}
+								<option.icon class="h-5 w-5 {colors.icon}" />
+							{/if}
+						</div>
+						<div class="min-w-0 flex-1">
+							<p class="text-primary text-sm font-medium">{option.title}</p>
+							<p class="text-secondary truncate text-xs">{option.description}</p>
+						</div>
 					</div>
-					<div class="flex-1">
-						<p class="text-primary text-sm font-medium">Documentation</p>
-						<p class="text-secondary text-xs">Read the full documentation and guides</p>
-					</div>
-				</div>
-			</button>
-
-			<!-- Incorrect Service Detection -->
-			<button
-				on:click={() =>
-					handleCardClick(
-						'https://github.com/netvisor-io/netvisor/issues/new?template=service-detection-issue.md'
-					)}
-				class="card card-focused w-full text-left"
-			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-yellow-500/10"
-					>
-						<AlertTriangle class="h-5 w-5 text-yellow-500" />
-					</div>
-					<div class="flex-1">
-						<p class="text-primary text-sm font-medium">Incorrect Service Detection</p>
-						<p class="text-secondary text-xs">Report a service that was incorrectly identified</p>
-					</div>
-				</div>
-			</button>
-
-			<!-- Request a Feature -->
-			<button
-				on:click={() =>
-					handleCardClick(
-						'https://github.com/netvisor-io/netvisor/issues/new?template=feature_request.md'
-					)}
-				class="card card-focused w-full text-left"
-			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-green-500/10"
-					>
-						<Lightbulb class="h-5 w-5 text-green-500" />
-					</div>
-					<div class="flex-1">
-						<p class="text-primary text-sm font-medium">Request a Feature</p>
-						<p class="text-secondary text-xs">Suggest a new feature or improvement</p>
-					</div>
-				</div>
-			</button>
-
-			<!-- Report a Bug -->
-			<button
-				on:click={() =>
-					handleCardClick(
-						'https://github.com/netvisor-io/netvisor/issues/new?template=bug_report.md'
-					)}
-				class="card card-focused w-full text-left"
-			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-red-500/10"
-					>
-						<Bug class="h-5 w-5 text-red-500" />
-					</div>
-					<div class="flex-1">
-						<p class="text-primary text-sm font-medium">Report a Bug</p>
-						<p class="text-secondary text-xs">Found an issue? Let us know so we can fix it</p>
-					</div>
-				</div>
-			</button>
-
-			<!-- Discord -->
-			<button
-				on:click={() => handleCardClick('https://discord.gg/b7ffQr8AcZ')}
-				class="card card-focused w-full text-left"
-			>
-				<div class="flex items-center gap-3">
-					<div
-						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-500/10"
-					>
-						<img
-							src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/discord.svg"
-							alt="Discord"
-							class="h-5 w-5"
-						/>
-					</div>
-					<div class="flex-1">
-						<p class="text-primary text-sm font-medium">Discord</p>
-						<p class="text-secondary text-xs">Join our community for help and discussions</p>
-					</div>
-				</div>
-			</button>
+				</button>
+			{/each}
 		</div>
-
-		<InlineInfo title={`NetVisor v${VERSION}`} />
+		<InfoCard title="Support Information">
+			<InfoRow label="Version">{VERSION}</InfoRow>
+			<InfoRow label="Organization ID" mono={true}>
+				{$organization?.id ?? '—'}
+			</InfoRow>
+			<InfoRow label="User ID" mono={true}>{$currentUser?.id ?? '—'}</InfoRow>
+		</InfoCard>
 	</div>
-</EditModal>
+
+	<svelte:fragment slot="footer">
+		<div class="flex justify-end">
+			<button type="button" onclick={onClose} class="btn-secondary">Close</button>
+		</div>
+	</svelte:fragment>
+</GenericModal>
