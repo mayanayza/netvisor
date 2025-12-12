@@ -271,7 +271,7 @@ impl BillingPlan {
                 live_chat_support: false,
                 embeds: false,
                 email_support: true,
-                community_support: true,
+                community_support: false,
                 priority_support: false,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
@@ -288,7 +288,7 @@ impl BillingPlan {
                 live_chat_support: false,
                 embeds: true,
                 email_support: true,
-                community_support: true,
+                community_support: false,
                 priority_support: false,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
