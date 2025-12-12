@@ -22,6 +22,9 @@ impl ServiceDefinition for Spinnaker {
     fn logo_url(&self) -> &'static str {
         "https://simpleicons.org/icons/spinnaker.svg"
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<Spinnaker>));

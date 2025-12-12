@@ -10,6 +10,7 @@
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { onMount } from 'svelte';
 	import type { BillingPlan } from './types';
 	import type { BillingPlanMetadata, FeatureMetadata } from '$lib/shared/stores/metadata';
 	import type { ColorStyle } from '$lib/shared/utils/styling';
@@ -83,6 +84,45 @@
 
 	type BillingPeriod = 'monthly' | 'yearly';
 	let billingPeriod = $state<BillingPeriod>('monthly');
+
+	// Sticky header visibility
+	let mainHeaderRef = $state<HTMLElement | null>(null);
+	let tableContainerRef = $state<HTMLElement | null>(null);
+	let showStickyHeader = $state(false);
+	let stickyHeaderLeft = $state(0);
+	let stickyHeaderWidth = $state(0);
+
+	onMount(() => {
+		if (!mainHeaderRef) return;
+
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				showStickyHeader = !entry.isIntersecting;
+			},
+			{ threshold: 0 }
+		);
+
+		observer.observe(mainHeaderRef);
+
+		// Update sticky header position on scroll/resize
+		function updateStickyPosition() {
+			if (tableContainerRef) {
+				const rect = tableContainerRef.getBoundingClientRect();
+				stickyHeaderLeft = rect.left;
+				stickyHeaderWidth = rect.width;
+			}
+		}
+
+		updateStickyPosition();
+		window.addEventListener('scroll', updateStickyPosition);
+		window.addEventListener('resize', updateStickyPosition);
+
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('scroll', updateStickyPosition);
+			window.removeEventListener('resize', updateStickyPosition);
+		};
+	});
 
 	// ============================================================================
 	// Constants
@@ -293,12 +333,37 @@
 	</div>
 
 	<!-- Pricing Table -->
-	<div>
+	<div class="relative" bind:this={tableContainerRef}>
+		<!-- Sticky Header (fixed overlay, always rendered for smooth transitions) -->
+		<div
+			class="card fixed top-0 z-30 overflow-hidden rounded-none p-0 transition-opacity duration-150 {showStickyHeader
+				? 'opacity-100'
+				: 'pointer-events-none opacity-0'}"
+			style="left: {stickyHeaderLeft}px; width: {stickyHeaderWidth}px;"
+		>
+			<div class="flex">
+				<div class="border-r border-gray-700 p-3" style="width: {columnWidth}"></div>
+				{#each filteredPlans as plan (plan.type)}
+					{@const IconComponent = billingPlanHelpers.getIconComponent(plan.type)}
+					{@const colorHelper = billingPlanHelpers.getColorHelper(plan.type)}
+					<div
+						class="flex items-center justify-center gap-2 border-r border-gray-700 p-3 last:border-r-0"
+						style="width: {columnWidth}"
+					>
+						<IconComponent class="{colorHelper.icon} h-5 w-5" />
+						<span class="text-primary font-semibold">
+							{billingPlanHelpers.getName(plan.type)}
+						</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+
 		<div class="card overflow-hidden rounded-b-none border-b-0 p-0">
 			<table class="w-full table-fixed">
 				<!-- Header Row: Plan Names and Prices -->
-				<thead class="sticky top-0 z-10">
-					<tr class="border-b border-gray-700">
+				<thead class="z-10">
+					<tr class="border-b border-gray-700" bind:this={mainHeaderRef}>
 						<th class="border-r border-gray-700 p-4" style="width: {columnWidth}"></th>
 
 						{#each filteredPlans as plan (plan.type)}

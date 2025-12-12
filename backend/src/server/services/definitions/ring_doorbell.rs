@@ -35,6 +35,9 @@ impl ServiceDefinition for RingDoorbell {
     fn logo_url(&self) -> &'static str {
         "https://simpleicons.org/icons/ring.svg"
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(
