@@ -28,6 +28,8 @@ pub enum BillingPlan {
     Team(PlanConfig),
     Business(PlanConfig),
     Enterprise(PlanConfig),
+    Demo(PlanConfig),
+    CommercialSelfHosted(PlanConfig),
 }
 
 impl PartialEq for BillingPlan {
@@ -44,15 +46,30 @@ impl Hash for BillingPlan {
 
 impl Default for BillingPlan {
     fn default() -> Self {
-        BillingPlan::Community(PlanConfig {
-            base_cents: 0,
-            rate: BillingRate::Month,
-            trial_days: 0,
-            seat_cents: None,
-            network_cents: None,
-            included_networks: None,
-            included_seats: None,
-        })
+        #[cfg(feature = "commercial-selfhost")]
+        {
+            BillingPlan::CommercialSelfHosted(PlanConfig {
+                base_cents: 0,
+                rate: BillingRate::Month,
+                trial_days: 0,
+                seat_cents: None,
+                network_cents: None,
+                included_networks: None,
+                included_seats: None,
+            })
+        }
+        #[cfg(not(feature = "commercial-selfhost"))]
+        {
+            BillingPlan::Community(PlanConfig {
+                base_cents: 0,
+                rate: BillingRate::Month,
+                trial_days: 0,
+                seat_cents: None,
+                network_cents: None,
+                included_networks: None,
+                included_seats: None,
+            })
+        }
     }
 }
 
@@ -116,23 +133,21 @@ pub struct BillingPlanFeatures {
     pub share_views: bool,
     pub remove_created_with: bool,
     pub audit_logs: bool,
-    pub api_access: bool,
+    pub webhooks: bool,
     pub onboarding_call: bool,
     pub commercial_license: bool,
+    pub custom_sso: bool,
+    pub managed_deployment: bool,
+    pub whitelabeling: bool,
+    pub invoice_billing: bool,
+    pub live_chat_support: bool,
+    pub embeds: bool,
+    pub email_support: bool,
+    pub community_support: bool,
+    pub priority_support: bool,
 }
 
 impl BillingPlan {
-    pub fn from_id(id: &str, plan_config: PlanConfig) -> Option<Self> {
-        match id {
-            "starter" => Some(Self::Starter(plan_config)),
-            "pro" => Some(Self::Pro(plan_config)),
-            "team" => Some(Self::Team(plan_config)),
-            "business" => Some(Self::Business(plan_config)),
-            "enterprise" => Some(Self::Enterprise(plan_config)),
-            _ => None,
-        }
-    }
-
     pub fn config(&self) -> PlanConfig {
         match self {
             BillingPlan::Community(plan_config) => *plan_config,
@@ -141,6 +156,8 @@ impl BillingPlan {
             BillingPlan::Team(plan_config) => *plan_config,
             BillingPlan::Business(plan_config) => *plan_config,
             BillingPlan::Enterprise(plan_config) => *plan_config,
+            BillingPlan::Demo(plan_config) => *plan_config,
+            BillingPlan::CommercialSelfHosted(plan_config) => *plan_config,
         }
     }
 
@@ -152,14 +169,56 @@ impl BillingPlan {
             BillingPlan::Team(plan_config) => *plan_config = config,
             BillingPlan::Business(plan_config) => *plan_config = config,
             BillingPlan::Enterprise(plan_config) => *plan_config = config,
+            BillingPlan::Demo(plan_config) => *plan_config = config,
+            BillingPlan::CommercialSelfHosted(plan_config) => *plan_config = config,
         }
     }
 
     pub fn is_commercial(&self) -> bool {
         matches!(
             self,
-            BillingPlan::Team(_) | BillingPlan::Business(_) | BillingPlan::Enterprise(_)
+            BillingPlan::Team(_)
+                | BillingPlan::Business(_)
+                | BillingPlan::Enterprise(_)
+                | BillingPlan::CommercialSelfHosted(_)
+                | BillingPlan::Demo(_)
         )
+    }
+
+    pub fn hosting(&self) -> &str {
+        match self {
+            BillingPlan::Community(_) => "Self-Hosted",
+            BillingPlan::CommercialSelfHosted(_) => "Self-Hosted",
+            BillingPlan::Enterprise(_) => "Managed",
+            _ => "Cloud",
+        }
+    }
+
+    pub fn custom_checkout_link(&self) -> Option<&str> {
+        match self {
+            BillingPlan::Enterprise(_) => Some("mailto:enterprise@netvisor.io"),
+            BillingPlan::CommercialSelfHosted(_) => Some("mailto:licensing@netvisor.io"),
+            BillingPlan::Community(_) => Some("https://github.com/netvisor-io/netvisor"),
+            _ => None,
+        }
+    }
+
+    pub fn custom_checkout_cta(&self) -> Option<&str> {
+        match self {
+            BillingPlan::Enterprise(_) => Some("Contact Us"),
+            BillingPlan::CommercialSelfHosted(_) => Some("Contact Us"),
+            BillingPlan::Community(_) => Some("View on GitHub"),
+            _ => None,
+        }
+    }
+
+    pub fn custom_price(&self) -> Option<&str> {
+        match self {
+            BillingPlan::Enterprise(_) => Some("Custom"),
+            BillingPlan::Community(_) => Some("Free"),
+            BillingPlan::CommercialSelfHosted(_) => Some("Custom"),
+            _ => None,
+        }
     }
 
     pub fn stripe_product_id(&self) -> String {
@@ -201,51 +260,139 @@ impl BillingPlan {
         match self {
             BillingPlan::Community { .. } => BillingPlanFeatures {
                 share_views: true,
-                onboarding_call: true,
-                api_access: true,
-                audit_logs: true,
+                onboarding_call: false,
+                webhooks: false,
+                audit_logs: false,
                 commercial_license: false,
                 remove_created_with: false,
+                custom_sso: false,
+                managed_deployment: false,
+                whitelabeling: false,
+                invoice_billing: false,
+                live_chat_support: false,
+                embeds: true,
+                email_support: false,
+                community_support: true,
+                priority_support: false,
             },
             BillingPlan::Starter { .. } => BillingPlanFeatures {
                 share_views: false,
                 onboarding_call: false,
                 commercial_license: false,
-                api_access: false,
+                webhooks: false,
                 audit_logs: false,
                 remove_created_with: false,
+                custom_sso: false,
+                managed_deployment: false,
+                whitelabeling: false,
+                invoice_billing: false,
+                live_chat_support: false,
+                embeds: false,
+                email_support: true,
+                community_support: true,
+                priority_support: false,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: false,
                 commercial_license: false,
-                api_access: false,
+                webhooks: false,
                 audit_logs: false,
                 remove_created_with: false,
+                custom_sso: false,
+                managed_deployment: false,
+                whitelabeling: false,
+                invoice_billing: false,
+                live_chat_support: false,
+                embeds: true,
+                email_support: true,
+                community_support: true,
+                priority_support: false,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
                 commercial_license: true,
-                api_access: false,
+                webhooks: false,
                 audit_logs: false,
                 remove_created_with: true,
+                custom_sso: false,
+                managed_deployment: false,
+                whitelabeling: false,
+                invoice_billing: false,
+                live_chat_support: false,
+                embeds: true,
+                email_support: true,
+                community_support: false,
+                priority_support: true,
             },
             BillingPlan::Business { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
                 commercial_license: true,
-                api_access: true,
+                webhooks: true,
                 audit_logs: true,
                 remove_created_with: true,
+                custom_sso: false,
+                managed_deployment: false,
+                whitelabeling: false,
+                invoice_billing: false,
+                live_chat_support: false,
+                embeds: true,
+                email_support: true,
+                community_support: false,
+                priority_support: true,
             },
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
                 share_views: true,
                 onboarding_call: true,
                 commercial_license: true,
-                api_access: true,
+                webhooks: true,
                 audit_logs: true,
                 remove_created_with: true,
+                custom_sso: true,
+                managed_deployment: true,
+                whitelabeling: true,
+                invoice_billing: true,
+                live_chat_support: true,
+                embeds: true,
+                email_support: true,
+                community_support: false,
+                priority_support: true,
+            },
+            BillingPlan::Demo { .. } => BillingPlanFeatures {
+                share_views: true,
+                onboarding_call: true,
+                commercial_license: true,
+                webhooks: true,
+                audit_logs: true,
+                remove_created_with: true,
+                custom_sso: true,
+                managed_deployment: true,
+                whitelabeling: true,
+                invoice_billing: true,
+                live_chat_support: true,
+                embeds: true,
+                email_support: true,
+                community_support: true,
+                priority_support: true,
+            },
+            BillingPlan::CommercialSelfHosted { .. } => BillingPlanFeatures {
+                share_views: true,
+                onboarding_call: true,
+                commercial_license: true,
+                webhooks: true,
+                audit_logs: true,
+                remove_created_with: true,
+                custom_sso: true,
+                managed_deployment: false,
+                whitelabeling: false,
+                invoice_billing: true,
+                live_chat_support: false,
+                embeds: true,
+                email_support: true,
+                community_support: false,
+                priority_support: true,
             },
         }
     }
@@ -260,13 +407,58 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             share_views,
             onboarding_call,
             commercial_license,
-            api_access,
+            webhooks,
             audit_logs,
             remove_created_with,
+            custom_sso,
+            managed_deployment,
+            whitelabeling,
+            invoice_billing,
+            live_chat_support,
+            embeds,
+            email_support,
+            priority_support,
+            community_support,
         } = self;
 
         if share_views {
             features.push(Feature::ShareViews)
+        }
+
+        if custom_sso {
+            features.push(Feature::CustomSso)
+        }
+
+        if managed_deployment {
+            features.push(Feature::ManagedDeployment)
+        }
+
+        if embeds {
+            features.push(Feature::Embeds)
+        }
+
+        if whitelabeling {
+            features.push(Feature::Whitelabeling)
+        }
+
+        if invoice_billing {
+            features.push(Feature::InvoiceBilling)
+        }
+
+        if live_chat_support {
+            features.push(Feature::LiveChatSupport)
+        }
+
+        if priority_support {
+            features.push(Feature::PrioritySupport)
+        }
+
+        if community_support {
+            features.push(Feature::CommunitySupport)
+        }
+
+        if email_support {
+            features.push(Feature::EmailSupport)
         }
 
         if onboarding_call {
@@ -277,8 +469,8 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             features.push(Feature::CommercialLicense)
         }
 
-        if api_access {
-            features.push(Feature::ApiAccess);
+        if webhooks {
+            features.push(Feature::Webhooks);
         }
 
         if audit_logs {
@@ -308,6 +500,8 @@ impl EntityMetadataProvider for BillingPlan {
             BillingPlan::Team { .. } => "Users",
             BillingPlan::Business { .. } => "Briefcase",
             BillingPlan::Enterprise { .. } => "Building",
+            BillingPlan::Demo { .. } => "TestTube",
+            BillingPlan::CommercialSelfHosted { .. } => "ServerCog",
         }
     }
 
@@ -317,8 +511,10 @@ impl EntityMetadataProvider for BillingPlan {
             BillingPlan::Starter { .. } => "blue",
             BillingPlan::Pro { .. } => "yellow",
             BillingPlan::Team { .. } => "orange",
-            BillingPlan::Business { .. } => "brown",
-            BillingPlan::Enterprise { .. } => "gray",
+            BillingPlan::Business { .. } => "indigo",
+            BillingPlan::Enterprise { .. } => "teal",
+            BillingPlan::Demo { .. } => "purple",
+            BillingPlan::CommercialSelfHosted { .. } => "gray",
         }
     }
 }
@@ -332,12 +528,16 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Team { .. } => "Team",
             BillingPlan::Business { .. } => "Business",
             BillingPlan::Enterprise { .. } => "Enterprise",
+            BillingPlan::Demo { .. } => "Demo",
+            BillingPlan::CommercialSelfHosted { .. } => "Commercial Self-Hosted",
         }
     }
 
     fn description(&self) -> &'static str {
         match self {
-            BillingPlan::Community { .. } => "Community plan for individuals self-hosting NetVisor",
+            BillingPlan::Community { .. } => {
+                "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations"
+            }
             BillingPlan::Starter { .. } => {
                 "Automatically create living documentation of your network"
             }
@@ -349,7 +549,11 @@ impl TypeMetadataProvider for BillingPlan {
                 "Manage multi-site and multi-customer documentation with advanced features"
             }
             BillingPlan::Enterprise { .. } => {
-                "Deploy NetVisor with enterprise-grade features and functionality"
+                "Fully managed NetVisor with dedicated support and custom deployment"
+            }
+            BillingPlan::Demo { .. } => "Demo mode",
+            BillingPlan::CommercialSelfHosted { .. } => {
+                "Commercial license for self-managed deployments — full control over configuration and integrations"
             }
         }
     }
@@ -368,7 +572,11 @@ impl TypeMetadataProvider for BillingPlan {
             "included_networks": config.included_networks,
             // Feature flags and metadata
             "features": self.features(),
-            "is_commercial": self.is_commercial()
+            "is_commercial": self.is_commercial(),
+            "hosting": self.hosting(),
+            "custom_checkout_link": self.custom_checkout_link(),
+            "custom_checkout_cta": self.custom_checkout_cta(),
+            "custom_price": self.custom_price()
         })
     }
 }

@@ -23,6 +23,9 @@ impl ServiceDefinition for MinIO {
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/minio.svg"
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<MinIO>));

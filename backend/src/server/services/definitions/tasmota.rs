@@ -22,6 +22,9 @@ impl ServiceDefinition for Tasmota {
     fn logo_url(&self) -> &'static str {
         "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tasmota.svg"
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(create_service::<Tasmota>));

@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use email_address::EmailAddress;
 // use plunk::{PlunkClient, PlunkClientTrait, PlunkPayloads};
 use reqwest::Client;
-use serde_json::Value;
 use serde_json::json;
 
 /// Plunk-based email provider
@@ -97,30 +96,11 @@ impl EmailProvider for PlunkEmailProvider {
         event: String,
         email: EmailAddress,
         subscribed: bool,
-        data: Value,
     ) -> Result<(), Error> {
-        // Convert all values in the object to strings
-        let normalized_data = if let Value::Object(map) = data {
-            let stringified: serde_json::Map<String, Value> = map
-                .into_iter()
-                .map(|(k, v)| {
-                    let string_value = match v {
-                        Value::String(s) => Value::String(s),
-                        other => Value::String(serde_json::to_string(&other).unwrap_or_default()),
-                    };
-                    (k, string_value)
-                })
-                .collect();
-            Value::Object(stringified)
-        } else {
-            serde_json::json!({})
-        };
-
         let body = serde_json::json!({
             "event": event,
             "email": email.to_string(),
             "subscribed": subscribed,
-            "data": normalized_data
         });
 
         let response = self

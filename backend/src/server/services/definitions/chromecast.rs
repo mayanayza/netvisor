@@ -31,6 +31,9 @@ impl ServiceDefinition for ChromecastDevice {
     fn logo_url(&self) -> &'static str {
         "https://simpleicons.org/icons/googlecast.svg"
     }
+    fn logo_needs_white_background(&self) -> bool {
+        true
+    }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(
