@@ -39,15 +39,8 @@ impl EventSubscriber for EmailService {
                     .map(|v| serde_json::from_value::<bool>(v).unwrap_or(false))
                     .unwrap_or(false);
 
-                let metadata = serde_json::to_value(metadata_map)?;
-
-                self.track_event(
-                    operation.to_string().to_lowercase(),
-                    email,
-                    subscribed,
-                    metadata,
-                )
-                .await?;
+                self.track_event(operation.to_string().to_lowercase(), email, subscribed)
+                    .await?;
             };
         }
 

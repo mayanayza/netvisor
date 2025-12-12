@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use email_address::EmailAddress;
-use serde_json::Value;
 
 use crate::server::{
     email::templates::{EMAIL_FOOTER, EMAIL_HEADER, INVITE_LINK_BODY, PASSWORD_RESET_BODY},
@@ -59,10 +58,9 @@ pub trait EmailProvider: Send + Sync {
         event: String,
         email: EmailAddress,
         subscribed: bool,
-        data: Value,
     ) -> Result<()> {
         // Default implementation does nothing
-        let _ = (event, email, subscribed, data);
+        let _ = (event, email, subscribed);
         Ok(())
     }
 }
@@ -106,11 +104,8 @@ impl EmailService {
         event: String,
         email: EmailAddress,
         subscribed: bool,
-        data: Value,
     ) -> Result<()> {
-        self.provider
-            .track_event(event, email, subscribed, data)
-            .await
+        self.provider.track_event(event, email, subscribed).await
     }
 }
 
