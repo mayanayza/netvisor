@@ -8,13 +8,11 @@
     "color": "blue",
     "metadata": {
       "base_cents": 1499,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": false,
         "commercial_license": false,
-        "community_support": true,
+        "community_support": false,
         "custom_sso": false,
         "email_support": true,
         "embeds": false,
@@ -47,13 +45,11 @@
     "color": "yellow",
     "metadata": {
       "base_cents": 2499,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": false,
         "commercial_license": false,
-        "community_support": true,
+        "community_support": false,
         "custom_sso": false,
         "email_support": true,
         "embeds": true,
@@ -86,8 +82,6 @@
     "color": "orange",
     "metadata": {
       "base_cents": 7999,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -125,8 +119,6 @@
     "color": "indigo",
     "metadata": {
       "base_cents": 14999,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": true,
@@ -164,13 +156,11 @@
     "color": "blue",
     "metadata": {
       "base_cents": 14400,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": false,
         "commercial_license": false,
-        "community_support": true,
+        "community_support": false,
         "custom_sso": false,
         "email_support": true,
         "embeds": false,
@@ -203,13 +193,11 @@
     "color": "yellow",
     "metadata": {
       "base_cents": 24000,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": false,
         "commercial_license": false,
-        "community_support": true,
+        "community_support": false,
         "custom_sso": false,
         "email_support": true,
         "embeds": true,
@@ -242,8 +230,6 @@
     "color": "orange",
     "metadata": {
       "base_cents": 76800,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -281,8 +267,6 @@
     "color": "indigo",
     "metadata": {
       "base_cents": 144000,
-      "custom_checkout_cta": null,
-      "custom_checkout_link": null,
       "custom_price": null,
       "features": {
         "audit_logs": true,
@@ -320,8 +304,6 @@
     "color": "teal",
     "metadata": {
       "base_cents": 0,
-      "custom_checkout_cta": "Contact Us",
-      "custom_checkout_link": "mailto:enterprise@netvisor.io",
       "custom_price": "Custom",
       "features": {
         "audit_logs": true,
@@ -359,8 +341,6 @@
     "color": "pink",
     "metadata": {
       "base_cents": 0,
-      "custom_checkout_cta": "View on GitHub",
-      "custom_checkout_link": "https://github.com/netvisor-io/netvisor",
       "custom_price": "Free",
       "features": {
         "audit_logs": false,
@@ -391,15 +371,13 @@
   },
   {
     "id": "CommercialSelfHosted",
-    "name": "Commercial Self-Hosted",
+    "name": "Self Hosted",
     "description": "Commercial license for self-managed deployments — full control over configuration and integrations",
     "category": null,
     "icon": "ServerCog",
     "color": "gray",
     "metadata": {
       "base_cents": 0,
-      "custom_checkout_cta": "Contact Us",
-      "custom_checkout_link": "mailto:licensing@netvisor.io",
       "custom_price": "Custom",
       "features": {
         "audit_logs": true,
@@ -437,8 +415,6 @@
     "color": "teal",
     "metadata": {
       "base_cents": 0,
-      "custom_checkout_cta": "Contact Us",
-      "custom_checkout_link": "mailto:enterprise@netvisor.io",
       "custom_price": "Custom",
       "features": {
         "audit_logs": true,
@@ -476,8 +452,6 @@
     "color": "pink",
     "metadata": {
       "base_cents": 0,
-      "custom_checkout_cta": "View on GitHub",
-      "custom_checkout_link": "https://github.com/netvisor-io/netvisor",
       "custom_price": "Free",
       "features": {
         "audit_logs": false,
@@ -508,15 +482,13 @@
   },
   {
     "id": "CommercialSelfHosted",
-    "name": "Commercial Self-Hosted",
+    "name": "Self Hosted",
     "description": "Commercial license for self-managed deployments — full control over configuration and integrations",
     "category": null,
     "icon": "ServerCog",
     "color": "gray",
     "metadata": {
       "base_cents": 0,
-      "custom_checkout_cta": "Contact Us",
-      "custom_checkout_link": "mailto:licensing@netvisor.io",
       "custom_price": "Custom",
       "features": {
         "audit_logs": true,
