@@ -14,7 +14,7 @@
 	import { networks } from '$lib/features/networks/store';
 	import { subnets } from '$lib/features/subnets/store';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
-	import { getConfig } from '$lib/shared/stores/config';
+	import { config, getConfig } from '$lib/shared/stores/config';
 	import { getOrganization, organization } from '$lib/features/organizations/store';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
 	import { getRoute } from '$lib/shared/utils/navigation';
@@ -38,6 +38,24 @@
 			apiKeys.set([]);
 			daemons.set([]);
 			networks.set([]);
+		}
+	});
+
+	let posthogInitialized = false;
+
+	$effect(() => {
+		const isSaas = $config.billing_enabled ?? false;
+
+		if (browser && isSaas && !posthogInitialized) {
+			posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
+				api_host: 'https://ph.netvisor.io',
+				ui_host: 'https://us.posthog.com',
+				defaults: '2025-11-30',
+				secure_cookie: true,
+				cookieless_mode: 'always',
+				person_profiles: 'always'
+			});
+			posthogInitialized = true;
 		}
 	});
 
@@ -108,23 +126,6 @@
 				pushError('Failed to load organization. Please refresh the page.');
 			}
 		}
-
-		const load = async () => {
-			if (browser) {
-				posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
-					api_host: 'https://ph.netvisor.io',
-					ui_host: 'https://us.posthog.com',
-					defaults: '2025-11-30',
-					secure_cookie: true,
-					cookieless_mode: 'always',
-					person_profiles: 'always' // or 'always' to create profiles for anonymous users as well
-				});
-			}
-
-			return;
-		};
-
-		load();
 	});
 </script>
 
