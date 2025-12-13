@@ -9,7 +9,7 @@
   "heartbeat_interval": 30,
   "bind_address": "0.0.0.0",
   "concurrent_scans": 15,
-  "id": "98462fcd-365e-4258-a390-ead468af9ce2",
+  "id": "98462fcd-365e-4258-a390-ead468af9ce3",
   "last_heartbeat": "2025-12-13T17:05:39.025541650Z",
   "host_id": "009bee10-1d53-454e-a585-162b111c092e",
   "daemon_api_key": "c50c6a4322b841f898f21fb62cd205f0",
