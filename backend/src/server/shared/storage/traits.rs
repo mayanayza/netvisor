@@ -56,6 +56,8 @@ pub trait StorableEntity: Sized + Clone + Send + Sync + 'static {
 
     /// Primary key
     fn id(&self) -> Uuid;
+    fn network_id(&self) -> Option<Uuid>;
+    fn organization_id(&self) -> Option<Uuid>;
     fn created_at(&self) -> DateTime<Utc>;
     fn updated_at(&self) -> DateTime<Utc>;
     fn set_updated_at(&mut self, time: DateTime<Utc>);

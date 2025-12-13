@@ -23,6 +23,14 @@ impl StorableEntity for Organization {
         self.base.clone()
     }
 
+    fn network_id(&self) -> Option<Uuid> {
+        None
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        None
+    }
+
     fn new(base: Self::BaseData) -> Self {
         let now = chrono::Utc::now();
 

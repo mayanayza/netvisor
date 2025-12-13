@@ -88,6 +88,14 @@ impl StorableEntity for Network {
         self.id
     }
 
+    fn network_id(&self) -> Option<Uuid> {
+        None
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        Some(self.base.organization_id)
+    }
+
     fn created_at(&self) -> DateTime<Utc> {
         self.created_at
     }

@@ -19,6 +19,14 @@ impl StorableEntity for Tag {
         self.base.clone()
     }
 
+    fn network_id(&self) -> Option<Uuid> {
+        None
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        Some(self.base.organization_id)
+    }
+
     fn new(base: Self::BaseData) -> Self {
         let now = chrono::Utc::now();
 
