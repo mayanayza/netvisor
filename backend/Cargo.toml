@@ -182,4 +182,4 @@ comrak = "0.48.0"
 
 [features]
 generate-fixtures = []
-commercial-selfhost = []
+commercial = []

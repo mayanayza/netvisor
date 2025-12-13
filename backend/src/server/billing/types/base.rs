@@ -46,7 +46,7 @@ impl Hash for BillingPlan {
 
 impl Default for BillingPlan {
     fn default() -> Self {
-        #[cfg(feature = "commercial-selfhost")]
+        #[cfg(feature = "commercial")]
         {
             BillingPlan::CommercialSelfHosted(PlanConfig {
                 base_cents: 0,
@@ -58,7 +58,7 @@ impl Default for BillingPlan {
                 included_seats: None,
             })
         }
-        #[cfg(not(feature = "commercial-selfhost"))]
+        #[cfg(not(feature = "commercial"))]
         {
             BillingPlan::Community(PlanConfig {
                 base_cents: 0,

@@ -44,10 +44,10 @@
 	let posthogInitialized = false;
 
 	$effect(() => {
-		const isSaas = $config.billing_enabled ?? false;
+		const posthogKey = $config.posthog_key;
 
-		if (browser && isSaas && !posthogInitialized) {
-			posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
+		if (browser && posthogKey && !posthogInitialized) {
+			posthog.init(posthogKey, {
 				api_host: 'https://ph.netvisor.io',
 				ui_host: 'https://us.posthog.com',
 				defaults: '2025-11-30',

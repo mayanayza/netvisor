@@ -1,4 +1,19 @@
+use axum::Json;
 use serde::Serialize;
+use strum::{IntoDiscriminant, IntoEnumIterator};
+
+use crate::server::{
+    auth::middleware::auth::AuthenticatedUser,
+    billing::types::{base::BillingPlan, features::Feature},
+    discovery::r#impl::types::DiscoveryType,
+    groups::r#impl::types::GroupType,
+    hosts::r#impl::ports::PortBase,
+    services::definitions::ServiceDefinitionRegistry,
+    shared::{concepts::Concept, entities::EntityDiscriminants, types::api::ApiResponse},
+    subnets::r#impl::types::SubnetType,
+    topology::types::edges::EdgeType,
+    users::r#impl::permissions::UserOrgPermissions,
+};
 
 #[derive(Serialize, Debug, Clone)]
 pub struct MetadataRegistry {
@@ -95,4 +110,33 @@ where
             metadata: (!metadata.as_object().is_some_and(|obj| obj.is_empty())).then_some(metadata),
         }
     }
+}
+
+pub async fn get_metadata_registry(
+    _user: AuthenticatedUser,
+) -> Json<ApiResponse<MetadataRegistry>> {
+    let registry = MetadataRegistry {
+        service_definitions: ServiceDefinitionRegistry::all_service_definitions()
+            .iter()
+            .map(|t| t.to_metadata())
+            .collect(),
+        subnet_types: SubnetType::iter().map(|t| t.to_metadata()).collect(),
+        group_types: GroupType::iter()
+            .map(|t| t.discriminant().to_metadata())
+            .collect(),
+        edge_types: EdgeType::iter().map(|t| t.to_metadata()).collect(),
+        entities: EntityDiscriminants::iter()
+            .map(|e| e.to_metadata())
+            .collect(),
+        concepts: Concept::iter().map(|e| e.to_metadata()).collect(),
+        ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
+        discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
+        billing_plans: BillingPlan::iter().map(|p| p.to_metadata()).collect(),
+        features: Feature::iter().map(|f| f.to_metadata()).collect(),
+        permissions: UserOrgPermissions::iter()
+            .map(|p| p.to_metadata())
+            .collect(),
+    };
+
+    Json(ApiResponse::success(registry))
 }
