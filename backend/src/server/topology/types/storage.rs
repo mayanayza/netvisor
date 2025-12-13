@@ -26,6 +26,14 @@ impl StorableEntity for Topology {
         self.base.clone()
     }
 
+    fn network_id(&self) -> Option<Uuid> {
+        Some(self.base.network_id)
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        None
+    }
+
     fn new(base: Self::BaseData) -> Self {
         let now = chrono::Utc::now();
 

@@ -22,6 +22,14 @@ impl StorableEntity for Group {
         "groups"
     }
 
+    fn network_id(&self) -> Option<Uuid> {
+        Some(self.base.network_id)
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        None
+    }
+
     fn get_base(&self) -> Self::BaseData {
         self.base.clone()
     }

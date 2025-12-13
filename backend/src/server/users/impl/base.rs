@@ -143,6 +143,14 @@ impl StorableEntity for User {
         }
     }
 
+    fn network_id(&self) -> Option<Uuid> {
+        None
+    }
+
+    fn organization_id(&self) -> Option<Uuid> {
+        Some(self.base.organization_id)
+    }
+
     fn table_name() -> &'static str {
         "users"
     }
