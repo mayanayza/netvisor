@@ -65,7 +65,7 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 |-----------|----------|---------------------|-----------------|---------|-------------|
 | **Server URL** | `--server-url` | `NETVISOR_SERVER_URL` | `server_url` | `http://127.0.0.1:60072` | URL where the daemon can reach the server |
 | **API Key** | `--daemon-api-key` | `NETVISOR_DAEMON_API_KEY` | `api_key` | *Required* | Authentication key for daemon (generated via UI) |
-| **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed |
+| **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed. |
 | **Network ID** | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
 | **Daemon URL** | `--daemon-url` | `NETVISOR_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
 | **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `port` | `60073` | Port for daemon to listen on |
