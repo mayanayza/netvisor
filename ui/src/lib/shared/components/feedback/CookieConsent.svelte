@@ -1,185 +1,516 @@
 <script lang="ts">
-	import '@beyonk/gdpr-cookie-consent-banner/banner.css';
-	import GdprBanner from '@beyonk/gdpr-cookie-consent-banner';
 	import posthog from 'posthog-js';
 	import { dev } from '$app/environment';
+	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 
-	function handleAnalytics(event: CustomEvent<{ agreed: boolean }>) {
+	const COOKIE_NAME = 'netvisor_gdpr';
+	const COOKIE_DOMAIN = dev ? '' : '.netvisor.io';
+	const COOKIE_DAYS = 365;
+
+	interface CookiePreferences {
+		necessary: boolean;
+		analytics: boolean;
+	}
+
+	let preferences: CookiePreferences = $state({
+		necessary: true,
+		analytics: false
+	});
+
+	let showBanner = $state(false);
+	let showSettings = $state(false);
+	let mounted = $state(false);
+	let hasConsented = $state(false);
+
+	onMount(() => {
+		mounted = true;
+		const saved = getCookie(COOKIE_NAME);
+		if (saved) {
+			try {
+				const parsed = JSON.parse(saved) as CookiePreferences;
+				preferences = { ...preferences, ...parsed };
+				hasConsented = true;
+				applyPreferences();
+			} catch {
+				showBanner = true;
+			}
+		} else {
+			showBanner = true;
+		}
+	});
+
+	function getCookie(name: string): string | null {
+		const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+		return match ? decodeURIComponent(match[2]) : null;
+	}
+
+	function setCookie(name: string, value: string, days: number) {
+		const expires = new Date(Date.now() + days * 864e5).toUTCString();
+		const domain = COOKIE_DOMAIN ? `; domain=${COOKIE_DOMAIN}` : '';
+		document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/${domain}; SameSite=Lax`;
+	}
+
+	function applyPreferences() {
 		if (posthog.__loaded) {
-			if (event.detail.agreed) {
+			if (preferences.analytics) {
 				posthog.opt_in_capturing();
 			} else {
 				posthog.opt_out_capturing();
 			}
 		}
 	}
+
+	function savePreferences() {
+		setCookie(COOKIE_NAME, JSON.stringify(preferences), COOKIE_DAYS);
+		hasConsented = true;
+		showBanner = false;
+		showSettings = false;
+		applyPreferences();
+	}
+
+	function acceptAll() {
+		preferences = { necessary: true, analytics: true };
+		savePreferences();
+	}
+
+	function rejectAll() {
+		preferences = { necessary: true, analytics: false };
+		savePreferences();
+	}
+
+	function openSettings() {
+		showSettings = true;
+		showBanner = true;
+	}
+
+	function closeSettings() {
+		showSettings = false;
+		if (hasConsented) {
+			showBanner = false;
+		}
+	}
 </script>
 
-<GdprBanner
-	cookieName="netvisor_gdpr"
-	heading="Cookie Settings"
-	description="We use cookies to offer a better browsing experience and analyze site traffic. Please review our <a href='/privacy'>privacy policy page</a>. By clicking accept, you consent to our privacy policy & use of cookies."
-	on:analytics={handleAnalytics}
-	cookieConfig={dev ? {} : { domain: '.netvisor.io' }}
-	canRejectCookies={true}
-	rejectLabel="Reject"
-	on:all={handleAnalytics}
-	acceptAllLabel="Accept All"
-	acceptSelectedLabel="Accept"
-	choices={{
-		necessary: {
-			label: 'Necessary cookies',
-			description: "Used for basic functionality. Can't be turned off.",
-			value: true
-		},
-		tracking: false,
-		analytics: {
-			label: 'Analytics cookies',
-			description: 'Used for analyitcs tools that track user behavior.',
-			value: true
-		},
-		marketing: false
-	}}
-/>
+{#if mounted}
+	{#if showBanner && !showSettings}
+		<div class="spacer"></div>
+	{/if}
+	{#if showBanner}
+		<div class="overlay" class:visible={showSettings}></div>
+		<div class="banner" class:settings-open={showSettings}>
+			{#if showSettings}
+				<div class="settings-panel">
+					<div class="settings-header">
+						<h3 class="title">Cookie Preferences</h3>
+						<button class="close-btn" onclick={closeSettings} aria-label="Close">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="20"
+								height="20"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<line x1="18" y1="6" x2="6" y2="18"></line>
+								<line x1="6" y1="6" x2="18" y2="18"></line>
+							</svg>
+						</button>
+					</div>
+					<p class="settings-description">
+						Manage your cookie preferences below. You can enable or disable different types of
+						cookies. See our <a href="https://netvisor.io/privacy">privacy policy</a> for more details.
+					</p>
+
+					<div class="cookie-options">
+						<div class="cookie-option">
+							<div class="option-header">
+								<label class="option-label">
+									<input type="checkbox" checked disabled />
+									<span class="checkbox disabled"></span>
+									<span class="option-title">Necessary</span>
+								</label>
+								<span class="always-on">Always on</span>
+							</div>
+							<p class="option-description">
+								Essential cookies required for the website to function. These cannot be disabled.
+							</p>
+						</div>
+
+						<div class="cookie-option">
+							<div class="option-header">
+								<label class="option-label">
+									<input type="checkbox" bind:checked={preferences.analytics} />
+									<span class="checkbox"></span>
+									<span class="option-title">Analytics</span>
+								</label>
+							</div>
+							<p class="option-description">
+								Help us understand how visitors interact with our website by collecting anonymous
+								usage data.
+							</p>
+						</div>
+					</div>
+
+					<div class="settings-buttons">
+						<button class="btn btn-secondary" onclick={rejectAll}>Reject All</button>
+						<button class="btn btn-secondary" onclick={acceptAll}>Accept All</button>
+						<button class="btn btn-primary" onclick={savePreferences}>Save Preferences</button>
+					</div>
+				</div>
+			{:else}
+				<div class="content">
+					<div class="text-content">
+						<h3 class="title">Cookie Settings</h3>
+						<p class="description">
+							We use cookies to improve your experience and analyze site traffic. See our <a
+								href="https://netvisor.io/privacy">privacy policy</a
+							> for details.
+						</p>
+					</div>
+					<div class="buttons">
+						<button class="btn btn-link" onclick={openSettings}>Customize</button>
+						<button class="btn btn-secondary" onclick={rejectAll}>Reject All</button>
+						<button class="btn btn-primary" onclick={acceptAll}>Accept All</button>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{:else if hasConsented}
+		<button class="toggle" onclick={openSettings} aria-label="Cookie settings">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="20"
+				height="20"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<circle cx="12" cy="12" r="10" />
+				<circle cx="8" cy="9" r="1.5" fill="currentColor" />
+				<circle cx="15" cy="8" r="1.5" fill="currentColor" />
+				<circle cx="10" cy="14" r="1.5" fill="currentColor" />
+				<circle cx="16" cy="13" r="1.5" fill="currentColor" />
+				<circle cx="13" cy="17" r="1" fill="currentColor" />
+			</svg>
+		</button>
+	{/if}
+{/if}
 
 <style>
-	/* Banner wrapper - bottom bar */
-	:global(.cookieConsentWrapper) {
+	.spacer {
+		height: 100px;
+	}
+
+	@media (min-width: 768px) {
+		.spacer {
+			height: 72px;
+		}
+	}
+
+	.overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0);
+		z-index: 9998;
+		pointer-events: none;
+		transition: background 200ms;
+	}
+
+	.overlay.visible {
+		background: rgba(0, 0, 0, 0.5);
+		pointer-events: auto;
+	}
+
+	.banner {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
 		background: #1f2937;
 		border-top: 1px solid #374151;
-		padding: 1.5rem;
+		padding: 1.25rem;
+		z-index: 9999;
 	}
 
-	/* Floating toggle button */
-	:global(.cookieConsentToggle) {
-		background: #1f2937;
+	.banner.settings-open {
+		bottom: auto;
+		top: 50%;
+		left: 50%;
+		right: auto;
+		transform: translate(-50%, -50%);
+		max-width: 500px;
+		width: calc(100% - 2rem);
 		border: 1px solid #374151;
-		color: #9ca3af;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+		border-radius: 0.5rem;
+		max-height: 90vh;
+		overflow-y: auto;
 	}
 
-	:global(.cookieConsentToggle:hover) {
-		background: #374151;
+	.content {
+		max-width: 1200px;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.text-content {
+		flex: 1;
+	}
+
+	@media (min-width: 768px) {
+		.content {
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+		}
+	}
+
+	.title {
 		color: white;
+		font-size: 1rem;
+		font-weight: 600;
+		margin: 0 0 0.25rem 0;
 	}
 
-	/* Main buttons */
-	:global(.cookieConsent__Button) {
+	.description {
+		color: #9ca3af;
+		font-size: 0.875rem;
+		margin: 0;
+	}
+
+	.description a,
+	.settings-description a {
+		color: #60a5fa;
+		text-decoration: underline;
+	}
+
+	.description a:hover,
+	.settings-description a:hover {
+		color: #93c5fd;
+	}
+
+	.buttons {
+		display: flex;
+		gap: 0.5rem;
+		flex-shrink: 0;
+		flex-wrap: wrap;
+	}
+
+	.btn {
+		padding: 0.5rem 1rem;
+		border-radius: 0.375rem;
+		font-weight: 500;
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition:
+			background-color 150ms,
+			border-color 150ms,
+			color 150ms;
+	}
+
+	.btn-primary {
 		background: #1d4ed8;
 		color: white;
 		border: 1px solid #2563eb;
-		border-radius: 0.375rem;
-		padding: 0.5rem 1rem;
-		font-weight: 500;
-		transition:
-			background-color 150ms,
-			border-color 150ms;
 	}
 
-	:global(.cookieConsent__Button:hover) {
+	.btn-primary:hover {
 		background: #2563eb;
 		border-color: #3b82f6;
-		opacity: 1;
 	}
 
-	/* Secondary/settings button style */
-	:global(.cookieConsent__Button:first-of-type) {
+	.btn-secondary {
 		background: transparent;
-		border: 1px solid #374151;
 		color: #9ca3af;
+		border: 1px solid #374151;
 	}
 
-	:global(.cookieConsent__Button:first-of-type:hover) {
-		background: #1f2937;
+	.btn-secondary:hover {
+		background: #374151;
 		border-color: #4b5563;
 		color: #e5e7eb;
 	}
 
-	/* Settings modal overlay */
-	:global(.cookieConsentOperations) {
-		background: rgba(0, 0, 0, 0.7);
-		backdrop-filter: blur(4px);
+	.btn-link {
+		background: transparent;
+		color: #9ca3af;
+		border: 1px solid transparent;
+		text-decoration: underline;
 	}
 
-	/* Settings modal content */
-	:global(.cookieConsentOperations__List) {
-		background: #111827;
+	.btn-link:hover {
+		color: #e5e7eb;
+	}
+
+	/* Settings panel styles */
+	.settings-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.settings-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.close-btn {
+		background: transparent;
+		border: none;
+		color: #9ca3af;
+		cursor: pointer;
+		padding: 0.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.25rem;
+	}
+
+	.close-btn:hover {
 		color: white;
+		background: #374151;
+	}
+
+	.settings-description {
+		color: #9ca3af;
+		font-size: 0.875rem;
+		margin: 0;
+	}
+
+	.cookie-options {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin: 0.5rem 0;
+	}
+
+	.cookie-option {
+		background: #111827;
 		border: 1px solid #374151;
-		border-radius: 0.5rem;
-		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+		border-radius: 0.375rem;
+		padding: 1rem;
 	}
 
-	/* Reduce padding since checkbox is smaller */
-	:global(.cookieConsentOperations__Item) {
-		padding-left: 36px;
+	.option-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
 	}
 
-	/* Checkbox box */
-	:global(.cookieConsentOperations__Item label::before) {
-		width: 1rem;
-		height: 1rem;
+	.option-label {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		cursor: pointer;
+	}
+
+	.option-label input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.checkbox {
+		width: 1.25rem;
+		height: 1.25rem;
+		border: 1px solid #4b5563;
 		border-radius: 0.25rem;
 		background: #374151;
-		border: 1px solid #4b5563;
-		left: -36px;
-		top: 50%;
-		transform: translateY(-50%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		transition:
+			background 150ms,
+			border-color 150ms;
 	}
 
-	/* Hide the default toggle thumb entirely */
-	:global(.cookieConsentOperations__Item label::after) {
-		display: none;
-	}
-
-	/* Checkbox checked state - blue background with checkmark */
-	:global(.cookieConsentOperations__Item input:checked + label::before) {
-		background: #2563eb
-			url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e")
-			center/80% no-repeat;
-		border-color: #2563eb;
-	}
-
-	/* Disabled item - grayed out appearance */
-	:global(.cookieConsentOperations__Item.disabled) {
-		color: #6b7280;
+	.checkbox.disabled {
+		opacity: 0.6;
 		cursor: not-allowed;
 	}
 
-	:global(.cookieConsentOperations__Item.disabled label::before) {
-		background: #4b5563
-			url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e")
-			center/80% no-repeat;
-		border-color: #4b5563;
-		opacity: 0.6;
-	}
-
-	/* Close button in modal */
-	:global(.cookieConsent__Button--Close) {
-		background: #1d4ed8;
-		color: white;
-		border: 1px solid #2563eb;
-		border-radius: 0.375rem;
-	}
-
-	:global(.cookieConsent__Button--Close:hover) {
+	.option-label input:checked + .checkbox {
 		background: #2563eb;
-		border-color: #3b82f6;
+		border-color: #2563eb;
 	}
 
-	/* Description text */
-	:global(.cookieConsent__Description) {
-		color: #9ca3af;
+	.option-label input:checked + .checkbox::after {
+		content: '';
+		width: 0.5rem;
+		height: 0.75rem;
+		border: solid white;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg) translateY(-1px);
 	}
 
-	/* Title text */
-	:global(.cookieConsent__Title) {
+	.option-label:hover .checkbox:not(.disabled) {
+		border-color: #6b7280;
+	}
+
+	.option-title {
 		color: white;
+		font-weight: 500;
+		font-size: 0.9375rem;
 	}
 
-	/* Item description in modal */
-	:global(.cookieConsentOperations__Item span) {
+	.always-on {
+		color: #6b7280;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.option-description {
 		color: #9ca3af;
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
+		margin: 0;
+		line-height: 1.4;
+	}
+
+	.settings-buttons {
+		display: flex;
+		gap: 0.5rem;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+		padding-top: 0.5rem;
+		border-top: 1px solid #374151;
+	}
+
+	/* Toggle button */
+	.toggle {
+		position: fixed;
+		bottom: 1rem;
+		left: 1rem;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		background: #1f2937;
+		border: 1px solid #374151;
+		color: #9ca3af;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+		z-index: 9999;
+		transition:
+			background-color 150ms,
+			color 150ms;
+	}
+
+	.toggle:hover {
+		background: #374151;
+		color: white;
 	}
 </style>
