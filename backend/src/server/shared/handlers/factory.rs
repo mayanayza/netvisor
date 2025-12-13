@@ -1,4 +1,5 @@
 use crate::server::api_keys::r#impl::base::{ApiKey, ApiKeyBase};
+use crate::server::api_keys::service::generate_api_key_for_storage;
 use crate::server::auth::middleware::auth::{AuthenticatedEntity, AuthenticatedUser};
 use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::billing::types::base::BillingPlan;
@@ -197,12 +198,14 @@ pub async fn onboarding(
         .await?;
 
     if let Some(integrated_daemon_url) = &state.config.integrated_daemon_url {
-        let api_key = state
+        let (plaintext, hashed) = generate_api_key_for_storage();
+
+        state
             .services
             .api_key_service
             .create(
                 ApiKey::new(ApiKeyBase {
-                    key: state.services.api_key_service.generate_api_key(),
+                    key: hashed,
                     name: "Integrated Daemon API Key".to_string(),
                     last_used: None,
                     expires_at: None,
@@ -217,7 +220,7 @@ pub async fn onboarding(
         state
             .services
             .daemon_service
-            .initialize_local_daemon(integrated_daemon_url.clone(), network.id, api_key.base.key)
+            .initialize_local_daemon(integrated_daemon_url.clone(), network.id, plaintext)
             .await?;
     }
 
