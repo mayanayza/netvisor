@@ -490,7 +490,7 @@
 	.toggle {
 		position: fixed;
 		bottom: 1rem;
-		left: 1rem;
+		right: 1rem;
 		width: 3rem;
 		height: 3rem;
 		border-radius: 50%;
