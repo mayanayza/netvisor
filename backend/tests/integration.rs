@@ -553,7 +553,9 @@ pub async fn generate_fixtures() {
         .await
         .expect("Failed to generate services markdown");
 
-    generate_billing_plans_json().expect("Failed to generate billing and features json");
+    generate_billing_plans_json()
+        .await
+        .expect("Failed to generate billing and features json");
 
     println!("✅ Generated test fixtures");
 }
@@ -757,7 +759,6 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-#[tokio::test]
 async fn generate_billing_plans_json() -> Result<(), Box<dyn std::error::Error>> {
     use netvisor::server::billing::plans::get_website_fixture_plans;
     use netvisor::server::billing::types::features::Feature;
