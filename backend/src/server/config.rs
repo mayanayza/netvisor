@@ -130,6 +130,7 @@ pub struct PublicConfigResponse {
     pub has_email_opt_in: bool,
     pub public_url: String,
     pub posthog_key: Option<String>,
+    pub needs_cookie_consent: bool,
 }
 
 impl Default for ServerConfig {
@@ -277,5 +278,6 @@ pub async fn get_public_config(
         public_url: state.config.public_url.clone(),
         has_email_opt_in: state.config.plunk_secret.is_some(),
         posthog_key: state.config.posthog_key.clone(),
+        needs_cookie_consent: state.config.posthog_key.is_some(),
     }))
 }
