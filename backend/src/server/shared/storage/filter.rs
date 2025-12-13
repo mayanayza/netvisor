@@ -28,6 +28,12 @@ impl EntityFilter {
     }
 
     pub fn entity_ids(mut self, ids: &[Uuid]) -> Self {
+        if ids.is_empty() {
+            // Empty IN clause should match nothing
+            self.conditions.push("FALSE".to_string());
+            return self;
+        }
+
         let placeholders: Vec<String> = ids
             .iter()
             .enumerate()
@@ -45,6 +51,12 @@ impl EntityFilter {
     }
 
     pub fn network_ids(mut self, ids: &[Uuid]) -> Self {
+        if ids.is_empty() {
+            // Empty IN clause should match nothing
+            self.conditions.push("FALSE".to_string());
+            return self;
+        }
+
         let placeholders: Vec<String> = ids
             .iter()
             .enumerate()
@@ -76,6 +88,12 @@ impl EntityFilter {
     }
 
     pub fn host_ids(mut self, ids: &[Uuid]) -> Self {
+        if ids.is_empty() {
+            // Empty IN clause should match nothing
+            self.conditions.push("FALSE".to_string());
+            return self;
+        }
+
         let placeholders: Vec<String> = ids
             .iter()
             .enumerate()
