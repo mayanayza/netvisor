@@ -39,17 +39,14 @@
 			<div class="absolute inset-0 bg-black/70"></div>
 		</div>
 
-		<!-- Content (sits above background) -->
-		<div class="flex min-h-screen items-center justify-center">
-			<div class="relative z-10 pt-10">
-				<BillingPlanForm
-					plans={$currentPlans}
-					billingPlanHelpers={billingPlans}
-					featureHelpers={features}
-					onPlanSelect={handlePlanSelect}
-					{initialPlanFilter}
-				/>
-			</div>
+		<div class="relative z-10 px-2 pb-20 pt-6 lg:px-10">
+			<BillingPlanForm
+				plans={$currentPlans}
+				billingPlanHelpers={billingPlans}
+				featureHelpers={features}
+				onPlanSelect={handlePlanSelect}
+				{initialPlanFilter}
+			/>
 		</div>
 
 		<Toast />

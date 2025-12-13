@@ -162,16 +162,20 @@ async fn start_session(
 
 async fn discovery_stream(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let mut rx = state.services.discovery_service.subscribe();
+    let allowed_networks = user.network_ids;
 
     let stream = async_stream::stream! {
         loop {
             match rx.recv().await {
                 Ok(update) => {
-                    let json = serde_json::to_string(&update).unwrap_or_default();
-                    yield Ok(Event::default().data(json));
+                    // Only emit if user has access to this discovery's network
+                    if allowed_networks.contains(&update.network_id) {
+                        let json = serde_json::to_string(&update).unwrap_or_default();
+                        yield Ok(Event::default().data(json));
+                    }
                 }
                 Err(broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("SSE client lagged by {} messages", n);

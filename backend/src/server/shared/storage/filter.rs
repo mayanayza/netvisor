@@ -83,6 +83,27 @@ impl EntityFilter {
         self
     }
 
+    pub fn host_ids(mut self, ids: &[Uuid]) -> Self {
+        if ids.is_empty() {
+            return self;
+        }
+
+        let placeholders: Vec<String> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", self.values.len() + i + 1))
+            .collect();
+
+        self.conditions
+            .push(format!("host_id IN ({})", placeholders.join(", ")));
+
+        for id in ids {
+            self.values.push(SqlValue::Uuid(*id));
+        }
+
+        self
+    }
+
     pub fn api_key(mut self, api_key: String) -> Self {
         self.conditions
             .push(format!("key = ${}", self.values.len() + 1));
