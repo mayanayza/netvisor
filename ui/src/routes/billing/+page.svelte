@@ -29,7 +29,7 @@
 {#if $loading}
 	<Loading />
 {:else}
-	<div class="relative min-h-screen bg-gray-900">
+	<div class="relative min-h-dvh bg-gray-900">
 		<!-- Background image with overlay -->
 		<div class="absolute inset-0 z-0">
 			<div
@@ -39,15 +39,18 @@
 			<div class="absolute inset-0 bg-black/70"></div>
 		</div>
 
-		<div class="relative z-10 px-2 pb-20 pt-6 lg:px-10">
-			<BillingPlanForm
-				plans={$currentPlans}
-				billingPlanHelpers={billingPlans}
-				featureHelpers={features}
-				onPlanSelect={handlePlanSelect}
-				{initialPlanFilter}
-			/>
-		</div>
+		<!-- Content (sits above background) -->
+		<section class="py-10 pb-24 lg:pb-10">
+			<div class="container mx-auto px-2">
+				<BillingPlanForm
+					plans={$currentPlans}
+					billingPlanHelpers={billingPlans}
+					featureHelpers={features}
+					onPlanSelect={handlePlanSelect}
+					{initialPlanFilter}
+				/>
+			</div>
+		</section>
 
 		<Toast />
 	</div>

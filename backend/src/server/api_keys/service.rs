@@ -21,6 +21,7 @@ use crate::server::{
         },
     },
 };
+use sha2::{Digest, Sha256};
 
 pub struct ApiKeyService {
     storage: Arc<GenericPostgresStorage<ApiKey>>,
@@ -82,13 +83,26 @@ impl CrudService<ApiKey> for ApiKeyService {
     }
 }
 
+pub fn hash_api_key(key: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(key.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+fn generate_api_key() -> String {
+    // Return plaintext to user (shown once)
+    Uuid::new_v4().simple().to_string()
+}
+
+pub fn generate_api_key_for_storage() -> (String, String) {
+    let plaintext = generate_api_key();
+    let hashed = hash_api_key(&plaintext);
+    (plaintext, hashed) // Return both - plaintext for user, hash for DB
+}
+
 impl ApiKeyService {
     pub fn new(storage: Arc<GenericPostgresStorage<ApiKey>>, event_bus: Arc<EventBus>) -> Self {
         Self { storage, event_bus }
-    }
-
-    pub fn generate_api_key(&self) -> String {
-        Uuid::new_v4().simple().to_string()
     }
 
     pub async fn rotate_key(
@@ -99,9 +113,9 @@ impl ApiKeyService {
         user: AuthenticatedUser,
     ) -> Result<String> {
         if let Some(mut api_key) = self.get_by_id(&api_key_id).await? {
-            let new_key = self.generate_api_key();
+            let (plaintext, hashed) = generate_api_key_for_storage();
 
-            api_key.base.key = new_key.clone();
+            api_key.base.key = hashed;
 
             self.event_bus
                 .publish_auth(AuthEvent {
@@ -119,7 +133,7 @@ impl ApiKeyService {
 
             let _updated = self.update(&mut api_key, user.into()).await?;
 
-            Ok(new_key)
+            Ok(plaintext)
         } else {
             tracing::warn!(
                 api_key_id = %api_key_id,

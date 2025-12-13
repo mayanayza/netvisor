@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::server::{
+    api_keys::service::hash_api_key,
     config::AppState,
     shared::{services::traits::CrudService, storage::filter::EntityFilter, types::api::ApiError},
     users::r#impl::{base::User, permissions::UserOrgPermissions},
@@ -134,7 +135,8 @@ where
                 .and_then(|h| h.to_str().ok())
                 .and_then(|s| Uuid::parse_str(s).ok())
         {
-            let api_key_filter = EntityFilter::unfiltered().api_key(api_key.to_owned());
+            let hashed_key = hash_api_key(api_key);
+            let api_key_filter = EntityFilter::unfiltered().api_key(hashed_key);
             // Get API key record by key
             if let Ok(Some(mut api_key)) = app_state
                 .services

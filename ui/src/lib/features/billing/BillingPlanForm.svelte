@@ -41,6 +41,8 @@
 		showGithubStars?: boolean;
 		showHosting?: boolean;
 		class?: string;
+
+		showHosting?: boolean;
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
@@ -51,8 +53,8 @@
 		onPlanSelect,
 		initialPlanFilter = 'commercial',
 		showGithubStars = true,
-		showHosting = true,
-		class: className = ''
+		class: className = '',
+		showHosting = false
 	}: Props = $props();
 
 	let collapsedCategories = $state<Record<string, boolean>>({});
@@ -191,17 +193,17 @@
 	function formatBasePricing(plan: BillingPlan): string {
 		const metadata = billingPlanHelpers.getMetadata(plan.type);
 		if (metadata?.custom_price) return metadata.custom_price;
-		return `$${plan.base_cents / 100}/${plan.rate}`;
+		return `$${plan.base_cents / 100} / ${plan.rate}`;
 	}
 
 	function formatSeatAddonPricing(plan: BillingPlan): string {
-		if (plan.seat_cents) return `+$${plan.seat_cents / 100}/seat/${plan.rate.toLowerCase()}`;
+		if (plan.seat_cents) return `+$${plan.seat_cents / 100} / seat / ${plan.rate.toLowerCase()}`;
 		return '';
 	}
 
 	function formatNetworkAddonPricing(plan: BillingPlan): string {
 		if (plan.network_cents)
-			return `+$${plan.network_cents / 100}/network/${plan.rate.toLowerCase()}`;
+			return `+$${plan.network_cents / 100} / network / ${plan.rate.toLowerCase()}`;
 		return '';
 	}
 
@@ -327,8 +329,8 @@
 				<div class="grid-cell label-cell"></div>
 				{#each filteredPlans as plan (plan.type)}
 					<div class="grid-cell plan-cell text-center">
-						<div class="flex flex-col items-center space-y-1">
-							<div class="text-primary text-sm font-bold lg:text-2xl">
+						<div class="flex min-w-0 flex-col items-center space-y-1">
+							<div class="text-primary min-w-0 text-sm font-bold lg:text-2xl">
 								{formatBasePricing(plan)}
 							</div>
 							{#if plan.trial_days > 0 && !hasCustomPrice(plan)}
@@ -489,12 +491,12 @@
 					{@const commercial = isCommercial(plan)}
 					{@const trial = hasTrial(plan)}
 					<div class="grid-cell plan-cell">
-						<div class="flex flex-col gap-1 lg:gap-2">
+						<div class="flex flex-col gap-4">
 							{#if hosting === 'Cloud'}
 								<button
 									type="button"
 									onclick={() => onPlanSelect(plan)}
-									class="btn-primary w-full whitespace-nowrap text-xs lg:text-sm"
+									class="btn-primary w-full whitespace-nowrap px-2 text-xs lg:text-sm"
 								>
 									{trial ? 'Start Free Trial' : 'Get Started'}
 								</button>
@@ -545,7 +547,7 @@
 </div>
 
 <style>
-	/* Sticky header - sticks to top (no navbar in app) */
+	/* Sticky header - sticks below navbar */
 	.sticky-header {
 		position: sticky;
 		top: 0;
@@ -571,6 +573,7 @@
 		z-index: 20;
 		overflow-x: auto;
 		scrollbar-width: none;
+		padding-bottom: env(safe-area-inset-bottom, 0);
 	}
 
 	.sticky-footer::-webkit-scrollbar {
@@ -608,6 +611,15 @@
 
 	.grid-cell:last-child {
 		border-right: none;
+	}
+
+	/* Plan cells - allow text wrapping */
+	.plan-cell {
+		min-width: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
 	}
 
 	/* Label column - sticky on horizontal scroll */
