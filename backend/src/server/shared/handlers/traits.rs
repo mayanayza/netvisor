@@ -202,24 +202,22 @@ where
 {
     let service = T::get_service(&state);
 
-    if let Some(network_id) = service.get_network_id(&entity)
-        && !user.network_ids.contains(&network_id)
-    {
-        return Err(ApiError::unauthorized(
-            "You aren't allowed to update entities on this network".to_string(),
+    // Enforce path ID matches body ID
+    if entity.id() != id {
+        tracing::warn!(
+            entity_type = T::table_name(),
+            path_id = %id,
+            body_id = %entity.id(),
+            user_id = %user.user_id,
+            "Path/body ID mismatch"
+        );
+        return Err(ApiError::bad_request(
+            "Entity ID in request body must match URL path ID",
         ));
     }
 
-    if let Some(organization_id) = service.get_organization_id(&entity)
-        && user.organization_id != organization_id
-    {
-        return Err(ApiError::unauthorized(
-            "You aren't allowed to update entities for this organization".to_string(),
-        ));
-    }
-
-    // Verify entity exists
-    service
+    // Fetch existing entity and verify ownership BEFORE any updates
+    let existing = service
         .get_by_id(&id)
         .await
         .map_err(|e| {
@@ -241,6 +239,56 @@ where
             );
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
+
+    // Verify user has access to the EXISTING entity's network
+    if let Some(network_id) = service.get_network_id(&existing)
+        && !user.network_ids.contains(&network_id)
+    {
+        tracing::warn!(
+            entity_type = T::table_name(),
+            entity_id = %id,
+            user_id = %user.user_id,
+            entity_network_id = %network_id,
+            "Unauthorized update attempt - user lacks access to entity's current network"
+        );
+        return Err(ApiError::unauthorized(
+            "You don't have access to this entity".to_string(),
+        ));
+    }
+
+    // Verify user has access to the EXISTING entity's organization
+    if let Some(organization_id) = service.get_organization_id(&existing)
+        && user.organization_id != organization_id
+    {
+        tracing::warn!(
+            entity_type = T::table_name(),
+            entity_id = %id,
+            user_id = %user.user_id,
+            entity_org_id = %organization_id,
+            user_org_id = %user.organization_id,
+            "Unauthorized update attempt - entity belongs to different organization"
+        );
+        return Err(ApiError::unauthorized(
+            "You don't have access to this entity".to_string(),
+        ));
+    }
+
+    // Now check the NEW values being set (prevent reassigning to unauthorized network/org)
+    if let Some(network_id) = service.get_network_id(&entity)
+        && !user.network_ids.contains(&network_id)
+    {
+        return Err(ApiError::unauthorized(
+            "You can't move this entity to a network you don't have access to".to_string(),
+        ));
+    }
+
+    if let Some(organization_id) = service.get_organization_id(&entity)
+        && user.organization_id != organization_id
+    {
+        return Err(ApiError::unauthorized(
+            "You can't move this entity to a different organization".to_string(),
+        ));
+    }
 
     let updated = service
         .update(&mut entity, user.clone().into())
@@ -270,7 +318,7 @@ where
 {
     let service = T::get_service(&state);
 
-    // Verify entity exists and log the deletion attempt
+    // Fetch entity first to verify ownership
     let entity = service
         .get_by_id(&id)
         .await
@@ -292,19 +340,33 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
+    // Verify ownership BEFORE delete - check existing entity's network
     if let Some(network_id) = service.get_network_id(&entity)
         && !user.network_ids.contains(&network_id)
     {
+        tracing::warn!(
+            entity_type = T::table_name(),
+            entity_id = %id,
+            user_id = %user.user_id,
+            "Unauthorized delete attempt - user lacks network access"
+        );
         return Err(ApiError::unauthorized(
-            "You aren't allowed to delete entities on this network".to_string(),
+            "You don't have access to delete this entity".to_string(),
         ));
     }
 
+    // Verify ownership - check existing entity's organization
     if let Some(organization_id) = service.get_organization_id(&entity)
         && user.organization_id != organization_id
     {
+        tracing::warn!(
+            entity_type = T::table_name(),
+            entity_id = %id,
+            user_id = %user.user_id,
+            "Unauthorized delete attempt - entity belongs to different organization"
+        );
         return Err(ApiError::unauthorized(
-            "You aren't allowed to delete entities for this organization".to_string(),
+            "You don't have access to delete this entity".to_string(),
         ));
     }
 
@@ -336,29 +398,58 @@ where
 
     let service = T::get_service(&state);
 
+    // Fetch all entities by the requested IDs
     let entity_filter = EntityFilter::unfiltered().entity_ids(&ids);
     let entities = service.get_all(entity_filter).await?;
 
-    for entity in entities {
-        if let Some(network_id) = service.get_network_id(&entity)
+    // Verify we found all requested entities
+    if entities.len() != ids.len() {
+        let found_ids: Vec<Uuid> = entities.iter().map(|e| e.id()).collect();
+        let missing: Vec<&Uuid> = ids.iter().filter(|id| !found_ids.contains(id)).collect();
+        tracing::warn!(
+            entity_type = T::table_name(),
+            user_id = %user.user_id,
+            missing_ids = ?missing,
+            "Bulk delete requested non-existent entities"
+        );
+    }
+
+    // Verify ownership of ALL entities before deleting any
+    for entity in &entities {
+        if let Some(network_id) = service.get_network_id(entity)
             && !user.network_ids.contains(&network_id)
         {
+            tracing::warn!(
+                entity_type = T::table_name(),
+                user_id = %user.user_id,
+                entity_network_id = %network_id,
+                "Bulk delete rejected - user lacks access to entity's network"
+            );
             return Err(ApiError::unauthorized(
-                "You aren't allowed to delete entities on this network".to_string(),
+                "You don't have access to delete one or more of these entities".to_string(),
             ));
         }
 
-        if let Some(organization_id) = service.get_organization_id(&entity)
+        if let Some(organization_id) = service.get_organization_id(entity)
             && user.organization_id != organization_id
         {
+            tracing::warn!(
+                entity_type = T::table_name(),
+                user_id = %user.user_id,
+                entity_org_id = %organization_id,
+                "Bulk delete rejected - entity belongs to different organization"
+            );
             return Err(ApiError::unauthorized(
-                "You aren't allowed to delete entities for this organization".to_string(),
+                "You don't have access to delete one or more of these entities".to_string(),
             ));
         }
     }
 
+    // Only delete entities that actually exist and user has access to
+    let valid_ids: Vec<Uuid> = entities.iter().map(|e| e.id()).collect();
+
     let deleted_count = service
-        .delete_many(&ids, user.clone().into())
+        .delete_many(&valid_ids, user.clone().into())
         .await
         .map_err(|e| {
             tracing::error!(

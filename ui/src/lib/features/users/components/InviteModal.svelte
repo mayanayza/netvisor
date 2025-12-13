@@ -238,6 +238,7 @@
 		{#if !invite}
 			<button
 				onclick={handleGenerateInvite}
+				type="button"
 				disabled={generatingInvite || $emailField.invalid}
 				class="btn-primary w-full"
 			>
