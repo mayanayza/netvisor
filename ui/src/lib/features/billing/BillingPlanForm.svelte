@@ -41,8 +41,6 @@
 		showGithubStars?: boolean;
 		showHosting?: boolean;
 		class?: string;
-
-		showHosting?: boolean;
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
