@@ -38,7 +38,7 @@ export const fieldDefs: FieldDef[] = [
 		cliFlag: '--mode',
 		envVar: 'NETVISOR_MODE',
 		helpText:
-			'Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed.',
+			'Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed',
 		options: [
 			{ label: 'Push', value: 'Push' },
 			{ label: 'Pull', value: 'Pull' }
