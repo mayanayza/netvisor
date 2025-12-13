@@ -1,6 +1,6 @@
 use crate::server::auth::middleware::permissions::{MemberOrDaemon, RequireMember};
 use crate::server::shared::handlers::traits::{
-    CrudHandlers, bulk_delete_handler, get_all_handler, get_by_id_handler,
+    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, get_all_handler, get_by_id_handler,
 };
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
@@ -30,7 +30,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/{id}", get(get_by_id_handler::<Host>))
         .route("/", post(create_host))
         .route("/{id}", put(update_host))
-        .route("/bulk-delete", post(bulk_delete_handler::<Host>))
+        .route("/bulk-delete", post(bulk_delete_hosts))
         .route(
             "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),
@@ -191,6 +191,7 @@ pub async fn delete_handler(
     let daemon_service = &state.services.daemon_service;
 
     let host_filter = EntityFilter::unfiltered().host_id(&id);
+
     if daemon_service.get_one(host_filter).await?.is_some() {
         return Err(ApiError::conflict(
             "Can't delete a host with an associated daemon. Delete the daemon first.",
@@ -210,4 +211,27 @@ pub async fn delete_handler(
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
 
     Ok(Json(ApiResponse::success(())))
+}
+
+pub async fn bulk_delete_hosts(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+    Json(ids): Json<Vec<Uuid>>,
+) -> ApiResult<Json<ApiResponse<BulkDeleteResponse>>> {
+    let daemon_service = &state.services.daemon_service;
+
+    let host_filter = EntityFilter::unfiltered().host_ids(&ids);
+
+    if !daemon_service.get_all(host_filter).await?.is_empty() {
+        return Err(ApiError::conflict(
+            "One or more hosts has an associated daemon, and can't be deleted. Delete the daemon(s) first.",
+        ));
+    }
+
+    bulk_delete_handler::<Host>(
+        axum::extract::State(state),
+        RequireMember(user),
+        axum::extract::Json(ids),
+    )
+    .await
 }

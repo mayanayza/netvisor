@@ -3,7 +3,7 @@
     "id": "share_views",
     "name": "Share Views",
     "description": "Share live network diagrams with others",
-    "category": "Features",
+    "category": "Sharing",
     "icon": null,
     "color": null,
     "metadata": {
@@ -36,7 +36,7 @@
     "id": "audit_logs",
     "name": "Audit Logs",
     "description": "Comprehensive logs of all access and data modification actions performed in NetVisor",
-    "category": "Features",
+    "category": "Enterprise",
     "icon": null,
     "color": null,
     "metadata": {
@@ -47,7 +47,7 @@
     "id": "webhooks",
     "name": "Webhooks",
     "description": "Push real-time events to external systems when hosts, services, or topology changes",
-    "category": "Features",
+    "category": "Integrations",
     "icon": null,
     "color": null,
     "metadata": {
@@ -58,7 +58,7 @@
     "id": "remove_created_with",
     "name": "Remove Watermark",
     "description": "Remove 'Created using netvisor.io' in bottom right corner of visualization",
-    "category": "Features",
+    "category": "Sharing",
     "icon": null,
     "color": null,
     "metadata": {
@@ -69,7 +69,7 @@
     "id": "custom_sso",
     "name": "Custom SSO",
     "description": "Configure your own OIDC identity provider for single sign-on",
-    "category": "Deployment",
+    "category": "Enterprise",
     "icon": null,
     "color": null,
     "metadata": {
@@ -80,7 +80,7 @@
     "id": "managed_deployment",
     "name": "Managed Deployment",
     "description": "We deploy, configure, and manage NetVisor for you — on a dedicated instance or your own infrastructure",
-    "category": "Deployment",
+    "category": "Enterprise",
     "icon": null,
     "color": null,
     "metadata": {
@@ -91,7 +91,7 @@
     "id": "whitelabeling",
     "name": "Whitelabeling",
     "description": "Custom domain with your branding",
-    "category": "Deployment",
+    "category": "Enterprise",
     "icon": null,
     "color": null,
     "metadata": {
@@ -157,7 +157,7 @@
     "id": "embeds",
     "name": "Embeds",
     "description": "Embed live network diagrams in wikis, dashboards, or documentation",
-    "category": "Features",
+    "category": "Sharing",
     "icon": null,
     "color": null,
     "metadata": {

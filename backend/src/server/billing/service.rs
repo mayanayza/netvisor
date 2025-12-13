@@ -638,11 +638,17 @@ impl BillingService {
 
         let org_id = Uuid::parse_str(org_id)?;
 
-        let mut organization = self
-            .organization_service
-            .get_by_id(&org_id)
-            .await?
-            .ok_or_else(|| anyhow!("Could not find organization to update subscriptions status"))?;
+        let mut organization = match self.organization_service.get_by_id(&org_id).await? {
+            Some(org) => org,
+            None => {
+                // Organization was deleted - acknowledge webhook to stop retries
+                tracing::warn!(
+                    stripe_customer_id = %sub.customer.id(),
+                    "Received subscription update for deleted organization, ignoring"
+                );
+                return Ok(());
+            }
+        };
 
         let owners = self
             .user_service

@@ -88,10 +88,11 @@
 			class="h-full w-full bg-cover bg-center bg-no-repeat"
 			style="background-image: url('/images/diagram.png')"
 		></div>
+		<div class="absolute inset-0 bg-black/70"></div>
 	</div>
 
 	<!-- GitHub Stars Island - positioned absolutely at top -->
-	<div class="absolute bottom-10 left-10 z-[100]">
+	<div class="absolute bottom-10 left-10 z-[100] hidden md:block">
 		<div
 			class="inline-flex items-center gap-2 rounded-2xl border border-gray-700 bg-gray-800/90 px-4 py-3 shadow-xl backdrop-blur-sm"
 		>

@@ -1,5 +1,8 @@
 use crate::server::{
-    api_keys::r#impl::{api::ApiKeyResponse, base::ApiKey},
+    api_keys::{
+        r#impl::{api::ApiKeyResponse, base::ApiKey},
+        service::generate_api_key_for_storage,
+    },
     auth::middleware::permissions::RequireMember,
     config::AppState,
     shared::{
@@ -45,8 +48,10 @@ pub async fn create_handler(
         "API key create request received"
     );
 
+    let (plaintext, hashed) = generate_api_key_for_storage();
+
     let service = ApiKey::get_service(&state);
-    api_key.base.key = service.generate_api_key();
+    api_key.base.key = hashed;
     let api_key = service
         .create(api_key, user.clone().into())
         .await
@@ -84,7 +89,7 @@ pub async fn create_handler(
     }
 
     Ok(Json(ApiResponse::success(ApiKeyResponse {
-        key: api_key.base.key.clone(),
+        key: plaintext,
         api_key,
     })))
 }
