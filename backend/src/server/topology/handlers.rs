@@ -234,20 +234,31 @@ async fn unlock(
 
 async fn staleness_stream(
     State(state): State<Arc<AppState>>,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let rx = state
         .services
         .topology_service
         .subscribe_staleness_changes();
 
-    let stream = stream::unfold(rx, |mut rx| async move {
-        match rx.recv().await {
-            Ok(update) => {
-                let json = serde_json::to_string(&update).ok()?;
-                Some((Ok(Event::default().data(json)), rx))
+    let allowed_networks = user.network_ids;
+
+    let stream = stream::unfold(rx, move |mut rx| {
+        let allowed = allowed_networks.clone();
+        async move {
+            loop {
+                match rx.recv().await {
+                    Ok(update) => {
+                        // Only emit if user has access to this topology's network
+                        if allowed.contains(&update.base.network_id) {
+                            let json = serde_json::to_string(&update).ok()?;
+                            return Some((Ok(Event::default().data(json)), rx));
+                        }
+                        // Otherwise skip and wait for next message
+                    }
+                    Err(_) => return None,
+                }
             }
-            Err(_) => None,
         }
     });
 

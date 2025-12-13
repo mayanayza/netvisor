@@ -3,14 +3,13 @@
 	 * BillingPlanForm Component
 	 *
 	 * A pure presentation layer for displaying billing plans.
-	 * All data and callbacks are provided via props.
+	 * Uses CSS Grid for consistent sticky header/footer on both desktop and mobile.
 	 */
 	import { Check, X, ChevronDown } from 'lucide-svelte';
 	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { onMount } from 'svelte';
 	import type { BillingPlan } from './types';
 	import type { BillingPlanMetadata, FeatureMetadata } from '$lib/shared/stores/metadata';
 	import type { ColorStyle } from '$lib/shared/utils/styling';
@@ -34,34 +33,16 @@
 	// ============================================================================
 
 	interface Props {
-		/** Array of billing plans to display */
 		plans: BillingPlan[];
-
-		/** Metadata helpers for billing plans (provides name, description, icon, color, features) */
 		billingPlanHelpers: MetadataHelpers<BillingPlanMetadata>;
-
-		/** Metadata helpers for features (provides name, description, is_coming_soon) */
 		featureHelpers: MetadataHelpers<FeatureMetadata>;
-
-		/** Callback when a plan is selected (not called for Enterprise plans) */
 		onPlanSelect: (plan: BillingPlan) => void | Promise<void>;
-
-		/**
-		 * Initial filter for plan types. Defaults to 'commercial'.
-		 * In the app, this can be set dynamically based on user email.
-		 * On the website, this is typically static.
-		 */
 		initialPlanFilter?: 'all' | 'personal' | 'commercial';
-
-		/** Whether to show GitHub stars badge. Defaults to true */
 		showGithubStars?: boolean;
-
-		/** Custom class for the container */
+		showHosting?: boolean;
 		class?: string;
 	}
 
-	// The MetadataHelpers interface includes methods for interface consistency
-	// even though not all are used in this component
 	// eslint-disable-next-line svelte/no-unused-props
 	let {
 		plans,
@@ -70,63 +51,55 @@
 		onPlanSelect,
 		initialPlanFilter = 'commercial',
 		showGithubStars = true,
+		showHosting = true,
 		class: className = ''
 	}: Props = $props();
-
-	// ============================================================================
-	// State
-	// ============================================================================
 
 	let collapsedCategories = $state<Record<string, boolean>>({});
 
 	type PlanFilter = 'all' | 'personal' | 'commercial';
-	let planFilter = $state<PlanFilter>(initialPlanFilter);
+	let planFilter = $derived<PlanFilter>(initialPlanFilter);
 
 	type BillingPeriod = 'monthly' | 'yearly';
 	let billingPeriod = $state<BillingPeriod>('monthly');
 
-	// Sticky header visibility
-	let mainHeaderRef = $state<HTMLElement | null>(null);
-	let tableContainerRef = $state<HTMLElement | null>(null);
-	let showStickyHeader = $state(false);
-	let stickyHeaderLeft = $state(0);
-	let stickyHeaderWidth = $state(0);
+	// Refs for scroll sync between header, content, and footer
+	let headerScrollRef = $state<HTMLElement | null>(null);
+	let contentScrollRef = $state<HTMLElement | null>(null);
+	let footerScrollRef = $state<HTMLElement | null>(null);
 
-	onMount(() => {
-		if (!mainHeaderRef) return;
+	// Sync horizontal scroll across header, content, and footer
+	$effect(() => {
+		if (!contentScrollRef) return;
 
-		const observer = new IntersectionObserver(
-			([entry]) => {
-				showStickyHeader = !entry.isIntersecting;
-			},
-			{ threshold: 0 }
-		);
-
-		observer.observe(mainHeaderRef);
-
-		// Update sticky header position on scroll/resize
-		function updateStickyPosition() {
-			if (tableContainerRef) {
-				const rect = tableContainerRef.getBoundingClientRect();
-				stickyHeaderLeft = rect.left;
-				stickyHeaderWidth = rect.width;
-			}
+		function syncFromContent() {
+			const scrollLeft = contentScrollRef?.scrollLeft ?? 0;
+			if (headerScrollRef) headerScrollRef.scrollLeft = scrollLeft;
+			if (footerScrollRef) footerScrollRef.scrollLeft = scrollLeft;
 		}
 
-		updateStickyPosition();
-		window.addEventListener('scroll', updateStickyPosition);
-		window.addEventListener('resize', updateStickyPosition);
+		function syncFromHeader() {
+			const scrollLeft = headerScrollRef?.scrollLeft ?? 0;
+			if (contentScrollRef) contentScrollRef.scrollLeft = scrollLeft;
+			if (footerScrollRef) footerScrollRef.scrollLeft = scrollLeft;
+		}
+
+		function syncFromFooter() {
+			const scrollLeft = footerScrollRef?.scrollLeft ?? 0;
+			if (contentScrollRef) contentScrollRef.scrollLeft = scrollLeft;
+			if (headerScrollRef) headerScrollRef.scrollLeft = scrollLeft;
+		}
+
+		contentScrollRef.addEventListener('scroll', syncFromContent);
+		headerScrollRef?.addEventListener('scroll', syncFromHeader);
+		footerScrollRef?.addEventListener('scroll', syncFromFooter);
 
 		return () => {
-			observer.disconnect();
-			window.removeEventListener('scroll', updateStickyPosition);
-			window.removeEventListener('resize', updateStickyPosition);
+			contentScrollRef?.removeEventListener('scroll', syncFromContent);
+			headerScrollRef?.removeEventListener('scroll', syncFromHeader);
+			footerScrollRef?.removeEventListener('scroll', syncFromFooter);
 		};
 	});
-
-	// ============================================================================
-	// Constants
-	// ============================================================================
 
 	const planTypeOptions = [
 		{ value: 'all', label: 'All Plans' },
@@ -139,13 +112,8 @@
 		{ value: 'yearly', label: 'Yearly', badge: '-20%' }
 	];
 
-	// ============================================================================
-	// Derived State
-	// ============================================================================
-
 	let filteredPlans = $derived.by(() => {
 		let result = plans;
-
 		if (planFilter !== 'all') {
 			result = result.filter((plan) => {
 				const metadata = billingPlanHelpers.getMetadata(plan.type);
@@ -154,13 +122,11 @@
 				return true;
 			});
 		}
-
 		result = result.filter((plan) => {
 			if (billingPeriod === 'monthly') return plan.rate === 'Month';
 			if (billingPeriod === 'yearly') return plan.rate === 'Year';
 			return true;
 		});
-
 		return result;
 	});
 
@@ -172,72 +138,51 @@
 
 	let sortedFeatureKeys = $derived(
 		[...featureKeys].sort((a, b) => {
-			// 1. Primary sort: by number of plans that have this feature (most first)
-			// This creates the "cascade" effect where features increase with more expensive plans
 			const countDiff = getTruthyCount(b) - getTruthyCount(a);
 			if (countDiff !== 0) return countDiff;
-
-			// 2. Secondary sort: Coming Soon features go after available features (within same count)
 			const aComingSoon = isComingSoon(a);
 			const bComingSoon = isComingSoon(b);
 			if (aComingSoon && !bComingSoon) return 1;
 			if (!aComingSoon && bComingSoon) return -1;
-
-			// 3. Tertiary sort: Text fields go after boolean fields
 			const aIsText = isTextField(a);
 			const bIsText = isTextField(b);
 			if (aIsText && !bIsText) return 1;
 			if (!aIsText && bIsText) return -1;
-
 			return 0;
 		})
 	);
 
 	let groupedFeatures = $derived.by(() => {
 		const groups: SvelteMap<string, string[]> = new SvelteMap();
-
 		for (const featureKey of sortedFeatureKeys) {
 			const category = featureHelpers.getCategory(featureKey) || 'Other';
-			if (!groups.has(category)) {
-				groups.set(category, []);
-			}
+			if (!groups.has(category)) groups.set(category, []);
 			groups.get(category)!.push(featureKey);
 		}
-
-		// Calculate category score: sum of truthy counts for all features in category
 		function getCategoryScore(categoryFeatures: string[]): number {
 			return categoryFeatures.reduce((sum, featureKey) => sum + getTruthyCount(featureKey), 0);
 		}
-
 		const sortedEntries = [...groups.entries()].sort(([a, aFeatures], [b, bFeatures]) => {
-			// Support always last
 			if (a === 'Support') return 1;
 			if (b === 'Support') return -1;
-
-			// Licensing & Billing second to last
 			if (a === 'Licensing & Billing') return 1;
 			if (b === 'Licensing & Billing') return -1;
-
-			// Enterprise third to last
 			if (a === 'Enterprise') return 1;
 			if (b === 'Enterprise') return -1;
-
-			// Sort by category score (most features available across plans first)
 			const scoreDiff = getCategoryScore(bFeatures) - getCategoryScore(aFeatures);
 			if (scoreDiff !== 0) return scoreDiff;
-
-			// Alphabetical as tiebreaker
 			return a.localeCompare(b);
 		});
-
 		return new Map(sortedEntries);
 	});
 
-	let columnWidth = $derived(`${100 / (filteredPlans.length + 1)}%`);
-
-	// ============================================================================
-	// Helper Functions
-	// ============================================================================
+	// Grid column template based on number of plans
+	let gridColumns = $derived.by(() => {
+		const planCount = filteredPlans.length;
+		if (planCount === 0) return '120px 1fr';
+		// Label column + plan columns
+		return `minmax(100px, 20%) repeat(${planCount}, minmax(120px, 1fr))`;
+	});
 
 	function toggleCategory(category: string) {
 		collapsedCategories[category] = !collapsedCategories[category];
@@ -266,7 +211,6 @@
 
 	function getFeatureValue(planType: string, featureKey: string): boolean | string | number | null {
 		const metadata = billingPlanHelpers.getMetadata(planType);
-		// Cast to allow dynamic key access - we iterate over keys from the same object
 		const features = metadata?.features as
 			| Record<string, boolean | string | number | null>
 			| undefined;
@@ -307,6 +251,19 @@
 		return billingPlanHelpers.getMetadata(plan.type)?.custom_price !== null;
 	}
 
+	function getHostingColor(hosting: string): string {
+		switch (hosting) {
+			case 'Cloud':
+				return 'sky';
+			case 'Managed':
+				return 'purple';
+			case 'Self-Hosted':
+				return 'green';
+			default:
+				return 'gray';
+		}
+	}
+
 	function anyPlanHasFeature(featureKey: string): boolean {
 		return getTruthyCount(featureKey) > 0;
 	}
@@ -316,9 +273,9 @@
 	}
 </script>
 
-<div class="space-y-6 px-10 {className}">
+<div class="space-y-6 {className}">
 	<!-- Header with GitHub Stars and Toggles -->
-	<div class="flex flex-wrap items-stretch justify-center gap-6">
+	<div class="flex flex-wrap items-stretch justify-center gap-3 px-4 lg:gap-6 lg:px-10">
 		{#if showGithubStars}
 			<div class="card inline-flex items-center gap-2 px-4 shadow-xl backdrop-blur-sm">
 				<span class="text-secondary text-sm">Open source on GitHub</span>
@@ -339,262 +296,353 @@
 		/>
 	</div>
 
-	<!-- Pricing Table -->
-	<div class="relative" bind:this={tableContainerRef}>
-		<!-- Sticky Header (fixed overlay, always rendered for smooth transitions) -->
+	<!-- Pricing Grid -->
+	<div class="pricing-wrapper card p-0">
+		<!-- Sticky Header -->
 		<div
-			class="card fixed top-0 z-30 overflow-hidden rounded-none p-0 transition-opacity duration-150 {showStickyHeader
-				? 'opacity-100'
-				: 'pointer-events-none opacity-0'}"
-			style="left: {stickyHeaderLeft}px; width: {stickyHeaderWidth}px;"
+			class="sticky-header card card-static rounded-b-none border-0 p-0"
+			bind:this={headerScrollRef}
 		>
-			<div class="flex">
-				<div class="border-r border-gray-700 p-2 lg:p-3" style="width: {columnWidth}"></div>
+			<div class="grid-row header-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell"></div>
 				{#each filteredPlans as plan (plan.type)}
 					{@const IconComponent = billingPlanHelpers.getIconComponent(plan.type)}
 					{@const colorHelper = billingPlanHelpers.getColorHelper(plan.type)}
-					<div
-						class="flex items-center justify-center gap-1 overflow-hidden border-r border-gray-700 p-2 last:border-r-0 lg:gap-2 lg:p-3"
-						style="width: {columnWidth}"
-					>
-						<IconComponent class="{colorHelper.icon} h-4 w-4 flex-shrink-0 lg:h-5 lg:w-5" />
-						<span class="text-primary truncate text-xs font-semibold lg:text-base">
-							{billingPlanHelpers.getName(plan.type)}
-						</span>
+					<div class="grid-cell plan-cell">
+						<div class="flex items-center justify-center gap-2 py-2 lg:py-3">
+							<IconComponent class="{colorHelper.icon} h-4 w-4 lg:h-8 lg:w-8" />
+							<span class="text-primary text-sm font-semibold lg:text-lg"
+								>{billingPlanHelpers.getName(plan.type)}</span
+							>
+						</div>
 					</div>
 				{/each}
 			</div>
 		</div>
 
-		<div class="card overflow-hidden rounded-b-none border-b-0 p-0">
-			<table class="w-full table-fixed">
-				<!-- Header Row: Plan Names and Prices -->
-				<thead class="z-10">
-					<tr class="border-b border-gray-700" bind:this={mainHeaderRef}>
-						<th class="border-r border-gray-700 p-4" style="width: {columnWidth}"></th>
-
-						{#each filteredPlans as plan (plan.type)}
-							{@const description = billingPlanHelpers.getDescription(plan.type)}
-							{@const IconComponent = billingPlanHelpers.getIconComponent(plan.type)}
-							{@const colorHelper = billingPlanHelpers.getColorHelper(plan.type)}
-							<th
-								class="overflow-hidden border-r border-gray-700 p-2 last:border-r-0 lg:p-4"
-								style="width: {columnWidth}"
-							>
-								<div
-									class="flex h-full min-h-[180px] flex-col justify-between space-y-2 lg:min-h-[200px] lg:space-y-3"
-								>
-									<!-- Top: Icon, Name -->
-									<div class="flex flex-col items-center space-y-1 lg:space-y-2">
-										<div class="flex justify-center">
-											<IconComponent class="{colorHelper.icon} h-6 w-6 lg:h-8 lg:w-8" />
-										</div>
-										<div class="flex items-center gap-2">
-											<span class="text-primary text-sm font-semibold lg:text-lg">
-												{billingPlanHelpers.getName(plan.type)}
-											</span>
-										</div>
-									</div>
-
-									<!-- Center: Price -->
-									<div class="flex flex-col items-center space-y-1">
-										<div class="text-primary text-lg font-bold lg:text-2xl">
-											{formatBasePricing(plan)}
-										</div>
-										{#if plan.trial_days > 0 && !hasCustomPrice(plan)}
-											<div class="text-xs font-medium text-success">
-												{plan.trial_days}-day free trial
-											</div>
-										{/if}
-									</div>
-
-									<!-- Bottom: Description -->
-									<div class="flex items-end justify-center">
-										{#if description}
-											<div class="text-tertiary text-center text-xs leading-tight">
-												{description}
-											</div>
-										{/if}
-									</div>
-								</div>
-							</th>
-						{/each}
-					</tr>
-				</thead>
-
-				<tbody>
-					<!-- Seats Row -->
-					<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
-						<td class="text-secondary border-r border-gray-700 p-4">
-							<div class="text-sm font-medium">Seats</div>
-						</td>
-						{#each filteredPlans as plan (plan.type)}
-							<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
-								<div class="flex flex-col">
-									<span class="text-secondary">
-										{plan.included_seats === null ? 'Unlimited' : plan.included_seats}
-									</span>
-									{#if plan.seat_cents}
-										<span class="text-tertiary text-sm">
-											{formatSeatAddonPricing(plan)} for additional seats
-										</span>
-									{/if}
-								</div>
-							</td>
-						{/each}
-					</tr>
-
-					<!-- Networks Row -->
-					<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
-						<td class="text-secondary border-r border-gray-700 p-4">
-							<div class="text-sm font-medium">Networks</div>
-						</td>
-						{#each filteredPlans as plan (plan.type)}
-							<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
-								<div class="flex flex-col">
-									<span class="text-secondary">
-										{plan.included_networks === null ? 'Unlimited' : plan.included_networks}
-									</span>
-									{#if plan.network_cents}
-										<span class="text-tertiary text-sm">
-											{formatNetworkAddonPricing(plan)} for additional networks
-										</span>
-									{/if}
-								</div>
-							</td>
-						{/each}
-					</tr>
-
-					<!-- Feature Rows grouped by category -->
-					{#each [...groupedFeatures.entries()] as [category, categoryFeatures] (category)}
-						{#if categoryHasVisibleFeatures(categoryFeatures)}
-							<!-- Category Header -->
-							<tr class="border-b border-gray-700">
-								<td colspan={filteredPlans.length + 1} class="p-0">
-									<button
-										type="button"
-										class="text-secondary hover:text-primary flex w-full items-center justify-between p-3 text-left transition-colors hover:bg-gray-800/60"
-										onclick={() => toggleCategory(category)}
-										aria-expanded={!collapsedCategories[category]}
-									>
-										<span class="text-sm font-semibold uppercase tracking-wide">{category}</span>
-										<ChevronDown
-											class="h-4 w-4 transition-transform {collapsedCategories[category]
-												? '-rotate-90'
-												: ''}"
-										/>
-									</button>
-								</td>
-							</tr>
-
-							{#if !collapsedCategories[category]}
-								{#each categoryFeatures as featureKey (featureKey)}
-									{#if anyPlanHasFeature(featureKey)}
-										{@const featureDescription = featureHelpers.getDescription(featureKey)}
-										{@const comingSoon = isComingSoon(featureKey)}
-										<tr class="border-b border-gray-700 transition-colors hover:bg-gray-800/30">
-											<td class="text-secondary border-r border-gray-700 p-4">
-												<div class="text-sm font-medium">
-													{featureHelpers.getName(featureKey)}
-												</div>
-												{#if featureDescription}
-													<div class="text-tertiary mt-1 text-xs leading-tight">
-														{featureDescription}
-													</div>
-												{/if}
-											</td>
-
-											{#each filteredPlans as plan (plan.type)}
-												{@const value = getFeatureValue(plan.type, featureKey)}
-												<td class="border-r border-gray-700 p-4 text-center last:border-r-0">
-													{#if comingSoon && value}
-														<Tag label="Coming Soon" color="gray" />
-													{:else if typeof value === 'boolean'}
-														{#if value}
-															<Check class="mx-auto h-8 w-8 text-success" />
-														{:else}
-															<X class="text-muted mx-auto h-8 w-8" />
-														{/if}
-													{:else if value === null}
-														<span class="text-tertiary">—</span>
-													{:else}
-														<span class="text-secondary text-lg">{value}</span>
-													{/if}
-												</td>
-											{/each}
-										</tr>
-									{/if}
-								{/each}
+		<!-- Scrollable Content -->
+		<div class="content-scroll rounded-none border-y-0 p-0" bind:this={contentScrollRef}>
+			<!-- Price Row -->
+			<div class="grid-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell"></div>
+				{#each filteredPlans as plan (plan.type)}
+					<div class="grid-cell plan-cell text-center">
+						<div class="flex flex-col items-center space-y-1">
+							<div class="text-primary text-sm font-bold lg:text-2xl">
+								{formatBasePricing(plan)}
+							</div>
+							{#if plan.trial_days > 0 && !hasCustomPrice(plan)}
+								<div class="text-xs font-medium text-success">{plan.trial_days}-day free trial</div>
 							{/if}
-						{/if}
-					{/each}
-				</tbody>
-			</table>
-		</div>
+						</div>
+					</div>
+				{/each}
+			</div>
 
-		<!-- Sticky CTA Footer -->
-		<div class="sticky bottom-0 left-0 right-0 z-20">
-			<div class="card overflow-hidden rounded-t-none p-0">
-				<div class="flex">
-					<div class="border-r border-gray-700 p-2 lg:p-4" style="width: {columnWidth}"></div>
+			<!-- Description Row -->
+			<div class="grid-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell">
+					<div class="text-xs font-medium lg:text-sm">Description</div>
+				</div>
+				{#each filteredPlans as plan (plan.type)}
+					{@const description = billingPlanHelpers.getDescription(plan.type)}
+					<div class="grid-cell plan-cell text-center">
+						{#if description}
+							<div class="text-tertiary text-xs leading-tight lg:text-sm">{description}</div>
+						{:else}
+							<span class="text-tertiary">—</span>
+						{/if}
+					</div>
+				{/each}
+			</div>
+
+			<!-- Seats Row -->
+			<div class="grid-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell">
+					<div class="text-xs font-medium lg:text-sm">Seats</div>
+				</div>
+				{#each filteredPlans as plan (plan.type)}
+					<div class="grid-cell plan-cell text-center">
+						<div class="flex flex-col">
+							<span class="text-secondary text-xs lg:text-base"
+								>{plan.included_seats === null ? 'Unlimited' : plan.included_seats}</span
+							>
+							{#if plan.seat_cents}
+								<span class="text-tertiary text-xs">{formatSeatAddonPricing(plan)}</span>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Networks Row -->
+			<div class="grid-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell">
+					<div class="text-xs font-medium lg:text-sm">Networks</div>
+				</div>
+				{#each filteredPlans as plan (plan.type)}
+					<div class="grid-cell plan-cell text-center">
+						<div class="flex flex-col">
+							<span class="text-secondary text-xs lg:text-base"
+								>{plan.included_networks === null ? 'Unlimited' : plan.included_networks}</span
+							>
+							{#if plan.network_cents}
+								<span class="text-tertiary text-xs">{formatNetworkAddonPricing(plan)}</span>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Hosting Row -->
+			{#if showHosting}
+				<div class="grid-row" style="grid-template-columns: {gridColumns}">
+					<div class="grid-cell label-cell">
+						<div class="text-xs font-medium lg:text-sm">Hosting</div>
+					</div>
 					{#each filteredPlans as plan (plan.type)}
 						{@const hosting = getHosting(plan)}
-						{@const commercial = isCommercial(plan)}
-						{@const trial = hasTrial(plan)}
-						<div
-							class="flex flex-col gap-1 border-r border-gray-700 p-2 last:border-r-0 lg:gap-2 lg:p-4"
-							style="width: {columnWidth}"
+						<div class="grid-cell plan-cell text-center">
+							{#if hosting}
+								<Tag label={hosting} color={getHostingColor(hosting)} />
+							{:else}
+								<span class="text-tertiary">—</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- Feature Rows -->
+			{#each [...groupedFeatures.entries()] as [category, categoryFeatures] (category)}
+				{#if categoryHasVisibleFeatures(categoryFeatures)}
+					<!-- Category Header -->
+					<div class="category-row">
+						<button
+							type="button"
+							class="text-secondary hover:text-primary flex w-full items-center gap-2 p-2 text-left transition-colors hover:bg-gray-800/60 lg:p-3"
+							onclick={() => toggleCategory(category)}
+							aria-expanded={!collapsedCategories[category]}
 						>
+							<span class="text-xs font-semibold uppercase tracking-wide lg:text-sm"
+								>{category}</span
+							>
+							<ChevronDown
+								class="h-4 w-4 flex-shrink-0 transition-transform {collapsedCategories[category]
+									? '-rotate-90'
+									: ''}"
+							/>
+						</button>
+					</div>
+
+					{#if !collapsedCategories[category]}
+						{#each categoryFeatures as featureKey (featureKey)}
+							{#if anyPlanHasFeature(featureKey)}
+								{@const featureDescription = featureHelpers.getDescription(featureKey)}
+								{@const comingSoon = isComingSoon(featureKey)}
+								<div class="grid-row" style="grid-template-columns: {gridColumns}">
+									<div class="grid-cell label-cell">
+										<div class="text-xs font-medium lg:text-sm">
+											{featureHelpers.getName(featureKey)}
+										</div>
+										{#if featureDescription}
+											<div class="feature-description text-tertiary mt-1 leading-tight">
+												{featureDescription}
+											</div>
+										{/if}
+									</div>
+									{#each filteredPlans as plan (plan.type)}
+										{@const value = getFeatureValue(plan.type, featureKey)}
+										<div class="grid-cell plan-cell text-center">
+											{#if comingSoon && value}
+												<Tag label="Coming Soon" color="gray" />
+											{:else if typeof value === 'boolean'}
+												{#if value}
+													<Check class="mx-auto h-5 w-5 text-success lg:h-8 lg:w-8" />
+												{:else}
+													<X class="text-muted mx-auto h-5 w-5 lg:h-8 lg:w-8" />
+												{/if}
+											{:else if value === null}
+												<span class="text-tertiary">—</span>
+											{:else}
+												<span class="text-secondary text-xs lg:text-lg">{value}</span>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{/each}
+					{/if}
+				{/if}
+			{/each}
+		</div>
+
+		<!-- Sticky Footer -->
+		<div
+			class="sticky-footer card card-static rounded-t-none border-0 p-0"
+			bind:this={footerScrollRef}
+		>
+			<div class="grid-row footer-row" style="grid-template-columns: {gridColumns}">
+				<div class="grid-cell label-cell"></div>
+				{#each filteredPlans as plan (plan.type)}
+					{@const hosting = getHosting(plan)}
+					{@const commercial = isCommercial(plan)}
+					{@const trial = hasTrial(plan)}
+					<div class="grid-cell plan-cell">
+						<div class="flex flex-col gap-1 lg:gap-2">
 							{#if hosting === 'Cloud'}
 								<button
 									type="button"
 									onclick={() => onPlanSelect(plan)}
-									class="btn-primary w-full whitespace-nowrap text-sm"
+									class="btn-primary w-full whitespace-nowrap text-xs lg:text-sm"
 								>
 									{trial ? 'Start Free Trial' : 'Get Started'}
 								</button>
 								{#if commercial}
 									{@const subject = encodeURIComponent(`NetVisor ${plan.type} Plan Inquiry`)}
-									{@const body = encodeURIComponent(`Hi,\n\nI'm interested in the ${plan.type} plan.`)}
+									{@const body = encodeURIComponent(
+										`Hi,\n\nI'm interested in the ${plan.type} plan.`
+									)}
 									<a
 										href="mailto:maya@netvisor.io?subject={subject}&body={body}"
-										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-sm"
+										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
+										>Contact Us</a
 									>
-										Contact Us
-									</a>
 								{/if}
 							{:else if hosting === 'Self-Hosted'}
 								{#if commercial}
 									{@const subject = encodeURIComponent(`NetVisor ${plan.type} Plan Inquiry`)}
-									{@const body = encodeURIComponent(`Hi,\n\nI'm interested in the ${plan.type} plan.`)}
+									{@const body = encodeURIComponent(
+										`Hi,\n\nI'm interested in the ${plan.type} plan.`
+									)}
 									<a
 										href="mailto:maya@netvisor.io?subject={subject}&body={body}"
-										class="btn-primary inline-block w-full whitespace-nowrap text-center text-sm"
+										class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
+										>Contact Us</a
 									>
-										Contact Us
-									</a>
 								{:else}
 									<a
 										href="https://github.com/netvisor-io/netvisor"
 										target="_blank"
 										rel="noopener noreferrer"
-										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-sm"
+										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
+										>View on GitHub</a
 									>
-										View on GitHub
-									</a>
 								{/if}
 							{:else if commercial}
 								<a
 									href="mailto:maya@netvisor.io"
-									class="btn-primary inline-block w-full whitespace-nowrap text-center text-sm"
+									class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
+									>Contact Us</a
 								>
-									Contact Us
-								</a>
 							{/if}
 						</div>
-					{/each}
-				</div>
+					</div>
+				{/each}
 			</div>
 		</div>
 	</div>
 </div>
+
+<style>
+	/* Sticky header - sticks to top (no navbar in app) */
+	.sticky-header {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		overflow-x: auto;
+		scrollbar-width: none;
+		box-shadow: none;
+	}
+
+	.sticky-header::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Scrollable content area */
+	.content-scroll {
+		overflow-x: auto;
+	}
+
+	/* Sticky footer - sticks to bottom of viewport */
+	.sticky-footer {
+		position: sticky;
+		bottom: 0;
+		z-index: 20;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.sticky-footer::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Grid rows */
+	.grid-row {
+		display: grid;
+		min-width: 600px;
+	}
+
+	/* Header row styling */
+	.header-row .grid-cell {
+		border-bottom: none;
+	}
+
+	/* Footer row styling */
+	.footer-row .grid-cell {
+		border-bottom: none;
+	}
+
+	/* Grid cells */
+	.grid-cell {
+		padding: 0.5rem;
+		border-bottom: 1px solid rgb(55 65 81);
+		border-right: 1px solid rgb(55 65 81);
+	}
+
+	@media (min-width: 1024px) {
+		.grid-cell {
+			padding: 1rem;
+		}
+	}
+
+	.grid-cell:last-child {
+		border-right: none;
+	}
+
+	/* Label column - sticky on horizontal scroll */
+	.label-cell {
+		color: rgb(156 163 175);
+		text-align: left;
+		position: sticky;
+		left: 0;
+		z-index: 10;
+		background: rgb(31 41 55);
+	}
+
+	/* Category row - full width, not grid */
+	.category-row {
+		min-width: 600px;
+		border-bottom: 1px solid rgb(55 65 81);
+	}
+
+	/* Category button stays fixed on horizontal scroll */
+	.category-row button {
+		position: sticky;
+		left: 0;
+		background: rgb(31 41 55 0);
+		width: fit-content;
+	}
+
+	/* Feature descriptions - smaller on mobile */
+	.feature-description {
+		font-size: 0.625rem;
+		line-height: 1.2;
+	}
+
+	@media (min-width: 1024px) {
+		.feature-description {
+			font-size: 0.75rem;
+		}
+	}
+</style>

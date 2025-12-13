@@ -511,7 +511,7 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Business { .. } => "Business",
             BillingPlan::Enterprise { .. } => "Enterprise",
             BillingPlan::Demo { .. } => "Demo",
-            BillingPlan::CommercialSelfHosted { .. } => "Commercial Self-Hosted",
+            BillingPlan::CommercialSelfHosted { .. } => "Self Hosted",
         }
     }
 
