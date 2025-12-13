@@ -173,6 +173,7 @@ pub mod rancher;
 // Database
 pub mod cassandra;
 pub mod couchdb;
+pub mod denodo;
 pub mod elasticsearch;
 pub mod influxdb;
 pub mod mariadb;
