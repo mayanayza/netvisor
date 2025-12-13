@@ -2,7 +2,6 @@
 	import posthog from 'posthog-js';
 	import { dev } from '$app/environment';
 	import { onMount } from 'svelte';
-	import { resolve } from '$app/paths';
 
 	const COOKIE_NAME = 'netvisor_gdpr';
 	const COOKIE_DOMAIN = dev ? '' : '.netvisor.io';
