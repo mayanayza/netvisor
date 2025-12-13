@@ -69,7 +69,7 @@ pub struct DaemonCli {
     #[arg(long)]
     docker_proxy_ssl_chain: Option<String>,
 
-    /// Select whether the daemon will Pull work from the server or have work Pushed to it.
+    /// Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed
     #[arg(long)]
     mode: Option<DaemonMode>,
 
