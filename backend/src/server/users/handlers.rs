@@ -118,6 +118,13 @@ pub async fn update_user(
         ));
     }
 
+    // Preserve fields that shouldn't be changed via this endpoint
+    request.base.email = existing.base.email.clone();
+    request.base.password_hash = existing.base.password_hash.clone();
+    request.base.oidc_provider = existing.base.oidc_provider.clone();
+    request.base.oidc_subject = existing.base.oidc_subject.clone();
+    request.base.oidc_linked_at = existing.base.oidc_linked_at;
+
     let updated = service
         .update(&mut request, user.into())
         .await
@@ -173,6 +180,7 @@ pub async fn admin_update_user(
 
     // Preserve fields that shouldn't be changed via this endpoint
     request.base.email = existing.base.email.clone();
+    request.base.password_hash = existing.base.password_hash.clone();
     request.base.oidc_provider = existing.base.oidc_provider.clone();
     request.base.oidc_subject = existing.base.oidc_subject.clone();
     request.base.oidc_linked_at = existing.base.oidc_linked_at;

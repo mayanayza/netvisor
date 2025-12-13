@@ -3,7 +3,7 @@
 	 * BillingPlanForm Component
 	 *
 	 * A pure presentation layer for displaying billing plans.
-	 * All data and callbacks are provided via props.
+	 * Uses CSS Grid for consistent sticky header/footer on both desktop and mobile.
 	 */
 	import { Check, X, ChevronDown } from 'lucide-svelte';
 	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
@@ -33,36 +33,18 @@
 	// ============================================================================
 
 	interface Props {
-		/** Array of billing plans to display */
 		plans: BillingPlan[];
-
-		/** Metadata helpers for billing plans (provides name, description, icon, color, features) */
 		billingPlanHelpers: MetadataHelpers<BillingPlanMetadata>;
-
-		/** Metadata helpers for features (provides name, description, is_coming_soon) */
 		featureHelpers: MetadataHelpers<FeatureMetadata>;
-
-		/** Callback when a plan is selected (not called for Enterprise plans) */
 		onPlanSelect: (plan: BillingPlan) => void | Promise<void>;
-
-		/**
-		 * Initial filter for plan types. Defaults to 'commercial'.
-		 * In the app, this can be set dynamically based on user email.
-		 * On the website, this is typically static.
-		 */
 		initialPlanFilter?: 'all' | 'personal' | 'commercial';
-
-		/** Whether to show GitHub stars badge. Defaults to true */
 		showGithubStars?: boolean;
-
-		/** Custom class for the container */
+		showHosting?: boolean;
 		class?: string;
 
 		showHosting?: boolean;
 	}
 
-	// The MetadataHelpers interface includes methods for interface consistency
-	// even though not all are used in this component
 	// eslint-disable-next-line svelte/no-unused-props
 	let {
 		plans,

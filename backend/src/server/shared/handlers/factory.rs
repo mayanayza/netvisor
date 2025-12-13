@@ -103,7 +103,10 @@ async fn get_metadata_registry(_user: AuthenticatedUser) -> Json<ApiResponse<Met
 }
 
 async fn get_health() -> Json<ApiResponse<String>> {
-    Json(ApiResponse::success("Netvisor Server Running".to_string()))
+    Json(ApiResponse::success(format!(
+        "NetVisor Server {}",
+        env!("CARGO_PKG_VERSION")
+    )))
 }
 
 pub async fn get_public_config(

@@ -36,6 +36,7 @@
 				class="h-full w-full bg-cover bg-center bg-no-repeat"
 				style="background-image: url('/images/diagram.png')"
 			></div>
+			<div class="absolute inset-0 bg-black/70"></div>
 		</div>
 
 		<!-- Content (sits above background) -->
