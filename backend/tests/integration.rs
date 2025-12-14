@@ -1,5 +1,5 @@
 use email_address::EmailAddress;
-use scanopy::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
+use scanopy::server::auth::r#impl::api::{LoginRequest, RegisterRequest, SetupRequest, SetupResponse};
 use scanopy::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use scanopy::server::daemons::r#impl::base::Daemon;
 use scanopy::server::discovery::r#impl::types::DiscoveryType;
@@ -9,7 +9,6 @@ use scanopy::server::organizations::r#impl::base::Organization;
 
 use scanopy::server::services::definitions::home_assistant::HomeAssistant;
 use scanopy::server::services::r#impl::base::Service;
-use scanopy::server::shared::handlers::factory::OnboardingRequest;
 use scanopy::server::shared::storage::traits::StorableEntity;
 use scanopy::server::shared::types::api::ApiResponse;
 use scanopy::server::shared::types::metadata::HasId;
