@@ -241,6 +241,7 @@ pub mod proxmox_datacenter_manager;
 
 // Monitoring
 pub mod apc;
+pub mod cadvisor;
 pub mod coolercontrol;
 pub mod elastic_apm;
 pub mod gatus;
