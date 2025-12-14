@@ -1,3 +1,5 @@
+name: scanopy
+
 services:
   postgres-dev:
     image: postgres:17-alpine
