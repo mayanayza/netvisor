@@ -10,29 +10,29 @@ UPDATE services
 SET name = 'Scanopy Server'
 WHERE name = 'NetVisor Server API';
 
--- 2. Update services table - service_definition field (TEXT)
+-- 2. Update services table - service_definition field (stores name(), not struct name)
 UPDATE services
-SET service_definition = 'ScanopyDaemon'
-WHERE service_definition = 'NetvisorDaemon';
+SET service_definition = 'Scanopy Daemon'
+WHERE service_definition = 'NetVisor Daemon API';
 
 UPDATE services
-SET service_definition = 'ScanopyServer'
-WHERE service_definition = 'NetvisorServer';
+SET service_definition = 'Scanopy Server'
+WHERE service_definition = 'NetVisor Server API';
 
 -- 3. Update topology snapshots - services JSONB array
 UPDATE topologies
 SET services = (
     SELECT jsonb_agg(
         CASE 
-            WHEN svc->>'name' = 'NetVisor Daemon API' 
+            WHEN svc->>'service_definition' = 'NetVisor Daemon API'
             THEN jsonb_set(
                 jsonb_set(svc, '{name}', '"Scanopy Daemon"'),
-                '{service_definition}', '"ScanopyDaemon"'
+                '{service_definition}', '"Scanopy Daemon"'
             )
-            WHEN svc->>'name' = 'NetVisor Server API' 
+            WHEN svc->>'service_definition' = 'NetVisor Server API'
             THEN jsonb_set(
                 jsonb_set(svc, '{name}', '"Scanopy Server"'),
-                '{service_definition}', '"ScanopyServer"'
+                '{service_definition}', '"Scanopy Server"'
             )
             ELSE svc
         END

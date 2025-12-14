@@ -353,8 +353,8 @@ docker compose down
 docker compose down -v
 
 # Remove images
-docker rmi mayanayza/scanopy-server:latest
-docker rmi mayanayza/scanopy-daemon:latest
+docker rmi ghcr.io/scanopy/scanopy/server:latest
+docker rmi ghcr.io/scanopy/scanopy/daemon:latest
 ```
 
 ### Standalone Daemon

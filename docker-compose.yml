@@ -5,7 +5,7 @@ x-scanopy-env: &scanopy-env
 
 services:
   daemon:
-    image: mayanayza/scanopy-daemon:latest
+    image: ghcr.io/scanopy/scanopy/daemon:latest
     container_name: scanopy-daemon
     network_mode: host
     privileged: true
@@ -48,7 +48,7 @@ services:
       - scanopy
 
   server:
-    image: mayanayza/scanopy-server:latest
+    image: ghcr.io/scanopy/scanopy/server:latest
     ports:
       - "${SCANOPY_SERVER_PORT:-60072}:${SCANOPY_SERVER_PORT:-60072}"
     environment:
