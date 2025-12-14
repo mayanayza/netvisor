@@ -1,6 +1,6 @@
-# NetVisor Service Definitions
+# Scanopy Service Definitions
 
-This document lists all services that NetVisor can automatically discover and identify.
+This document lists all services that Scanopy can automatically discover and identify.
 
 ## AdBlock
 
@@ -942,12 +942,6 @@ This document lists all services that NetVisor can automatically discover and id
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/ contains "Schneider Electric"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png" alt="cAdvisor" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">cAdvisor</td>
-<td style="padding: 12px; color: #d1d5db;">Analyzes resource usage and performance characteristics of running containers.</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/api/v1.2/containers contains "cAdvisor"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cooler-control.svg" alt="CoolerControl" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">CoolerControl</td>
 <td style="padding: 12px; color: #d1d5db;">Monitor temperatures, fan speeds, and power in real time.</td>
@@ -1076,7 +1070,7 @@ This document lists all services that NetVisor can automatically discover and id
 </tbody>
 </table>
 
-## Netvisor
+## Scanopy
 
 <table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
 <thead>
@@ -1089,16 +1083,16 @@ This document lists all services that NetVisor can automatically discover and id
 </thead>
 <tbody>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png" alt="NetVisor Daemon API" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">NetVisor Daemon API</td>
-<td style="padding: 12px; color: #d1d5db;">NetVisor Daemon API for network scanning</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60073/api/health contains "netvisor"</code></td>
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy Daemon API" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Scanopy Daemon API</td>
+<td style="padding: 12px; color: #d1d5db;">Scanopy Daemon API for network scanning</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60073/api/health contains "scanopy"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png" alt="NetVisor Server API" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">NetVisor Server API</td>
-<td style="padding: 12px; color: #d1d5db;">NetVisor Server API for network management</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60072/api/health contains "netvisor"</code></td>
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy Server API" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Scanopy Server API</td>
+<td style="padding: 12px; color: #d1d5db;">Scanopy Server API for network management</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60072/api/health contains "scanopy"</code></td>
 </tr>
 </tbody>
 </table>

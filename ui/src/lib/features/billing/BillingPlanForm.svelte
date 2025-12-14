@@ -499,30 +499,30 @@
 									{trial ? 'Start Free Trial' : 'Get Started'}
 								</button>
 								{#if commercial}
-									{@const subject = encodeURIComponent(`NetVisor ${plan.type} Plan Inquiry`)}
+									{@const subject = encodeURIComponent(`Scanopy ${plan.type} Plan Inquiry`)}
 									{@const body = encodeURIComponent(
 										`Hi,\n\nI'm interested in the ${plan.type} plan.`
 									)}
 									<a
-										href="mailto:maya@netvisor.io?subject={subject}&body={body}"
+										href="mailto:maya@scanopy.net?subject={subject}&body={body}"
 										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
 										>Contact Us</a
 									>
 								{/if}
 							{:else if hosting === 'Self-Hosted'}
 								{#if commercial}
-									{@const subject = encodeURIComponent(`NetVisor ${plan.type} Plan Inquiry`)}
+									{@const subject = encodeURIComponent(`Scanopy ${plan.type} Plan Inquiry`)}
 									{@const body = encodeURIComponent(
 										`Hi,\n\nI'm interested in the ${plan.type} plan.`
 									)}
 									<a
-										href="mailto:maya@netvisor.io?subject={subject}&body={body}"
+										href="mailto:maya@scanopy.net?subject={subject}&body={body}"
 										class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
 										>Contact Us</a
 									>
 								{:else}
 									<a
-										href="https://github.com/netvisor-io/netvisor"
+										href="https://github.com/scanopy/scanopy"
 										target="_blank"
 										rel="noopener noreferrer"
 										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
@@ -531,7 +531,7 @@
 								{/if}
 							{:else if commercial}
 								<a
-									href="mailto:maya@netvisor.io"
+									href="mailto:maya@scanopy.net"
 									class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
 									>Contact Us</a
 								>

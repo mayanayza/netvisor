@@ -61,7 +61,7 @@ pub enum ServiceCategory {
     // Special
     Unknown,
     Custom,
-    Netvisor,
+    Scanopy,
     OpenPorts,
 }
 
@@ -111,7 +111,7 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Communication => "Speech",
 
             // Special
-            ServiceCategory::Netvisor => "Zap",
+            ServiceCategory::Scanopy => "Zap",
             ServiceCategory::Custom => "Sparkle",
             ServiceCategory::OpenPorts => EntityDiscriminants::Port.icon(),
             ServiceCategory::Unknown => "CircleQuestionMark",
@@ -157,7 +157,7 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Communication => "orange",
 
             // Unknown
-            ServiceCategory::Netvisor => "purple",
+            ServiceCategory::Scanopy => "purple",
             ServiceCategory::Custom => "rose",
             ServiceCategory::OpenPorts => EntityDiscriminants::Port.color(),
             ServiceCategory::Unknown => "gray",

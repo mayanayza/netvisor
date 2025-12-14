@@ -25,4 +25,4 @@ WORKDIR /app
 
 EXPOSE 60072 60073
 
-CMD ["sh", "-c", "mkdir -p /data && touch /data/netvisor.db && mkdir -p /data/daemon-config/ && touch /data/daemon-config/ && cargo run --bin server"]
+CMD ["sh", "-c", "mkdir -p /data && touch /data/scanopy.db && mkdir -p /data/daemon-config/ && touch /data/daemon-config/ && cargo run --bin server"]

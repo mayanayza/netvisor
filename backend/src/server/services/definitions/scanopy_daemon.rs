@@ -5,28 +5,28 @@ use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::patterns::Pattern;
 
 #[derive(Default, Clone, Eq, PartialEq, Hash)]
-pub struct NetvisorServer;
+pub struct ScanopyDaemon;
 
-impl ServiceDefinition for NetvisorServer {
+impl ServiceDefinition for ScanopyDaemon {
     fn name(&self) -> &'static str {
-        "NetVisor Server API"
+        "Scanopy Daemon"
     }
     fn description(&self) -> &'static str {
-        "NetVisor Server API for network management"
+        "Automatically discover and visually document network infrastructure"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Netvisor
+        ServiceCategory::Scanopy
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::new_tcp(60072), "/api/health", "netvisor", None)
+        Pattern::Endpoint(PortBase::new_tcp(60073), "/api/health", "scanopy", None)
     }
 
     fn logo_url(&self) -> &'static str {
-        "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png"
+        "https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
     }
 }
 
 inventory::submit!(ServiceDefinitionFactory::new(
-    create_service::<NetvisorServer>
+    create_service::<ScanopyDaemon>
 ));

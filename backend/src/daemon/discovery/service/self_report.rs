@@ -13,7 +13,7 @@ use crate::{
             ports::{Port, PortBase},
         },
         services::{
-            definitions::netvisor_daemon::NetvisorDaemon,
+            definitions::scanopy_daemon::ScanopyDaemon,
             r#impl::{
                 base::ServiceBase, bindings::Binding, definitions::ServiceDefinition,
                 patterns::MatchDetails,
@@ -202,7 +202,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             name: hostname.clone().unwrap_or(format!("{}", local_ip)),
             hostname,
             network_id,
-            description: Some("NetVisor daemon".to_string()),
+            description: Some("Scanopy daemon".to_string()),
             tags: Vec::new(),
             target: HostTarget::Hostname,
             services: Vec::new(),
@@ -220,7 +220,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
         host.id = host_id;
 
         let mut services = Vec::new();
-        let daemon_service_definition = NetvisorDaemon;
+        let daemon_service_definition = ScanopyDaemon;
 
         let daemon_service_bound_interfaces: Vec<&Interface> = interfaces
             .iter()
@@ -240,7 +240,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             virtualization: None,
             source: EntitySource::DiscoveryWithMatch {
                 metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
-                details: MatchDetails::new_certain("NetVisor Daemon self-report"),
+                details: MatchDetails::new_certain("Scanopy Daemon self-report"),
             },
         });
 

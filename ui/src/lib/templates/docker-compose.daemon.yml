@@ -1,7 +1,7 @@
 services:
   daemon:
-    image: mayanayza/netvisor-daemon:latest
-    container_name: netvisor-daemon
+    image: mayanayza/scanopy-daemon:latest
+    container_name: scanopy-daemon
     network_mode: host
     privileged: true
     restart: unless-stopped

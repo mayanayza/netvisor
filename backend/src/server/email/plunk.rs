@@ -32,9 +32,9 @@ impl PlunkEmailProvider {
             "to": to.to_string(),
             "subject": subject,
             "body": body,
-            "name": "NetVisor",
-            "from": "no-reply@email.netvisor.io",
-            "reply": "no-reply@email.netvisor.io"
+            "name": "Scanopy",
+            "from": "no-reply@email.scanopy.net",
+            "reply": "no-reply@email.scanopy.net"
         });
 
         let response = self

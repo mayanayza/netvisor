@@ -14,8 +14,8 @@ use uuid::Uuid;
 use crate::server::daemons::r#impl::base::DaemonMode;
 
 #[derive(Parser)]
-#[command(name = "netvisor-daemon")]
-#[command(about = "NetVisor network discovery and test execution daemon")]
+#[command(name = "scanopy-daemon")]
+#[command(about = "Scanopy network discovery and test execution daemon")]
 pub struct DaemonCli {
     /// Complete Server URL
     #[arg(long)]
@@ -131,7 +131,7 @@ impl Default for AppConfig {
             network_id: None,
             daemon_port: 60073,
             bind_address: "0.0.0.0".to_string(),
-            name: "netvisor-daemon".to_string(),
+            name: "scanopy-daemon".to_string(),
             log_level: "info".to_string(),
             heartbeat_interval: 30,
             id: Uuid::new_v4(),
@@ -154,7 +154,7 @@ impl Default for AppConfig {
 
 impl AppConfig {
     pub fn get_config_path() -> Result<(bool, PathBuf)> {
-        let proj_dirs = ProjectDirs::from("com", "netvisor", "daemon")
+        let proj_dirs = ProjectDirs::from("com", "scanopy", "daemon")
             .ok_or_else(|| anyhow::anyhow!("Unable to determine config directory"))?;
 
         let config_path = proj_dirs.config_dir().join("config.json");
@@ -172,7 +172,20 @@ impl AppConfig {
         }
 
         // Add environment variables
-        figment = figment.merge(Env::prefixed("NETVISOR_"));
+        figment = figment
+            .merge(Env::prefixed("NETVISOR_"))
+            .merge(Env::prefixed("SCANOPY_"));
+
+        for (key, _) in std::env::vars() {
+            if key.starts_with("NETVISOR_") {
+                tracing::warn!(
+                    "Env vars prefixed with NETVISOR_ Will be deprecated in v0.13.0: {} - please migrate to SCANOPY_{}",
+                    key,
+                    key.trim_start_matches("NETVISOR_")
+                );
+                break; // Only warn once
+            }
+        }
 
         // Add CLI overrides (highest priority) - only if explicitly provided
         if let Some(server_url) = cli_args.server_url {
@@ -600,7 +613,7 @@ mod tests {
                 let id = a.get_id().to_string();
 
                 // Derive env var from field ID using same conversion as Figment
-                let env_var = format!("NETVISOR_{}", id.to_uppercase());
+                let env_var = format!("SCANOPY_{}", id.to_uppercase());
                 let config_key = cli_id_to_config_key(&id);
 
                 let info = FieldInfo {

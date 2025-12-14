@@ -4,7 +4,7 @@
   "server_target": null,
   "server_port": null,
   "daemon_port": 60073,
-  "name": "netvisor-daemon",
+  "name": "scanopy-daemon",
   "log_level": "debug",
   "heartbeat_interval": 30,
   "bind_address": "0.0.0.0",

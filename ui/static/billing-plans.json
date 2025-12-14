@@ -298,7 +298,7 @@
   {
     "id": "Enterprise",
     "name": "Enterprise",
-    "description": "Fully managed NetVisor with dedicated support and custom deployment",
+    "description": "Fully managed Scanopy with dedicated support and custom deployment",
     "category": null,
     "icon": "Building",
     "color": "teal",
@@ -335,7 +335,7 @@
   {
     "id": "Community",
     "name": "Community",
-    "description": "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations",
+    "description": "Community plan for individuals self-hosting Scanopy - full control over configuration and integrations",
     "category": null,
     "icon": "Heart",
     "color": "pink",
@@ -409,7 +409,7 @@
   {
     "id": "Enterprise",
     "name": "Enterprise",
-    "description": "Fully managed NetVisor with dedicated support and custom deployment",
+    "description": "Fully managed Scanopy with dedicated support and custom deployment",
     "category": null,
     "icon": "Building",
     "color": "teal",
@@ -446,7 +446,7 @@
   {
     "id": "Community",
     "name": "Community",
-    "description": "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations",
+    "description": "Community plan for individuals self-hosting Scanopy - full control over configuration and integrations",
     "category": null,
     "icon": "Heart",
     "color": "pink",

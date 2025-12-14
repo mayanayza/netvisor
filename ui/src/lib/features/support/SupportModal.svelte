@@ -39,28 +39,28 @@
 			{
 				title: 'User Guide',
 				description: 'Read the full documentation and guides',
-				url: 'https://github.com/netvisor-io/netvisor/blob/main/docs/USER_GUIDE.md',
+				url: 'https://github.com/scanopy/scanopy/blob/main/docs/USER_GUIDE.md',
 				color: 'gray',
 				icon: BookOpen
 			},
 			{
 				title: 'Incorrect Service Detection',
 				description: 'Report a service that was incorrectly identified',
-				url: 'https://github.com/netvisor-io/netvisor/issues/new?template=service-detection-issue.md',
+				url: 'https://github.com/scanopy/scanopy/issues/new?template=service-detection-issue.md',
 				color: 'yellow',
 				icon: AlertTriangle
 			},
 			{
 				title: 'Request a Feature',
 				description: 'Suggest a new feature or improvement',
-				url: 'https://github.com/netvisor-io/netvisor/issues/new?template=feature_request.md',
+				url: 'https://github.com/scanopy/scanopy/issues/new?template=feature_request.md',
 				color: 'green',
 				icon: Lightbulb
 			},
 			{
 				title: 'Report a Bug',
 				description: 'Found an issue? Let us know so we can fix it',
-				url: 'https://github.com/netvisor-io/netvisor/issues/new?template=bug_report.md',
+				url: 'https://github.com/scanopy/scanopy/issues/new?template=bug_report.md',
 				color: 'red',
 				icon: Bug
 			},
@@ -76,8 +76,8 @@
 		if (hasEmailSupport) {
 			options.push({
 				title: 'Email',
-				description: 'Email the NetVisor team directly',
-				url: 'mailto:support@netvisor.io',
+				description: 'Email the Scanopy team directly',
+				url: 'mailto:support@scanopy.net',
 				color: 'blue',
 				icon: Mail
 			});
@@ -98,7 +98,7 @@
 
 	<div class="space-y-6">
 		<p class="text-secondary text-sm">
-			Need help with NetVisor? Choose one of the options below to get support.
+			Need help with Scanopy? Choose one of the options below to get support.
 		</p>
 
 		<div class="grid grid-cols-2 gap-3">

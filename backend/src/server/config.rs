@@ -17,8 +17,8 @@ use std::{path::PathBuf, sync::Arc};
 use crate::server::shared::storage::factory::StorageFactory;
 
 #[derive(Parser)]
-#[command(name = "netvisor-server")]
-#[command(about = "NetVisor server")]
+#[command(name = "scanopy-server")]
+#[command(about = "Scanopy server")]
 pub struct ServerCli {
     /// Override server port
     #[arg(long)]
@@ -62,7 +62,7 @@ pub struct ServerCli {
     #[arg(long)]
     smtp_password: Option<String>,
 
-    /// Email used as to/from in emails send by NetVisor using SMTP
+    /// Email used as to/from in emails send by Scanopy using SMTP
     #[arg(long)]
     smtp_email: Option<String>,
 
@@ -139,7 +139,7 @@ impl Default for ServerConfig {
             server_port: 60072,
             log_level: "info".to_string(),
             rust_log: "".to_string(),
-            database_url: "postgresql://postgres:password@localhost:5432/netvisor".to_string(),
+            database_url: "postgresql://postgres:password@localhost:5432/scanopy".to_string(),
             public_url: "http://localhost:60072".to_string(),
             web_external_path: None,
             use_secure_session_cookies: false,
@@ -165,7 +165,19 @@ impl ServerConfig {
         // Standard configuration layering: Defaults → Env → CLI (highest priority)
         let mut figment = Figment::from(Serialized::defaults(ServerConfig::default()))
             .merge(Toml::file("../oidc.toml"))
-            .merge(Env::prefixed("NETVISOR_"));
+            .merge(Env::prefixed("NETVISOR_"))
+            .merge(Env::prefixed("SCANOPY_"));
+
+        for (key, _) in std::env::vars() {
+            if key.starts_with("NETVISOR_") {
+                tracing::warn!(
+                    "Env vars prefixed with NETVISOR_ Will be deprecated in v0.13.0: {} - please migrate to SCANOPY_{}",
+                    key,
+                    key.trim_start_matches("NETVISOR_")
+                );
+                break; // Only warn once
+            }
+        }
 
         // Add CLI overrides (highest priority) - only if explicitly provided
         if let Some(server_port) = cli_args.server_port {

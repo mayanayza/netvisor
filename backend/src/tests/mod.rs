@@ -47,7 +47,7 @@ use uuid::Uuid;
 pub mod dependencies;
 
 pub const DAEMON_CONFIG_FIXTURE: &str = "src/tests/daemon_config.json";
-pub const SERVER_DB_FIXTURE: &str = "src/tests/netvisor.sql";
+pub const SERVER_DB_FIXTURE: &str = "src/tests/scanopy.sql";
 
 pub async fn setup_test_db() -> (PgPool, String, ContainerAsync<GenericImage>) {
     let postgres_image = GenericImage::new("postgres", "17-alpine")
@@ -55,14 +55,14 @@ pub async fn setup_test_db() -> (PgPool, String, ContainerAsync<GenericImage>) {
             "database system is ready to accept connections",
         ))
         .with_env_var("POSTGRES_PASSWORD", "password")
-        .with_env_var("POSTGRES_DB", "netvisor_test");
+        .with_env_var("POSTGRES_DB", "scanopy_test");
 
     let container = postgres_image.start().await.unwrap();
 
     let port = container.get_host_port_ipv4(5432).await.unwrap();
 
     let database_url = format!(
-        "postgresql://postgres:password@localhost:{}/netvisor_test",
+        "postgresql://postgres:password@localhost:{}/scanopy_test",
         port
     );
 

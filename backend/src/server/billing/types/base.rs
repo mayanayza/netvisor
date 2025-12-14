@@ -518,7 +518,7 @@ impl TypeMetadataProvider for BillingPlan {
     fn description(&self) -> &'static str {
         match self {
             BillingPlan::Community { .. } => {
-                "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations"
+                "Community plan for individuals self-hosting Scanopy - full control over configuration and integrations"
             }
             BillingPlan::Starter { .. } => {
                 "Automatically create living documentation of your network"
@@ -531,7 +531,7 @@ impl TypeMetadataProvider for BillingPlan {
                 "Manage multi-site and multi-customer documentation with advanced features"
             }
             BillingPlan::Enterprise { .. } => {
-                "Fully managed NetVisor with dedicated support and custom deployment"
+                "Fully managed Scanopy with dedicated support and custom deployment"
             }
             BillingPlan::Demo { .. } => "Demo mode",
             BillingPlan::CommercialSelfHosted { .. } => {

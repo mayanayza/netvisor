@@ -157,7 +157,7 @@
 		<DataControls
 			items={$subnets}
 			fields={subnetFields}
-			storageKey="netvisor-subnets-table-state"
+			storageKey="scanopy-subnets-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>
