@@ -1,5 +1,7 @@
 use email_address::EmailAddress;
-use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest, SetupRequest, SetupResponse};
+use netvisor::server::auth::r#impl::api::{
+    LoginRequest, RegisterRequest, SetupRequest, SetupResponse,
+};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::discovery::r#impl::types::DiscoveryType;
