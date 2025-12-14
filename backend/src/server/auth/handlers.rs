@@ -1,23 +1,32 @@
 use crate::server::{
-    api_keys,
+    api_keys::{
+        self,
+        r#impl::base::{ApiKey, ApiKeyBase},
+        service::generate_api_key_for_storage,
+    },
     auth::{
         r#impl::{
             api::{
-                ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
-                RegisterRequest, ResetPasswordRequest, UpdateEmailPasswordRequest,
+                DaemonSetupRequest, DaemonSetupResponse, ForgotPasswordRequest, LoginRequest,
+                OidcAuthorizeParams, OidcCallbackParams, RegisterRequest, ResetPasswordRequest,
+                SetupRequest, SetupResponse, UpdateEmailPasswordRequest,
             },
-            base::LoginRegisterParams,
-            oidc::{OidcFlow, OidcPendingAuth, OidcProviderMetadata},
+            base::{LoginRegisterParams, PendingDaemonSetup, PendingSetup},
+            oidc::{OidcFlow, OidcPendingAuth, OidcProviderMetadata, OidcRegisterParams},
         },
-        middleware::auth::AuthenticatedUser,
+        middleware::auth::{AuthenticatedEntity, AuthenticatedUser},
         oidc::OidcService,
     },
     config::AppState,
+    networks::r#impl::{Network, NetworkBase},
     organizations::handlers::process_pending_invite,
     shared::{
+        events::types::{TelemetryEvent, TelemetryOperation},
         services::traits::CrudService,
+        storage::traits::StorableEntity,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
+    topology::types::base::{Topology, TopologyBase},
     users::r#impl::base::User,
 };
 use axum::{
@@ -43,6 +52,8 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/me", post(get_current_user))
         .nest("/keys", api_keys::handlers::create_router())
         .route("/update", post(update_password_auth))
+        .route("/setup", post(setup))
+        .route("/daemon-setup", post(daemon_setup))
         .route("/oidc/providers", get(list_oidc_providers))
         .route("/oidc/{slug}/authorize", get(oidc_authorize))
         .route("/oidc/{slug}/callback", get(oidc_callback))
@@ -78,6 +89,7 @@ async fn register(
 
     let user_agent = user_agent.map(|u| u.to_string());
 
+    // Check for pending invite
     let (org_id, permissions, network_ids) = match process_pending_invite(&state, &session).await {
         Ok(Some((org_id, permissions, network_ids))) => {
             (Some(org_id), Some(permissions), network_ids)
@@ -89,6 +101,23 @@ async fn register(
                 e
             )));
         }
+    };
+
+    // Track if this is a new org (not an invite)
+    let is_new_org = org_id.is_none();
+
+    // Extract pending setup from session (only relevant for new orgs)
+    let pending_setup = if is_new_org {
+        extract_pending_setup(&session).await
+    } else {
+        None
+    };
+
+    // Extract pending daemon setup from session
+    let pending_daemon_setup = if is_new_org {
+        extract_pending_daemon_setup(&session).await
+    } else {
+        None
     };
 
     let user = state
@@ -103,6 +132,8 @@ async fn register(
                 user_agent,
                 network_ids,
             },
+            pending_setup.clone(),
+            billing_enabled,
         )
         .await?;
 
@@ -111,7 +142,231 @@ async fn register(
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to save session: {}", e)))?;
 
+    // If this is a new org and setup was provided, create network/topology/daemon
+    if is_new_org && let Some(setup) = pending_setup {
+        // Apply setup: create network, seed data, topology, daemon
+        apply_pending_setup(&state, &user, setup, pending_daemon_setup).await?;
+
+        // Clear pending setup data from session
+        clear_pending_setup(&session).await;
+    }
+
     Ok(Json(ApiResponse::success(user)))
+}
+
+/// Store pre-registration setup data (org name, network name, seed preference) in session
+async fn setup(
+    session: Session,
+    Json(request): Json<SetupRequest>,
+) -> ApiResult<Json<ApiResponse<SetupResponse>>> {
+    // Validate request
+    if request.organization_name.trim().is_empty() {
+        return Err(ApiError::bad_request("Organization name is required"));
+    }
+    if request.network_name.trim().is_empty() {
+        return Err(ApiError::bad_request("Network name is required"));
+    }
+    if request.organization_name.len() > 100 {
+        return Err(ApiError::bad_request(
+            "Organization name must be 100 characters or less",
+        ));
+    }
+    if request.network_name.len() > 100 {
+        return Err(ApiError::bad_request(
+            "Network name must be 100 characters or less",
+        ));
+    }
+
+    // Generate a provisional network ID
+    let network_id = Uuid::new_v4();
+
+    // Store setup data in session
+    let pending_setup = PendingSetup {
+        org_name: request.organization_name.trim().to_string(),
+        network_name: request.network_name.trim().to_string(),
+        network_id,
+        seed_data: request.populate_seed_data,
+    };
+
+    session
+        .insert("pending_setup", pending_setup)
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to save setup data: {}", e)))?;
+
+    Ok(Json(ApiResponse::success(SetupResponse { network_id })))
+}
+
+/// Store pre-registration daemon setup data in session and generate provisional API key
+async fn daemon_setup(
+    session: Session,
+    Json(request): Json<DaemonSetupRequest>,
+) -> ApiResult<Json<ApiResponse<DaemonSetupResponse>>> {
+    // Validate request
+    if request.daemon_name.trim().is_empty() {
+        return Err(ApiError::bad_request("Daemon name is required"));
+    }
+
+    // Generate a provisional API key (raw key to show user)
+    let (api_key_raw, _) = crate::server::api_keys::service::generate_api_key_for_storage();
+
+    // Store daemon setup data in session
+    let pending_daemon_setup = PendingDaemonSetup {
+        daemon_name: request.daemon_name.trim().to_string(),
+        api_key_raw: api_key_raw.clone(),
+    };
+
+    session
+        .insert("pending_daemon_setup", pending_daemon_setup)
+        .await
+        .map_err(|e| {
+            ApiError::internal_error(&format!("Failed to save daemon setup data: {}", e))
+        })?;
+
+    Ok(Json(ApiResponse::success(DaemonSetupResponse {
+        api_key: api_key_raw,
+    })))
+}
+
+/// Extract pending setup data from session
+pub async fn extract_pending_setup(session: &Session) -> Option<PendingSetup> {
+    session.get("pending_setup").await.ok().flatten()
+}
+
+/// Extract pending daemon setup data from session
+pub async fn extract_pending_daemon_setup(session: &Session) -> Option<PendingDaemonSetup> {
+    session.get("pending_daemon_setup").await.ok().flatten()
+}
+
+/// Clear all pending setup data from session
+pub async fn clear_pending_setup(session: &Session) {
+    let _ = session.remove::<PendingSetup>("pending_setup").await;
+    let _ = session
+        .remove::<PendingDaemonSetup>("pending_daemon_setup")
+        .await;
+}
+
+/// Apply pending setup after user registration: create network, topology, seed data, and daemon
+/// Note: Org name, onboarding status, and billing plan are now set in provision_user
+async fn apply_pending_setup(
+    state: &Arc<AppState>,
+    user: &User,
+    setup: PendingSetup,
+    daemon_setup: Option<PendingDaemonSetup>,
+) -> Result<(), ApiError> {
+    let organization_id = user.base.organization_id;
+    let auth_entity: AuthenticatedEntity = user.clone().into();
+
+    // Create network with the setup network name and pre-generated ID
+    let mut network = Network::new(NetworkBase::new(organization_id));
+    network.id = setup.network_id; // Use pre-generated ID from setup step
+    network.base.name = setup.network_name;
+
+    let network = state
+        .services
+        .network_service
+        .create(network, auth_entity.clone())
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to create network: {}", e)))?;
+
+    // Seed default data if requested
+    if setup.seed_data {
+        state
+            .services
+            .network_service
+            .seed_default_data(network.id, auth_entity.clone())
+            .await
+            .map_err(|e| ApiError::internal_error(&format!("Failed to seed data: {}", e)))?;
+    }
+
+    // Create default topology
+    let topology = Topology::new(TopologyBase::new("My Topology".to_string(), network.id));
+    state
+        .services
+        .topology_service
+        .create(topology, auth_entity.clone())
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to create topology: {}", e)))?;
+
+    // Handle daemon setup if present
+    if let Some(daemon) = daemon_setup {
+        // Hash the raw API key and create the API key record
+        let hashed_key = crate::server::api_keys::service::hash_api_key(&daemon.api_key_raw);
+
+        state
+            .services
+            .api_key_service
+            .create(
+                ApiKey::new(ApiKeyBase {
+                    key: hashed_key,
+                    name: format!("{} API Key", daemon.daemon_name),
+                    last_used: None,
+                    expires_at: None,
+                    network_id: network.id,
+                    is_enabled: true,
+                    tags: Vec::new(),
+                }),
+                AuthenticatedEntity::System,
+            )
+            .await
+            .map_err(|e| ApiError::internal_error(&format!("Failed to create API key: {}", e)))?;
+
+        // Note: Daemon will auto-register when it connects with the API key
+        // No need to create daemon record here - it will be created on first registration
+    }
+
+    // Handle integrated daemon if configured (existing behavior)
+    if let Some(integrated_daemon_url) = &state.config.integrated_daemon_url {
+        let (plaintext, hashed) = generate_api_key_for_storage();
+
+        state
+            .services
+            .api_key_service
+            .create(
+                ApiKey::new(ApiKeyBase {
+                    key: hashed,
+                    name: "Integrated Daemon API Key".to_string(),
+                    last_used: None,
+                    expires_at: None,
+                    network_id: network.id,
+                    is_enabled: true,
+                    tags: Vec::new(),
+                }),
+                AuthenticatedEntity::System,
+            )
+            .await
+            .map_err(|e| {
+                ApiError::internal_error(&format!("Failed to create integrated daemon key: {}", e))
+            })?;
+
+        state
+            .services
+            .daemon_service
+            .initialize_local_daemon(integrated_daemon_url.clone(), network.id, plaintext)
+            .await
+            .map_err(|e| {
+                ApiError::internal_error(&format!("Failed to initialize local daemon: {}", e))
+            })?;
+    }
+
+    // Publish telemetry event
+    state
+        .services
+        .event_bus
+        .publish_telemetry(TelemetryEvent {
+            id: Uuid::new_v4(),
+            organization_id,
+            operation: TelemetryOperation::OnboardingModalCompleted,
+            timestamp: Utc::now(),
+            authentication: auth_entity,
+            metadata: serde_json::json!({
+                "is_onboarding_step": true,
+                "pre_registration_setup": true
+            }),
+        })
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to publish telemetry: {}", e)))?;
+
+    Ok(())
 }
 
 async fn login(
@@ -680,14 +935,29 @@ async fn handle_register_flow(
         }
     };
 
+    // Track if this is a new org (not an invite)
+    let is_new_org = org_id.is_none();
+
+    // Extract pending setup from session (only relevant for new orgs)
+    let pending_setup = if is_new_org {
+        extract_pending_setup(&session).await
+    } else {
+        None
+    };
+
+    // Extract pending daemon setup from session
+    let pending_daemon_setup = if is_new_org {
+        extract_pending_daemon_setup(&session).await
+    } else {
+        None
+    };
+
+    let billing_enabled = state.config.stripe_secret.is_some();
+
     // Register user
     match oidc_service
         .register(
-            slug,
-            code,
             pending_auth,
-            subscribed,
-            terms_accepted_at,
             LoginRegisterParams {
                 org_id,
                 permissions,
@@ -695,6 +965,14 @@ async fn handle_register_flow(
                 user_agent,
                 network_ids,
             },
+            OidcRegisterParams {
+                subscribed,
+                terms_accepted_at,
+                billing_enabled,
+                provider_slug: slug,
+                code,
+            },
+            pending_setup.clone(),
         )
         .await
     {
@@ -707,6 +985,21 @@ async fn handle_register_flow(
                     return_url,
                     urlencoding::encode(&format!("Failed to create session: {}", e))
                 )));
+            }
+
+            // If this is a new org and setup was provided, apply it
+            if is_new_org {
+                if let Some(setup) = pending_setup
+                    && let Err(e) =
+                        apply_pending_setup(&state, &user, setup, pending_daemon_setup).await
+                {
+                    tracing::error!("Failed to apply pending setup: {:?}", e);
+                    // Don't fail registration, just log the error
+                    // The user can complete onboarding manually
+                }
+
+                // Clear pending setup data from session
+                clear_pending_setup(&session).await;
             }
 
             // Clear OIDC session data

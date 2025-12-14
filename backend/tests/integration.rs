@@ -1,5 +1,7 @@
 use email_address::EmailAddress;
-use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
+use netvisor::server::auth::r#impl::api::{
+    LoginRequest, RegisterRequest, SetupRequest, SetupResponse,
+};
 use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use netvisor::server::daemons::r#impl::base::Daemon;
 use netvisor::server::discovery::r#impl::types::DiscoveryType;
@@ -9,7 +11,6 @@ use netvisor::server::organizations::r#impl::base::Organization;
 
 use netvisor::server::services::definitions::home_assistant::HomeAssistant;
 use netvisor::server::services::r#impl::base::Service;
-use netvisor::server::shared::handlers::factory::OnboardingRequest;
 use netvisor::server::shared::storage::traits::StorableEntity;
 use netvisor::server::shared::types::api::ApiResponse;
 use netvisor::server::shared::types::metadata::HasId;
@@ -185,21 +186,17 @@ impl TestClient {
             .await
     }
 
-    /// Onboarding request
-    async fn onboard_request(&self) -> Result<Organization, String> {
+    /// Pre-registration setup request (stores org/network config in session)
+    async fn setup(&self, request: &SetupRequest) -> Result<SetupResponse, String> {
         let response = self
             .client
-            .post(format!("{}/api/onboarding", BASE_URL))
-            .json(&OnboardingRequest {
-                organization_name: "My Organization".to_string(),
-                network_name: "My Network".to_string(),
-                populate_seed_data: true,
-            })
+            .post(format!("{}/api/auth/setup", BASE_URL))
+            .json(request)
             .send()
             .await
-            .map_err(|e| format!("POST /onboarding failed: {}", e))?;
+            .map_err(|e| format!("POST /auth/setup failed: {}", e))?;
 
-        self.parse_response(response, "POST /onboarding").await
+        self.parse_response(response, "POST /auth/setup").await
     }
 
     /// Parse API response
@@ -279,7 +276,24 @@ async fn setup_authenticated_user(client: &TestClient) -> Result<User, String> {
 
     let test_email: EmailAddress = EmailAddress::new_unchecked("user@gmail.com");
 
-    // Try to register
+    // Call setup endpoint first (stores org/network config in session)
+    // This must be done before register for the new onboarding flow
+    let setup_request = SetupRequest {
+        organization_name: "My Organization".to_string(),
+        network_name: "My Network".to_string(),
+        populate_seed_data: true,
+    };
+
+    match client.setup(&setup_request).await {
+        Ok(response) => {
+            println!("✅ Setup completed, network_id: {}", response.network_id);
+        }
+        Err(e) => {
+            println!("⚠️  Setup failed (may already be registered): {}", e);
+        }
+    }
+
+    // Try to register (will create user, org, network using setup data from session)
     match client.register(&test_email, TEST_PASSWORD).await {
         Ok(user) => {
             println!("✅ Registered new user: {}", user.base.email);
@@ -299,15 +313,6 @@ async fn wait_for_organization(client: &TestClient) -> Result<Organization, Stri
         let organization: Option<Organization> = client.get("/api/organizations").await?;
 
         organization.ok_or_else(|| "No networks found yet".to_string())
-    })
-    .await
-}
-
-async fn onboard(client: &TestClient) -> Result<(), String> {
-    retry("wait for organization to be created", 15, 2, || async {
-        let _org = client.onboard_request().await?;
-
-        Ok(())
     })
     .await
 }
@@ -474,19 +479,14 @@ async fn test_full_integration() {
         .expect("Failed to authenticate user");
     println!("✅ Authenticated as: {}", user.base.email);
 
-    // Wait for organization
+    // Wait for organization (created during registration with setup data)
     println!("\n=== Waiting for Organization ===");
     let organization = wait_for_organization(&client)
         .await
         .expect("Failed to find organization");
     println!("✅ Organization: {}", organization.base.name);
 
-    // Onboard
-    println!("\n=== Onboarding ===");
-    onboard(&client).await.expect("Failed to onboard");
-    println!("✅ Onboarded");
-
-    // Wait for network
+    // Wait for network (created during registration with setup data)
     println!("\n=== Waiting for Network ===");
     let network = wait_for_network(&client)
         .await

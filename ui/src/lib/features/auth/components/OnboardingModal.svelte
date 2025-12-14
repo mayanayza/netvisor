@@ -11,11 +11,15 @@
 	let {
 		isOpen = false,
 		onClose,
-		onSubmit
+		onSubmit,
+		onSwitchToLogin = null,
+		showLoginLink = false
 	}: {
 		isOpen: boolean;
 		onClose: () => void;
 		onSubmit: (formData: OnboardingRequest) => void;
+		onSwitchToLogin?: (() => void) | null;
+		showLoginLink?: boolean;
 	} = $props();
 
 	let loading = false;
@@ -51,10 +55,10 @@
 
 <EditModal
 	{isOpen}
-	title="Welcome to NetVisor"
+	title="Let's start mapping your network!"
 	{loading}
 	centerTitle={true}
-	saveLabel="Get Started"
+	saveLabel="Continue"
 	showCancel={false}
 	showCloseButton={false}
 	onSave={() => onSubmit(formData)}
@@ -75,7 +79,7 @@
 			id="organizationName"
 			{formApi}
 			placeholder="My Organization"
-			helpText="This will be the name of your organization (you can change it later)"
+			helpText="Enter the name of your organization (you can change it later)"
 			required={true}
 			field={organizationName}
 		/>
@@ -85,13 +89,13 @@
 			id="networkName"
 			{formApi}
 			placeholder="My Network"
-			helpText="This will be the name of your first network (you can change it later)"
+			helpText="Enter the name of your first network (you can change it later)"
 			required={true}
 			field={networkName}
 		/>
 
 		<Checkbox
-			label="Populate with baseline data"
+			label="Populate with baseline data (recommended)"
 			helpText="NetVisor will create two subnets - one representing a remote network, one representing
 						the internet - to help you organize services which are not discoverable on your own
 						network, and three hosts with example services to help you understand how NetVisor
@@ -105,15 +109,28 @@
 	<!-- Custom footer -->
 	<svelte:fragment slot="footer">
 		<div class="flex w-full flex-col gap-4">
-			<!-- Get Started Button -->
+			<!-- Continue Button -->
 			<button
 				type="button"
 				disabled={loading}
 				onclick={() => onSubmit(formData)}
 				class="btn-primary w-full"
 			>
-				{loading ? 'Setting up...' : 'Get Started'}
+				{loading ? 'Setting up...' : 'Continue'}
 			</button>
+
+			{#if showLoginLink && onSwitchToLogin}
+				<p class="text-secondary text-center text-sm">
+					Already have an account?
+					<button
+						type="button"
+						onclick={onSwitchToLogin}
+						class="font-medium text-blue-400 hover:text-blue-300"
+					>
+						Log in here
+					</button>
+				</p>
+			{/if}
 		</div>
 	</svelte:fragment>
 </EditModal>

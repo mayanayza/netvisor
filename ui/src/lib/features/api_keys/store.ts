@@ -81,7 +81,7 @@ export function createEmptyApiKeyFormData(): ApiKey {
 		updated_at: utcTimeZoneSentinel,
 		expires_at: null,
 		last_used: null,
-		network_id: get(networks)[0].id || '',
+		network_id: get(networks)[0]?.id || '',
 		key: '',
 		is_enabled: true,
 		tags: []
