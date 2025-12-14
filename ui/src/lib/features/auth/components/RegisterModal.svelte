@@ -108,7 +108,11 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
+		<img
+			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+			alt="Scanopy Logo"
+			class="h-8 w-8"
+		/>
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}
@@ -145,7 +149,7 @@
 			<div class="flex flex-grow flex-col items-center gap-2">
 				{#if enableTermsCheckbox}
 					<Checkbox
-						label="I agree to the <a class='text-link' target='_blank' href='https://netvisor.io/terms'>terms</a> and <a target='_blank' class='text-link'href='https://netvisor.io/privacy'>privacy policy</a>"
+						label="I agree to the <a class='text-link' target='_blank' href='https://scanopy.net/terms'>terms</a> and <a target='_blank' class='text-link'href='https://scanopy.net/privacy'>privacy policy</a>"
 						helpText=""
 						{formApi}
 						required={true}

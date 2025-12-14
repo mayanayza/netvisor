@@ -1,13 +1,13 @@
 .PHONY: help build test clean format
 
 help:
-	@echo "NetVisor Development Commands"
+	@echo "Scanopy Development Commands"
 	@echo ""
 	@echo "  make fresh-db       - Clean and set up a new database"
 	@echo "  make setup-db       - Set up database"
 	@echo "  make clean-db       - Clean up database"
 	@echo "  make clean-daemon   - Remove daemon config file"
-	@echo "  make dump-db        - Dump database to /netvisor"
+	@echo "  make dump-db        - Dump database to /scanopy"
 	@echo "  make dev-server     - Start server dev environment"
 	@echo "  make dev-ui         - Start ui"
 	@echo "  make dev-daemon     - Start daemon dev environment"
@@ -30,27 +30,27 @@ fresh-db:
 setup-db:
 	@echo "Setting up PostgreSQL..."
 	@docker run -d \
-		--name netvisor-postgres \
+		--name scanopy-postgres \
 		-e POSTGRES_USER=postgres \
 		-e POSTGRES_PASSWORD=password \
-		-e POSTGRES_DB=netvisor \
+		-e POSTGRES_DB=scanopy \
 		-p 5432:5432 \
 		postgres:17-alpine || echo "Already running"
 	@sleep 3
 	@echo "PostgreSQL ready at localhost:5432"
 
 clean-db:
-	docker stop netvisor-postgres || true
-	docker rm netvisor-postgres || true
+	docker stop scanopy-postgres || true
+	docker rm scanopy-postgres || true
 
 clean-daemon:
-	rm -rf ~/Library/Application\ Support/com.netvisor.daemon
+	rm -rf ~/Library/Application\ Support/com.scanopy.daemon
 
 dump-db:
-	docker exec -t netvisor-postgres pg_dump -U postgres -d netvisor > ~/dev/netvisor/netvisor.sql  
+	docker exec -t scanopy-postgres pg_dump -U postgres -d scanopy > ~/dev/scanopy/scanopy.sql  
 
 dev-server:
-	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor" && \
+	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy" && \
 	cd backend && cargo run --bin server -- --log-level debug --public-url http://localhost:60072
 
 dev-daemon:
@@ -74,18 +74,18 @@ dev-down:
 
 build:
 	@echo "Building Server + UI Docker image..."
-	docker build -f backend/Dockerfile -t mayanayza/netvisor-server:latest .
-	@echo "✓ Server image built: mayanayza/netvisor-server:latest"
+	docker build -f backend/Dockerfile -t mayanayza/scanopy-server:latest .
+	@echo "✓ Server image built: mayanayza/scanopy-server:latest"
 	@echo ""
 	@echo "Building Daemon Docker image..."
-	docker build -f backend/Dockerfile.daemon -t mayanayza/netvisor-daemon:latest ./backend
-	@echo "✓ Daemon image built: mayanayza/netvisor-daemon:latest"
+	docker build -f backend/Dockerfile.daemon -t mayanayza/scanopy-daemon:latest ./backend
+	@echo "✓ Daemon image built: mayanayza/scanopy-daemon:latest"
 
 test:
 	cd ui && npx vite-node scripts/export-daemon-field-defs.ts > ../backend/src/tests/daemon-config-frontend-fields.json
 	make dev-down
 	rm -rf ./data/daemon_config/*
-	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test" && \
+	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy_test" && \
 	cd backend && cargo test -- --nocapture --test-threads=1
 
 format:

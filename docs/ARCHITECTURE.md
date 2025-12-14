@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Technical overview of NetVisor's system design, components, and technology stack.
+Technical overview of Scanopy's system design, components, and technology stack.
 
 ## Table of Contents
 
@@ -224,4 +224,4 @@ Technical overview of NetVisor's system design, components, and technology stack
 ```
 ---
 
-**For implementation details**, see the [source code](https://github.com/netvisor-io/netvisor).
+**For implementation details**, see the [source code](https://github.com/scanopy/scanopy).

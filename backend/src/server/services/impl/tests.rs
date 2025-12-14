@@ -615,7 +615,7 @@ async fn test_service_definition_logo_urls_resolve() {
 
         // Check if it's a local file path or external URL
         if logo_url.starts_with('/') {
-            // Local file path like /logos/netvisor-logo.png
+            // Local file path like /logos/scanopy-logo.png
             assert!(
                 logo_url.starts_with("/logos/"),
                 "Service '{}' has local logo URL '{}' that doesn't start with /logos/",

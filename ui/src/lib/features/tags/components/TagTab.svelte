@@ -130,7 +130,7 @@
 			items={$tags}
 			fields={tagFields}
 			{allowBulkDelete}
-			storageKey="netvisor-tags-table-state"
+			storageKey="scanopy-tags-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>

@@ -84,7 +84,7 @@
 
 <EditModal
 	{isOpen}
-	title="Sign in to NetVisor"
+	title="Sign in to Scanopy"
 	loading={$loading}
 	centerTitle={true}
 	saveLabel="Sign In"
@@ -99,7 +99,11 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
+		<img
+			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+			alt="Scanopy Logo"
+			class="h-8 w-8"
+		/>
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}

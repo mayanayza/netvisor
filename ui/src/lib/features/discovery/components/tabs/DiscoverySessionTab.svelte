@@ -95,7 +95,7 @@
 		<DataControls
 			items={sessionsList}
 			fields={discoveryFields}
-			storageKey="netvisor-discovery-session-table-state"
+			storageKey="scanopy-discovery-session-table-state"
 			getItemId={(item) => item.session_id}
 		>
 			{#snippet children(item: DiscoveryUpdatePayload, viewMode: 'card' | 'list')}

@@ -327,7 +327,7 @@ pub mod wizarr;
 
 // ============= SPECIAL =============
 
-// Netvisor
-pub mod netvisor_daemon;
-pub mod netvisor_server;
+// Scanopy
 pub mod open_ports;
+pub mod scanopy_daemon;
+pub mod scanopy_server;

@@ -1,6 +1,6 @@
 use axum::{Router, http::Method};
 use clap::Parser;
-use netvisor::{
+use scanopy::{
     daemon::{
         runtime::types::DaemonAppState,
         shared::{
@@ -36,13 +36,13 @@ async fn async_main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(format!(
-            "netvisor={},daemon={}",
+            "scanopy={},daemon={}",
             config.log_level, config.log_level
         )))
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("🤖 NetVisor Daemon v{}", env!("CARGO_PKG_VERSION"));
+    tracing::info!("🤖 Scanopy Daemon v{}", env!("CARGO_PKG_VERSION"));
 
     let (_, path) = AppConfig::get_config_path()?;
     let path_str = path

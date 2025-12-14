@@ -101,7 +101,7 @@
 		}
 	}
 
-	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/install.sh)"`;
+	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/scanopy/scanopy/refs/heads/main/install.sh)"`;
 
 	$: runCommand = buildRunCommand(serverUrl, selectedNetworkId, key, $values, daemon);
 	$: dockerCompose = key
@@ -115,7 +115,7 @@
 		values: Record<string, string | number | boolean>,
 		daemon: Daemon | null
 	): string {
-		let cmd = `sudo netvisor-daemon --server-url ${serverUrl}`;
+		let cmd = `sudo scanopy-daemon --server-url ${serverUrl}`;
 
 		if (!daemon) {
 			cmd += ` --network-id ${networkId}`;
@@ -157,9 +157,9 @@
 		valids: Record<string, boolean>
 	): string {
 		const envVars: string[] = [
-			`NETVISOR_SERVER_URL=${serverUrl}`,
-			`NETVISOR_NETWORK_ID=${networkId}`,
-			`NETVISOR_DAEMON_API_KEY=${key}`
+			`SCANOPY_SERVER_URL=${serverUrl}`,
+			`SCANOPY_NETWORK_ID=${networkId}`,
+			`SCANOPY_DAEMON_API_KEY=${key}`
 		];
 
 		for (const def of fieldDefs) {
@@ -191,8 +191,8 @@
 		const lines = [
 			'services:',
 			'  daemon:',
-			'    image: mayanayza/netvisor-daemon:latest',
-			'    container_name: netvisor-daemon',
+			'    image: mayanayza/scanopy-daemon:latest',
+			'    container_name: scanopy-daemon',
 			'    network_mode: host',
 			'    privileged: true',
 			'    restart: unless-stopped',
@@ -381,7 +381,7 @@
 			<CodeContainer
 				language="bash"
 				expandable={false}
-				code={`- NETVISOR_DAEMON_API_KEY=${key}\n`}
+				code={`- SCANOPY_DAEMON_API_KEY=${key}\n`}
 			/>
 		{/if}
 	</div>

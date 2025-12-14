@@ -19,8 +19,8 @@ export const autoRebuild = writable<boolean>(false);
 export const selectedNode = writable<Node | null>(null);
 export const selectedEdge = writable<Edge | null>(null);
 
-const OPTIONS_STORAGE_KEY = 'netvisor_topology_options';
-const EXPANDED_STORAGE_KEY = 'netvisor_topology_options_expanded_state';
+const OPTIONS_STORAGE_KEY = 'scanopy_topology_options';
+const EXPANDED_STORAGE_KEY = 'scanopy_topology_options_expanded_state';
 
 // Default options
 const defaultOptions: TopologyOptions = {

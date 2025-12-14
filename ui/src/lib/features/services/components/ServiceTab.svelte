@@ -163,7 +163,7 @@
 		<DataControls
 			items={$services}
 			fields={serviceFields}
-			storageKey="netvisor-services-table-state"
+			storageKey="scanopy-services-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>

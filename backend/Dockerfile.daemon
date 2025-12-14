@@ -25,12 +25,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy release binary
-COPY --from=builder /app/target/release/daemon /usr/local/bin/netvisor-daemon
-RUN chmod +x /usr/local/bin/netvisor-daemon
+COPY --from=builder /app/target/release/daemon /usr/local/bin/scanopy-daemon
+RUN chmod +x /usr/local/bin/scanopy-daemon
 
 EXPOSE 60073
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:60073/api/health || exit 1
 
-CMD ["netvisor-daemon"]
+CMD ["scanopy-daemon"]

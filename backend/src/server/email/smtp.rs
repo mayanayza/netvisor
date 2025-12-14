@@ -33,7 +33,7 @@ impl SmtpEmailProvider {
             .build();
 
         let from = Mailbox::new(
-            Some("NetVisor".to_string()),
+            Some("Scanopy".to_string()),
             smtp_email
                 .parse()
                 .map_err(|e| anyhow!("Invalid from email address: {}", e))?,

@@ -2,7 +2,7 @@ use super::types::base::{BillingPlan, BillingRate, PlanConfig};
 
 const YEARLY_DISCOUNT: f32 = 0.2;
 
-/// Returns the canonical list of billing plans for NetVisor.
+/// Returns the canonical list of billing plans for Scanopy.
 /// This is the single source of truth for plan definitions.
 fn get_default_plans() -> Vec<BillingPlan> {
     vec![

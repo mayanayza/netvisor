@@ -118,7 +118,7 @@
 			items={$discoveries.filter((d) => d.run_type.type == 'Historical')}
 			{fields}
 			onBulkDelete={handleBulkDelete}
-			storageKey="netvisor-discovery-historical-table-state"
+			storageKey="scanopy-discovery-historical-table-state"
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

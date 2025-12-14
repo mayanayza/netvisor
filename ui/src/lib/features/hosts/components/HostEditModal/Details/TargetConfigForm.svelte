@@ -110,7 +110,7 @@
 				>
 			{/each}
 		</select>
-		<p class="text-tertiary text-xs">How should NetVisor display a link for this host?</p>
+		<p class="text-tertiary text-xs">How should Scanopy display a link for this host?</p>
 	</div>
 
 	<!-- Target Configuration -->

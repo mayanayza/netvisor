@@ -51,7 +51,7 @@
 
 		if (browser && posthogKey && !posthogInitialized) {
 			posthog.init(posthogKey, {
-				api_host: 'https://ph.netvisor.io',
+				api_host: 'https://ph.scanopy.net',
 				ui_host: 'https://us.posthog.com',
 				defaults: '2025-11-30',
 				secure_cookie: true,

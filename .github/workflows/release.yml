@@ -47,7 +47,7 @@ jobs:
         run: |
           make dev-down
           rm -rf ./data/daemon_config/*
-          export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test"
+          export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy_test"
           cd backend && cargo test --features generate-fixtures -- --nocapture --test-threads=1
 
       - name: Show container logs on test failure
@@ -62,7 +62,7 @@ jobs:
       
       - name: Update fixtures
         run: |
-          mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
+          mv backend/src/tests/scanopy-next.sql backend/src/tests/scanopy.sql
           mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
           mv ui/static/services-next.json ui/static/services.json
           mv docs/SERVICES-NEXT.md docs/SERVICES.md
@@ -79,7 +79,7 @@ jobs:
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
 
            # Stage fixture updates
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json ui/static/features.json
+          git add backend/src/tests/scanopy.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json ui/static/features.json
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
@@ -102,27 +102,27 @@ jobs:
           # Linux - musl for maximum compatibility
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            binary: netvisor-daemon-linux-amd64
+            binary: scanopy-daemon-linux-amd64
             use_cross: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            binary: netvisor-daemon-linux-arm64
+            binary: scanopy-daemon-linux-arm64
             use_cross: true
           
           # macOS - native builds
           - os: macos-latest
             target: x86_64-apple-darwin
-            binary: netvisor-daemon-darwin-amd64
+            binary: scanopy-daemon-darwin-amd64
             use_cross: false
           - os: macos-latest
             target: aarch64-apple-darwin
-            binary: netvisor-daemon-darwin-arm64
+            binary: scanopy-daemon-darwin-arm64
             use_cross: false
 
           # Windows - native builds
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: netvisor-daemon-windows-amd64.exe
+            binary: scanopy-daemon-windows-amd64.exe
             use_cross: false
     
     steps:
@@ -234,7 +234,7 @@ jobs:
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
           tags: |
-            mayanayza/netvisor-server:${{ steps.version.outputs.version }}
+            mayanayza/scanopy-server:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository }}/server:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -252,7 +252,7 @@ jobs:
             PUBLIC_SERVER_PORT=60072
             CARGO_FEATURES=commercial
           tags: |
-            mayanayza/netvisor-server-commercial:${{ steps.version.outputs.version }}
+            mayanayza/scanopy-server-commercial:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository }}/server-commercial:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -266,7 +266,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            mayanayza/netvisor-daemon:${{ steps.version.outputs.version }}
+            mayanayza/scanopy-daemon:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository }}/daemon:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -284,6 +284,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            netvisor-daemon-*/netvisor-daemon-*
+            scanopy-daemon-*/scanopy-daemon-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

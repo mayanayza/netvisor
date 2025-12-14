@@ -1,20 +1,20 @@
 use email_address::EmailAddress;
-use netvisor::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
-use netvisor::server::daemons::r#impl::api::DiscoveryUpdatePayload;
-use netvisor::server::daemons::r#impl::base::Daemon;
-use netvisor::server::discovery::r#impl::types::DiscoveryType;
-use netvisor::server::groups::r#impl::base::{Group, GroupBase};
-use netvisor::server::networks::r#impl::Network;
-use netvisor::server::organizations::r#impl::base::Organization;
+use scanopy::server::auth::r#impl::api::{LoginRequest, RegisterRequest};
+use scanopy::server::daemons::r#impl::api::DiscoveryUpdatePayload;
+use scanopy::server::daemons::r#impl::base::Daemon;
+use scanopy::server::discovery::r#impl::types::DiscoveryType;
+use scanopy::server::groups::r#impl::base::{Group, GroupBase};
+use scanopy::server::networks::r#impl::Network;
+use scanopy::server::organizations::r#impl::base::Organization;
 
-use netvisor::server::services::definitions::home_assistant::HomeAssistant;
-use netvisor::server::services::r#impl::base::Service;
-use netvisor::server::shared::handlers::factory::OnboardingRequest;
-use netvisor::server::shared::storage::traits::StorableEntity;
-use netvisor::server::shared::types::api::ApiResponse;
-use netvisor::server::shared::types::metadata::HasId;
-use netvisor::server::tags::r#impl::base::{Tag, TagBase};
-use netvisor::server::users::r#impl::base::User;
+use scanopy::server::services::definitions::home_assistant::HomeAssistant;
+use scanopy::server::services::r#impl::base::Service;
+use scanopy::server::shared::handlers::factory::OnboardingRequest;
+use scanopy::server::shared::storage::traits::StorableEntity;
+use scanopy::server::shared::types::api::ApiResponse;
+use scanopy::server::shared::types::metadata::HasId;
+use scanopy::server::tags::r#impl::base::{Tag, TagBase};
+use scanopy::server::users::r#impl::base::User;
 use serde::Serialize;
 use std::process::{Child, Command};
 use uuid::Uuid;
@@ -80,7 +80,7 @@ impl ContainerManager {
                 "down",
                 "-v",
                 "--rmi",
-                "local", // Only remove locally built images (netvisor-*), not pulled images
+                "local", // Only remove locally built images (scanopy-*), not pulled images
                 "--remove-orphans",
             ])
             .current_dir("..")
@@ -528,7 +528,7 @@ async fn test_full_integration() {
     println!("   ✓ Home Assistant discovered");
 }
 
-use netvisor::server::{
+use scanopy::server::{
     services::{
         definitions::ServiceDefinitionRegistry,
         r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt},
@@ -564,12 +564,12 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     let output = std::process::Command::new("docker")
         .args([
             "exec",
-            "netvisor-postgres-dev-1",
+            "scanopy-postgres-dev-1",
             "pg_dump",
             "-U",
             "postgres",
             "-d",
-            "netvisor",
+            "scanopy",
             "--clean",
             "--if-exists",
         ])
@@ -584,10 +584,10 @@ async fn generate_db_fixture() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let fixture_path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tests/netvisor-next.sql");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tests/scanopy-next.sql");
     std::fs::write(&fixture_path, output.stdout)?;
 
-    println!("✅ Generated netvisor-next.sql from test data");
+    println!("✅ Generated scanopy-next.sql from test data");
     Ok(())
 }
 
@@ -596,7 +596,7 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
     let find_output = std::process::Command::new("docker")
         .args([
             "exec",
-            "netvisor-daemon-1",
+            "scanopy-daemon-1",
             "find",
             "/root/.config",
             "-name",
@@ -626,7 +626,7 @@ async fn generate_daemon_config_fixture() -> Result<(), Box<dyn std::error::Erro
 
     // Now read the config file
     let output = std::process::Command::new("docker")
-        .args(["exec", "netvisor-daemon-1", "cat", &config_path])
+        .args(["exec", "scanopy-daemon-1", "cat", &config_path])
         .output()?;
 
     if !output.status.success() {
@@ -689,8 +689,8 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
     let mut categories: Vec<String> = by_category.keys().cloned().collect();
     categories.sort();
 
-    let mut markdown = String::from("# NetVisor Service Definitions\n\n");
-    markdown.push_str("This document lists all services that NetVisor can automatically discover and identify.\n\n");
+    let mut markdown = String::from("# Scanopy Service Definitions\n\n");
+    markdown.push_str("This document lists all services that Scanopy can automatically discover and identify.\n\n");
 
     for category in categories {
         let services = by_category.get(&category).unwrap();
@@ -760,9 +760,9 @@ async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> 
 }
 
 async fn generate_billing_plans_json() -> Result<(), Box<dyn std::error::Error>> {
-    use netvisor::server::billing::plans::get_website_fixture_plans;
-    use netvisor::server::billing::types::features::Feature;
-    use netvisor::server::shared::types::metadata::{MetadataProvider, TypeMetadata};
+    use scanopy::server::billing::plans::get_website_fixture_plans;
+    use scanopy::server::billing::types::features::Feature;
+    use scanopy::server::shared::types::metadata::{MetadataProvider, TypeMetadata};
     use strum::IntoEnumIterator;
 
     // Get all plans (monthly + yearly)

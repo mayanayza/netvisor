@@ -51,7 +51,7 @@
 
 <EditModal
 	{isOpen}
-	title="Welcome to NetVisor"
+	title="Welcome to Scanopy"
 	{loading}
 	centerTitle={true}
 	saveLabel="Get Started"
@@ -65,7 +65,11 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
+		<img
+			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+			alt="Scanopy Logo"
+			class="h-8 w-8"
+		/>
 	</svelte:fragment>
 
 	<!-- Content -->
@@ -92,9 +96,9 @@
 
 		<Checkbox
 			label="Populate with baseline data"
-			helpText="NetVisor will create two subnets - one representing a remote network, one representing
+			helpText="Scanopy will create two subnets - one representing a remote network, one representing
 						the internet - to help you organize services which are not discoverable on your own
-						network, and three hosts with example services to help you understand how NetVisor
+						network, and three hosts with example services to help you understand how Scanopy
 						works. You can delete this data at any time."
 			id="seedData"
 			field={seedDataField}

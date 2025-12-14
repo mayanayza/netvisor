@@ -66,7 +66,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn get_health() -> Json<ApiResponse<String>> {
     Json(ApiResponse::success(format!(
-        "NetVisor Server {}",
+        "Scanopy Server {}",
         env!("CARGO_PKG_VERSION")
     )))
 }

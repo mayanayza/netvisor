@@ -5,7 +5,7 @@ pub const EMAIL_HEADER: &str = r#"<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetVisor</title>
+    <title>Scanopy</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
@@ -15,7 +15,7 @@ pub const EMAIL_HEADER: &str = r#"<!DOCTYPE html>
                     <!-- Header with Logo -->
                     <tr>
                         <td align="center" style="padding: 40px 40px 30px 40px;">
-                            <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@master/png/netvisor.png" alt="NetVisor" style="width: 80px; height: 80px; display: block;">
+                            <img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy" style="width: 80px; height: 80px; display: block;">
                         </td>
                     </tr>
 "#;
@@ -32,14 +32,14 @@ pub const EMAIL_FOOTER: &str = r#"                    <!-- Footer -->
                                         </a>
                                     </td>
                                     <td style="padding: 0 10px;">
-                                        <a href="https://github.com/netvisor-io/netvisor" style="display: inline-block;">
+                                        <a href="https://github.com/scanopy/scanopy" style="display: inline-block;">
                                             <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@master/png/github.png" alt="GitHub" style="width: 24px; height: 24px; display: block;">
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             
-                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #9ca3af;">© 2025 NetVisor. All rights reserved.</p>
+                            <p style="margin: 0; font-size: 12px; line-height: 18px; color: #9ca3af;">© 2025 Scanopy. All rights reserved.</p>
                         </td>
                     </tr>
                 </table>
@@ -50,14 +50,14 @@ pub const EMAIL_FOOTER: &str = r#"                    <!-- Footer -->
 </html>
 "#;
 
-pub const PASSWORD_RESET_TITLE: &str = "NetVisor Password Reset";
+pub const PASSWORD_RESET_TITLE: &str = "Scanopy Password Reset";
 
 pub const PASSWORD_RESET_BODY: &str = r#"                    <!-- Main Content -->
                     <tr>
                         <td style="padding: 0 40px 20px 40px;">
                             <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">Reset Your Password</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">We received a request to reset your password for your NetVisor account. Click the button below to create a new password:</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">We received a request to reset your password for your Scanopy account. Click the button below to create a new password:</p>
                         </td>
                     </tr>
                     
@@ -87,9 +87,9 @@ pub const PASSWORD_RESET_BODY: &str = r#"                    <!-- Main Content -
 pub const INVITE_LINK_BODY: &str = r#"                    <!-- Main Content -->
                     <tr>
                         <td style="padding: 0 40px 20px 40px;">
-                            <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">You've Been Invited to NetVisor</h1>
+                            <h1 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #1a1a1a; text-align: center;">You've Been Invited to Scanopy</h1>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Hi there,</p>
-                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">{inviter_name} has invited you to join their NetVisor instance to visualize and explore their network infrastructure.</p>
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">{inviter_name} has invited you to join their Scanopy instance to visualize and explore their network infrastructure.</p>
                             <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 24px; color: #4a4a4a;">Click the button below to accept the invitation and create your account:</p>
                         </td>
                     </tr>
