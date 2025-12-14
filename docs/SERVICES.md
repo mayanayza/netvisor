@@ -291,12 +291,6 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5984/ contains "couchdb"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/denodo.svg" alt="CouchDB" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Denodo</td>
-<td style="padding: 12px; color: #d1d5db;">Data Virtualization</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (9999/tcp (VDP) is open, 9996/tcp (ODBC) is open, 9090/tcp (HTTP) is open, 9099/tcp (Web container) is open)</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/elasticsearch.svg" alt="Elasticsearch" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Elasticsearch</td>
 <td style="padding: 12px; color: #d1d5db;">Distributed search and analytics engine</td>
@@ -349,6 +343,12 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Redis</td>
 <td style="padding: 12px; color: #d1d5db;">In-memory data store and cache</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">6379/tcp is open</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png" alt="cAdvisor" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">cAdvisor</td>
+<td style="padding: 12px; color: #d1d5db;">Graph database</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/api/v1.0/containers/ contains "cAdvisor"</code></td>
 </tr>
 </tbody>
 </table>
@@ -1070,33 +1070,6 @@ This document lists all services that Scanopy can automatically discover and ide
 </tbody>
 </table>
 
-## Scanopy
-
-<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
-<thead>
-<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
-<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
-<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
-<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
-<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
-</tr>
-</thead>
-<tbody>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy Daemon API" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Scanopy Daemon API</td>
-<td style="padding: 12px; color: #d1d5db;">Scanopy Daemon API for network scanning</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60073/api/health contains "scanopy"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy Server API" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Scanopy Server API</td>
-<td style="padding: 12px; color: #d1d5db;">Scanopy Server API for network management</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60072/api/health contains "scanopy"</code></td>
-</tr>
-</tbody>
-</table>
-
 ## NetworkAccess
 
 <table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
@@ -1387,6 +1360,33 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Tyk</td>
 <td style="padding: 12px; color: #d1d5db;">API gateway</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response status is between 200 and 300, and response body from <ip>:8080/hello contains "tyk"</code></td>
+</tr>
+</tbody>
+</table>
+
+## Scanopy
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy Daemon" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Scanopy Daemon</td>
+<td style="padding: 12px; color: #d1d5db;">Automatically discover and visually document network infrastructure</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60073/api/health contains "scanopy"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png" alt="Scanopy Server" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Scanopy Server</td>
+<td style="padding: 12px; color: #d1d5db;">Automatically discover and visually document network infrastructure</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:60072/api/health contains "scanopy"</code></td>
 </tr>
 </tbody>
 </table>

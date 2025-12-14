@@ -21,7 +21,7 @@
         "managed_deployment": false,
         "onboarding_call": false,
         "priority_support": false,
-        "remove_created_with": false,
+        "remove_created_with": true,
         "share_views": false,
         "webhooks": false,
         "whitelabeling": false
@@ -58,7 +58,7 @@
         "managed_deployment": false,
         "onboarding_call": false,
         "priority_support": false,
-        "remove_created_with": false,
+        "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
         "whitelabeling": false
@@ -169,7 +169,7 @@
         "managed_deployment": false,
         "onboarding_call": false,
         "priority_support": false,
-        "remove_created_with": false,
+        "remove_created_with": true,
         "share_views": false,
         "webhooks": false,
         "whitelabeling": false
@@ -206,7 +206,7 @@
         "managed_deployment": false,
         "onboarding_call": false,
         "priority_support": false,
-        "remove_created_with": false,
+        "remove_created_with": true,
         "share_views": true,
         "webhooks": false,
         "whitelabeling": false

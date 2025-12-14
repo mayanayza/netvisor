@@ -603,6 +603,15 @@
     "name": "CoolerControl"
   },
   {
+    "category": "Database",
+    "color": "gray",
+    "description": "Graph database",
+    "discovery_pattern": "Endpoint response body from <ip>:8080/api/v1.0/containers/ contains \"cAdvisor\"",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png",
+    "name": "cAdvisor"
+  },
+  {
     "category": "Monitoring",
     "color": "orange",
     "description": "APC Network-Connected UPS",
@@ -1150,6 +1159,15 @@
     "logo_needs_white_background": false,
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
     "name": "Docker Swarm"
+  },
+  {
+    "category": "Virtualization",
+    "color": "indigo",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   },
   {
     "category": "Virtualization",
@@ -1870,14 +1888,5 @@
     "logo_needs_white_background": false,
     "logo_url": "",
     "name": "Dhcp Server"
-  },
-  {
-    "category": "Virtualization",
-    "color": "indigo",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_needs_white_background": false,
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
   }
 ]
