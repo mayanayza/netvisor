@@ -222,8 +222,8 @@ impl DaemonRuntimeService {
         let registration_request = DaemonRegistrationRequest {
             daemon_id,
             network_id,
-            url,
-            name,
+            url: url.clone(),
+            name: name.clone(),
             mode,
             capabilities: DaemonCapabilities {
                 has_docker_socket,
@@ -233,22 +233,69 @@ impl DaemonRuntimeService {
 
         tracing::info!(daemon_id = %daemon_id, "Sending register request");
 
-        let response: DaemonRegistrationResponse = self
-            .api_client
-            .post(
-                "/api/daemons/register",
-                &registration_request,
-                "Registration failed",
-            )
-            .await?;
+        // Retry loop for handling pending API keys (pre-registration setup flow)
+        // First attempt immediately, then wait 10s (user fills form), then exponential backoff: 1, 2, 4, 8...
+        // Caps at heartbeat_interval
+        let heartbeat_interval = config.get_heartbeat_interval().await?;
+        let mut attempt = 0;
 
-        config.set_host_id(response.host_id).await?;
+        loop {
+            attempt += 1;
 
-        tracing::info!(
-            "Successfully registered with server, assigned ID: {}",
-            response.daemon.id
-        );
+            let result: Result<DaemonRegistrationResponse, _> = self
+                .api_client
+                .post(
+                    "/api/daemons/register",
+                    &registration_request,
+                    "Registration failed",
+                )
+                .await;
 
-        Ok(())
+            match result {
+                Ok(response) => {
+                    config.set_host_id(response.host_id).await?;
+                    tracing::info!(
+                        "Successfully registered with server, assigned ID: {}",
+                        response.daemon.id
+                    );
+                    return Ok(());
+                }
+                Err(e) => {
+                    let error_str = e.to_string();
+
+                    // Check if this is an "Invalid API key" error
+                    // This can happen when daemon is installed before user completes registration
+                    if error_str.contains("Invalid API key") || error_str.contains("HTTP 401") {
+                        // Calculate retry delay:
+                        // Attempt 1 failed -> wait 10s (user filling out registration form)
+                        // Attempt 2 failed -> wait 1s
+                        // Attempt 3 failed -> wait 2s
+                        // Attempt 4 failed -> wait 4s, etc.
+                        // Capped at heartbeat_interval
+                        let retry_secs = if attempt == 1 {
+                            10 // Initial wait for user to complete registration
+                        } else {
+                            // Exponential backoff: 1, 2, 4, 8, 16...
+                            (1u64 << (attempt - 2)).min(heartbeat_interval)
+                        };
+
+                        tracing::warn!(
+                            daemon_id = %daemon_id,
+                            attempt = %attempt,
+                            "API key not yet active. This daemon was likely installed before account \
+                             registration was completed. Waiting for account creation... \
+                             Retrying in {} seconds.",
+                            retry_secs
+                        );
+
+                        tokio::time::sleep(Duration::from_secs(retry_secs)).await;
+                        continue;
+                    }
+
+                    // For other errors, fail immediately
+                    return Err(e);
+                }
+            }
+        }
     }
 }

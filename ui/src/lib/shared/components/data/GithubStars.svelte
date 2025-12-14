@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Star } from 'lucide-svelte';
+	import { Star, Github } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { api } from '$lib/shared/utils/api';
 	import { writable } from 'svelte/store';
@@ -47,19 +47,25 @@
 
 {#if !loading && !error && $stars != null && $stars != undefined}
 	<a
-		href="https://github.com/netvisor-io/netvisor"
+		href="https://github.com/scanopy/scanopy"
 		target="_blank"
 		rel="noopener noreferrer"
-		class="inline-flex items-center gap-1.5 rounded-md border border-gray-600 bg-gray-700/50 px-3 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:border-gray-500 hover:bg-gray-700 {className}"
+		class="card inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-gray-300 transition-all hover:border-gray-600 hover:bg-gray-700/80 {className}"
 	>
-		<Star class="h-4 w-4 fill-yellow-400 text-yellow-400" />
-		<span>{formatStars($stars)}</span>
+		<Github class="h-4 w-4" />
+		<span class="flex items-center gap-1">
+			<Star class="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+			<span>{formatStars($stars)}</span>
+		</span>
 	</a>
 {:else if loading}
 	<div
-		class="inline-flex items-center gap-1.5 rounded-md border border-gray-600 bg-gray-700/50 px-3 py-1.5 text-sm {className}"
+		class="card inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-gray-400 {className}"
 	>
-		<Star class="h-4 w-4 text-gray-500" />
-		<span class="text-gray-500">...</span>
+		<Github class="h-4 w-4" />
+		<span class="flex items-center gap-1">
+			<Star class="h-3.5 w-3.5" />
+			<span>...</span>
+		</span>
 	</div>
 {/if}
