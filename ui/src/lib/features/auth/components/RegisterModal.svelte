@@ -16,15 +16,13 @@
 		invitedBy = null,
 		isOpen = false,
 		onRegister,
-		onClose,
-		onSwitchToLogin = null
+		onClose
 	}: {
 		orgName?: string | null;
 		invitedBy?: string | null;
 		isOpen?: boolean;
 		onRegister: (data: RegisterRequest) => Promise<void> | void;
 		onClose: () => void;
-		onSwitchToLogin?: (() => void) | null;
 	} = $props();
 
 	const loading = loadData([getConfig]);
@@ -94,7 +92,7 @@
 
 <EditModal
 	{isOpen}
-	title="Create your account"
+	title="Create Account to Activate Daemon"
 	loading={registering || $loading}
 	centerTitle={true}
 	saveLabel="Create Account"
@@ -190,7 +188,7 @@
 							{#if provider.logo}
 								<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
 							{/if}
-							Sign up with {provider.name}
+							Create Account with {provider.name}
 						</button>
 					{/each}
 				</div>
@@ -207,18 +205,6 @@
 					/>
 				{/if}
 			</div>
-
-			<!-- Login Link -->
-			{#if onSwitchToLogin}
-				<div class="text-center">
-					<p class="text-sm text-gray-400">
-						Already have an account?
-						<button type="button" onclick={onSwitchToLogin} class="text-link">
-							Sign in here
-						</button>
-					</p>
-				</div>
-			{/if}
 		</div>
 	</svelte:fragment>
 </EditModal>

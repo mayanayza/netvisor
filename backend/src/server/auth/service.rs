@@ -3,7 +3,7 @@ use crate::server::{
     auth::{
         r#impl::{
             api::{LoginRequest, RegisterRequest},
-            base::{LoginRegisterParams, ProvisionUserParams},
+            base::{LoginRegisterParams, PendingSetup, ProvisionUserParams},
         },
         middleware::auth::{AuthenticatedEntity, AuthenticatedUser},
     },
@@ -74,6 +74,8 @@ impl AuthService {
         &self,
         request: RegisterRequest,
         params: LoginRegisterParams,
+        pending_setup: Option<PendingSetup>,
+        billing_enabled: bool,
     ) -> Result<User> {
         let LoginRegisterParams {
             org_id,
@@ -105,16 +107,20 @@ impl AuthService {
 
         // Provision user with password
         let user = self
-            .provision_user(ProvisionUserParams {
-                email: request.email,
-                password_hash: Some(hash_password(&request.password)?),
-                oidc_subject: None,
-                oidc_provider: None,
-                org_id,
-                permissions,
-                network_ids,
-                terms_accepted_at,
-            })
+            .provision_user(
+                ProvisionUserParams {
+                    email: request.email,
+                    password_hash: Some(hash_password(&request.password)?),
+                    oidc_subject: None,
+                    oidc_provider: None,
+                    org_id,
+                    permissions,
+                    network_ids,
+                    terms_accepted_at,
+                    billing_enabled,
+                },
+                pending_setup,
+            )
             .await?;
 
         self.event_bus
@@ -138,7 +144,13 @@ impl AuthService {
     }
 
     /// Core user provisioning logic - handles both password and OIDC registration
-    pub async fn provision_user(&self, params: ProvisionUserParams) -> Result<User> {
+    /// If pending_setup is provided, uses setup.org_name and marks OnboardingModalCompleted
+    /// If billing_enabled is false (self-hosted), sets default billing plan
+    pub async fn provision_user(
+        &self,
+        params: ProvisionUserParams,
+        pending_setup: Option<PendingSetup>,
+    ) -> Result<User> {
         let ProvisionUserParams {
             email,
             password_hash,
@@ -148,15 +160,36 @@ impl AuthService {
             permissions,
             network_ids,
             terms_accepted_at,
+            billing_enabled,
         } = params;
 
         let mut is_new_org = false;
 
-        // If being invited, use provied org ID, otherwise create a new one
+        // If being invited, use provided org ID, otherwise create a new one
         let organization_id = if let Some(org_id) = org_id {
             org_id
         } else {
             is_new_org = true;
+
+            // Use org name from setup if provided, otherwise default
+            let org_name = pending_setup
+                .as_ref()
+                .map(|s| s.org_name.clone())
+                .unwrap_or_else(|| "My Organization".to_string());
+
+            // Mark OnboardingModalCompleted if setup was provided (pre-registration setup flow)
+            let onboarding = if pending_setup.is_some() {
+                vec![TelemetryOperation::OnboardingModalCompleted]
+            } else {
+                vec![]
+            };
+
+            // Set billing plan if billing is disabled (self-hosted)
+            let plan = if !billing_enabled {
+                Some(crate::server::billing::types::base::BillingPlan::default())
+            } else {
+                None
+            };
 
             // Create new organization for this user
             let organization = self
@@ -164,10 +197,10 @@ impl AuthService {
                 .create(
                     Organization::new(OrganizationBase {
                         stripe_customer_id: None,
-                        name: "My Organization".to_string(),
-                        plan: None,
+                        name: org_name,
+                        plan,
                         plan_status: None,
-                        onboarding: vec![],
+                        onboarding,
                     }),
                     AuthenticatedEntity::System,
                 )

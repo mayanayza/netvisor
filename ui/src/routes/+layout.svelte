@@ -95,11 +95,27 @@
 		// Check authentication status and get public server config
 		await Promise.all([checkAuth(), getConfig()]);
 
-		// Redirect to auth page if not authenticated and not already there
+		// Redirect if not authenticated and not on an auth route
 		if (!$isAuthenticated) {
-			if ($page.url.pathname !== '/auth') {
-				// eslint-disable-next-line svelte/no-navigation-without-resolve
-				await goto(`${resolve('/auth')}${$page.url.search}`);
+			const isAuthRoute =
+				$page.url.pathname === '/auth' ||
+				$page.url.pathname === '/login' ||
+				$page.url.pathname === '/onboarding';
+
+			if (!isAuthRoute) {
+				// Check for password reset token - redirect to login with token
+				const token = $page.url.searchParams.get('token');
+				if (token) {
+					// eslint-disable-next-line svelte/no-navigation-without-resolve
+					await goto(`${resolve('/login')}?token=${token}`);
+				} else if (typeof localStorage !== 'undefined' && localStorage.getItem('hasAccount')) {
+					// Returning user (has logged in before) - redirect to login
+					await goto(resolve('/login'));
+				} else {
+					// New user - redirect to onboarding
+					// eslint-disable-next-line svelte/no-navigation-without-resolve
+					await goto(`${resolve('/onboarding')}${$page.url.search}`);
+				}
 			}
 		} else {
 			await getOrganization();

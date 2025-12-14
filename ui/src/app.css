@@ -161,7 +161,7 @@
 		@apply bg-black/70 p-4 backdrop-blur-sm;
 	}
 	.modal-page {
-		@apply fixed inset-0 z-50 flex items-center justify-center overscroll-contain;
+		@apply fixed inset-0 z-50 flex items-center justify-center overscroll-contain py-16;
 	}
 
 	.modal-container {
