@@ -1,8 +1,11 @@
 use crate::server::auth::r#impl::oidc::OidcProviderMetadata;
+use crate::server::shared::types::api::ApiResponse;
 use crate::server::{
     auth::r#impl::oidc::OidcProviderConfig, shared::services::factory::ServiceFactory,
 };
 use anyhow::{Error, Result};
+use axum::Json;
+use axum::extract::State;
 use clap::Parser;
 use figment::{
     Figment,
@@ -83,6 +86,10 @@ pub struct ServerCli {
     /// List of OIDC providers
     #[arg(long)]
     pub oidc_providers: Option<String>,
+
+    /// List of OIDC providers
+    #[arg(long)]
+    pub posthog_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,6 +116,7 @@ pub struct ServerConfig {
     pub stripe_key: Option<String>,
     pub stripe_secret: Option<String>,
     pub stripe_webhook_secret: Option<String>,
+    pub posthog_key: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -121,6 +129,8 @@ pub struct PublicConfigResponse {
     pub has_email_service: bool,
     pub has_email_opt_in: bool,
     pub public_url: String,
+    pub posthog_key: Option<String>,
+    pub needs_cookie_consent: bool,
 }
 
 impl Default for ServerConfig {
@@ -145,6 +155,7 @@ impl Default for ServerConfig {
             plunk_secret: None,
             client_ip_source: None,
             oidc_providers: None,
+            posthog_key: None,
         }
     }
 }
@@ -205,6 +216,9 @@ impl ServerConfig {
         if let Some(oidc_providers) = cli_args.oidc_providers {
             figment = figment.merge(("oidc_providers", oidc_providers));
         }
+        if let Some(posthog_key) = cli_args.posthog_key {
+            figment = figment.merge(("posthog_key", posthog_key));
+        }
 
         figment = figment.merge(("disable_registration", cli_args.disable_registration));
 
@@ -238,4 +252,32 @@ impl AppState {
             services,
         }))
     }
+}
+
+pub async fn get_public_config(
+    State(state): State<Arc<AppState>>,
+) -> Json<ApiResponse<PublicConfigResponse>> {
+    let oidc_providers = state
+        .services
+        .oidc_service
+        .as_ref()
+        .map(|o| o.as_ref().list_providers())
+        .unwrap_or_default();
+
+    Json(ApiResponse::success(PublicConfigResponse {
+        server_port: state.config.server_port,
+        disable_registration: state.config.disable_registration,
+        oidc_providers,
+        billing_enabled: state.config.stripe_secret.is_some(),
+        has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
+        has_email_service: (state.config.smtp_password.is_some()
+            && state.config.smtp_username.is_some()
+            && state.config.smtp_email.is_some()
+            && state.config.smtp_relay.is_some())
+            || state.config.plunk_secret.is_some(),
+        public_url: state.config.public_url.clone(),
+        has_email_opt_in: state.config.plunk_secret.is_some(),
+        posthog_key: state.config.posthog_key.clone(),
+        needs_cookie_consent: state.config.posthog_key.is_some(),
+    }))
 }

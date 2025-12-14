@@ -239,7 +239,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      # Server image (Commercial self-hosted)
+      # Server image (Commercial, used for saas and commercical self-hosted)
       - name: Build and push Server+UI image (Commercial)
         uses: docker/build-push-action@v5
         with:
@@ -250,7 +250,7 @@ jobs:
           build-args: |
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
-            CARGO_FEATURES=commercial-selfhost
+            CARGO_FEATURES=commercial
           tags: |
             mayanayza/netvisor-server-commercial:${{ steps.version.outputs.version }}
             ghcr.io/${{ github.repository }}/server-commercial:${{ steps.version.outputs.version }}

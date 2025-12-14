@@ -22,6 +22,7 @@
 	import { daemons } from '$lib/features/daemons/store';
 	import posthog from 'posthog-js';
 	import { browser } from '$app/environment';
+	import CookieConsent from '$lib/shared/components/feedback/CookieConsent.svelte';
 
 	// Accept children as a snippet prop
 	let { children }: { children: Snippet } = $props();
@@ -44,16 +45,19 @@
 	let posthogInitialized = false;
 
 	$effect(() => {
-		const isSaas = $config.billing_enabled ?? false;
+		if (!$config) return;
 
-		if (browser && isSaas && !posthogInitialized) {
-			posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
+		const posthogKey = $config.posthog_key;
+
+		if (browser && posthogKey && !posthogInitialized) {
+			posthog.init(posthogKey, {
 				api_host: 'https://ph.netvisor.io',
 				ui_host: 'https://us.posthog.com',
 				defaults: '2025-11-30',
 				secure_cookie: true,
-				cookieless_mode: 'always',
-				person_profiles: 'always'
+				cookieless_mode: 'on_reject',
+				person_profiles: 'always',
+				opt_out_capturing_by_default: true
 			});
 			posthogInitialized = true;
 		}
@@ -135,4 +139,8 @@
 	</div>
 {:else}
 	{@render children()}
+{/if}
+
+{#if $config && $config.needs_cookie_consent}
+	<CookieConsent />
 {/if}

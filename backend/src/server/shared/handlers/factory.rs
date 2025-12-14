@@ -1,28 +1,18 @@
 use crate::server::api_keys::r#impl::base::{ApiKey, ApiKeyBase};
 use crate::server::api_keys::service::generate_api_key_for_storage;
-use crate::server::auth::middleware::auth::{AuthenticatedEntity, AuthenticatedUser};
+use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::billing::types::base::BillingPlan;
-use crate::server::billing::types::features::Feature;
-use crate::server::config::PublicConfigResponse;
-use crate::server::discovery::r#impl::types::DiscoveryType;
+use crate::server::config::get_public_config;
 use crate::server::github::handlers::get_stars;
-use crate::server::groups::r#impl::types::GroupType;
-use crate::server::hosts::r#impl::ports::PortBase;
 use crate::server::networks::r#impl::{Network, NetworkBase};
 use crate::server::organizations::r#impl::base::Organization;
-use crate::server::services::definitions::ServiceDefinitionRegistry;
-use crate::server::shared::concepts::Concept;
-use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::events::types::{TelemetryEvent, TelemetryOperation};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::api::{ApiError, ApiResult};
-use crate::server::shared::types::metadata::{MetadataProvider, MetadataRegistry};
-use crate::server::subnets::r#impl::types::SubnetType;
+use crate::server::shared::types::metadata::get_metadata_registry;
 use crate::server::topology::types::base::{Topology, TopologyBase};
-use crate::server::topology::types::edges::EdgeType;
-use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use crate::server::{
     auth::handlers as auth_handlers, billing::handlers as billing_handlers, config::AppState,
     daemons::handlers as daemon_handlers, discovery::handlers as discovery_handlers,
@@ -41,7 +31,6 @@ use chrono::Utc;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use strum::{IntoDiscriminant, IntoEnumIterator};
 use tower_http::set_header::SetResponseHeaderLayer;
 use uuid::Uuid;
 
@@ -75,64 +64,11 @@ pub fn create_router() -> Router<Arc<AppState>> {
         )
 }
 
-async fn get_metadata_registry(_user: AuthenticatedUser) -> Json<ApiResponse<MetadataRegistry>> {
-    let registry = MetadataRegistry {
-        service_definitions: ServiceDefinitionRegistry::all_service_definitions()
-            .iter()
-            .map(|t| t.to_metadata())
-            .collect(),
-        subnet_types: SubnetType::iter().map(|t| t.to_metadata()).collect(),
-        group_types: GroupType::iter()
-            .map(|t| t.discriminant().to_metadata())
-            .collect(),
-        edge_types: EdgeType::iter().map(|t| t.to_metadata()).collect(),
-        entities: EntityDiscriminants::iter()
-            .map(|e| e.to_metadata())
-            .collect(),
-        concepts: Concept::iter().map(|e| e.to_metadata()).collect(),
-        ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
-        discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
-        billing_plans: BillingPlan::iter().map(|p| p.to_metadata()).collect(),
-        features: Feature::iter().map(|f| f.to_metadata()).collect(),
-        permissions: UserOrgPermissions::iter()
-            .map(|p| p.to_metadata())
-            .collect(),
-    };
-
-    Json(ApiResponse::success(registry))
-}
-
 async fn get_health() -> Json<ApiResponse<String>> {
     Json(ApiResponse::success(format!(
         "NetVisor Server {}",
         env!("CARGO_PKG_VERSION")
     )))
-}
-
-pub async fn get_public_config(
-    State(state): State<Arc<AppState>>,
-) -> Json<ApiResponse<PublicConfigResponse>> {
-    let oidc_providers = state
-        .services
-        .oidc_service
-        .as_ref()
-        .map(|o| o.as_ref().list_providers())
-        .unwrap_or_default();
-
-    Json(ApiResponse::success(PublicConfigResponse {
-        server_port: state.config.server_port,
-        disable_registration: state.config.disable_registration,
-        oidc_providers,
-        billing_enabled: state.config.stripe_secret.is_some(),
-        has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
-        has_email_service: (state.config.smtp_password.is_some()
-            && state.config.smtp_username.is_some()
-            && state.config.smtp_email.is_some()
-            && state.config.smtp_relay.is_some())
-            || state.config.plunk_secret.is_some(),
-        public_url: state.config.public_url.clone(),
-        has_email_opt_in: state.config.plunk_secret.is_some(),
-    }))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
