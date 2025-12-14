@@ -81,3 +81,29 @@ pub struct ResetPasswordRequest {
     pub token: String,
     pub password: String,
 }
+
+/// Setup request for pre-registration org/network configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetupRequest {
+    pub organization_name: String,
+    pub network_name: String,
+    pub populate_seed_data: bool,
+}
+
+/// Response from setup endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetupResponse {
+    pub network_id: Uuid,
+}
+
+/// Daemon setup request for pre-registration daemon configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonSetupRequest {
+    pub daemon_name: String,
+}
+
+/// Response from daemon setup endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonSetupResponse {
+    pub api_key: String,
+}

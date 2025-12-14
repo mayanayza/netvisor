@@ -1,10 +1,14 @@
 import { writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type {
+	DaemonSetupRequest,
+	DaemonSetupResponse,
 	ForgotPasswordRequest,
 	LoginRequest,
 	RegisterRequest,
-	ResetPasswordRequest
+	ResetPasswordRequest,
+	SetupRequest,
+	SetupResponse
 } from './types/base';
 import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 import type { User } from '../users/types';
@@ -50,6 +54,10 @@ export async function login(request: LoginRequest): Promise<User | null> {
 
 	if (result && result.success && result.data != undefined) {
 		isAuthenticated.set(true);
+		// Mark that user has an account (for redirect logic after logout)
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('hasAccount', 'true');
+		}
 		pushSuccess(`Welcome back, ${result.data.email}!`);
 		return result.data;
 	}
@@ -74,6 +82,10 @@ export async function register(request: RegisterRequest): Promise<User | null> {
 
 	if (result && result.success && result.data != undefined) {
 		isAuthenticated.set(true);
+		// Mark that user has an account (for redirect logic after logout)
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('hasAccount', 'true');
+		}
 		pushSuccess(`Welcome, ${result.data.email}!`);
 		return result.data;
 	}
@@ -129,9 +141,62 @@ export async function resetPassword(request: ResetPasswordRequest): Promise<User
 
 	if (result && result.success && result.data != undefined) {
 		isAuthenticated.set(true);
+		// Mark that user has an account (for redirect logic after logout)
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('hasAccount', 'true');
+		}
 		pushSuccess('Your password has been reset');
 		pushSuccess(`Welcome, ${result.data.email}!`);
 		return result.data;
 	}
+	return null;
+}
+
+/**
+ * Submit pre-registration setup data (org name, network name, seed preference)
+ * This is stored in session and applied during registration
+ * Returns the provisional network ID to use for daemon setup
+ */
+export async function submitSetup(request: SetupRequest): Promise<SetupResponse | null> {
+	const result = await api.request<SetupResponse, SetupResponse | null>(
+		'/auth/setup',
+		null,
+		(data) => data,
+		{
+			method: 'POST',
+			body: JSON.stringify(request)
+		}
+	);
+
+	if (result && result.success && result.data) {
+		return result.data;
+	}
+
+	pushError('Failed to save setup data');
+	return null;
+}
+
+/**
+ * Submit pre-registration daemon setup data
+ * Returns the provisional API key to show to user for installation
+ */
+export async function submitDaemonSetup(
+	request: DaemonSetupRequest
+): Promise<DaemonSetupResponse | null> {
+	const result = await api.request<DaemonSetupResponse, DaemonSetupResponse | null>(
+		'/auth/daemon-setup',
+		null,
+		(data) => data,
+		{
+			method: 'POST',
+			body: JSON.stringify(request)
+		}
+	);
+
+	if (result && result.success && result.data) {
+		return result.data;
+	}
+
+	pushError('Failed to save daemon setup');
 	return null;
 }

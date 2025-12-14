@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use openidconnect::{
     AuthenticationFlow, AuthorizationCode, ClientId, ClientSecret, CsrfToken, IssuerUrl, Nonce,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, Scope, TokenResponse,
@@ -13,6 +14,15 @@ pub struct OidcPendingAuth {
     pub nonce: String,
     pub csrf_token: String,
     pub flow: OidcFlow,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OidcRegisterParams<'a> {
+    pub subscribed: bool,
+    pub terms_accepted_at: Option<DateTime<Utc>>,
+    pub billing_enabled: bool,
+    pub provider_slug: &'a str,
+    pub code: &'a str,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

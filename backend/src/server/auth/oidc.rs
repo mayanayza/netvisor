@@ -1,6 +1,6 @@
 use anyhow::{Error, Result, anyhow};
 use bad_email::is_email_unwanted;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use email_address::EmailAddress;
 use std::{collections::HashMap, net::IpAddr, str::FromStr, sync::Arc};
 use uuid::Uuid;
@@ -8,8 +8,11 @@ use uuid::Uuid;
 use crate::server::{
     auth::{
         r#impl::{
-            base::{LoginRegisterParams, ProvisionUserParams},
-            oidc::{OidcPendingAuth, OidcProvider, OidcProviderConfig, OidcProviderMetadata},
+            base::{LoginRegisterParams, PendingSetup, ProvisionUserParams},
+            oidc::{
+                OidcPendingAuth, OidcProvider, OidcProviderConfig, OidcProviderMetadata,
+                OidcRegisterParams,
+            },
         },
         middleware::auth::AuthenticatedEntity,
         service::AuthService,
@@ -88,13 +91,19 @@ impl OidcService {
     /// Register new user via OIDC (fails if account already exists)
     pub async fn register(
         &self,
-        provider_slug: &str,
-        code: &str,
         pending_auth: OidcPendingAuth,
-        subscribed: bool,
-        terms_accepted_at: Option<DateTime<Utc>>,
         params: LoginRegisterParams,
+        oidc_register_params: OidcRegisterParams<'_>,
+        pending_setup: Option<PendingSetup>,
     ) -> Result<User> {
+        let OidcRegisterParams {
+            provider_slug,
+            code,
+            subscribed,
+            billing_enabled,
+            terms_accepted_at,
+        } = oidc_register_params;
+
         let provider = self
             .get_provider(provider_slug)
             .ok_or_else(|| anyhow!("Provider '{}' not found", provider_slug))?;
@@ -142,16 +151,20 @@ impl OidcService {
         // Register new user
         let user = self
             .auth_service
-            .provision_user(ProvisionUserParams {
-                email,
-                password_hash: None,
-                oidc_subject: Some(user_info.subject),
-                oidc_provider: Some(provider.slug.clone()),
-                org_id,
-                permissions,
-                network_ids,
-                terms_accepted_at,
-            })
+            .provision_user(
+                ProvisionUserParams {
+                    email,
+                    password_hash: None,
+                    oidc_subject: Some(user_info.subject),
+                    oidc_provider: Some(provider.slug.clone()),
+                    org_id,
+                    permissions,
+                    network_ids,
+                    terms_accepted_at,
+                    billing_enabled,
+                },
+                pending_setup,
+            )
             .await?;
 
         // Publish event

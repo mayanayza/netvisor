@@ -65,8 +65,8 @@
 		<!-- Modal content -->
 		<div
 			class="modal-container {sizeClasses[size]} {size === 'full'
-				? 'h-[95vh]'
-				: 'max-h-[95vh]'} flex flex-col"
+				? 'h-[calc(100vh-8rem)]'
+				: 'max-h-[calc(100vh-8rem)]'} flex flex-col"
 		>
 			<!-- Header -->
 			<div class="modal-header">

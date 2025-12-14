@@ -13,7 +13,7 @@ export function getRoute(): string {
 	const $config = get(config);
 
 	if (!$organization) {
-		return resolve('/auth');
+		return resolve('/onboarding');
 	}
 
 	// Check onboarding first
@@ -23,7 +23,7 @@ export function getRoute(): string {
 	}
 
 	// Check billing if enabled
-	const billingEnabled = $config?.billing_enabled ?? false;
+	const billingEnabled = $config.billing_enabled ?? false;
 	if (billingEnabled && !isBillingPlanActive($organization)) {
 		return resolve('/billing');
 	}

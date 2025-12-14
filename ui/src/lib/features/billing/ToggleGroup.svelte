@@ -14,14 +14,14 @@
 	let { options, selected, onchange }: Props = $props();
 </script>
 
-<div class="card inline-flex gap-1 p-1">
+<div class="card inline-flex gap-1 rounded-full p-1">
 	{#each options as option (option.value)}
 		<button
 			type="button"
 			onclick={() => onchange(option.value)}
-			class="rounded-xl px-4 py-2 text-sm font-medium transition-all {selected === option.value
-				? 'scale-110 bg-gray-700/50 text-white shadow-lg'
-				: 'text-secondary hover:text-primary hover:bg-gray-800/50'}"
+			class="rounded-full px-3 py-1.5 text-sm font-medium transition-all {selected === option.value
+				? 'bg-gray-700 text-white'
+				: 'text-gray-400 hover:text-gray-300'}"
 		>
 			<span>{option.label}</span>
 			{#if option.badge}

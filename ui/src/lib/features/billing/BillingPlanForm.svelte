@@ -9,6 +9,7 @@
 	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
+	import ScanProgressIndicator from '$lib/features/discovery/components/ScanProgressIndicator.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type { BillingPlan } from './types';
 	import type { BillingPlanMetadata, FeatureMetadata } from '$lib/shared/stores/metadata';
@@ -277,11 +278,10 @@
 	<!-- Header with GitHub Stars and Toggles -->
 	<div class="flex flex-wrap items-stretch justify-center gap-3 px-4 lg:gap-6 lg:px-10">
 		{#if showGithubStars}
-			<div class="card inline-flex items-center gap-2 px-4 shadow-xl backdrop-blur-sm">
-				<span class="text-secondary text-sm">Open source on GitHub</span>
-				<GithubStars />
-			</div>
+			<GithubStars />
 		{/if}
+
+		<ScanProgressIndicator />
 
 		<ToggleGroup
 			options={planTypeOptions}
