@@ -212,7 +212,7 @@
 		const lines = [
 			'services:',
 			'  daemon:',
-			'    image: mayanayza/scanopy-daemon:latest',
+			'    image: ghcr.io/scanopy/scanopy/daemon:latest',
 			'    container_name: scanopy-daemon',
 			'    network_mode: host',
 			'    privileged: true',

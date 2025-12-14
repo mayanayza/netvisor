@@ -72,15 +72,6 @@ dev-container-rebuild-clean:
 dev-down:
 	docker compose -f docker-compose.dev.yml down --volumes --rmi local
 
-build:
-	@echo "Building Server + UI Docker image..."
-	docker build -f backend/Dockerfile -t mayanayza/scanopy-server:latest .
-	@echo "✓ Server image built: mayanayza/scanopy-server:latest"
-	@echo ""
-	@echo "Building Daemon Docker image..."
-	docker build -f backend/Dockerfile.daemon -t mayanayza/scanopy-daemon:latest ./backend
-	@echo "✓ Daemon image built: mayanayza/scanopy-daemon:latest"
-
 test:
 	cd ui && npx vite-node scripts/export-daemon-field-defs.ts > ../backend/src/tests/daemon-config-frontend-fields.json
 	make dev-down

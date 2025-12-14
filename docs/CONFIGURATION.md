@@ -275,7 +275,7 @@ Add the following volume mount to your `scanopy-server` service:
 ```yaml
 services:
   scanopy-server:
-    image: mayanayza/scanopy-server:latest
+    image: ghcr.io/scanopy/scanopy/server:latest
     volumes:
       - ./oidc.toml:/oidc.toml:ro
     # ... rest of config
@@ -526,7 +526,7 @@ SCANOPY_INTEGRATED_DAEMON_URL=http://172.17.0.1:60073
 ```yaml
 services:
   scanopy-server:
-    image: mayanayza/scanopy-server:latest
+    image: ghcr.io/scanopy/scanopy/server:latest
     env_file:
       - .env
     # ... rest of config
