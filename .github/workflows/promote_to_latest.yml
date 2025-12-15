@@ -108,10 +108,10 @@ jobs:
       
       - name: Copy fixtures to website repo
         run: |
-          mkdir -p website/path/to/fixtures
-          cp backend/fixtures/services.json website/src/lib/fixtures/
-          cp backend/fixtures/features.json website/src/lib/fixtures/
-          cp backend/fixtures/billing-plans.json website/src/lib/fixtures/
+          mkdir -p website/src/lib/fixtures/
+          cp ui/static/services.json website/src/lib/fixtures/
+          cp ui/static/features.json website/src/lib/fixtures/
+          cp ui/static/billing-plans.json website/src/lib/fixtures/
       
       - name: Commit and push to website repo
         working-directory: website
