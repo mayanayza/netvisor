@@ -8,9 +8,9 @@
 
 Scanopy scans your network, identifies hosts and services, and generates an interactive visualization showing how everything connects, letting you easily create and maintain network documentation.<br>
 <br>
-![Docker Pulls](https://img.shields.io/docker/pulls/mayanayza/scanopy-server?style=for-the-badge&logo=docker)  ![Github Stars](https://img.shields.io/github/stars/mayanayza/scanopy?style=for-the-badge&logo=github
+![Docker Pulls](https://img.shields.io/docker/pulls/mayanayza/netvisor-server?style=for-the-badge&logo=docker)  ![Github Stars](https://img.shields.io/github/stars/scanopy/scanopy?style=for-the-badge&logo=github
 )<br>
-![GitHub release](https://img.shields.io/github/v/release/mayanayza/scanopy?style=for-the-badge) ![License](https://img.shields.io/github/license/mayanayza/scanopy?style=for-the-badge)<br>
+![GitHub release](https://img.shields.io/github/v/release/scanopy/scanopy?style=for-the-badge) ![License](https://img.shields.io/github/license/scanopy/scanopy?style=for-the-badge)<br>
 ![Daemon image size](https://img.shields.io/docker/image-size/mayanayza/scanopy-daemon?style=for-the-badge&label=Daemon%20image%20size) ![Server image size](https://img.shields.io/docker/image-size/mayanayza/scanopy-server?style=for-the-badge&label=Server%20image%20size
 )<br>
 ![Daemon](https://img.shields.io/github/actions/workflow/status/mayanayza/scanopy/daemon-ci.yml?label=daemon-ci&style=for-the-badge)  ![Server](https://img.shields.io/github/actions/workflow/status/mayanayza/scanopy/server-ci.yml?label=server-ci&style=for-the-badge)  ![UI](https://img.shields.io/github/actions/workflow/status/mayanayza/scanopy/ui-ci.yml?label=ui-ci&style=for-the-badge)<br>
