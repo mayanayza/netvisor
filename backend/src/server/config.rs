@@ -79,6 +79,9 @@ pub struct ServerCli {
     #[arg(long)]
     pub plunk_secret: Option<String>,
 
+    #[arg(long)]
+    pub plunk_key: Option<String>,
+
     /// Configure what proxy (if any) is providing IP address for requests, ie in a reverse proxy setup, for accurate IP in auth event logging
     #[arg(long)]
     pub client_ip_source: Option<String>,
@@ -112,11 +115,16 @@ pub struct ServerConfig {
     pub oidc_providers: Option<Vec<OidcProviderConfig>>,
 
     // Used in SaaS deployment
+    pub plunk_key: Option<String>,
     pub plunk_secret: Option<String>,
     pub stripe_key: Option<String>,
     pub stripe_secret: Option<String>,
     pub stripe_webhook_secret: Option<String>,
     pub posthog_key: Option<String>,
+
+    // Testing
+    #[serde(default)]
+    pub enforce_billing_for_testing: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -153,9 +161,11 @@ impl Default for ServerConfig {
             smtp_email: None,
             smtp_relay: None,
             plunk_secret: None,
+            plunk_key: None,
             client_ip_source: None,
             oidc_providers: None,
             posthog_key: None,
+            enforce_billing_for_testing: false,
         }
     }
 }
@@ -222,6 +232,9 @@ impl ServerConfig {
         if let Some(plunk_secret) = cli_args.plunk_secret {
             figment = figment.merge(("plunk_secret", plunk_secret));
         }
+        if let Some(plunk_key) = cli_args.plunk_key {
+            figment = figment.merge(("plunk_key", plunk_key));
+        }
         if let Some(client_ip_source) = cli_args.client_ip_source {
             figment = figment.merge(("client_ip_source", client_ip_source));
         }
@@ -286,7 +299,7 @@ pub async fn get_public_config(
             && state.config.smtp_username.is_some()
             && state.config.smtp_email.is_some()
             && state.config.smtp_relay.is_some())
-            || state.config.plunk_secret.is_some(),
+            || (state.config.plunk_secret.is_some() && state.config.plunk_key.is_some()),
         public_url: state.config.public_url.clone(),
         has_email_opt_in: state.config.plunk_secret.is_some(),
         posthog_key: state.config.posthog_key.clone(),

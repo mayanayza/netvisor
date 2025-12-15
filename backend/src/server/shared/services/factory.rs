@@ -112,8 +112,10 @@ impl ServiceFactory {
 
         let email_service = config.clone().and_then(|c| {
             // Prefer Plunk if API key is provided
-            if let Some(plunk_secret) = c.plunk_secret {
-                let provider = Box::new(PlunkEmailProvider::new(plunk_secret));
+            if let Some(plunk_secret) = c.plunk_secret
+                && let Some(plunk_key) = c.plunk_key
+            {
+                let provider = Box::new(PlunkEmailProvider::new(plunk_secret, plunk_key));
                 return Some(Arc::new(EmailService::new(provider, user_service.clone())));
             }
 

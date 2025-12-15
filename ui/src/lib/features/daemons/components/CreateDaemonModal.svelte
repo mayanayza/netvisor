@@ -174,10 +174,7 @@
 		values: Record<string, string | number | boolean>,
 		valids: Record<string, boolean>
 	): string {
-		const envVars: string[] = [
-			`SCANOPY_SERVER_URL=${serverUrl}`,
-			`SCANOPY_DAEMON_API_KEY=${key}`
-		];
+		const envVars: string[] = [`SCANOPY_SERVER_URL=${serverUrl}`, `SCANOPY_DAEMON_API_KEY=${key}`];
 
 		if (networkId) {
 			envVars.splice(1, 0, `SCANOPY_NETWORK_ID=${networkId}`);
@@ -234,11 +231,12 @@
 
 <EditModal
 	{isOpen}
-	title={onboardingMode ? 'Install a Daemon' : 'Create Daemon'}
+	title={onboardingMode ? 'Set up network scanning' : 'Create Daemon'}
 	cancelLabel={onboardingMode ? 'Continue' : 'Close'}
 	onCancel={onboardingMode && onContinue ? onContinue : handleOnClose}
 	showSave={false}
-	size="lg"
+	showBackdrop={onboardingMode}
+	size="xl"
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
@@ -254,7 +252,7 @@
 			<!-- Onboarding mode: show info banner -->
 			<InlineInfo
 				title="Your daemon will activate after account creation"
-				body="Install your daemon now using the commands below. After you complete registration, the daemon will automatically connect and begin scanning your network."
+				body="To visualize your network, Scanopy needs to discover what's on it. Install the daemon below—after registration, it'll connect and start mapping automatically."
 			/>
 		{:else if !daemon}
 			<SelectNetwork bind:selectedNetworkId />
@@ -419,7 +417,9 @@
 		{#if onboardingMode}
 			<div class="flex w-full items-center justify-between gap-4">
 				{#if onSkip}
-					<button type="button" class="btn-secondary" on:click={onSkip}> Skip for now </button>
+					<button type="button" class="btn-secondary" on:click={onSkip}>
+						I'll do this later
+					</button>
 				{/if}
 				<button type="button" class="btn-primary ml-auto" on:click={onContinue ?? handleOnClose}>
 					Continue

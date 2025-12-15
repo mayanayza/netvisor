@@ -55,13 +55,14 @@
 
 <EditModal
 	{isOpen}
-	title="Let's start mapping your network!"
+	title="Let's start visualizing your network!"
 	{loading}
 	centerTitle={true}
 	saveLabel="Continue"
 	showCancel={false}
 	showCloseButton={false}
 	onSave={() => onSubmit(formData)}
+	showBackdrop={false}
 	onCancel={onClose}
 	size="md"
 	preventCloseOnClickOutside={true}
@@ -82,8 +83,8 @@
 			label="Organization Name"
 			id="organizationName"
 			{formApi}
-			placeholder="My Organization"
-			helpText="Enter the name of your organization (you can change it later)"
+			placeholder="Acme Corp"
+			helpText="Your company, team, or project name"
 			required={true}
 			field={organizationName}
 		/>
@@ -92,18 +93,15 @@
 			label="Network Name"
 			id="networkName"
 			{formApi}
-			placeholder="My Network"
-			helpText="Enter the name of your first network (you can change it later)"
+			placeholder="Home Lab"
+			helpText="A logical grouping of devices to visualize (e.g., 'Office', 'Home Lab', 'Production')"
 			required={true}
 			field={networkName}
 		/>
 
 		<Checkbox
-			label="Populate with baseline data (recommended)"
-			helpText="Scanopy will create two subnets - one representing a remote network, one representing
-						the internet - to help you organize services which are not discoverable on your own
-						network, and three hosts with example services to help you understand how Scanopy
-						works. You can delete this data at any time."
+			label="Track services Scanopy can't discover automatically?"
+			helpText="Creates subnets for remote hosts and internet services that aren't on your local network (Cloud services, APIs, SaaS tools, etc). Includes example data to show how it works."
 			id="seedData"
 			field={seedDataField}
 			{formApi}

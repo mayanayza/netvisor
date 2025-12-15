@@ -1,11 +1,11 @@
 use crate::server::auth::middleware::{
-    auth::AuthenticatedUser, features::CreateNetworkFeature, features::RequireFeature,
+    auth::AuthenticatedUser,
+    features::{CreateNetworkFeature, RequireFeature},
     permissions::RequireAdmin,
 };
 use crate::server::networks::api::CreateNetworkRequest;
 use crate::server::shared::handlers::traits::{
-    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
-    update_handler,
+    CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler, update_handler,
 };
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
@@ -17,7 +17,6 @@ use crate::server::{
         types::api::{ApiResponse, ApiResult},
     },
 };
-use axum::extract::Path;
 use axum::{
     Router,
     extract::State,
@@ -25,16 +24,15 @@ use axum::{
     routing::{delete, get, post, put},
 };
 use std::sync::Arc;
-use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", post(create_handler))
         .route("/", get(get_all_networks))
-        .route("/{id}", put(update_network))
-        .route("/{id}", delete(delete_network))
+        .route("/{id}", put(update_handler::<Network>))
+        .route("/{id}", delete(delete_handler::<Network>))
         .route("/{id}", get(get_by_id_handler::<Network>))
-        .route("/bulk-delete", post(bulk_delete_network))
+        .route("/bulk-delete", post(bulk_delete_handler::<Network>))
 }
 
 pub async fn create_handler(
@@ -74,29 +72,4 @@ async fn get_all_networks(
     let networks = service.get_all(filter).await?;
 
     Ok(Json(ApiResponse::success(networks)))
-}
-
-async fn update_network(
-    state: State<Arc<AppState>>,
-    admin: RequireAdmin,
-    id: Path<Uuid>,
-    request: Json<Network>,
-) -> ApiResult<Json<ApiResponse<Network>>> {
-    update_handler::<Network>(state, admin.into(), id, request).await
-}
-
-async fn delete_network(
-    admin: RequireAdmin,
-    state: State<Arc<AppState>>,
-    id: Path<Uuid>,
-) -> ApiResult<Json<ApiResponse<()>>> {
-    delete_handler::<Network>(state, admin.into(), id).await
-}
-
-async fn bulk_delete_network(
-    admin: RequireAdmin,
-    state: State<Arc<AppState>>,
-    ids: Json<Vec<Uuid>>,
-) -> ApiResult<Json<ApiResponse<BulkDeleteResponse>>> {
-    bulk_delete_handler::<Network>(state, admin.into(), ids).await
 }

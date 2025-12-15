@@ -186,5 +186,5 @@ pub async fn setup_test_app() -> Router<Arc<AppState>> {
 
     let state = AppState::new(config).await.unwrap();
 
-    crate::server::shared::handlers::factory::create_router().with_state(state)
+    crate::server::shared::handlers::factory::create_router(state.clone()).with_state(state)
 }

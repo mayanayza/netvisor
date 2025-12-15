@@ -19,11 +19,18 @@ pub struct FeatureCheckContext<'a> {
 pub enum FeatureCheckResult {
     Allowed,
     Denied { message: String },
+    PaymentRequired { message: String },
 }
 
 impl FeatureCheckResult {
     pub fn denied(msg: impl Into<String>) -> Self {
         Self::Denied {
+            message: msg.into(),
+        }
+    }
+
+    pub fn payment_required(msg: impl Into<String>) -> Self {
+        Self::PaymentRequired {
             message: msg.into(),
         }
     }
@@ -88,6 +95,9 @@ where
                 _phantom: std::marker::PhantomData,
             }),
             FeatureCheckResult::Denied { message } => Err(AuthError(ApiError::forbidden(&message))),
+            FeatureCheckResult::PaymentRequired { message } => {
+                Err(AuthError(ApiError::payment_required(&message)))
+            }
         }
     }
 }
@@ -141,5 +151,56 @@ impl FeatureCheck for CreateNetworkFeature {
         }
 
         FeatureCheckResult::Allowed
+    }
+}
+
+/// Feature check that verifies the organization has an active billing plan.
+///
+/// Exemptions:
+/// - Community plan (free tier, doesn't require Stripe)
+/// - CommercialSelfHosted plan (self-hosted, billing disabled)
+/// - Demo plan (demo accounts)
+/// - Self-hosted instances (when stripe_secret is None in config)
+///
+/// Blocks immediately for:
+/// - past_due subscription status (no grace period)
+/// - Missing plan_status when billing is enabled and plan requires it
+#[derive(Default)]
+pub struct ActivePlanFeature;
+
+#[async_trait]
+impl FeatureCheck for ActivePlanFeature {
+    async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
+        // Self-hosted instances with billing disabled are always allowed
+        // (unless enforce_billing_for_testing is set for integration tests)
+        let billing_enabled = ctx.app_state.config.stripe_secret.is_some()
+            || ctx.app_state.config.enforce_billing_for_testing;
+        if !billing_enabled {
+            return FeatureCheckResult::Allowed;
+        }
+
+        // Check plan type - some plans are exempt
+        match &ctx.plan {
+            BillingPlan::Community(_)
+            | BillingPlan::CommercialSelfHosted(_)
+            | BillingPlan::Demo(_) => {
+                return FeatureCheckResult::Allowed;
+            }
+            _ => {}
+        }
+
+        // Check subscription status
+        match ctx.organization.base.plan_status.as_deref() {
+            Some("active") | Some("trialing") => FeatureCheckResult::Allowed,
+            Some("past_due") => FeatureCheckResult::payment_required(
+                "Your subscription is past due. Please update your payment method.",
+            ),
+            Some("canceled") => FeatureCheckResult::payment_required(
+                "Your subscription has been canceled. Please renew to continue.",
+            ),
+            _ => FeatureCheckResult::payment_required(
+                "Active billing plan required. Please select a plan.",
+            ),
+        }
     }
 }

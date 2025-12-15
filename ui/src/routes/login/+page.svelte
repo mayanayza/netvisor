@@ -8,7 +8,6 @@
 	import ResetPasswordModal from '$lib/features/auth/components/ResetPasswordModal.svelte';
 	import type { LoginRequest } from '$lib/features/auth/types/base';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
-	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import { getOrganization } from '$lib/features/organizations/store';
 	import { navigate } from '$lib/shared/utils/navigation';
 	import { resolve } from '$app/paths';
@@ -73,16 +72,16 @@
 	<!-- Background image with overlay -->
 	<div class="absolute inset-0 z-0">
 		<div
-			class="h-full w-full bg-cover bg-center bg-no-repeat"
+			class="h-full w-full bg-cover bg-center bg-no-repeat blur-sm"
 			style="background-image: url('/images/diagram.png')"
 		></div>
-		<div class="absolute inset-0 bg-black/70"></div>
+		<div class="absolute inset-0 bg-black/60"></div>
 	</div>
 
 	<!-- GitHub Stars - positioned absolutely at bottom -->
-	<div class="absolute bottom-10 left-10 z-[100] hidden md:block">
+	<!-- <div class="absolute bottom-10 left-10 z-[100] hidden md:block">
 		<GithubStars />
-	</div>
+	</div> -->
 
 	<!-- Spacer to push modal down -->
 	<div class="flex flex-1 items-center justify-center">

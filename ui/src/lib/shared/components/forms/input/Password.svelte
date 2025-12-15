@@ -15,7 +15,7 @@
 	export let required: boolean = true;
 
 	// Create form fields with validation
-	let passwordValidation = [minLength(12), passwordComplexity()];
+	let passwordValidation = [minLength(10), passwordComplexity()];
 	if (required) passwordValidation.push(requiredValidation());
 	const password = field('password', value, passwordValidation);
 
@@ -32,8 +32,7 @@
 	$: hasUppercase = /[A-Z]/.test(passwordValue);
 	$: hasLowercase = /[a-z]/.test(passwordValue);
 	$: hasNumber = /[0-9]/.test(passwordValue);
-	$: hasSpecial = /[^A-Za-z0-9]/.test(passwordValue);
-	$: passwordLongEnough = passwordValue.length >= 12;
+	$: passwordLongEnough = passwordValue.length >= 10;
 
 	// Expose validation state
 	export let isValid = false;
@@ -57,7 +56,7 @@
 			<div class="mt-2 space-y-1 rounded-md bg-gray-700 p-3">
 				<p class="text-xs font-medium text-gray-300">Password Requirements:</p>
 				<p class="text-xs {passwordLongEnough ? 'text-green-400' : 'text-gray-400'}">
-					{passwordLongEnough ? '✓' : '○'} At least 12 characters
+					{passwordLongEnough ? '✓' : '○'} At least 10 characters
 				</p>
 				<p class="text-xs {hasUppercase ? 'text-green-400' : 'text-gray-400'}">
 					{hasUppercase ? '✓' : '○'} Contains uppercase letter
@@ -67,9 +66,6 @@
 				</p>
 				<p class="text-xs {hasNumber ? 'text-green-400' : 'text-gray-400'}">
 					{hasNumber ? '✓' : '○'} Contains number
-				</p>
-				<p class="text-xs {hasSpecial ? 'text-green-400' : 'text-gray-400'}">
-					{hasSpecial ? '✓' : '○'} Contains special character
 				</p>
 			</div>
 		{/if}

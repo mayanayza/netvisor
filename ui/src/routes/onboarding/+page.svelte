@@ -6,7 +6,6 @@
 	import OnboardingModal from '$lib/features/auth/components/OnboardingModal.svelte';
 	import RegisterModal from '$lib/features/auth/components/RegisterModal.svelte';
 	import CreateDaemonModal from '$lib/features/daemons/components/CreateDaemonModal.svelte';
-	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import type { OnboardingRequest, RegisterRequest } from '$lib/features/auth/types/base';
 	import { submitSetup, submitDaemonSetup, register, checkAuth } from '$lib/features/auth/store';
 	import { getOrganization } from '$lib/features/organizations/store';
@@ -136,10 +135,10 @@
 	<!-- Background image with overlay -->
 	<div class="absolute inset-0 z-0">
 		<div
-			class="h-full w-full bg-cover bg-center bg-no-repeat"
+			class="h-full w-full bg-cover bg-center bg-no-repeat blur-sm"
 			style="background-image: url('/images/diagram.png')"
 		></div>
-		<div class="absolute inset-0 bg-black/70"></div>
+		<div class="absolute inset-0 bg-black/60"></div>
 	</div>
 
 	<!-- Progress Indicator - fixed position above modal (hidden for invite flow) -->
@@ -162,9 +161,10 @@
 					Step {currentStepNumber()} of {totalSteps}
 				</span>
 				<div class="flex gap-1">
-					{#each Array(totalSteps) as step (step)}
+					<!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -->
+					{#each Array(totalSteps) as _, i (i)}
 						<div
-							class="h-2 w-2 rounded-full transition-colors {step < currentStepNumber()
+							class="h-2 w-2 rounded-full transition-colors {i < currentStepNumber()
 								? 'bg-primary-500'
 								: 'bg-gray-600'}"
 						></div>
@@ -175,9 +175,9 @@
 	{/if}
 
 	<!-- GitHub Stars - positioned absolutely at bottom -->
-	<div class="absolute bottom-10 left-10 z-[100] hidden md:block">
+	<!-- <div class="absolute bottom-10 left-10 z-[100] hidden md:block">
 		<GithubStars />
-	</div>
+	</div> -->
 
 	<!-- Modal container -->
 	<div class="flex flex-1 items-center justify-center">

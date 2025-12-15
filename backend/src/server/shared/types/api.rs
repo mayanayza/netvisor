@@ -70,6 +70,10 @@ impl ApiError {
     pub fn too_many_requests(message: String) -> Self {
         Self::new(StatusCode::TOO_MANY_REQUESTS, message.to_string())
     }
+
+    pub fn payment_required(message: &str) -> Self {
+        Self::new(StatusCode::PAYMENT_REQUIRED, message.to_string())
+    }
 }
 
 impl axum::response::IntoResponse for ApiError {

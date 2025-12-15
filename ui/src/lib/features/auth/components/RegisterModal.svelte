@@ -92,13 +92,14 @@
 
 <EditModal
 	{isOpen}
-	title="Create Account to Activate Daemon"
+	title="Create your account"
 	loading={registering || $loading}
 	centerTitle={true}
 	saveLabel="Create Account"
 	showCancel={false}
 	showCloseButton={false}
 	onSave={handleSubmit}
+	showBackdrop={false}
 	onCancel={onClose}
 	size="md"
 	preventCloseOnClickOutside={true}
@@ -128,7 +129,7 @@
 			label="Email"
 			id="email"
 			{formApi}
-			placeholder="Enter email"
+			placeholder="Enter your email"
 			required={true}
 			field={email}
 		/>

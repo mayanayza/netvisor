@@ -47,6 +47,7 @@
 	centerTitle={true}
 	saveLabel="Reset Password"
 	cancelLabel="Cancel"
+	showBackdrop={false}
 	showCloseButton={false}
 	showCancel={false}
 	showSave={!resetComplete}

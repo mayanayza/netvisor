@@ -109,11 +109,8 @@
 
 				{#if !isEditing}
 					<Checkbox
-						label="Populate with baseline data"
-						helpText="Scanopy will create two subnets - one representing a remote network, one representing
-									the internet - to help you organize services which are not discoverable on your own
-									network, and three hosts with example services to help you understand how Scanopy
-									works. You can delete this data at any time."
+						label="Track services Scanopy can't discover automatically?"
+						helpText="Creates subnets for remote hosts and internet services that aren't on your local network (Cloud services, APIs, SaaS tools, etc). Includes example data to show how it works."
 						id="seedData"
 						field={seedDataField}
 						{formApi}

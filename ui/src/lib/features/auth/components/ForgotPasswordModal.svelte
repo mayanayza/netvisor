@@ -56,6 +56,7 @@
 	cancelLabel="Cancel"
 	showCloseButton={false}
 	showCancel={false}
+	showBackdrop={false}
 	showSave={!emailSent}
 	onSave={handleSubmit}
 	onCancel={onClose}

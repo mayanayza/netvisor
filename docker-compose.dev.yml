@@ -34,6 +34,7 @@ services:
       - SCANOPY_WEB_EXTERNAL_PATH=/app/static
       - SCANOPY_LOG_LEVEL=debug
       - SCANOPY_INTEGRATED_DAEMON_URL=http://daemon:60073
+      - SCANOPY_ENFORCE_BILLING_FOR_TESTING=true
     volumes:
       - ./backend:/app
       - data-volume:/data
