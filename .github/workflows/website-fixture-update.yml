@@ -25,6 +25,28 @@ jobs:
           repository: scanopy/website
           token: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
           path: website
+
+      - name: Debug files
+        run: |
+          echo "=== Source file info ==="
+          ls -la ui/static/services.json
+          echo "Line count: $(wc -l < ui/static/services.json)"
+          echo "First entry: $(head -20 ui/static/services.json)"
+          echo ""
+          echo "Checking for Neo4j:"
+          grep -i "neo4j" ui/static/services.json || echo "NOT FOUND"
+          
+          echo ""
+          echo "=== Website file info ==="
+          ls -la website/src/lib/fixtures/services.json
+          echo "Line count: $(wc -l < website/src/lib/fixtures/services.json)"
+          echo ""
+          echo "Checking for Neo4j:"
+          grep -i "neo4j" website/src/lib/fixtures/services.json || echo "NOT FOUND"
+          
+          echo ""
+          echo "=== Diff ==="
+          diff ui/static/services.json website/src/lib/fixtures/services.json || echo "Files differ"
       
       - name: Copy fixtures
         run: |
