@@ -9,6 +9,7 @@ use crate::server::{
         events::types::{TelemetryEvent, TelemetryOperation},
         handlers::traits::{
             CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
+            update_handler,
         },
         services::traits::{CrudService, EventBusService},
         types::api::{ApiError, ApiResponse, ApiResult},
@@ -28,15 +29,16 @@ use uuid::Uuid;
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(get_all_handler::<ApiKey>))
-        .route("/", post(create_handler))
+        .route("/", post(create_api_key))
         .route("/{id}/rotate", post(rotate_key_handler))
-        .route("/{id}", put(update_handler))
+        .route("/{id}", put(update_api_key))
         .route("/{id}", delete(delete_handler::<ApiKey>))
         .route("/{id}", get(get_by_id_handler::<ApiKey>))
         .route("/bulk-delete", post(bulk_delete_handler::<ApiKey>))
 }
 
-pub async fn create_handler(
+/// Create a new API key with generated key pair
+pub async fn create_api_key(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     Json(mut api_key): Json<ApiKey>,
@@ -120,57 +122,22 @@ pub async fn rotate_key_handler(
     Ok(Json(ApiResponse::success(key)))
 }
 
-pub async fn update_handler(
+/// Update an API key, preserving the key hash
+pub async fn update_api_key(
     State(state): State<Arc<AppState>>,
-    RequireMember(user): RequireMember,
+    user: RequireMember,
     Path(id): Path<Uuid>,
     Json(mut request): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKey>>> {
-    tracing::debug!(
-        api_key_id = %id,
-        user_id = %user.user_id,
-        "API key update request received"
-    );
-
-    let service = ApiKey::get_service(&state);
-
-    // Verify entity exists
-    let existing = service
+    // Fetch existing to preserve immutable fields
+    let existing = ApiKey::get_service(&state)
         .get_by_id(&id)
-        .await
-        .map_err(|e| {
-            tracing::error!(
-                api_key_id = %id,
-                user_id = %user.user_id,
-                error = %e,
-                "Failed to fetch API key for update"
-            );
-            ApiError::internal_error(&e.to_string())
-        })?
-        .ok_or_else(|| {
-            tracing::warn!(
-                api_key_id = %id,
-                user_id = %user.user_id,
-                "API key not found for update"
-            );
-            ApiError::not_found(format!("Api Key '{}' not found", id))
-        })?;
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("Api Key '{}' not found", id)))?;
 
-    // Preserve the key - don't allow it to be changed via update
+    // Preserve the key hash - don't allow it to be changed via update
     request.base.key = existing.base.key;
 
-    let updated = service
-        .update(&mut request, user.clone().into())
-        .await
-        .map_err(|e| {
-            tracing::error!(
-                api_key_id = %id,
-                user_id = %user.user_id,
-                error = %e,
-                "Failed to update API key"
-            );
-            ApiError::internal_error(&e.to_string())
-        })?;
-
-    Ok(Json(ApiResponse::success(updated)))
+    // Delegate to generic handler (handles validation, auth checks, update)
+    update_handler::<ApiKey>(State(state), user, Path(id), Json(request)).await
 }

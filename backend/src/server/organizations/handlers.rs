@@ -1,7 +1,8 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::auth::middleware::{
-    auth::AuthenticatedUser, features::InviteUsersFeature, features::RequireFeature,
+    auth::AuthenticatedUser,
+    features::{InviteUsersFeature, RequireFeature},
     permissions::RequireMember,
 };
 use crate::server::config::AppState;

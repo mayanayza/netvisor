@@ -9,7 +9,7 @@ use validator::Validate;
 pub struct LoginRequest {
     pub email: EmailAddress,
 
-    #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
+    #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
     pub password: String,
 }
 
@@ -19,7 +19,7 @@ pub struct LoginRequest {
 pub struct RegisterRequest {
     pub email: EmailAddress,
 
-    #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
+    #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
     #[validate(custom(function = "validate_password_complexity"))]
     pub password: String,
     pub subscribed: bool,
@@ -31,13 +31,10 @@ fn validate_password_complexity(password: &str) -> Result<(), validator::Validat
     let has_uppercase = password.chars().any(|c| c.is_uppercase());
     let has_lowercase = password.chars().any(|c| c.is_lowercase());
     let has_digit = password.chars().any(|c| c.is_numeric());
-    let has_special = password.chars().any(|c| !c.is_alphanumeric());
 
-    if !has_uppercase || !has_lowercase || !has_digit || !has_special {
+    if !has_uppercase || !has_lowercase || !has_digit {
         let mut err = validator::ValidationError::new("password_complexity");
-        err.message = Some(
-            "Password must contain uppercase, lowercase, number, and special character".into(),
-        );
+        err.message = Some("Password must contain uppercase, lowercase, and number".into());
         return Err(err);
     }
 

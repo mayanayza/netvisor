@@ -131,13 +131,12 @@ export const passwordComplexity = (): Validator => (value: string) => {
 	const hasUppercase = /[A-Z]/.test(value);
 	const hasLowercase = /[a-z]/.test(value);
 	const hasNumber = /[0-9]/.test(value);
-	const hasSpecial = /[^A-Za-z0-9]/.test(value);
 
-	if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+	if (!hasUppercase || !hasLowercase || !hasNumber) {
 		return {
 			valid: false,
-			name: 'Password must contain uppercase, lowercase, number, and special character',
-			message: 'Password must contain uppercase, lowercase, number, and special character'
+			name: 'Password must contain uppercase, lowercase, and number',
+			message: 'Password must contain uppercase, lowercase, and number'
 		};
 	}
 

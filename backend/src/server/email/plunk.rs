@@ -9,14 +9,16 @@ use serde_json::json;
 
 /// Plunk-based email provider
 pub struct PlunkEmailProvider {
-    api_key: String,
+    secret_key: String,
+    public_key: String,
     client: Client,
 }
 
 impl PlunkEmailProvider {
-    pub fn new(api_key: String) -> Self {
+    pub fn new(secret_key: String, public_key: String) -> Self {
         Self {
-            api_key,
+            secret_key,
+            public_key,
             client: Client::new(),
         }
     }
@@ -27,7 +29,7 @@ impl PlunkEmailProvider {
         subject: String,
         body: String,
     ) -> Result<(), Error> {
-        let url = "https://api.useplunk.com/v1/send";
+        let url = "https://next-api.useplunk.com/v1/send";
         let payload = json!({
             "to": to.to_string(),
             "subject": subject,
@@ -40,7 +42,7 @@ impl PlunkEmailProvider {
         let response = self
             .client
             .post(url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Authorization", format!("Bearer {}", self.secret_key))
             .json(&payload)
             .send()
             .await?;
@@ -105,9 +107,9 @@ impl EmailProvider for PlunkEmailProvider {
 
         let response = self
             .client
-            .post("https://api.useplunk.com/v1/track")
+            .post("https://next-api.useplunk.com/v1/track")
             .header("Content-Type", "application/json")
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Authorization", format!("Bearer {}", self.public_key))
             .json(&body)
             .send()
             .await?;

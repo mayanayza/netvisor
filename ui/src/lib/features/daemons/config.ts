@@ -25,7 +25,7 @@ export const fieldDefs: FieldDef[] = [
 		type: 'string',
 		cliFlag: '--name',
 		envVar: 'SCANOPY_NAME',
-		helpText: 'Name for this daemon',
+		helpText: '',
 		placeholder: 'Enter a name for this daemon...',
 		validators: [required(), maxLength(100)],
 		required: true

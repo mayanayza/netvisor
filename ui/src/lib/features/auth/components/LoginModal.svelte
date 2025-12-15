@@ -42,7 +42,7 @@
 
 	// Create form fields with validation
 	const email = field('email', formData.email, [required(), emailValidator()]);
-	const password = field('password', formData.password, [required(), minLength(12)]);
+	const password = field('password', formData.password, [required(), minLength(10)]);
 
 	// Update formData when field values change
 	$effect(() => {
@@ -90,6 +90,7 @@
 	saveLabel="Sign In"
 	cancelLabel="Cancel"
 	showCloseButton={false}
+	showBackdrop={false}
 	showCancel={false}
 	onSave={handleSubmit}
 	onCancel={onClose}

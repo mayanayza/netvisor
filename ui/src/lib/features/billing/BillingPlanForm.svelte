@@ -6,7 +6,6 @@
 	 * Uses CSS Grid for consistent sticky header/footer on both desktop and mobile.
 	 */
 	import { Check, X, ChevronDown } from 'lucide-svelte';
-	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
 	import ScanProgressIndicator from '$lib/features/discovery/components/ScanProgressIndicator.svelte';
@@ -278,7 +277,7 @@
 	<!-- Header with GitHub Stars and Toggles -->
 	<div class="flex flex-wrap items-stretch justify-center gap-3 px-4 lg:gap-6 lg:px-10">
 		{#if showGithubStars}
-			<GithubStars />
+			<!-- <GithubStars /> -->
 		{/if}
 
 		<ScanProgressIndicator />
@@ -488,8 +487,8 @@
 					{@const hosting = getHosting(plan)}
 					{@const commercial = isCommercial(plan)}
 					{@const trial = hasTrial(plan)}
-					<div class="grid-cell plan-cell">
-						<div class="flex flex-col gap-4">
+					<div class="grid-cell plan-cell footer-plan-cell">
+						<div class="flex w-full flex-col gap-3">
 							{#if hosting === 'Cloud'}
 								<button
 									type="button"
@@ -618,6 +617,17 @@
 		align-items: center;
 		justify-content: center;
 		text-align: center;
+	}
+
+	/* Footer plan cells - full width CTAs with padding */
+	.footer-plan-cell {
+		padding: 1rem;
+	}
+
+	@media (min-width: 1024px) {
+		.footer-plan-cell {
+			padding: 1.25rem;
+		}
 	}
 
 	/* Label column - sticky on horizontal scroll */
