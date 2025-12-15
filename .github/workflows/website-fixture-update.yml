@@ -17,7 +17,7 @@ jobs:
       - name: Checkout scanopy repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag }}
+           ref: dev  # instead of ${{ inputs.release_tag }}
       
       - name: Checkout website repo
         uses: actions/checkout@v4
