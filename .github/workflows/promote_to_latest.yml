@@ -105,6 +105,17 @@ jobs:
           repository: scanopy/website
           token: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
           path: website
+
+      - name: Debug source files
+        run: |
+          echo "=== Source file from scanopy repo (tag ${{ inputs.release_tag }}) ==="
+          echo "Checking for Neo4j in source:"
+          grep -i "neo4j" ui/static/services.json || echo "Neo4j NOT found in source"
+          
+          echo ""
+          echo "=== Destination file in website repo ==="
+          echo "Checking for Neo4j in destination:"
+          grep -i "neo4j" website/src/lib/fixtures/services.json || echo "Neo4j NOT found in destination"
       
       - name: Copy fixtures to website repo
         run: |
