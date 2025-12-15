@@ -1028,6 +1028,15 @@
   {
     "category": "Database",
     "color": "gray",
+    "description": "Graph database",
+    "discovery_pattern": "Any of: (7473/tcp is open, 7687/tcp is open)",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/neo4j.png",
+    "name": "Neo4j"
+  },
+  {
+    "category": "Database",
+    "color": "gray",
     "description": "Open-source relational database",
     "discovery_pattern": "3306/tcp is open",
     "logo_needs_white_background": true,
@@ -1078,6 +1087,15 @@
     "logo_needs_white_background": false,
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/elasticsearch.svg",
     "name": "Elasticsearch"
+  },
+  {
+    "category": "Database",
+    "color": "gray",
+    "description": "Data virtualization",
+    "discovery_pattern": "All of: (9990/tcp is open, 9996/tcp is open, 9090/tcp is open, 9099/tcp is open)",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/denodo.svg",
+    "name": "Denodo"
   },
   {
     "category": "Database",
