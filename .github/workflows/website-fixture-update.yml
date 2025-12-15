@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: scanopy/website
-          token: ${{ secrets.WEBSITE_REPO_TOKEN }}
+          token: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
           path: website
       
       - name: Copy fixtures
