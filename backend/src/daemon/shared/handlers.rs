@@ -23,7 +23,7 @@ async fn get_health() -> ApiResult<Json<ApiResponse<String>>> {
     tracing::info!("Received healthcheck request");
 
     Ok(Json(ApiResponse::success(
-        "Netvisor Daemon Running".to_string(),
+        "Scanopy Daemon Running".to_string(),
     )))
 }
 

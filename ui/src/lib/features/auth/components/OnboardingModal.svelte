@@ -11,11 +11,15 @@
 	let {
 		isOpen = false,
 		onClose,
-		onSubmit
+		onSubmit,
+		onSwitchToLogin = null,
+		showLoginLink = false
 	}: {
 		isOpen: boolean;
 		onClose: () => void;
 		onSubmit: (formData: OnboardingRequest) => void;
+		onSwitchToLogin?: (() => void) | null;
+		showLoginLink?: boolean;
 	} = $props();
 
 	let loading = false;
@@ -51,13 +55,14 @@
 
 <EditModal
 	{isOpen}
-	title="Welcome to NetVisor"
+	title="Let's start visualizing your network!"
 	{loading}
 	centerTitle={true}
-	saveLabel="Get Started"
+	saveLabel="Continue"
 	showCancel={false}
 	showCloseButton={false}
 	onSave={() => onSubmit(formData)}
+	showBackdrop={false}
 	onCancel={onClose}
 	size="md"
 	preventCloseOnClickOutside={true}
@@ -65,7 +70,11 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
+		<img
+			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+			alt="Scanopy Logo"
+			class="h-8 w-8"
+		/>
 	</svelte:fragment>
 
 	<!-- Content -->
@@ -74,8 +83,8 @@
 			label="Organization Name"
 			id="organizationName"
 			{formApi}
-			placeholder="My Organization"
-			helpText="This will be the name of your organization (you can change it later)"
+			placeholder="Acme Corp"
+			helpText="Your company, team, or project name"
 			required={true}
 			field={organizationName}
 		/>
@@ -84,18 +93,15 @@
 			label="Network Name"
 			id="networkName"
 			{formApi}
-			placeholder="My Network"
-			helpText="This will be the name of your first network (you can change it later)"
+			placeholder="Home Lab"
+			helpText="A logical grouping of devices to visualize (e.g., 'Office', 'Home Lab', 'Production')"
 			required={true}
 			field={networkName}
 		/>
 
 		<Checkbox
-			label="Populate with baseline data"
-			helpText="NetVisor will create two subnets - one representing a remote network, one representing
-						the internet - to help you organize services which are not discoverable on your own
-						network, and three hosts with example services to help you understand how NetVisor
-						works. You can delete this data at any time."
+			label="Track services Scanopy can't discover automatically?"
+			helpText="Creates subnets for remote hosts and internet services that aren't on your local network (Cloud services, APIs, SaaS tools, etc). Includes example data to show how it works."
 			id="seedData"
 			field={seedDataField}
 			{formApi}
@@ -105,15 +111,28 @@
 	<!-- Custom footer -->
 	<svelte:fragment slot="footer">
 		<div class="flex w-full flex-col gap-4">
-			<!-- Get Started Button -->
+			<!-- Continue Button -->
 			<button
 				type="button"
 				disabled={loading}
 				onclick={() => onSubmit(formData)}
 				class="btn-primary w-full"
 			>
-				{loading ? 'Setting up...' : 'Get Started'}
+				{loading ? 'Setting up...' : 'Continue'}
 			</button>
+
+			{#if showLoginLink && onSwitchToLogin}
+				<p class="text-secondary text-center text-sm">
+					Already have an account?
+					<button
+						type="button"
+						onclick={onSwitchToLogin}
+						class="font-medium text-blue-400 hover:text-blue-300"
+					>
+						Log in here
+					</button>
+				</p>
+			{/if}
 		</div>
 	</svelte:fragment>
 </EditModal>

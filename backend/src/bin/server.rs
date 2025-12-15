@@ -7,13 +7,13 @@ use axum::{
 };
 use axum_client_ip::ClientIpSource;
 use clap::Parser;
-use netvisor::server::{
+use reqwest::header;
+use scanopy::server::{
     auth::middleware::{logging::request_logging_middleware, rate_limit::rate_limit_middleware},
     billing::plans::get_all_plans,
     config::{AppState, ServerCli, ServerConfig},
     shared::handlers::{cache::AppCache, factory::create_router},
 };
-use reqwest::header;
 use tower::ServiceBuilder;
 use tower_http::{
     cors::CorsLayer,
@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(format!(
-            "netvisor={},server={},request_log={}",
+            "scanopy={},server={},request_log={}",
             config.log_level, config.log_level, config.log_level
         )))
         .with(tracing_subscriber::fmt::layer())
@@ -103,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let base_router = create_router().with_state(state.clone());
+    let base_router = create_router(state.clone()).with_state(state.clone());
 
     let api_router = if let Some(static_path) = &web_external_path {
         base_router.fallback_service(
@@ -175,7 +175,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
     let actual_port = listener.local_addr()?.port();
 
-    tracing::info!("🚀 NetVisor Server v{}", env!("CARGO_PKG_VERSION"));
+    tracing::info!("🚀 Scanopy Server v{}", env!("CARGO_PKG_VERSION"));
     if web_external_path.is_some() {
         tracing::info!("📊 Web UI: http://<your-ip>:{}", actual_port);
     }

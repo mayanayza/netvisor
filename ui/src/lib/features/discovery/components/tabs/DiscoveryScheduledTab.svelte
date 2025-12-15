@@ -133,7 +133,7 @@
 			)}
 			{fields}
 			onBulkDelete={handleBulkDelete}
-			storageKey="netvisor-discovery-scheduled-table-state"
+			storageKey="scanopy-discovery-scheduled-table-state"
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

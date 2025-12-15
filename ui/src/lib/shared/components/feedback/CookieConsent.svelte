@@ -3,8 +3,8 @@
 	import { dev } from '$app/environment';
 	import { onMount } from 'svelte';
 
-	const COOKIE_NAME = 'netvisor_gdpr';
-	const COOKIE_DOMAIN = dev ? '' : '.netvisor.io';
+	const COOKIE_NAME = 'scanopy_gdpr';
+	const COOKIE_DOMAIN = dev ? '' : '.scanopy.net';
 	const COOKIE_DAYS = 365;
 
 	interface CookiePreferences {
@@ -121,7 +121,7 @@
 					</div>
 					<p class="settings-description">
 						Manage your cookie preferences below. You can enable or disable different types of
-						cookies. See our <a href="https://netvisor.io/privacy">privacy policy</a> for more details.
+						cookies. See our <a href="https://scanopy.net/privacy">privacy policy</a> for more details.
 					</p>
 
 					<div class="cookie-options">
@@ -166,7 +166,7 @@
 						<h3 class="title">Cookie Settings</h3>
 						<p class="description">
 							We use cookies to improve your experience and analyze site traffic. See our <a
-								href="https://netvisor.io/privacy">privacy policy</a
+								href="https://scanopy.net/privacy">privacy policy</a
 							> for details.
 						</p>
 					</div>

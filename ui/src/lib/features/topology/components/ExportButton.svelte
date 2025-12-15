@@ -18,7 +18,7 @@
 
 	function downloadImage(dataUrl: string) {
 		const link = document.createElement('a');
-		link.download = `netvisor-topology-${new Date().toISOString().split('T')[0]}.png`;
+		link.download = `scanopy-topology-${new Date().toISOString().split('T')[0]}.png`;
 		link.href = dataUrl;
 		link.click();
 		pushSuccess('Export complete! Check your downloads folder.');
@@ -174,14 +174,14 @@
 			`;
 
 			const logo = document.createElement('img');
-			logo.src = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/netvisor.png';
+			logo.src = 'https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png';
 			logo.style.cssText = `
 				height: 18px;
 				width: auto;
 			`;
 
 			const text = document.createElement('span');
-			text.textContent = 'Created using netvisor.io';
+			text.textContent = 'Created using scanopy.net';
 
 			watermark.appendChild(logo);
 			watermark.appendChild(text);

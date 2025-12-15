@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide covers installing NetVisor on various platforms and deployment scenarios.
+This guide covers installing Scanopy on various platforms and deployment scenarios.
 
 ## Table of Contents
 
@@ -41,24 +41,24 @@ This guide covers installing NetVisor on various platforms and deployment scenar
 
 ## Docker Installation (Recommended)
 
-This is the easiest way to get started with NetVisor.
+This is the easiest way to get started with Scanopy.
 
 ### 1. Download the Docker Compose File
 
 ```bash
-curl -O https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/scanopy/scanopy/refs/heads/main/docker-compose.yml
 ```
 
 ### 2. Review Configuration
 
 The default `docker-compose.yml` includes:
-- NetVisor server on port 60072
+- Scanopy server on port 60072
 - PostgreSQL database
 - Integrated daemon for immediate network scanning
 
-**Important**: The integrated daemon assumes your Docker bridge network is `172.17.0.1`. If your Docker bridge uses a different address, edit the `NETVISOR_INTEGRATED_DAEMON_URL` environment variable in the compose file.
+**Important**: The integrated daemon assumes your Docker bridge network is `172.17.0.1`. If your Docker bridge uses a different address, edit the `SCANOPY_INTEGRATED_DAEMON_URL` environment variable in the compose file.
 
-### 3. Start NetVisor
+### 3. Start Scanopy
 
 ```bash
 docker compose up -d
@@ -73,9 +73,9 @@ docker compose ps
 ```
 
 You should see:
-- `netvisor-server` - Running on port 60072
-- `netvisor-postgres` - PostgreSQL database
-- `netvisor-daemon` - Integrated daemon
+- `scanopy-server` - Running on port 60072
+- `scanopy-postgres` - PostgreSQL database
+- `scanopy-daemon` - Integrated daemon
 
 ### 5. Access the UI
 
@@ -91,24 +91,24 @@ Refer to [contributing](../contributing.md) for details on getting your dev envi
 
 ### Proxmox LXC Container
 
-You can use this [helper script](https://community-scripts.github.io/ProxmoxVE/scripts?id=netvisor) to create a NetVisor LXC on your Proxmox host.
+You can use this [helper script](https://community-scripts.github.io/ProxmoxVE/scripts?id=netvisor) to create a Scanopy LXC on your Proxmox host.
 
 ### Unraid
 
-NetVisor is available as an Unraid community app.
+Scanopy is available as an Unraid community app.
 
 **Common Issues:**
 
-If running NetVisor directly on a Proxmox host and encountering `could not create any Unix-domain sockets`, add this to both the PostgreSQL and NetVisor services in your docker-compose:
+If running Scanopy directly on a Proxmox host and encountering `could not create any Unix-domain sockets`, add this to both the PostgreSQL and Scanopy services in your docker-compose:
 
 ```yaml
 security_opt:
   - apparmor:unconfined
 ```
 
-If running in an LXC, you may need to change `NETVISOR_INTEGRATED_DAEMON_URL` to `172.31.0.1`.
+If running in an LXC, you may need to change `SCANOPY_INTEGRATED_DAEMON_URL` to `172.31.0.1`.
 
-See [issue #87](https://github.com/netvisor-io/netvisor/issues/87) for more details.
+See [issue #87](https://github.com/scanopy/scanopy/issues/87) for more details.
 
 ## Additional Daemons
 
@@ -116,7 +116,7 @@ To scan multiple VLANs or remote networks, deploy additional daemons.
 
 ### Creating a Daemon
 
-1. Navigate to **Manage > Daemons** in the NetVisor UI
+1. Navigate to **Manage > Daemons** in the Scanopy UI
 2. Click **"Create Daemon"**
 3. Select the target network
 4. Select Daemon mode
@@ -125,25 +125,25 @@ To scan multiple VLANs or remote networks, deploy additional daemons.
 
 **Manual Installation:**
 
-Download the appropriate binary from the [releases page](https://github.com/netvisor-io/netvisor/releases/latest):
+Download the appropriate binary from the [releases page](https://github.com/scanopy/scanopy/releases/latest):
 
-- Linux x86_64: `netvisor-daemon-linux-amd64`
-- Linux ARM64: `netvisor-daemon-linux-arm64`
-- macOS x86_64: `netvisor-daemon-darwin-amd64`
-- macOS ARM64: `netvisor-daemon-darwin-arm64`
-- Windows x86_64: `netvisor-daemon-windows-amd64.exe`
+- Linux x86_64: `scanopy-daemon-linux-amd64`
+- Linux ARM64: `scanopy-daemon-linux-arm64`
+- macOS x86_64: `scanopy-daemon-darwin-amd64`
+- macOS ARM64: `scanopy-daemon-darwin-arm64`
+- Windows x86_64: `scanopy-daemon-windows-amd64.exe`
 
 Make it executable (Linux/macOS):
 
 ```bash
-chmod +x netvisor-daemon
-sudo mv netvisor-daemon /usr/local/bin/
+chmod +x scanopy-daemon
+sudo mv scanopy-daemon /usr/local/bin/
 ```
 
 **Run the Daemon:**
 
 ```bash
-netvisor-daemon \
+scanopy-daemon \
   --server-url http://YOUR_SERVER_URL \
   --network-id YOUR_NETWORK_ID \
   --daemon-api-key YOUR_API_KEY
@@ -159,13 +159,13 @@ For automatic startup, the install script offers to set up a systemd service.
 1. Download the service file:
 
 ```bash
-curl -o netvisor-daemon.service https://raw.githubusercontent.com/netvisor-io/netvisor/main/netvisor-daemon.service
+curl -o scanopy-daemon.service https://raw.githubusercontent.com/scanopy/scanopy/main/scanopy-daemon.service
 ```
 
 2. Edit the service file with your configuration:
 
 ```bash
-sudo nano netvisor-daemon.service
+sudo nano scanopy-daemon.service
 ```
 
 Update the `ExecStart` line with your parameters.
@@ -173,17 +173,17 @@ Update the `ExecStart` line with your parameters.
 3. Install and enable:
 
 ```bash
-sudo mv netvisor-daemon.service /etc/systemd/system/
+sudo mv scanopy-daemon.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable netvisor-daemon
-sudo systemctl start netvisor-daemon
+sudo systemctl enable scanopy-daemon
+sudo systemctl start scanopy-daemon
 ```
 
 4. Check status:
 
 ```bash
-sudo systemctl status netvisor-daemon
-sudo journalctl -u netvisor-daemon -f
+sudo systemctl status scanopy-daemon
+sudo journalctl -u scanopy-daemon -f
 ```
 
 ## Troubleshooting
@@ -196,10 +196,10 @@ sudo journalctl -u netvisor-daemon -f
 
 ```bash
 # Check daemon logs
-docker logs netvisor-daemon
+docker logs scanopy-daemon
 
 # Check if daemon can reach server
-docker exec netvisor-daemon curl http://netvisor-server:60072/api/health
+docker exec scanopy-daemon curl http://scanopy-server:60072/api/health
 ```
 
 **Solutions**:
@@ -209,7 +209,7 @@ docker exec netvisor-daemon curl http://netvisor-server:60072/api/health
    docker network inspect bridge | grep Gateway
    ```
 
-2. **Update compose file**: If gateway isn't `172.17.0.1`, update `NETVISOR_INTEGRATED_DAEMON_URL`
+2. **Update compose file**: If gateway isn't `172.17.0.1`, update `SCANOPY_INTEGRATED_DAEMON_URL`
 
 3. **Check API key**: Ensure the integrated daemon has a valid API key in the database
 
@@ -222,12 +222,12 @@ docker exec netvisor-daemon curl http://netvisor-server:60072/api/health
 **Docker:**
 ```yaml
 environment:
-  - NETVISOR_CONCURRENT_SCANS=10  # Reduce from default
+  - SCANOPY_CONCURRENT_SCANS=10  # Reduce from default
 ```
 
 **Binary:**
 ```bash
-netvisor-daemon --concurrent-scans 10 ...
+scanopy-daemon --concurrent-scans 10 ...
 ```
 
 See [CONFIGURATION.md](CONFIGURATION.md#concurrent-scans) for recommended values.
@@ -243,7 +243,7 @@ See [CONFIGURATION.md](CONFIGURATION.md#concurrent-scans) for recommended values
 1. **Reduce concurrent scans** (easiest):
    ```yaml
    environment:
-     - NETVISOR_CONCURRENT_SCANS=10
+     - SCANOPY_CONCURRENT_SCANS=10
    ```
 
 2. **Increase system file descriptor limit**:
@@ -293,16 +293,16 @@ Log out and back in for changes to take effect.
 
 ### Browser Shows "SSL Protocol Error"
 
-**Symptoms**: Browser displays "ERR_SSL_PROTOCOL_ERROR" or "SSL protocol is too long" when accessing NetVisor
+**Symptoms**: Browser displays "ERR_SSL_PROTOCOL_ERROR" or "SSL protocol is too long" when accessing Scanopy
 
 **Cause**: Attempting to access the HTTP server using HTTPS.
 
-**Solution**: Use `http://` (not `https://`) to access NetVisor directly:
+**Solution**: Use `http://` (not `https://`) to access Scanopy directly:
 ```
 http://your-server:60072
 ```
 
-If you need HTTPS, configure a reverse proxy (Traefik, Nginx, Caddy) in front of NetVisor to handle TLS termination.
+If you need HTTPS, configure a reverse proxy (Traefik, Nginx, Caddy) in front of Scanopy to handle TLS termination.
 
 ### PostgreSQL "Could not create any Unix-domain sockets" (Proxmox)
 
@@ -310,14 +310,14 @@ If you need HTTPS, configure a reverse proxy (Traefik, Nginx, Caddy) in front of
 
 **Cause**: AppArmor security policy blocking socket creation.
 
-**Solution**: Add to both PostgreSQL and NetVisor services in docker-compose.yml:
+**Solution**: Add to both PostgreSQL and Scanopy services in docker-compose.yml:
 
 ```yaml
 security_opt:
   - apparmor:unconfined
 ```
 
-See [issue #87](https://github.com/netvisor-io/netvisor/issues/87) for details.
+See [issue #87](https://github.com/scanopy/scanopy/issues/87) for details.
 
 ### Discovery Takes Extremely Long (Hours)
 
@@ -353,8 +353,8 @@ docker compose down
 docker compose down -v
 
 # Remove images
-docker rmi mayanayza/netvisor-server:latest
-docker rmi mayanayza/netvisor-daemon:latest
+docker rmi ghcr.io/scanopy/scanopy/server:latest
+docker rmi ghcr.io/scanopy/scanopy/daemon:latest
 ```
 
 ### Standalone Daemon
@@ -363,24 +363,24 @@ docker rmi mayanayza/netvisor-daemon:latest
 
 ```bash
 # Stop systemd service (if installed)
-sudo systemctl stop netvisor-daemon
-sudo systemctl disable netvisor-daemon
-sudo rm /etc/systemd/system/netvisor-daemon.service
+sudo systemctl stop scanopy-daemon
+sudo systemctl disable scanopy-daemon
+sudo rm /etc/systemd/system/scanopy-daemon.service
 
 # Remove binary
-sudo rm /usr/local/bin/netvisor-daemon
+sudo rm /usr/local/bin/scanopy-daemon
 
 # Remove configuration
-rm -rf ~/.config/netvisor/  # Linux
-rm -rf ~/Library/Application\ Support/com.netvisor.daemon/  # macOS
+rm -rf ~/.config/scanopy/  # Linux
+rm -rf ~/Library/Application\ Support/com.scanopy.daemon/  # macOS
 ```
 
 **Windows:**
 
 1. Stop the daemon process
 2. Delete the executable
-3. Remove configuration from `%APPDATA%\netvisor\daemon\`
+3. Remove configuration from `%APPDATA%\scanopy\daemon\`
 
 ---
 
-**Next Steps**: See the [User Guide](USER_GUIDE.md) to learn how to use NetVisor's features.
+**Next Steps**: See the [User Guide](USER_GUIDE.md) to learn how to use Scanopy's features.

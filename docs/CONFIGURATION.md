@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Complete reference for configuring NetVisor server and daemon components.
+Complete reference for configuring Scanopy server and daemon components.
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ Complete reference for configuring NetVisor server and daemon components.
 
 ## Configuration Priority
 
-NetVisor uses the following priority order (highest to lowest):
+Scanopy uses the following priority order (highest to lowest):
 
 1. **Command-line arguments** (highest priority)
 2. **Environment variables**
@@ -30,32 +30,32 @@ Later sources override earlier ones. For example, an environment variable overri
 **Command-line arguments**:
 
 ```bash
-netvisor-daemon --server-url http://192.168.1.100:60072 --api-key YOUR_KEY
+scanopy-daemon --server-url http://192.168.1.100:60072 --api-key YOUR_KEY
 ```
 
 **Environment variables**:
 
 ```bash
-export NETVISOR_SERVER_URL=http://192.168.1.100:60072
-export NETVISOR_DAEMON_API_KEY=YOUR_KEY
-netvisor-daemon
+export SCANOPY_SERVER_URL=http://192.168.1.100:60072
+export SCANOPY_DAEMON_API_KEY=YOUR_KEY
+scanopy-daemon
 ```
 
 **Docker environment**:
 
 ```yaml
 environment:
-  - NETVISOR_SERVER_URL=http://192.168.1.100:60072
-  - NETVISOR_DAEMON_API_KEY=YOUR_KEY
+  - SCANOPY_SERVER_URL=http://192.168.1.100:60072
+  - SCANOPY_DAEMON_API_KEY=YOUR_KEY
 ```
 
 **Configuration file**:
 
 The daemon automatically creates a config file at:
 
-- **Linux**: `~/.config/netvisor/daemon/config.json`
-- **macOS**: `~/Library/Application Support/com.netvisor.daemon/config.json`
-- **Windows**: `%APPDATA%\netvisor\daemon\config.json`
+- **Linux**: `~/.config/scanopy/daemon/config.json`
+- **macOS**: `~/Library/Application Support/com.scanopy.daemon/config.json`
+- **Windows**: `%APPDATA%\scanopy\daemon\config.json`
 
 The config file stores runtime state (daemon ID, host ID) alongside your settings. Command-line and environment variables take priority over the file.
 
@@ -63,22 +63,22 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 <!-- DAEMON_CONFIG_TABLE_START -->
 | Parameter | CLI Flag | Environment Variable | Config File Key | Default | Description |
 |-----------|----------|---------------------|-----------------|---------|-------------|
-| **Server URL** | `--server-url` | `NETVISOR_SERVER_URL` | `server_url` | `http://127.0.0.1:60072` | URL where the daemon can reach the server |
-| **API Key** | `--daemon-api-key` | `NETVISOR_DAEMON_API_KEY` | `api_key` | *Required* | Authentication key for daemon (generated via UI) |
-| **Mode** | `--mode` | `NETVISOR_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed |
-| **Network ID** | `--network-id` | `NETVISOR_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
-| **Daemon URL** | `--daemon-url` | `NETVISOR_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
-| **Daemon Port** | `--daemon-port` or `-p` | `NETVISOR_DAEMON_PORT` | `port` | `60073` | Port for daemon to listen on |
-| **Bind Address** | `--bind-address` | `NETVISOR_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind daemon to |
-| **Daemon Name** | `--name` | `NETVISOR_NAME` | `name` | `netvisor-daemon` | Name for this daemon |
-| **Log Level** | `--log-level` | `NETVISOR_LOG_LEVEL` | `log_level` | `info` | Logging verbosity |
-| **Heartbeat Interval** | `--heartbeat-interval` | `NETVISOR_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates / work requests (for daemons in pull mode) to server |
-| **Concurrent Scans** | `--concurrent-scans` | `NETVISOR_CONCURRENT_SCANS` | `concurrent_scans` | *Auto* | Maximum parallel host scans |
-| **Allow Self-Signed Certificates** | `--allow-self-signed-certs` | `NETVISOR_ALLOW_SELF_SIGNED_CERTS` | `allow_self_signed_certs` | *None* | Allow self-signed certs for daemon -> server connections |
-| **Docker Proxy** | `--docker-proxy` | `NETVISOR_DOCKER_PROXY` | `docker_proxy` | *None* | Optional proxy for Docker API. Can use both non-SSL and SSL proxy; SSL proxy requires additional SSL config vars |
-| **Docker SSL Proxy Cert Path** | `--docker-proxy-ssl-cert` | `NETVISOR_DOCKER_PROXY_SSL_CERT` | `docker_proxy_ssl_cert` | *None* | Path to SSL certificate if using a docker proxy with SSL |
-| **Docker SSL Proxy Key Path** | `--docker-proxy-ssl-key` | `NETVISOR_DOCKER_PROXY_SSL_KEY` | `docker_proxy_ssl_key` | *None* | Path to SSL private key if using a docker proxy with SSL |
-| **Docker SSL Proxy Chain Path** | `--docker-proxy-ssl-chain` | `NETVISOR_DOCKER_PROXY_SSL_CHAIN` | `docker_proxy_ssl_chain` | *None* | Path to SSL chain if using a docker proxy with SSL |
+| **Server URL** | `--server-url` | `SCANOPY_SERVER_URL` | `server_url` | `http://127.0.0.1:60072` | URL where the daemon can reach the server |
+| **API Key** | `--daemon-api-key` | `SCANOPY_DAEMON_API_KEY` | `api_key` | *Required* | Authentication key for daemon (generated via UI) |
+| **Mode** | `--mode` | `SCANOPY_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed |
+| **Network ID** | `--network-id` | `SCANOPY_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
+| **Daemon URL** | `--daemon-url` | `SCANOPY_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
+| **Daemon Port** | `--daemon-port` or `-p` | `SCANOPY_DAEMON_PORT` | `port` | `60073` | Port for daemon to listen on |
+| **Bind Address** | `--bind-address` | `SCANOPY_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind daemon to |
+| **Daemon Name** | `--name` | `SCANOPY_NAME` | `name` | `scanopy-daemon` | Name for this daemon |
+| **Log Level** | `--log-level` | `SCANOPY_LOG_LEVEL` | `log_level` | `info` | Logging verbosity |
+| **Heartbeat Interval** | `--heartbeat-interval` | `SCANOPY_HEARTBEAT_INTERVAL` | `heartbeat_interval` | `30` | Seconds between heartbeat updates / work requests (for daemons in pull mode) to server |
+| **Concurrent Scans** | `--concurrent-scans` | `SCANOPY_CONCURRENT_SCANS` | `concurrent_scans` | *Auto* | Maximum parallel host scans |
+| **Allow Self-Signed Certificates** | `--allow-self-signed-certs` | `SCANOPY_ALLOW_SELF_SIGNED_CERTS` | `allow_self_signed_certs` | *None* | Allow self-signed certs for daemon -> server connections |
+| **Docker Proxy** | `--docker-proxy` | `SCANOPY_DOCKER_PROXY` | `docker_proxy` | *None* | Optional proxy for Docker API. Can use both non-SSL and SSL proxy; SSL proxy requires additional SSL config vars |
+| **Docker SSL Proxy Cert Path** | `--docker-proxy-ssl-cert` | `SCANOPY_DOCKER_PROXY_SSL_CERT` | `docker_proxy_ssl_cert` | *None* | Path to SSL certificate if using a docker proxy with SSL |
+| **Docker SSL Proxy Key Path** | `--docker-proxy-ssl-key` | `SCANOPY_DOCKER_PROXY_SSL_KEY` | `docker_proxy_ssl_key` | *None* | Path to SSL private key if using a docker proxy with SSL |
+| **Docker SSL Proxy Chain Path** | `--docker-proxy-ssl-chain` | `SCANOPY_DOCKER_PROXY_SSL_CHAIN` | `docker_proxy_ssl_chain` | *None* | Path to SSL chain if using a docker proxy with SSL |
 <!-- DAEMON_CONFIG_TABLE_END -->
 ### Concurrent Scans
 
@@ -108,14 +108,14 @@ Controls how many hosts the daemon scans simultaneously during network discovery
 
 ```bash
 # CLI
-netvisor-daemon --concurrent-scans 10
+scanopy-daemon --concurrent-scans 10
 
 # Environment
-export NETVISOR_CONCURRENT_SCANS=10
+export SCANOPY_CONCURRENT_SCANS=10
 
 # Docker
 environment:
-  - NETVISOR_CONCURRENT_SCANS=10
+  - SCANOPY_CONCURRENT_SCANS=10
 ```
 
 **Symptoms of too high**:
@@ -138,32 +138,32 @@ environment:
 
 ```yaml
 environment:
-  - NETVISOR_SERVER_PORT=60072
-  - DATABASE_URL=postgresql://postgres:password@db:5432/netvisor
+  - SCANOPY_SERVER_PORT=60072
+  - DATABASE_URL=postgresql://postgres:password@db:5432/scanopy
 ```
 
 **Command-line** (for binary builds):
 
 ```bash
-./netvisor-server --port 60072 --database-url postgresql://...
+./scanopy-server --port 60072 --database-url postgresql://...
 ```
 
 ### Parameter Reference
 
 | Parameter | CLI Flag | Environment Variable | Default | Description |
 |-----------|----------|---------------------|---------|-------------|
-| **Server Public URL** | `--public-url` | `NETVISOR_PUBLIC_URL` | `http://localhost:60072` | Public URL for webhooks, email links, etc |
-| **Server Port** | `--server-port` | `NETVISOR_SERVER_PORT` | `60072` | Port for server to listen on |
-| **Database URL** | `--database-url` | `NETVISOR_DATABASE_URL` | *Required* | PostgreSQL connection string |
-| **Log Level** | `--log-level` | `NETVISOR_LOG_LEVEL` | `info` | Logging verbosity: `trace`, `debug`, `info`, `warn`, `error` |
-| **Secure Cookies** | `--use-secure-session-cookies` | `NETVISOR_USE_SECURE_SESSION_COOKIES` | `false` | Enable HTTPS-only cookies |
-| **Integrated Daemon URL** | `--integrated-daemon-url` | `NETVISOR_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL to reach daemon in default docker compose |
-| **Disable Registration** | `--disable-registration` | `NETVISOR_DISABLE_REGISTRATION` | `false` | Disable new user registration |
-| **SMTP Username** | `--smtp-username` | `NETVISOR_SMTP_USERNAME` | - | SMTP username for email features (password reset, notifications) |
-| **SMTP Password** | `--smtp-password` | `NETVISOR_SMTP_PASSWORD` | - | SMTP password for email authentication |
-| **SMTP Relay** | `--smtp-relay` | `NETVISOR_SMTP_RELAY` | - | SMTP server address (e.g., `smtp.gmail.com`) |
-| **SMTP Email** | `--smtp-email` | `NETVISOR_SMTP_EMAIL` | - | Sender email address for outgoing emails |
-| **Client IP Source** | `--client-ip-source` | `NETVISOR_CLIENT_IP_SOURCE` | - | Source of IP address from request headers, used to log accurate IP address in auth logs while using a reverse proxy. Refer to [axum-client-ip](https://github.com/imbolc/axum-client-ip?tab=readme-ov-file#configurable-vs-specific-extractors) docs for values you can set. |
+| **Server Public URL** | `--public-url` | `SCANOPY_PUBLIC_URL` | `http://localhost:60072` | Public URL for webhooks, email links, etc |
+| **Server Port** | `--server-port` | `SCANOPY_SERVER_PORT` | `60072` | Port for server to listen on |
+| **Database URL** | `--database-url` | `SCANOPY_DATABASE_URL` | *Required* | PostgreSQL connection string |
+| **Log Level** | `--log-level` | `SCANOPY_LOG_LEVEL` | `info` | Logging verbosity: `trace`, `debug`, `info`, `warn`, `error` |
+| **Secure Cookies** | `--use-secure-session-cookies` | `SCANOPY_USE_SECURE_SESSION_COOKIES` | `false` | Enable HTTPS-only cookies |
+| **Integrated Daemon URL** | `--integrated-daemon-url` | `SCANOPY_INTEGRATED_DAEMON_URL` | `http://172.17.0.1:60073` | URL to reach daemon in default docker compose |
+| **Disable Registration** | `--disable-registration` | `SCANOPY_DISABLE_REGISTRATION` | `false` | Disable new user registration |
+| **SMTP Username** | `--smtp-username` | `SCANOPY_SMTP_USERNAME` | - | SMTP username for email features (password reset, notifications) |
+| **SMTP Password** | `--smtp-password` | `SCANOPY_SMTP_PASSWORD` | - | SMTP password for email authentication |
+| **SMTP Relay** | `--smtp-relay` | `SCANOPY_SMTP_RELAY` | - | SMTP server address (e.g., `smtp.gmail.com`) |
+| **SMTP Email** | `--smtp-email` | `SCANOPY_SMTP_EMAIL` | - | Sender email address for outgoing emails |
+| **Client IP Source** | `--client-ip-source` | `SCANOPY_CLIENT_IP_SOURCE` | - | Source of IP address from request headers, used to log accurate IP address in auth logs while using a reverse proxy. Refer to [axum-client-ip](https://github.com/imbolc/axum-client-ip?tab=readme-ov-file#configurable-vs-specific-extractors) docs for values you can set. |
 
 ### Integrated Daemon URL
 
@@ -179,7 +179,7 @@ docker network inspect bridge | grep Gateway
 
 ```yaml
 environment:
-  - NETVISOR_INTEGRATED_DAEMON_URL=http://YOUR_GATEWAY_IP:60073
+  - SCANOPY_INTEGRATED_DAEMON_URL=http://YOUR_GATEWAY_IP:60073
 ```
 
 ### SMTP Configuration
@@ -192,10 +192,10 @@ SMTP settings enable email-based features such as password reset.
 
 ```yaml
 environment:
-  - NETVISOR_SMTP_RELAY=smtp.gmail.com:587
-  - NETVISOR_SMTP_USERNAME=your-email@gmail.com
-  - NETVISOR_SMTP_PASSWORD=your-app-password
-  - NETVISOR_SMTP_EMAIL=netvisor@yourdomain.com
+  - SCANOPY_SMTP_RELAY=smtp.gmail.com:587
+  - SCANOPY_SMTP_USERNAME=your-email@gmail.com
+  - SCANOPY_SMTP_PASSWORD=your-app-password
+  - SCANOPY_SMTP_EMAIL=scanopy@yourdomain.com
 ```
 
 ## UI Configuration
@@ -215,21 +215,21 @@ docker build \
   --build-arg PUBLIC_SERVER_HOSTNAME=api.example.com \
   --build-arg PUBLIC_SERVER_PORT=8080 \
   -f backend/Dockerfile \
-  -t netvisor-server:custom \
+  -t scanopy-server:custom \
   .
 ```
 
 Then use your custom image in docker-compose:
 
 ```yaml
-netvisor-server:
-  image: netvisor-server:custom
+scanopy-server:
+  image: scanopy-server:custom
   # ... rest of config
 ```
 
 ## OIDC Setup
 
-NetVisor supports OpenID Connect (OIDC) for enterprise authentication with providers like Authentik, Keycloak, Auth0, Okta, PocketID, and others.
+Scanopy supports OpenID Connect (OIDC) for enterprise authentication with providers like Authentik, Keycloak, Auth0, Okta, PocketID, and others.
 
 ### Quick Start
 
@@ -257,25 +257,25 @@ You can configure multiple providers by adding multiple `[[oidc_providers]]` sec
 Configure this URL in your OIDC provider's redirect/callback settings:
 
 ```
-http://your-netvisor-domain:60072/api/auth/oidc/{slug}/callback
+http://your-scanopy-domain:60072/api/auth/oidc/{slug}/callback
 ```
 
 Replace `{slug}` with the slug value from your oidc.toml. For example, if `slug = "authentik"`:
 
 ```
-http://netvisor.local:60072/api/auth/oidc/authentik/callback
+http://scanopy.local:60072/api/auth/oidc/authentik/callback
 ```
 
 **Required scopes**: `openid`, `email`, `profile` (profile is optional but recommended)
 
 ### OIDC with Docker Compose
 
-Add the following volume mount to your `netvisor-server` service:
+Add the following volume mount to your `scanopy-server` service:
 
 ```yaml
 services:
-  netvisor-server:
-    image: mayanayza/netvisor-server:latest
+  scanopy-server:
+    image: ghcr.io/scanopy/scanopy/server:latest
     volumes:
       - ./oidc.toml:/oidc.toml:ro
     # ... rest of config
@@ -286,20 +286,20 @@ services:
 #### Authentik
 
 1. **Create Application** in Authentik Admin → Applications → Create:
-   - Name: `NetVisor`
-   - Slug: `netvisor`
+   - Name: `Scanopy`
+   - Slug: `scanopy`
    - Provider: Create a new OAuth2/OpenID Provider
 
 2. **Configure Provider**:
-   - Name: `NetVisor OIDC`
+   - Name: `Scanopy OIDC`
    - Authorization flow: `default-provider-authorization-implicit-consent`
    - Client type: `Confidential`
-   - Redirect URIs: `http://your-netvisor:60072/api/auth/oidc/authentik/callback`
+   - Redirect URIs: `http://your-scanopy:60072/api/auth/oidc/authentik/callback`
    - Copy the Client ID and Client Secret
 
 3. **Find your Issuer URL**:
    - Go to Providers → your provider → OpenID Configuration Issuer
-   - Usually: `https://auth.yourdomain.com/application/o/netvisor/`
+   - Usually: `https://auth.yourdomain.com/application/o/scanopy/`
    - **Important**: Remove trailing slash if present (see [Common Issues](#common-oidc-issues))
 
 4. **Configure oidc.toml**:
@@ -309,7 +309,7 @@ services:
 name = "Authentik"
 slug = "authentik"
 logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/authentik.svg"
-issuer_url = "https://auth.yourdomain.com/application/o/netvisor"
+issuer_url = "https://auth.yourdomain.com/application/o/scanopy"
 client_id = "your-client-id"
 client_secret = "your-client-secret"
 ```
@@ -317,13 +317,13 @@ client_secret = "your-client-secret"
 #### Keycloak
 
 1. **Create Client** in Keycloak Admin → Clients → Create:
-   - Client ID: `netvisor`
+   - Client ID: `scanopy`
    - Client type: `OpenID Connect`
    - Client authentication: `On`
 
 2. **Configure Client Settings**:
-   - Valid redirect URIs: `http://your-netvisor:60072/api/auth/oidc/keycloak/callback`
-   - Web origins: `http://your-netvisor:60072`
+   - Valid redirect URIs: `http://your-scanopy:60072/api/auth/oidc/keycloak/callback`
+   - Web origins: `http://your-scanopy:60072`
 
 3. **Get Credentials**:
    - Go to Credentials tab
@@ -337,7 +337,7 @@ name = "Keycloak"
 slug = "keycloak"
 logo = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/keycloak.svg"
 issuer_url = "https://keycloak.yourdomain.com/realms/your-realm"
-client_id = "netvisor"
+client_id = "scanopy"
 client_secret = "your-client-secret"
 ```
 
@@ -345,8 +345,8 @@ client_secret = "your-client-secret"
 
 1. **Create OIDC Client** in PocketID:
    - Go to OIDC Clients → Add Client
-   - Name: `NetVisor`
-   - Callback URLs: `http://your-netvisor:60072/api/auth/oidc/pocketid/callback`
+   - Name: `Scanopy`
+   - Callback URLs: `http://your-scanopy:60072/api/auth/oidc/pocketid/callback`
 
 2. **Copy Credentials**:
    - Client ID
@@ -368,11 +368,11 @@ client_secret = "your-client-secret"
 
 1. **Create Application** in Auth0 Dashboard → Applications → Create:
    - Type: `Regular Web Application`
-   - Name: `NetVisor`
+   - Name: `Scanopy`
 
 2. **Configure Application Settings**:
-   - Allowed Callback URLs: `http://your-netvisor:60072/api/auth/oidc/auth0/callback`
-   - Allowed Web Origins: `http://your-netvisor:60072`
+   - Allowed Callback URLs: `http://your-scanopy:60072/api/auth/oidc/auth0/callback`
+   - Allowed Web Origins: `http://your-scanopy:60072`
 
 3. **Configure oidc.toml**:
 
@@ -393,8 +393,8 @@ client_secret = "your-client-secret"
    - Application type: `Web Application`
 
 2. **Configure Settings**:
-   - Sign-in redirect URIs: `http://your-netvisor:60072/api/auth/oidc/okta/callback`
-   - Sign-out redirect URIs: `http://your-netvisor:60072`
+   - Sign-in redirect URIs: `http://your-scanopy:60072/api/auth/oidc/okta/callback`
+   - Sign-out redirect URIs: `http://your-scanopy:60072`
 
 3. **Configure oidc.toml**:
 
@@ -428,11 +428,11 @@ curl https://your-provider/.well-known/openid-configuration | jq .issuer
 
 #### "Invalid redirect URI" error
 
-**Cause**: The callback URL in your provider doesn't match what NetVisor sends.
+**Cause**: The callback URL in your provider doesn't match what Scanopy sends.
 
 **Solution**: Ensure the redirect URI in your provider exactly matches:
 ```
-http://your-netvisor:60072/api/auth/oidc/{slug}/callback
+http://your-scanopy:60072/api/auth/oidc/{slug}/callback
 ```
 
 Common mistakes:
@@ -451,12 +451,12 @@ Common mistakes:
 **Solution**:
 1. Verify the volume mount exists in docker-compose.yml
 2. Validate TOML syntax (use a TOML validator)
-3. Restart with `docker compose restart netvisor-server`
-4. Check server logs: `docker logs netvisor-server`
+3. Restart with `docker compose restart scanopy-server`
+4. Check server logs: `docker logs scanopy-server`
 
 #### "Connection refused" when authenticating
 
-**Cause**: NetVisor server can't reach your OIDC provider.
+**Cause**: Scanopy server can't reach your OIDC provider.
 
 **Solutions**:
 1. Ensure the provider URL is reachable from the server container
@@ -471,11 +471,11 @@ Common mistakes:
 
 ### Secure Cookies
 
-**Important**: Enable secure cookies when running NetVisor behind HTTPS.
+**Important**: Enable secure cookies when running Scanopy behind HTTPS.
 
 ```yaml
 environment:
-  - NETVISOR_USE_SECURE_SESSION_COOKIES=true
+  - SCANOPY_USE_SECURE_SESSION_COOKIES=true
 ```
 
 **When to enable**:
@@ -503,30 +503,30 @@ For easier management, use `.env` files:
 
 ```bash
 # Database
-NETVISOR_DATABASE_URL=postgresql://postgres:password@db:5432/netvisor
+SCANOPY_DATABASE_URL=postgresql://postgres:password@db:5432/scanopy
 
 # Server
-NETVISOR_SERVER_PORT=60072
-NETVISOR_SERVER_PUBLIC_URL=http://your-domain.com:60072
-NETVISOR_LOG_LEVEL=info
-NETVISOR_USE_SECURE_SESSION_COOKIES=false
+SCANOPY_SERVER_PORT=60072
+SCANOPY_SERVER_PUBLIC_URL=http://your-domain.com:60072
+SCANOPY_LOG_LEVEL=info
+SCANOPY_USE_SECURE_SESSION_COOKIES=false
 
 # SMTP (optional - for password reset and notifications)
-NETVISOR_SMTP_RELAY=smtp.gmail.com:587
-NETVISOR_SMTP_USERNAME=your-email@gmail.com
-NETVISOR_SMTP_PASSWORD=your-app-password
-NETVISOR_SMTP_EMAIL=netvisor@yourdomain.com
+SCANOPY_SMTP_RELAY=smtp.gmail.com:587
+SCANOPY_SMTP_USERNAME=your-email@gmail.com
+SCANOPY_SMTP_PASSWORD=your-app-password
+SCANOPY_SMTP_EMAIL=scanopy@yourdomain.com
 
 # Daemon
-NETVISOR_INTEGRATED_DAEMON_URL=http://172.17.0.1:60073
+SCANOPY_INTEGRATED_DAEMON_URL=http://172.17.0.1:60073
 ```
 
 **Reference in docker-compose.yml**:
 
 ```yaml
 services:
-  netvisor-server:
-    image: mayanayza/netvisor-server:latest
+  scanopy-server:
+    image: ghcr.io/scanopy/scanopy/server:latest
     env_file:
       - .env
     # ... rest of config
@@ -534,4 +534,4 @@ services:
 
 ---
 
-**Next Steps**: See the [User Guide](USER_GUIDE.md) to learn how to use NetVisor's features.
+**Next Steps**: See the [User Guide](USER_GUIDE.md) to learn how to use Scanopy's features.

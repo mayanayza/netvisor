@@ -1,6 +1,6 @@
 # Multi-VLAN Deployment Guide
 
-Guide for deploying NetVisor across multiple VLANs and network segments.
+Guide for deploying Scanopy across multiple VLANs and network segments.
 
 ## Table of Contents
 
@@ -12,11 +12,11 @@ Guide for deploying NetVisor across multiple VLANs and network segments.
 
 ## Overview
 
-NetVisor uses daemons to discover hosts and services. The integrated daemon can scan networks it has direct access to, but isolated VLANs require additional daemons.
+Scanopy uses daemons to discover hosts and services. The integrated daemon can scan networks it has direct access to, but isolated VLANs require additional daemons.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    NetVisor Server                          │
+│                    Scanopy Server                          │
 │                   (192.168.1.10:60072)                      │
 └─────────────────────────┬───────────────────────────────────┘
                           │
@@ -78,11 +78,11 @@ Central daemon for routable networks, dedicated daemons for isolated segments.
 
 | VLAN | Subnet | Purpose | Daemon Location |
 |------|--------|---------|-----------------|
-| 1 | 192.168.1.0/24 | Production | netvisor-server host |
+| 1 | 192.168.1.0/24 | Production | scanopy-server host |
 | 10 | 192.168.10.0/24 | IoT | IoT management VM |
 | 20 | 192.168.20.0/24 | Guest | Guest network AP |
 
-### Step 2: Create Daemon in NetVisor UI
+### Step 2: Create Daemon in Scanopy UI
 
 1. Navigate to **Manage > Daemons**
 2. Click **"Create Daemon"**
@@ -141,4 +141,4 @@ Server initiates scan requests. Daemon must be reachable.
 
 For troubleshooting daemon and discovery issues, see [INSTALLATION.md - Troubleshooting](INSTALLATION.md#troubleshooting).
 
-**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/netvisor-io/netvisor/issues/new).
+**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/scanopy/scanopy/issues/new).

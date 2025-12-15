@@ -1,8 +1,8 @@
 [package]
-name = "netvisor-server"
-version = "0.11.9"
+name = "scanopy-server"
+version = "0.12.0"
 edition = "2024"
-description = "NetVisor HTTP API server"
+description = "Scanopy HTTP API server"
 
 [[bin]]
 name = "daemon"
@@ -13,7 +13,7 @@ name = "server"
 path = "src/bin/server.rs"
 
 [lib]
-name = "netvisor"
+name = "scanopy"
 path = "src/lib.rs"
 
 # Release profile optimizations for smaller, faster binaries

@@ -1,6 +1,6 @@
 # Docker Socket Proxy Guide
 
-Guide for configuring Docker socket proxies with NetVisor daemons.
+Guide for configuring Docker socket proxies with Scanopy daemons.
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@ Guide for configuring Docker socket proxies with NetVisor daemons.
 
 ## Overview
 
-NetVisor daemons can discover Docker containers by connecting to the Docker API. By default, daemons connect directly to `/var/run/docker.sock`. A Docker socket proxy provides an additional security layer by restricting which Docker API operations are allowed.
+Scanopy daemons can discover Docker containers by connecting to the Docker API. By default, daemons connect directly to `/var/run/docker.sock`. A Docker socket proxy provides an additional security layer by restricting which Docker API operations are allowed.
 
 ## When to Use a Docker Proxy
 
@@ -35,7 +35,7 @@ Route requests through a proxy:
 
 ```yaml
 environment:
-  - NETVISOR_DOCKER_PROXY=http://docker-proxy:2375
+  - SCANOPY_DOCKER_PROXY=http://docker-proxy:2375
 ```
 
 **Use when:**
@@ -45,7 +45,7 @@ environment:
 
 ## Supported Proxies
 
-NetVisor has been tested with these Docker socket proxies:
+Scanopy has been tested with these Docker socket proxies:
 
 ### Tecnativa docker-socket-proxy
 
@@ -104,12 +104,12 @@ Note: wollomatic's proxy uses allowlists. Refer to their documentation for confi
 ```yaml
 # Daemon configuration
 environment:
-  - NETVISOR_DOCKER_PROXY=http://docker-proxy:2375
+  - SCANOPY_DOCKER_PROXY=http://docker-proxy:2375
 ```
 
 Or via CLI:
 ```bash
-netvisor-daemon --docker-proxy http://docker-proxy:2375 ...
+scanopy-daemon --docker-proxy http://docker-proxy:2375 ...
 ```
 
 ### HTTPS Proxy (SSL)
@@ -118,17 +118,17 @@ For SSL-enabled proxies, provide certificate paths:
 
 ```yaml
 environment:
-  - NETVISOR_DOCKER_PROXY=https://docker-proxy:2376
-  - NETVISOR_DOCKER_PROXY_SSL_CERT=/certs/client-cert.pem
-  - NETVISOR_DOCKER_PROXY_SSL_KEY=/certs/client-key.pem
-  - NETVISOR_DOCKER_PROXY_SSL_CHAIN=/certs/ca.pem
+  - SCANOPY_DOCKER_PROXY=https://docker-proxy:2376
+  - SCANOPY_DOCKER_PROXY_SSL_CERT=/certs/client-cert.pem
+  - SCANOPY_DOCKER_PROXY_SSL_KEY=/certs/client-key.pem
+  - SCANOPY_DOCKER_PROXY_SSL_CHAIN=/certs/ca.pem
 volumes:
   - ./certs:/certs:ro
 ```
 
 Or via CLI:
 ```bash
-netvisor-daemon \
+scanopy-daemon \
   --docker-proxy https://docker-proxy:2376 \
   --docker-proxy-ssl-cert /certs/client-cert.pem \
   --docker-proxy-ssl-key /certs/client-key.pem \
@@ -138,7 +138,7 @@ netvisor-daemon \
 
 ### Required Docker API Permissions
 
-NetVisor daemon uses the following Docker API endpoints:
+Scanopy daemon uses the following Docker API endpoints:
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -149,7 +149,7 @@ NetVisor daemon uses the following Docker API endpoints:
 | `/containers/{id}/exec` | POST | Create exec instance for endpoint probing |
 | `/exec/{id}/start` | POST | Start exec to probe HTTP endpoints inside containers |
 
-**Note on exec**: NetVisor uses `exec` to probe HTTP endpoints from inside containers. This enables service detection for containers that don't expose ports to the host. If you disable exec access, containers will still be discovered but service detection accuracy may be reduced.
+**Note on exec**: Scanopy uses `exec` to probe HTTP endpoints from inside containers. This enables service detection for containers that don't expose ports to the host. If you disable exec access, containers will still be discovered but service detection accuracy may be reduced.
 
 ### Common Issues
 

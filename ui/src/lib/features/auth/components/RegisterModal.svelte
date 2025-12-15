@@ -16,15 +16,13 @@
 		invitedBy = null,
 		isOpen = false,
 		onRegister,
-		onClose,
-		onSwitchToLogin = null
+		onClose
 	}: {
 		orgName?: string | null;
 		invitedBy?: string | null;
 		isOpen?: boolean;
 		onRegister: (data: RegisterRequest) => Promise<void> | void;
 		onClose: () => void;
-		onSwitchToLogin?: (() => void) | null;
 	} = $props();
 
 	const loading = loadData([getConfig]);
@@ -101,6 +99,7 @@
 	showCancel={false}
 	showCloseButton={false}
 	onSave={handleSubmit}
+	showBackdrop={false}
 	onCancel={onClose}
 	size="md"
 	preventCloseOnClickOutside={true}
@@ -108,7 +107,11 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
+		<img
+			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+			alt="Scanopy Logo"
+			class="h-8 w-8"
+		/>
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}
@@ -126,7 +129,7 @@
 			label="Email"
 			id="email"
 			{formApi}
-			placeholder="Enter email"
+			placeholder="Enter your email"
 			required={true}
 			field={email}
 		/>
@@ -145,7 +148,7 @@
 			<div class="flex flex-grow flex-col items-center gap-2">
 				{#if enableTermsCheckbox}
 					<Checkbox
-						label="I agree to the <a class='text-link' target='_blank' href='https://netvisor.io/terms'>terms</a> and <a target='_blank' class='text-link'href='https://netvisor.io/privacy'>privacy policy</a>"
+						label="I agree to the <a class='text-link' target='_blank' href='https://scanopy.net/terms'>terms</a> and <a target='_blank' class='text-link'href='https://scanopy.net/privacy'>privacy policy</a>"
 						helpText=""
 						{formApi}
 						required={true}
@@ -186,7 +189,7 @@
 							{#if provider.logo}
 								<img src={provider.logo} alt={provider.name} class="h-5 w-5" />
 							{/if}
-							Sign up with {provider.name}
+							Create Account with {provider.name}
 						</button>
 					{/each}
 				</div>
@@ -203,18 +206,6 @@
 					/>
 				{/if}
 			</div>
-
-			<!-- Login Link -->
-			{#if onSwitchToLogin}
-				<div class="text-center">
-					<p class="text-sm text-gray-400">
-						Already have an account?
-						<button type="button" onclick={onSwitchToLogin} class="text-link">
-							Sign in here
-						</button>
-					</p>
-				</div>
-			{/if}
 		</div>
 	</svelte:fragment>
 </EditModal>

@@ -1,6 +1,6 @@
 use crate::server::auth::middleware::permissions::{MemberOrDaemon, RequireMember};
 use crate::server::shared::handlers::traits::{
-    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, get_all_handler, get_by_id_handler,
+    BulkDeleteResponse, bulk_delete_handler, delete_handler, get_by_id_handler,
 };
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
@@ -25,8 +25,8 @@ use validator::Validate;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", get(get_all_handler::<Host>))
-        .route("/{id}", delete(delete_handler))
+        .route("/", get(get_all_hosts))
+        .route("/{id}", delete(delete_host))
         .route("/{id}", get(get_by_id_handler::<Host>))
         .route("/", post(create_host))
         .route("/{id}", put(update_host))
@@ -35,6 +35,15 @@ pub fn create_router() -> Router<Arc<AppState>> {
             "/{destination_host}/consolidate/{other_host}",
             put(consolidate_hosts),
         )
+}
+
+async fn get_all_hosts(
+    State(state): State<Arc<AppState>>,
+    MemberOrDaemon { network_ids, .. }: MemberOrDaemon,
+) -> ApiResult<Json<ApiResponse<Vec<Host>>>> {
+    let filter = EntityFilter::unfiltered().network_ids(&network_ids);
+    let hosts = state.services.host_service.get_all(filter).await?;
+    Ok(Json(ApiResponse::success(hosts)))
 }
 
 async fn create_host(
@@ -181,36 +190,28 @@ async fn consolidate_hosts(
     Ok(Json(ApiResponse::success(updated_host)))
 }
 
-pub async fn delete_handler(
+/// Delete a host, checking for associated daemons first
+pub async fn delete_host(
     State(state): State<Arc<AppState>>,
-    RequireMember(user): RequireMember,
+    user: RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
-    let service = Host::get_service(&state);
-
-    let daemon_service = &state.services.daemon_service;
-
+    // Pre-validation: Can't delete a host with an associated daemon
     let host_filter = EntityFilter::unfiltered().host_id(&id);
-
-    if daemon_service.get_one(host_filter).await?.is_some() {
+    if state
+        .services
+        .daemon_service
+        .get_one(host_filter)
+        .await?
+        .is_some()
+    {
         return Err(ApiError::conflict(
             "Can't delete a host with an associated daemon. Delete the daemon first.",
         ));
     }
 
-    // Verify entity exists
-    service
-        .get_by_id(&id)
-        .await
-        .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found(format!("Host '{}' not found", id)))?;
-
-    service
-        .delete(&id, user.into())
-        .await
-        .map_err(|e| ApiError::internal_error(&e.to_string()))?;
-
-    Ok(Json(ApiResponse::success(())))
+    // Delegate to generic handler (handles auth checks, deletion)
+    delete_handler::<Host>(State(state), user, Path(id)).await
 }
 
 pub async fn bulk_delete_hosts(

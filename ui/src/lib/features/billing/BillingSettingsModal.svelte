@@ -202,7 +202,7 @@
 						{:else if org.plan_status === 'past_due'}
 							<div class="rounded-md border border-red-800 bg-red-900/30 p-3 text-sm text-red-300">
 								Your payment is past due. Please update your payment method to continue using
-								NetVisor.
+								Scanopy.
 							</div>
 						{:else if org.plan_status === 'canceled'}
 							<div
@@ -226,8 +226,8 @@
 			<!-- Additional Info -->
 			<InfoCard title="Need Help?">
 				<p class="text-secondary text-sm">
-					Contact us at <a href="mailto:billing@netvisor.io" class="text-blue-400 hover:underline"
-						>billing@netvisor.io</a
+					Contact us at <a href="mailto:billing@scanopy.net" class="text-blue-400 hover:underline"
+						>billing@scanopy.net</a
 					> for billing questions or assistance.
 				</p>
 			</InfoCard>

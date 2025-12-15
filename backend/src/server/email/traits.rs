@@ -18,7 +18,7 @@ pub trait EmailProvider: Send + Sync {
     }
 
     fn build_invite_title(&self, from_user: EmailAddress) -> String {
-        format!("You've been invited to join {} on NetVisor", from_user)
+        format!("You've been invited to join {} on Scanopy", from_user)
     }
 
     fn build_password_reset_email(&self, url: String, token: String) -> String {

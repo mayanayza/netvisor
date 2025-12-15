@@ -90,7 +90,7 @@ export function createEmptyHostFormData(): Host {
 			type: 'Manual'
 		},
 		virtualization: null,
-		network_id: get(networks)[0].id || '',
+		network_id: get(networks)[0]?.id || '',
 		hidden: false
 	};
 }

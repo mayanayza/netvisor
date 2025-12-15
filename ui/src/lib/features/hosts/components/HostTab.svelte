@@ -222,7 +222,7 @@
 		<DataControls
 			items={$hosts}
 			fields={hostFields}
-			storageKey="netvisor-hosts-table-state"
+			storageKey="scanopy-hosts-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>

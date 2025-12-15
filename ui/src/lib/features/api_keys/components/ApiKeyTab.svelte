@@ -114,7 +114,7 @@
 			items={$apiKeys}
 			fields={apiKeyFields}
 			onBulkDelete={handleBulkDelete}
-			storageKey="netvisor-api-keys-table-state"
+			storageKey="scanopy-api-keys-table-state"
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

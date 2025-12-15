@@ -13,7 +13,7 @@
   {
     "id": "onboarding_call",
     "name": "Onboarding Call",
-    "description": "30 minute onboarding call to ensure you're getting the most out of NetVisor",
+    "description": "30 minute onboarding call to ensure you're getting the most out of Scanopy",
     "category": "Support",
     "icon": null,
     "color": null,
@@ -24,7 +24,7 @@
   {
     "id": "commercial_license",
     "name": "Commercial License",
-    "description": "Use NetVisor under a commercial license",
+    "description": "Use Scanopy under a commercial license",
     "category": "Licensing & Billing",
     "icon": null,
     "color": null,
@@ -35,7 +35,7 @@
   {
     "id": "audit_logs",
     "name": "Audit Logs",
-    "description": "Comprehensive logs of all access and data modification actions performed in NetVisor",
+    "description": "Comprehensive logs of all access and data modification actions performed in Scanopy",
     "category": "Enterprise",
     "icon": null,
     "color": null,
@@ -57,7 +57,7 @@
   {
     "id": "remove_created_with",
     "name": "Remove Watermark",
-    "description": "Remove 'Created using netvisor.io' in bottom right corner of visualization",
+    "description": "Remove 'Created using scanopy.net' in bottom right corner of visualization",
     "category": "Sharing",
     "icon": null,
     "color": null,
@@ -79,7 +79,7 @@
   {
     "id": "managed_deployment",
     "name": "Managed Deployment",
-    "description": "We deploy, configure, and manage NetVisor for you — on a dedicated instance or your own infrastructure",
+    "description": "We deploy, configure, and manage Scanopy for you — on a dedicated instance or your own infrastructure",
     "category": "Enterprise",
     "icon": null,
     "color": null,
@@ -123,7 +123,7 @@
   {
     "id": "email_support",
     "name": "Email Support",
-    "description": "Access to the NetVisor team via email support tickets",
+    "description": "Access to the Scanopy team via email support tickets",
     "category": "Support",
     "icon": null,
     "color": null,
@@ -134,7 +134,7 @@
   {
     "id": "live_chat_support",
     "name": "Live Chat Support",
-    "description": "Access to the NetVisor team via live chat (Slack or Discord)",
+    "description": "Access to the Scanopy team via live chat (Slack or Discord)",
     "category": "Support",
     "icon": null,
     "color": null,

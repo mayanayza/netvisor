@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod billing;
 pub mod features;
 pub mod logging;
 pub mod permissions;

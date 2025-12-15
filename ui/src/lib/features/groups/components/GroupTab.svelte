@@ -154,7 +154,7 @@
 		<DataControls
 			items={$groups}
 			fields={groupFields}
-			storageKey="netvisor-groups-table-state"
+			storageKey="scanopy-groups-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>

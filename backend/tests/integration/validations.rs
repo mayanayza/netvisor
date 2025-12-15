@@ -1,0 +1,154 @@
+//! Handler validation tests.
+
+use crate::infra::{BASE_URL, TestContext};
+use reqwest::StatusCode;
+use scanopy::server::daemons::r#impl::base::Daemon;
+use scanopy::server::hosts::r#impl::api::HostWithServicesRequest;
+use scanopy::server::hosts::r#impl::base::{Host, HostBase};
+use scanopy::server::hosts::r#impl::targets::HostTarget;
+use scanopy::server::services::definitions::ServiceDefinitionRegistry;
+use scanopy::server::services::r#impl::base::{Service, ServiceBase};
+use scanopy::server::shared::storage::traits::StorableEntity;
+use scanopy::server::shared::types::entities::EntitySource;
+use scanopy::server::tags::r#impl::base::{Tag, TagBase};
+use uuid::Uuid;
+
+pub async fn run_validation_tests(ctx: &TestContext) -> Result<(), String> {
+    println!("\n=== Testing Handler Validations ===\n");
+
+    test_service_network_validation(ctx).await?;
+    test_host_daemon_deletion_prevention(ctx).await?;
+    test_bulk_delete_validation(ctx).await?;
+
+    println!("\n✅ All handler validation tests passed!");
+    Ok(())
+}
+
+async fn test_service_network_validation(ctx: &TestContext) -> Result<(), String> {
+    println!("Testing: Service must be on same network as host...");
+
+    let host = Host::new(HostBase {
+        name: "Validation Test Host".to_string(),
+        hostname: Some("validation.local".to_string()),
+        network_id: ctx.network_id,
+        description: None,
+        target: HostTarget::Hostname,
+        interfaces: vec![],
+        services: vec![],
+        ports: vec![],
+        source: EntitySource::System,
+        virtualization: None,
+        hidden: false,
+        tags: Vec::new(),
+    });
+    let host_request = HostWithServicesRequest {
+        host,
+        services: None,
+    };
+    let created_host: HostWithServicesRequest =
+        ctx.client.post("/api/hosts", &host_request).await?;
+
+    let service_def = ServiceDefinitionRegistry::all_service_definitions()[0].clone();
+    let service = Service::new(ServiceBase {
+        name: "Wrong Network Service".to_string(),
+        host_id: created_host.host.id,
+        bindings: vec![],
+        network_id: Uuid::new_v4(), // Different network!
+        service_definition: service_def,
+        virtualization: None,
+        source: EntitySource::System,
+        tags: Vec::new(),
+    });
+
+    let result = ctx
+        .client
+        .post_expect_status("/api/services", &service, StatusCode::BAD_REQUEST)
+        .await;
+    assert!(
+        result.is_ok(),
+        "Service on different network should return 400: {:?}",
+        result
+    );
+    println!("  ✓ Service with different network_id than host returns 400");
+
+    ctx.client
+        .delete_no_content(&format!("/api/hosts/{}", created_host.host.id))
+        .await?;
+
+    Ok(())
+}
+
+async fn test_host_daemon_deletion_prevention(ctx: &TestContext) -> Result<(), String> {
+    println!("Testing: Cannot delete host with associated daemon...");
+
+    let daemons: Vec<Daemon> = ctx.client.get("/api/daemons").await?;
+
+    if let Some(daemon) = daemons.first() {
+        let result = ctx
+            .client
+            .get_expect_status(
+                &format!("/api/hosts/{}", daemon.base.host_id),
+                StatusCode::OK,
+            )
+            .await;
+
+        if result.is_ok() {
+            let response = ctx
+                .client
+                .client
+                .delete(format!("{}/api/hosts/{}", BASE_URL, daemon.base.host_id))
+                .send()
+                .await
+                .map_err(|e| format!("Delete request failed: {}", e))?;
+
+            assert_eq!(
+                response.status(),
+                StatusCode::CONFLICT,
+                "Deleting host with daemon should return 409 Conflict"
+            );
+            println!("  ✓ Deleting host with daemon returns 409 Conflict");
+        }
+    } else {
+        println!("  ⚠ No daemon found to test host-daemon deletion");
+    }
+
+    Ok(())
+}
+
+async fn test_bulk_delete_validation(ctx: &TestContext) -> Result<(), String> {
+    println!("Testing: Bulk delete validates all items...");
+
+    let mut tag1 = Tag::new(TagBase::default());
+    tag1.base.organization_id = ctx.organization_id;
+    tag1.base.name = "Bulk Test Tag 1".to_string();
+    let created1: Tag = ctx.client.post("/api/tags", &tag1).await?;
+
+    let mut tag2 = Tag::new(TagBase::default());
+    tag2.base.organization_id = ctx.organization_id;
+    tag2.base.name = "Bulk Test Tag 2".to_string();
+    let created2: Tag = ctx.client.post("/api/tags", &tag2).await?;
+
+    let ids = vec![created1.id, created2.id];
+    let result: serde_json::Value = ctx.client.post("/api/tags/bulk-delete", &ids).await?;
+
+    assert!(
+        result.get("deleted").is_some() || result.get("deleted_count").is_some(),
+        "Bulk delete should return deleted count"
+    );
+    println!("  ✓ Bulk delete returns success with count");
+
+    let result1 = ctx
+        .client
+        .get_expect_status(&format!("/api/tags/{}", created1.id), StatusCode::NOT_FOUND)
+        .await;
+    let result2 = ctx
+        .client
+        .get_expect_status(&format!("/api/tags/{}", created2.id), StatusCode::NOT_FOUND)
+        .await;
+
+    assert!(result1.is_ok(), "First tag should be deleted");
+    assert!(result2.is_ok(), "Second tag should be deleted");
+    println!("  ✓ All bulk deleted items are removed");
+
+    Ok(())
+}

@@ -21,6 +21,21 @@ export interface OnboardingRequest {
 	populate_seed_data: boolean;
 }
 
+// SetupRequest is the same as OnboardingRequest - used for pre-registration setup
+export type SetupRequest = OnboardingRequest;
+
+export interface SetupResponse {
+	network_id: string;
+}
+
+export interface DaemonSetupRequest {
+	daemon_name: string;
+}
+
+export interface DaemonSetupResponse {
+	api_key: string;
+}
+
 export interface ForgotPasswordRequest {
 	email: string;
 }
