@@ -4,7 +4,7 @@
   <img src="./media/logo.png" width="100" alt="Scanopy Logo">
 </p>
 
-**Automatically discover and visually document network infrastructure.**
+**Clean network diagrams. One-time setup, zero upkeep.**
 
 Scanopy scans your network, identifies hosts and services, and generates an interactive visualization showing how everything connects, letting you easily create and maintain network documentation.<br>
 <br>
