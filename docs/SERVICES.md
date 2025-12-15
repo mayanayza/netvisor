@@ -326,6 +326,12 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #d1d5db;">Open-source relational database</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">3306/tcp is open</code></td>
 </tr>
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/neo4j.svg" alt="Neo4j" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Neo4j</td>
+<td style="padding: 12px; color: #d1d5db;">Graph database</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (7474/tcp (WebUI - Secure) is open, 7687/tcp (Bolt) is open)</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/oracle.svg" alt="Oracle Database" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Oracle Database</td>

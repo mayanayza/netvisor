@@ -179,6 +179,7 @@ pub mod mariadb;
 pub mod mongodb;
 pub mod mssql_server;
 pub mod mysql;
+pub mod neo4j;
 pub mod oracle_db;
 pub mod postgresql;
 pub mod redis_db;
