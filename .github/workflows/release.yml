@@ -9,13 +9,13 @@ jobs:
     name: Run Tests and Update Fixtures
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Need write permission to push
+      contents: write
     
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.target_commitish }}
-          fetch-depth: 0  # Fetch all history so we can push
+          fetch-depth: 0
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -32,22 +32,15 @@ jobs:
 
       - name: Free up disk space
         run: |
-          # Remove pre-installed tools we don't need
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          
-          # Clean Docker completely
+          sudo rm -rf /usr/share/dotnet /opt/ghc "$AGENT_TOOLSDIRECTORY"
           docker system prune -af --volumes
-          
-          echo "=== Disk space after cleanup ==="
           df -h
                   
       - name: Run all tests
         run: |
           make dev-down
           rm -rf ./data/daemon_config/*
-          export DATABASE_URL="postgresql://postgres:password@localhost:5432/netvisor_test"
+          export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy_test"
           cd backend && cargo test --features generate-fixtures -- --nocapture --test-threads=1
 
       - name: Show container logs on test failure
@@ -62,7 +55,7 @@ jobs:
       
       - name: Update fixtures
         run: |
-          mv backend/src/tests/netvisor-next.sql backend/src/tests/netvisor.sql
+          mv backend/src/tests/scanopy-next.sql backend/src/tests/scanopy.sql
           mv backend/src/tests/daemon_config-next.json backend/src/tests/daemon_config.json
           mv ui/static/services-next.json ui/static/services.json
           mv docs/SERVICES-NEXT.md docs/SERVICES.md
@@ -74,24 +67,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Stage version changes
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
-
-           # Stage fixture updates
-          git add backend/src/tests/netvisor.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json ui/static/features.json
+          git add backend/src/tests/scanopy.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json ui/static/features.json
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
           else
-            # Get the current branch name
             BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
-            
             git commit -m "chore: update test fixtures for release ${{ github.event.release.tag_name }}"
             git push origin "$BRANCH_NAME"
             echo "✅ Pushed fixture updates to $BRANCH_NAME"
           fi
-          
+
   build-binaries:
     name: Build Daemon Binaries
     runs-on: ${{ matrix.os }}
@@ -99,30 +86,25 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux - musl for maximum compatibility
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            binary: netvisor-daemon-linux-amd64
+            binary: scanopy-daemon-linux-amd64
             use_cross: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            binary: netvisor-daemon-linux-arm64
+            binary: scanopy-daemon-linux-arm64
             use_cross: true
-          
-          # macOS - native builds
           - os: macos-latest
             target: x86_64-apple-darwin
-            binary: netvisor-daemon-darwin-amd64
+            binary: scanopy-daemon-darwin-amd64
             use_cross: false
           - os: macos-latest
             target: aarch64-apple-darwin
-            binary: netvisor-daemon-darwin-arm64
+            binary: scanopy-daemon-darwin-arm64
             use_cross: false
-
-          # Windows - native builds
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: netvisor-daemon-windows-amd64.exe
+            binary: scanopy-daemon-windows-amd64.exe
             use_cross: false
     
     steps:
@@ -133,10 +115,6 @@ jobs:
         run: |
           git fetch origin ${{ github.event.release.target_commitish }}
           git reset --hard origin/${{ github.event.release.target_commitish }}
-          echo "=== Current commit ==="
-          git log -1 --oneline
-          echo "=== Cargo.toml version ==="
-          grep "^version" backend/Cargo.toml | head -1
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.90.0
@@ -157,20 +135,20 @@ jobs:
           workspaces: backend
           key: ${{ matrix.target }}
       
+      # Use pre-built cross binary instead of compiling from source
       - name: Install cross
         if: matrix.use_cross
-        run: |
-          cargo install cross --git https://github.com/cross-rs/cross --tag v0.2.5
+        uses: taiki-e/install-action@cross
       
       - name: Build daemon
         working-directory: backend
-        run: |          
+        shell: bash
+        run: |
           if [ "${{ matrix.use_cross }}" = "true" ]; then
             cross build --release --bin daemon --target ${{ matrix.target }}
           else
             cargo build --release --bin daemon --target ${{ matrix.target }}
           fi
-        shell: bash
       
       - name: Prepare binary
         shell: bash
@@ -189,10 +167,23 @@ jobs:
           path: ${{ matrix.binary }}
           retention-days: 1
 
-  build-docker:
-    name: Build and Push Docker Images
-    runs-on: ubuntu-latest
+  # ============================================
+  # Docker builds - parallelized by image type
+  # ============================================
+  
+  build-docker-server-community:
+    name: Build Server (Community)
+    runs-on: ${{ matrix.runner }}
     needs: build-binaries
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            suffix: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            suffix: arm64
     
     steps:
       - uses: actions/checkout@v4
@@ -218,47 +209,124 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Get release version
-        id: version
-        run: echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-      
-      # Server image (Community self-hosted)
-      - name: Build and push Server+UI image (Community)
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .  # Build from project root to access both backend/ and ui/
-          file: ./backend/Dockerfile  
-          platforms: linux/amd64,linux/arm64
+          context: .
+          file: ./backend/Dockerfile
+          platforms: ${{ matrix.platform }}
           push: true
           build-args: |
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
           tags: |
-            mayanayza/netvisor-server:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/server:${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            mayanayza/scanopy-server:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
+            ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
+          cache-from: type=gha,scope=server-${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=server-${{ matrix.suffix }}
+
+  build-docker-server-commercial:
+    name: Build Server (Commercial)
+    runs-on: ${{ matrix.runner }}
+    needs: build-binaries
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            suffix: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            suffix: arm64
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull latest changes
+        run: |
+          git fetch origin ${{ github.event.release.target_commitish }}
+          git reset --hard origin/${{ github.event.release.target_commitish }}
       
-      # Server image (Commercial, used for saas and commercical self-hosted)
-      - name: Build and push Server+UI image (Commercial)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .  # Build from project root to access both backend/ and ui/
-          file: ./backend/Dockerfile  
-          platforms: linux/amd64,linux/arm64
+          context: .
+          file: ./backend/Dockerfile
+          platforms: ${{ matrix.platform }}
           push: true
           build-args: |
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
             CARGO_FEATURES=commercial
           tags: |
-            mayanayza/netvisor-server-commercial:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/server-commercial:${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
+            ghcr.io/${{ github.repository }}/server-commercial:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
+          cache-from: type=gha,scope=server-commercial-${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=server-commercial-${{ matrix.suffix }}
+
+  build-docker-daemon:
+    name: Build Daemon Docker
+    runs-on: ubuntu-latest
+    needs: build-binaries
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull latest changes
+        run: |
+          git fetch origin ${{ github.event.release.target_commitish }}
+          git reset --hard origin/${{ github.event.release.target_commitish }}
       
-      # Build Daemon image
-      - name: Build and push Daemon image
+      # Download pre-built binaries
+      - name: Download Linux amd64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: scanopy-daemon-linux-amd64
+          path: backend/
+      
+      - name: Download Linux arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: scanopy-daemon-linux-arm64
+          path: backend/
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Daemon uses pre-built binaries, so multi-platform is fast (no Rust compilation)
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -266,15 +334,60 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            mayanayza/netvisor-daemon:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/daemon:${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            mayanayza/scanopy-daemon:${{ github.event.release.tag_name }}
+            ghcr.io/${{ github.repository }}/daemon:${{ github.event.release.tag_name }}
+
+  # ============================================
+  # Create multi-arch manifests for server images
+  # ============================================
+  
+  create-manifests:
+    name: Create Multi-arch Manifests
+    runs-on: ubuntu-latest
+    needs: [build-docker-server-community, build-docker-server-commercial, build-docker-daemon]
+    
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create manifest for Server Community (Docker Hub)
+        run: |
+          docker buildx imagetools create -t mayanayza/scanopy-server:${{ github.event.release.tag_name }} \
+            mayanayza/scanopy-server:${{ github.event.release.tag_name }}-amd64 \
+            mayanayza/scanopy-server:${{ github.event.release.tag_name }}-arm64
+      
+      - name: Create manifest for Server Community (GHCR)
+        run: |
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }} \
+            ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-amd64 \
+            ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-arm64
+      
+      - name: Create manifest for Server Commercial (Docker Hub)
+        run: |
+          docker buildx imagetools create -t mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }} \
+            mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }}-amd64 \
+            mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }}-arm64
+      
+      - name: Create manifest for Server Commercial (GHCR)
+        run: |
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server-commercial:${{ github.event.release.tag_name }} \
+            ghcr.io/${{ github.repository }}/server-commercial:${{ github.event.release.tag_name }}-amd64 \
+            ghcr.io/${{ github.repository }}/server-commercial:${{ github.event.release.tag_name }}-arm64
 
   upload-assets:
     name: Upload Release Assets
     runs-on: ubuntu-latest
-    needs: [build-binaries, build-docker]
+    needs: [build-binaries, create-manifests]
     
     steps:
       - name: Download all artifacts
@@ -284,6 +397,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            netvisor-daemon-*/netvisor-daemon-*
+            scanopy-daemon-*/scanopy-daemon-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
