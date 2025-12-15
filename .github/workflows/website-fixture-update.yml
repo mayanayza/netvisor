@@ -1,0 +1,47 @@
+name: Sync Fixtures to Website
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to sync fixtures from (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  sync-fixtures:
+    name: Sync Fixtures to Website
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout scanopy repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+      
+      - name: Checkout website repo
+        uses: actions/checkout@v4
+        with:
+          repository: scanopy/website
+          token: ${{ secrets.WEBSITE_REPO_TOKEN }}
+          path: website
+      
+      - name: Copy fixtures
+        run: |
+          mkdir -p website/src/lib/fixtures/
+          cp ui/static/services.json website/src/lib/fixtures/
+          cp ui/static/features.json website/src/lib/fixtures/
+          cp ui/static/billing-plans.json website/src/lib/fixtures/
+      
+      - name: Commit and push
+        working-directory: website
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/lib/fixtures/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync fixtures from ${{ inputs.release_tag }}"
+            git push
+          fi
