@@ -1,19 +1,7 @@
-FROM lukemathwalker/cargo-chef:latest-rust-1.90 AS chef
-WORKDIR /app
+FROM debian:bookworm-slim
 
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
+ARG TARGETARCH
 
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-# Build dependencies
-RUN cargo chef cook --release --recipe-path recipe.json
-COPY . .
-# Build daemon binary in release mode
-RUN cargo build --release --bin daemon
-
-FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
@@ -24,8 +12,8 @@ RUN apt-get update && apt-get install -y \
     tcpdump \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy release binary
-COPY --from=builder /app/target/release/daemon /usr/local/bin/scanopy-daemon
+# Pre-built binary copied in during build (named by architecture)
+COPY scanopy-daemon-linux-${TARGETARCH} /usr/local/bin/scanopy-daemon
 RUN chmod +x /usr/local/bin/scanopy-daemon
 
 EXPOSE 60073
