@@ -108,17 +108,21 @@ jobs:
       
       - name: Copy fixtures to website repo
         run: |
+          set -x
           mkdir -p website/src/lib/fixtures/
           cp ui/static/services.json website/src/lib/fixtures/
           cp ui/static/features.json website/src/lib/fixtures/
           cp ui/static/billing-plans.json website/src/lib/fixtures/
+          ls -la website/src/lib/fixtures/
       
       - name: Commit and push to website repo
         working-directory: website
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/lib/fixtures/services.json src/lib/fixtures/features.json src/lib/fixtures/billing-plans.json
+          set -x
+          ls -la src/lib/fixtures/
+          git status
+          git add -A
+          git status
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
