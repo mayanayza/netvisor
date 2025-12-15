@@ -67,16 +67,6 @@ jobs:
       - name: Create multi-arch manifest for Server (Docker Hub)
         run: |
           docker buildx imagetools create -t mayanayza/scanopy-server:latest \
-            mayanayza/scanopy-server:${{ inputs.release_tag }}
-      
-      - name: Create multi-arch manifest for Server (GHCR)
-        run: |
-          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
-            ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
-
-      - name: Create multi-arch manifest for Server (Docker Hub)
-        run: |
-          docker buildx imagetools create -t mayanayza/scanopy-server:latest \
             mayanayza/scanopy-server-commercial:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Server (GHCR)
@@ -94,10 +84,10 @@ jobs:
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/daemon:latest \
             ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
 
-      - name: Checkout current repo
+      - name: Checkout scanopy repo (dev branch for latest fixtures)
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: dev
       
       - name: Checkout website repo
         uses: actions/checkout@v4
@@ -105,41 +95,26 @@ jobs:
           repository: scanopy/website
           token: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
           path: website
-
-      - name: Debug source files
-        run: |
-          echo "=== Source file from scanopy repo (tag ${{ inputs.release_tag }}) ==="
-          echo "Checking for Neo4j in source:"
-          grep -i "neo4j" ui/static/services.json || echo "Neo4j NOT found in source"
-          
-          echo ""
-          echo "=== Destination file in website repo ==="
-          echo "Checking for Neo4j in destination:"
-          grep -i "neo4j" website/src/lib/fixtures/services.json || echo "Neo4j NOT found in destination"
       
       - name: Copy fixtures to website repo
         run: |
-          set -x
           mkdir -p website/src/lib/fixtures/
           cp ui/static/services.json website/src/lib/fixtures/
           cp ui/static/features.json website/src/lib/fixtures/
           cp ui/static/billing-plans.json website/src/lib/fixtures/
-          ls -la website/src/lib/fixtures/
       
       - name: Commit and push to website repo
         working-directory: website
         run: |
-          set -x
-          
-          # What does git have tracked in this path?
-          git ls-files src/lib/fixtures/
-          
-          # What's the actual content difference?
-          cat src/lib/fixtures/services.json | head -20
-          git show HEAD:src/lib/fixtures/services.json | head -20 || echo "File not in HEAD"
-          
-          git status
-          git diff
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/lib/fixtures/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync fixtures from ${{ inputs.release_tag }}"
+            git push
+          fi
       
       - name: Send Discord Notification
         env:
