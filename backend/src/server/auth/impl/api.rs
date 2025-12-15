@@ -9,7 +9,7 @@ use validator::Validate;
 pub struct LoginRequest {
     pub email: EmailAddress,
 
-    #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
+    #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
     pub password: String,
 }
 
@@ -19,7 +19,7 @@ pub struct LoginRequest {
 pub struct RegisterRequest {
     pub email: EmailAddress,
 
-    #[validate(length(min = 12, message = "Password must be at least 12 characters"))]
+    #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
     #[validate(custom(function = "validate_password_complexity"))]
     pub password: String,
     pub subscribed: bool,
@@ -31,13 +31,10 @@ fn validate_password_complexity(password: &str) -> Result<(), validator::Validat
     let has_uppercase = password.chars().any(|c| c.is_uppercase());
     let has_lowercase = password.chars().any(|c| c.is_lowercase());
     let has_digit = password.chars().any(|c| c.is_numeric());
-    let has_special = password.chars().any(|c| !c.is_alphanumeric());
 
-    if !has_uppercase || !has_lowercase || !has_digit || !has_special {
+    if !has_uppercase || !has_lowercase || !has_digit {
         let mut err = validator::ValidationError::new("password_complexity");
-        err.message = Some(
-            "Password must contain uppercase, lowercase, number, and special character".into(),
-        );
+        err.message = Some("Password must contain uppercase, lowercase, and number".into());
         return Err(err);
     }
 
@@ -80,4 +77,30 @@ pub struct ForgotPasswordRequest {
 pub struct ResetPasswordRequest {
     pub token: String,
     pub password: String,
+}
+
+/// Setup request for pre-registration org/network configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetupRequest {
+    pub organization_name: String,
+    pub network_name: String,
+    pub populate_seed_data: bool,
+}
+
+/// Response from setup endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SetupResponse {
+    pub network_id: Uuid,
+}
+
+/// Daemon setup request for pre-registration daemon configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonSetupRequest {
+    pub daemon_name: String,
+}
+
+/// Response from daemon setup endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaemonSetupResponse {
+    pub api_key: String,
 }

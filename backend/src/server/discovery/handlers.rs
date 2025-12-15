@@ -1,4 +1,3 @@
-use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::{
     auth::middleware::{
         auth::{AuthenticatedDaemon, AuthenticatedUser},
@@ -12,8 +11,8 @@ use crate::server::{
     },
     shared::{
         handlers::traits::{
-            CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
-            update_handler,
+            bulk_delete_handler, create_handler, delete_handler, get_all_handler,
+            get_by_id_handler, update_handler,
         },
         services::traits::CrudService,
         types::api::{ApiError, ApiResponse, ApiResult},
@@ -36,7 +35,7 @@ use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create_handler))
+        .route("/", post(create_discovery))
         .route("/", get(get_all_handler::<Discovery>))
         .route("/{id}", put(update_handler::<Discovery>))
         .route("/{id}", delete(delete_handler::<Discovery>))
@@ -49,26 +48,13 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/stream", get(discovery_stream))
 }
 
-pub async fn create_handler(
+/// Create a new discovery with subnet network validation
+pub async fn create_discovery(
     State(state): State<Arc<AppState>>,
-    RequireMember(user): RequireMember,
+    user: RequireMember,
     Json(discovery): Json<Discovery>,
 ) -> ApiResult<Json<ApiResponse<Discovery>>> {
-    if let Err(err) = discovery.validate() {
-        tracing::warn!(
-            entity_type = Discovery::table_name(),
-            user_id = %user.user_id,
-            error = %err,
-            "Entity validation failed"
-        );
-        return Err(ApiError::bad_request(&format!(
-            "{} validation failed: {}",
-            Discovery::entity_name(),
-            err
-        )));
-    }
-
-    // Check if any subnets aren't on the same network as the discovery / daemon
+    // Custom validation: Check if any subnets aren't on the same network as the discovery
     #[allow(clippy::single_match)]
     match &discovery.base.discovery_type {
         DiscoveryType::Network { subnet_ids, .. } => {
@@ -83,24 +69,11 @@ pub async fn create_handler(
                 }
             }
         }
-        _ => (),
+        DiscoveryType::Docker { .. } | DiscoveryType::SelfReport { .. } => (),
     }
 
-    let service = Discovery::get_service(&state);
-    let created = service
-        .create(discovery, user.clone().into())
-        .await
-        .map_err(|e| {
-            tracing::error!(
-                entity_type = Discovery::table_name(),
-                user_id = %user.user_id,
-                error = %e,
-                "Failed to create entity"
-            );
-            ApiError::internal_error(&e.to_string())
-        })?;
-
-    Ok(Json(ApiResponse::success(created)))
+    // Delegate to generic handler (handles validation, auth checks, creation)
+    create_handler::<Discovery>(State(state), user, Json(discovery)).await
 }
 
 /// Receive discovery progress update from daemon

@@ -131,8 +131,8 @@ pub async fn test_all_tables_have_entity_mapping() {
 
     // Get all tables from information_schema
     let tables: Vec<String> = sqlx::query_scalar(
-        "SELECT table_name FROM information_schema.tables 
-         WHERE table_schema = 'public' 
+        "SELECT table_name FROM information_schema.tables
+         WHERE table_schema = 'public'
          AND table_type = 'BASE TABLE'
          AND table_name != '_sqlx_migrations'",
     )
@@ -215,8 +215,8 @@ pub async fn test_database_schema_backward_compatibility() {
             // Check if table exists in the old schema
             let table_exists: bool = sqlx::query_scalar(
                 "SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = 'public'
                     AND table_name = $1
                 )",
             )

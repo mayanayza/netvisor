@@ -108,7 +108,7 @@
 		<DataControls
 			items={$daemons}
 			fields={daemonFields}
-			storageKey="netvisor-daemons-table-state"
+			storageKey="scanopy-daemons-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>

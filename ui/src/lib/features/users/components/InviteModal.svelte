@@ -263,7 +263,7 @@
 
 					<!-- Copy Button -->
 					{#if isSecureContext}
-						<button onclick={handleCopy} class="btn-primary w-full" disabled={copied}>
+						<button onclick={handleCopy} type="button" class="btn-primary w-full" disabled={copied}>
 							{#if copied}
 								<Check class="mr-2 h-4 w-4" />
 								Copied!

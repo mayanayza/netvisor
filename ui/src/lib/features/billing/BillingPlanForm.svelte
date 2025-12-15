@@ -6,9 +6,9 @@
 	 * Uses CSS Grid for consistent sticky header/footer on both desktop and mobile.
 	 */
 	import { Check, X, ChevronDown } from 'lucide-svelte';
-	import GithubStars from '$lib/shared/components/data/GithubStars.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ToggleGroup from './ToggleGroup.svelte';
+	import ScanProgressIndicator from '$lib/features/discovery/components/ScanProgressIndicator.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type { BillingPlan } from './types';
 	import type { BillingPlanMetadata, FeatureMetadata } from '$lib/shared/stores/metadata';
@@ -277,11 +277,10 @@
 	<!-- Header with GitHub Stars and Toggles -->
 	<div class="flex flex-wrap items-stretch justify-center gap-3 px-4 lg:gap-6 lg:px-10">
 		{#if showGithubStars}
-			<div class="card inline-flex items-center gap-2 px-4 shadow-xl backdrop-blur-sm">
-				<span class="text-secondary text-sm">Open source on GitHub</span>
-				<GithubStars />
-			</div>
+			<!-- <GithubStars /> -->
 		{/if}
+
+		<ScanProgressIndicator />
 
 		<ToggleGroup
 			options={planTypeOptions}
@@ -488,8 +487,8 @@
 					{@const hosting = getHosting(plan)}
 					{@const commercial = isCommercial(plan)}
 					{@const trial = hasTrial(plan)}
-					<div class="grid-cell plan-cell">
-						<div class="flex flex-col gap-4">
+					<div class="grid-cell plan-cell footer-plan-cell">
+						<div class="flex w-full flex-col gap-3">
 							{#if hosting === 'Cloud'}
 								<button
 									type="button"
@@ -499,30 +498,30 @@
 									{trial ? 'Start Free Trial' : 'Get Started'}
 								</button>
 								{#if commercial}
-									{@const subject = encodeURIComponent(`NetVisor ${plan.type} Plan Inquiry`)}
+									{@const subject = encodeURIComponent(`Scanopy ${plan.type} Plan Inquiry`)}
 									{@const body = encodeURIComponent(
 										`Hi,\n\nI'm interested in the ${plan.type} plan.`
 									)}
 									<a
-										href="mailto:maya@netvisor.io?subject={subject}&body={body}"
+										href="mailto:maya@scanopy.net?subject={subject}&body={body}"
 										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
 										>Contact Us</a
 									>
 								{/if}
 							{:else if hosting === 'Self-Hosted'}
 								{#if commercial}
-									{@const subject = encodeURIComponent(`NetVisor ${plan.type} Plan Inquiry`)}
+									{@const subject = encodeURIComponent(`Scanopy ${plan.type} Plan Inquiry`)}
 									{@const body = encodeURIComponent(
 										`Hi,\n\nI'm interested in the ${plan.type} plan.`
 									)}
 									<a
-										href="mailto:maya@netvisor.io?subject={subject}&body={body}"
+										href="mailto:maya@scanopy.net?subject={subject}&body={body}"
 										class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
 										>Contact Us</a
 									>
 								{:else}
 									<a
-										href="https://github.com/netvisor-io/netvisor"
+										href="https://github.com/scanopy/scanopy"
 										target="_blank"
 										rel="noopener noreferrer"
 										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
@@ -531,7 +530,7 @@
 								{/if}
 							{:else if commercial}
 								<a
-									href="mailto:maya@netvisor.io"
+									href="mailto:maya@scanopy.net"
 									class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
 									>Contact Us</a
 								>
@@ -618,6 +617,17 @@
 		align-items: center;
 		justify-content: center;
 		text-align: center;
+	}
+
+	/* Footer plan cells - full width CTAs with padding */
+	.footer-plan-cell {
+		padding: 1rem;
+	}
+
+	@media (min-width: 1024px) {
+		.footer-plan-cell {
+			padding: 1.25rem;
+		}
 	}
 
 	/* Label column - sticky on horizontal scroll */

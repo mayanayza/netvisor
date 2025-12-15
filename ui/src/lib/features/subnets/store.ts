@@ -69,7 +69,7 @@ export function createEmptySubnetFormData(): Subnet {
 		updated_at: utcTimeZoneSentinel,
 		tags: [],
 		name: '',
-		network_id: get(networks)[0].id || '',
+		network_id: get(networks)[0]?.id || '',
 		cidr: '',
 		description: '',
 		subnet_type: 'Unknown',

@@ -79,7 +79,7 @@
 
 	type NavConfig = (NavSection | NavItem)[];
 
-	const SIDEBAR_STORAGE_KEY = 'netvisor-sidebar-collapsed';
+	const SIDEBAR_STORAGE_KEY = 'scanopy-sidebar-collapsed';
 
 	// Base navigation config (before filtering)
 	const baseNavConfig: NavConfig = [
@@ -351,7 +351,7 @@
 				// Load section states
 				baseNavConfig.forEach((item) => {
 					if (isSection(item)) {
-						const key = `netvisor-section-${item.id}-collapsed`;
+						const key = `scanopy-section-${item.id}-collapsed`;
 						const sectionStored = localStorage.getItem(key);
 						if (sectionStored !== null) {
 							sectionStates[item.id] = JSON.parse(sectionStored);
@@ -384,7 +384,7 @@
 
 		if (typeof window !== 'undefined') {
 			try {
-				const key = `netvisor-section-${sectionId}-collapsed`;
+				const key = `scanopy-section-${sectionId}-collapsed`;
 				localStorage.setItem(key, JSON.stringify(sectionStates[sectionId]));
 			} catch (error) {
 				console.error('Failed to save section state:', error);
@@ -426,8 +426,12 @@
 				<Menu class="h-5 w-5 flex-shrink-0" />
 				{#if !collapsed}
 					<div class="absolute left-1/2 flex -translate-x-1/2 transform items-center">
-						<img src="/logos/netvisor-logo.png" alt="Logo" class="h-8 w-auto" />
-						<h1 class="text-primary ml-3 truncate whitespace-nowrap text-xl font-bold">NetVisor</h1>
+						<img
+							src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+							alt="Logo"
+							class="h-8 w-auto"
+						/>
+						<h1 class="text-primary ml-3 truncate whitespace-nowrap text-xl font-bold">Scanopy</h1>
 					</div>
 				{/if}
 			</button>

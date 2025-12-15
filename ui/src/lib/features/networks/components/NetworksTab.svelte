@@ -141,7 +141,7 @@
 			fields={networkFields}
 			onBulkDelete={handleBulkDelete}
 			{allowBulkDelete}
-			storageKey="netvisor-networks-table-state"
+			storageKey="scanopy-networks-table-state"
 			getItemId={(item) => item.id}
 		>
 			{#snippet children(

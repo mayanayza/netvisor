@@ -42,7 +42,7 @@
 
 	// Create form fields with validation
 	const email = field('email', formData.email, [required(), emailValidator()]);
-	const password = field('password', formData.password, [required(), minLength(12)]);
+	const password = field('password', formData.password, [required(), minLength(10)]);
 
 	// Update formData when field values change
 	$effect(() => {
@@ -84,12 +84,13 @@
 
 <EditModal
 	{isOpen}
-	title="Sign in to NetVisor"
+	title="Sign in to Scanopy"
 	loading={$loading}
 	centerTitle={true}
 	saveLabel="Sign In"
 	cancelLabel="Cancel"
 	showCloseButton={false}
+	showBackdrop={false}
 	showCancel={false}
 	onSave={handleSubmit}
 	onCancel={onClose}
@@ -99,7 +100,11 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<img src="/logos/netvisor-logo.png" alt="NetVisor Logo" class="h-8 w-8" />
+		<img
+			src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+			alt="Scanopy Logo"
+			class="h-8 w-8"
+		/>
 	</svelte:fragment>
 
 	{#if orgName && invitedBy}

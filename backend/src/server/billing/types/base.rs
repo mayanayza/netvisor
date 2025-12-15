@@ -46,7 +46,7 @@ impl Hash for BillingPlan {
 
 impl Default for BillingPlan {
     fn default() -> Self {
-        #[cfg(feature = "commercial-selfhost")]
+        #[cfg(feature = "commercial")]
         {
             BillingPlan::CommercialSelfHosted(PlanConfig {
                 base_cents: 0,
@@ -58,7 +58,7 @@ impl Default for BillingPlan {
                 included_seats: None,
             })
         }
-        #[cfg(not(feature = "commercial-selfhost"))]
+        #[cfg(not(feature = "commercial"))]
         {
             BillingPlan::Community(PlanConfig {
                 base_cents: 0,
@@ -263,7 +263,7 @@ impl BillingPlan {
                 commercial_license: false,
                 webhooks: false,
                 audit_logs: false,
-                remove_created_with: false,
+                remove_created_with: true,
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
@@ -280,7 +280,7 @@ impl BillingPlan {
                 commercial_license: false,
                 webhooks: false,
                 audit_logs: false,
-                remove_created_with: false,
+                remove_created_with: true,
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
@@ -518,7 +518,7 @@ impl TypeMetadataProvider for BillingPlan {
     fn description(&self) -> &'static str {
         match self {
             BillingPlan::Community { .. } => {
-                "Community plan for individuals self-hosting NetVisor - full control over configuration and integrations"
+                "Community plan for individuals self-hosting Scanopy - full control over configuration and integrations"
             }
             BillingPlan::Starter { .. } => {
                 "Automatically create living documentation of your network"
@@ -531,7 +531,7 @@ impl TypeMetadataProvider for BillingPlan {
                 "Manage multi-site and multi-customer documentation with advanced features"
             }
             BillingPlan::Enterprise { .. } => {
-                "Fully managed NetVisor with dedicated support and custom deployment"
+                "Fully managed Scanopy with dedicated support and custom deployment"
             }
             BillingPlan::Demo { .. } => "Demo mode",
             BillingPlan::CommercialSelfHosted { .. } => {

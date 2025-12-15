@@ -1,6 +1,6 @@
 # User Guide
 
-Complete guide to using NetVisor's features for network discovery, organization, and visualization.
+Complete guide to using Scanopy's features for network discovery, organization, and visualization.
 
 ## Table of Contents
 
@@ -39,13 +39,13 @@ Complete guide to using NetVisor's features for network discovery, organization,
 
 3. **Onboard**: 
     - Select the name of your organization and network
-    - Decide whether NetVisor should create baseline data for your first network (recommended)
+    - Decide whether Scanopy should create baseline data for your first network (recommended)
   
 4. **Create and deploy your first daemon**
     - Go to the Daemons tab to create a Daemon. If you are using the Community edition with the default Docker Compose, a daemon is enabled by default.
     - Install it on the host of your choice
        - If you are running the daemon on a network which is remote from the server, you will need to open and forward a port if using the Daemon in Push mode. You can also use Push mode if you prefer to not do any port forwarding.
-       - Take into consideration your [multi-vlan strategy](https://github.com/netvisor-io/netvisor/blob/main/docs/MULTI_VLAN_GUIDE.md)
+       - Take into consideration your [multi-vlan strategy](https://github.com/scanopy/scanopy/blob/main/docs/MULTI_VLAN_GUIDE.md)
     - The daemon will automatically run discovery
 
 5. **Monitor discovery**: Switch to **Discover > Sessions** to watch the scan progress
@@ -58,7 +58,7 @@ Complete guide to using NetVisor's features for network discovery, organization,
 
 ## Authentication
 
-NetVisor supports two authentication methods:
+Scanopy supports two authentication methods:
 
 ### Email & Password
 
@@ -68,7 +68,7 @@ Standard authentication with email and password.
 
 ### OIDC (OpenID Connect)
 
-NetVisor supports OIDC authentication for enterprise identity providers like Authentik, Keycloak, Auth0, Okta, and others.
+Scanopy supports OIDC authentication for enterprise identity providers like Authentik, Keycloak, Auth0, Okta, and others.
 
 **Setup**: OIDC must be configured by the server administrator. See [CONFIGURATION.md](CONFIGURATION.md#oidc-setup) for setup instructions.
 
@@ -143,7 +143,7 @@ These permission levels control what users can do:
 
 ## Navigation
 
-The NetVisor UI is organized into three main sections:
+The Scanopy UI is organized into three main sections:
 
 ### Sidebar
 
@@ -181,7 +181,7 @@ Interactive network visualization showing hosts, services, subnets, and their co
 
 ## Networks
 
-Networks are the primary organizational unit in NetVisor. Each network represents a distinct environment with its own hosts, services, and topology.
+Networks are the primary organizational unit in Scanopy. Each network represents a distinct environment with its own hosts, services, and topology.
 
 ### What Networks Are For
 
@@ -271,7 +271,7 @@ Any ports that the host has open which were not used to match a specific service
 
 ### Host Virtualization
 
-If a host runs Proxmox or Docker, NetVisor tracks which VMs or containers run on it.
+If a host runs Proxmox or Docker, Scanopy tracks which VMs or containers run on it.
 
 **Virtualization managers detected**:
 - **Proxmox**: Links VMs and LXC containers to the Proxmox service running on the host
@@ -281,7 +281,7 @@ This relationship is displayed in the topology and host details.
 
 ## Services
 
-Services represent applications or servers running on hosts. NetVisor automatically detects 50+ common services.
+Services represent applications or servers running on hosts. Scanopy automatically detects 50+ common services.
 
 ### Service Properties
 
@@ -353,7 +353,7 @@ Subnets represent network segments and are used to organize hosts in the topolog
 
 ### Subnet Types
 
-NetVisor automatically detects subnet types during discovery:
+Scanopy automatically detects subnet types during discovery:
 
 **Physical Networks**
 - **LAN**: Local area networks
@@ -677,7 +677,7 @@ Factors affecting speed:
 
 ### Host Naming
 
-When discovering hosts, NetVisor determines names using this priority:
+When discovering hosts, Scanopy determines names using this priority:
 
 1. Hostname from reverse DNS, if available
 2. If **BestService** is set - will use the first named service identified on the host. If **IP** is set, will use the host's IP address
@@ -1059,11 +1059,11 @@ Not currently. IPv6 support is planned for future releases:
 **Not planned**:
 - Full IPv6 subnet scanning (would take too long for /64 networks)
 
-If you need IPv6 support sooner, [open an issue](https://github.com/netvisor-io/netvisor/issues/new) describing your use case.
+If you need IPv6 support sooner, [open an issue](https://github.com/scanopy/scanopy/issues/new) describing your use case.
 
-### What services can NetVisor discover?
+### What services can Scanopy discover?
 
-NetVisor automatically detects **200+ common services** including:
+Scanopy automatically detects **200+ common services** including:
 
 **Infrastructure & Networking**: Pi-hole, AdGuard Home, Unifi Controller, pfSense, OPNsense  
 **Virtualization & Containers**: Proxmox, Docker, Kubernetes, Portainer  
@@ -1079,8 +1079,8 @@ NetVisor automatically detects **200+ common services** including:
 For the complete list, see the [service definitions directory](SERVICES.md).
 
 **Service not detected?**
-- Report it: [Service detection issue](https://github.com/netvisor-io/netvisor/issues/new?template=service-detection-issue.md)
-- Request it: [Missing service](https://github.com/netvisor-io/netvisor/issues/new?template=missing-service-detection.md)
+- Report it: [Service detection issue](https://github.com/scanopy/scanopy/issues/new?template=service-detection-issue.md)
+- Request it: [Missing service](https://github.com/scanopy/scanopy/issues/new?template=missing-service-detection.md)
 - Contribute: [Service definition guide](contributing.md#adding-service-definitions)
 
 ### How do I contribute?
@@ -1093,21 +1093,21 @@ We welcome contributions! See [contributing.md](contributing.md) for:
 
 Join our [Discord community](https://discord.gg/b7ffQr8AcZ) for help and discussions.
 
-Update `NETVISOR_INTEGRATED_DAEMON_URL` to match if using the integrated daemon.
+Update `SCANOPY_INTEGRATED_DAEMON_URL` to match if using the integrated daemon.
 
 See [CONFIGURATION.md](CONFIGURATION.md) for more options.
 
 ### How do I backup my data?
 
-NetVisor stores all data in PostgreSQL. To backup:
+Scanopy stores all data in PostgreSQL. To backup:
 
 **Docker setup**:
 ```bash
 # Backup
-docker exec netvisor-db pg_dump -U postgres netvisor > netvisor_backup.sql
+docker exec scanopy-db pg_dump -U postgres scanopy > scanopy_backup.sql
 
 # Restore
-docker exec -i netvisor-db psql -U postgres netvisor < netvisor_backup.sql
+docker exec -i scanopy-db psql -U postgres scanopy < scanopy_backup.sql
 ```
 
 **Manual setup**: Use standard PostgreSQL backup tools (pg_dump, pg_restore).
@@ -1135,4 +1135,4 @@ See [INSTALLATION.md](INSTALLATION.md#troubleshooting) for more troubleshooting 
 
 ---
 
-**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/netvisor-io/netvisor/issues/new).
+**Need help?** Join our [Discord](https://discord.gg/b7ffQr8AcZ) or [open an issue](https://github.com/scanopy/scanopy/issues/new).

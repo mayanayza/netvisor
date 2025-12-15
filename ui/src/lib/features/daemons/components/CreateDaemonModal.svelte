@@ -9,7 +9,7 @@
 	import { writable, derived, type Writable } from 'svelte/store';
 	import type { Daemon } from '../types/base';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
-	import { ChevronDown, ChevronRight, RotateCcwKey } from 'lucide-svelte';
+	import { ChevronDown, ChevronRight, RotateCcwKey, SatelliteDish } from 'lucide-svelte';
 	import { createEmptyApiKeyFormData, createNewApiKey } from '$lib/features/api_keys/store';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
@@ -27,6 +27,13 @@
 	export let isOpen = false;
 	export let onClose: () => void;
 	export let daemon: Daemon | null = null;
+
+	// Onboarding mode props
+	export let onboardingMode = false;
+	export let onSkip: (() => void) | null = null;
+	export let onContinue: (() => void) | null = null;
+	export let provisionalApiKey: string | null = null;
+	export let provisionalNetworkId: string | null = null;
 
 	// Separate field defs
 	const basicFieldDefs = fieldDefs.filter((d) => !d.section);
@@ -77,8 +84,19 @@
 	});
 
 	let keyStore: Writable<string | null> = writable(null);
-	$: key = $keyStore;
-	let selectedNetworkId = daemon ? daemon.network_id : $networks[0].id;
+	// In onboarding mode, use the provisionalApiKey; otherwise use keyStore
+	$: key = onboardingMode ? provisionalApiKey : $keyStore;
+	// In onboarding mode, use the provisionalNetworkId; otherwise use first network or daemon's network
+	let selectedNetworkId = '';
+
+	$: if (daemon) {
+		selectedNetworkId = daemon.network_id;
+	} else if (onboardingMode && provisionalNetworkId) {
+		selectedNetworkId = provisionalNetworkId;
+	} else if (!selectedNetworkId && $networks[0]?.id) {
+		selectedNetworkId = $networks[0].id;
+	}
+
 	let isNewDaemon = daemon === null;
 
 	let serverUrl = $config.public_url;
@@ -101,7 +119,7 @@
 		}
 	}
 
-	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/netvisor-io/netvisor/refs/heads/main/install.sh)"`;
+	const installCommand = `bash -c "$(curl -fsSL https://raw.githubusercontent.com/scanopy/scanopy/refs/heads/main/install.sh)"`;
 
 	$: runCommand = buildRunCommand(serverUrl, selectedNetworkId, key, $values, daemon);
 	$: dockerCompose = key
@@ -115,9 +133,9 @@
 		values: Record<string, string | number | boolean>,
 		daemon: Daemon | null
 	): string {
-		let cmd = `sudo netvisor-daemon --server-url ${serverUrl}`;
+		let cmd = `sudo scanopy-daemon --server-url ${serverUrl}`;
 
-		if (!daemon) {
+		if (!daemon && networkId) {
 			cmd += ` --network-id ${networkId}`;
 		}
 
@@ -156,11 +174,11 @@
 		values: Record<string, string | number | boolean>,
 		valids: Record<string, boolean>
 	): string {
-		const envVars: string[] = [
-			`NETVISOR_SERVER_URL=${serverUrl}`,
-			`NETVISOR_NETWORK_ID=${networkId}`,
-			`NETVISOR_DAEMON_API_KEY=${key}`
-		];
+		const envVars: string[] = [`SCANOPY_SERVER_URL=${serverUrl}`, `SCANOPY_DAEMON_API_KEY=${key}`];
+
+		if (networkId) {
+			envVars.splice(1, 0, `SCANOPY_NETWORK_ID=${networkId}`);
+		}
 
 		for (const def of fieldDefs) {
 			const value = values[def.id];
@@ -191,8 +209,8 @@
 		const lines = [
 			'services:',
 			'  daemon:',
-			'    image: mayanayza/netvisor-daemon:latest',
-			'    container_name: netvisor-daemon',
+			'    image: ghcr.io/scanopy/scanopy/daemon:latest',
+			'    container_name: scanopy-daemon',
 			'    network_mode: host',
 			'    privileged: true',
 			'    restart: unless-stopped',
@@ -213,19 +231,30 @@
 
 <EditModal
 	{isOpen}
-	title="Create Daemon"
-	cancelLabel="Close"
-	onCancel={handleOnClose}
+	title={onboardingMode ? 'Set up network scanning' : 'Create Daemon'}
+	cancelLabel={onboardingMode ? 'Continue' : 'Close'}
+	onCancel={onboardingMode && onContinue ? onContinue : handleOnClose}
 	showSave={false}
+	showBackdrop={onboardingMode}
 	size="xl"
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Daemon')} color={colorHelper.string} />
+		{#if onboardingMode}
+			<ModalHeaderIcon Icon={SatelliteDish} color="#10b981" />
+		{:else}
+			<ModalHeaderIcon Icon={entities.getIconComponent('Daemon')} color={colorHelper.string} />
+		{/if}
 	</svelte:fragment>
 
 	<div class="space-y-4">
-		{#if !daemon}
+		{#if onboardingMode}
+			<!-- Onboarding mode: show info banner -->
+			<InlineInfo
+				title="Your daemon will activate after account creation"
+				body="To visualize your network, Scanopy needs to discover what's on it. Install the daemon below—after registration, it'll connect and start mapping automatically."
+			/>
+		{:else if !daemon}
 			<SelectNetwork bind:selectedNetworkId />
 		{/if}
 
@@ -254,33 +283,35 @@
 			{/if}
 		{/each}
 
-		<!-- API Key Section -->
-		<div class="pb-2">
-			<div class="flex items-start gap-2">
-				<button
-					class="btn-primary m-1 flex-shrink-0 self-stretch"
-					disabled={!!key}
-					type="button"
-					on:click={handleCreateNewApiKey}
-				>
-					<RotateCcwKey />
-					<span>Generate Key</span>
-				</button>
+		<!-- API Key Section (hidden in onboarding mode) -->
+		{#if !onboardingMode}
+			<div class="pb-2">
+				<div class="flex items-start gap-2">
+					<button
+						class="btn-primary m-1 flex-shrink-0 self-stretch"
+						disabled={!!key}
+						type="button"
+						on:click={handleCreateNewApiKey}
+					>
+						<RotateCcwKey />
+						<span>Generate Key</span>
+					</button>
 
-				<div class="flex-1">
-					<CodeContainer
-						language="bash"
-						expandable={false}
-						code={key ? key : 'Press Generate Key...'}
-					/>
+					<div class="flex-1">
+						<CodeContainer
+							language="bash"
+							expandable={false}
+							code={key ? key : 'Press Generate Key...'}
+						/>
+					</div>
 				</div>
+				{#if !key}
+					<div class="text-tertiary mt-1 text-xs">
+						This will create a new API key, which you can manage later in the API Keys tab.
+					</div>
+				{/if}
 			</div>
-			{#if !key}
-				<div class="text-tertiary mt-1 text-xs">
-					This will create a new API key, which you can manage later in the API Keys tab.
-				</div>
-			{/if}
-		</div>
+		{/if}
 
 		<!-- Advanced Configuration -->
 		<div class="border-tertiary border-t pt-4">
@@ -352,11 +383,6 @@
 		</div>
 
 		{#if !daemon && key}
-			<InlineInfo
-				title="sudo & privileged: true"
-				body="The Daemon requires privileged access to system resources to perform ARP scanning. If you don't run with sudo (binary) or include privileged: true (docker), the daemon will not be able to detect all hosts on the network."
-			/>
-
 			<div class="text-secondary mt-3">
 				<b>Option 1.</b> Run the install script, then start the daemon
 			</div>
@@ -381,8 +407,24 @@
 			<CodeContainer
 				language="bash"
 				expandable={false}
-				code={`- NETVISOR_DAEMON_API_KEY=${key}\n`}
+				code={`- SCANOPY_DAEMON_API_KEY=${key}\n`}
 			/>
 		{/if}
 	</div>
+
+	<!-- Custom footer for onboarding mode -->
+	<svelte:fragment slot="footer">
+		{#if onboardingMode}
+			<div class="flex w-full items-center justify-between gap-4">
+				{#if onSkip}
+					<button type="button" class="btn-secondary" on:click={onSkip}>
+						I'll do this later
+					</button>
+				{/if}
+				<button type="button" class="btn-primary ml-auto" on:click={onContinue ?? handleOnClose}>
+					Continue
+				</button>
+			</div>
+		{/if}
+	</svelte:fragment>
 </EditModal>

@@ -1,6 +1,6 @@
-# Contributing to NetVisor
+# Contributing to Scanopy
 
-Thank you for your interest in contributing to NetVisor! We welcome contributions of all kinds, from bug reports and documentation improvements to new features and service definitions.
+Thank you for your interest in contributing to Scanopy! We welcome contributions of all kinds, from bug reports and documentation improvements to new features and service definitions.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ Thank you for your interest in contributing to NetVisor! We welcome contribution
 
 ### Quick Start for Service Definitions
 
-**The easiest way to contribute is by adding service definitions!** Service definitions help NetVisor identify and categorize network services during discovery. This is a great first contribution that doesn't require deep knowledge of the codebase. Given the wide variety of services that folks run across their networks, this is inherently best handled as a community-driven effort.
+**The easiest way to contribute is by adding service definitions!** Service definitions help Scanopy identify and categorize network services during discovery. This is a great first contribution that doesn't require deep knowledge of the codebase. Given the wide variety of services that folks run across their networks, this is inherently best handled as a community-driven effort.
 
 If you're interested in adding a service definition, jump to the [Adding Service Definitions](#adding-service-definitions) section.
 
@@ -25,7 +25,7 @@ If you're interested in adding a service definition, jump to the [Adding Service
 
 ### 1. Service Definitions (Recommended for First-Time Contributors)
 
-Service definitions are small, focused additions that help NetVisor discover and identify specific services on your network. Examples include:
+Service definitions are small, focused additions that help Scanopy discover and identify specific services on your network. Examples include:
 
 - Home automation platforms (Home Assistant, OpenHAB)
 - Media servers (Plex, Jellyfin, Emby)
@@ -34,7 +34,7 @@ Service definitions are small, focused additions that help NetVisor discover and
 
 ### 2. Bug Reports
 
-Found a bug? [Please open an issue!](https://github.com/netvisor-io/netvisor/issues/new?template=bug_report.md)
+Found a bug? [Please open an issue!](https://github.com/scanopy/scanopy/issues/new?template=bug_report.md)
 
 ### 3. Documentation
 
@@ -75,8 +75,8 @@ For larger features or bug fixes:
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/netvisor-io/netvisor.git
-   cd netvisor
+   git clone https://github.com/scanopy/scanopy.git
+   cd scanopy
    ```
 
 2. **Install development dependencies**
@@ -262,7 +262,7 @@ All three commands must pass without errors before submitting your PR.
 
 ## Adding Service Definitions
 
-Service definitions are the best place to start contributing! They help NetVisor identify and categorize services during network discovery.
+Service definitions are the best place to start contributing! They help Scanopy identify and categorize services during network discovery.
 
 ### Project Structure
 
@@ -332,7 +332,7 @@ That's it! Your service will now be automatically discovered during network scan
 
 ### Understanding Pattern Types
 
-Patterns define how NetVisor identifies your service. 
+Patterns define how Scanopy identifies your service. 
 
 Here are the available pattern types:
 
@@ -527,7 +527,7 @@ fn is_generic(&self) -> bool {
 
 #### Service Icons
 
-NetVisor supports icons from three sources.
+Scanopy supports icons from three sources.
 
 **Dashboard Icons** (Recommended - has the most service icons):
 
@@ -727,7 +727,7 @@ Check the server logs for any compilation errors.
 
 If you have the actual service running on your network:
 
-1. Start NetVisor with your changes
+1. Start Scanopy with your changes
 2. Navigate to the discovery page in the UI
 3. Run a network scan
 4. Verify your service is detected and correctly categorized
@@ -766,7 +766,7 @@ mod tests {
 
 ### Pre-commit Hooks
 
-NetVisor uses pre-commit hooks to ensure code quality. These hooks run automatically:
+Scanopy uses pre-commit hooks to ensure code quality. These hooks run automatically:
 - **On commit**: Format and lint checks
 - **On push**: Full test suite
 
@@ -855,11 +855,11 @@ git push --no-verify    # Skip push hooks
 
 ## Contributor License Agreement
 
-By submitting a contribution to NetVisor, you agree to the following terms:
+By submitting a contribution to Scanopy, you agree to the following terms:
 
-1. You grant the NetVisor project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute your contributions and such derivative works under any license (including commercial licenses).
+1. You grant the Scanopy project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute your contributions and such derivative works under any license (including commercial licenses).
 
-2. You grant the NetVisor project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer your contributions.
+2. You grant the Scanopy project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer your contributions.
 
 3. You represent that you are legally entitled to grant the above licenses. If your employer has rights to intellectual property that you create, you represent that you have received permission to make the contributions on behalf of that employer, or that your employer has waived such rights for your contributions.
 
@@ -869,4 +869,4 @@ By submitting a contribution to NetVisor, you agree to the following terms:
 
 ---
 
-Thank you for contributing to NetVisor! Every contribution, no matter how small, helps make network discovery and documentation better for everyone.
+Thank you for contributing to Scanopy! Every contribution, no matter how small, helps make network discovery and documentation better for everyone.

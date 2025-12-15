@@ -80,7 +80,7 @@ export function createEmptyGroupFormData(): Group {
 		source: {
 			type: 'Manual'
 		},
-		network_id: get(networks)[0].id || '',
+		network_id: get(networks)[0]?.id || '',
 		color: entities.getColorHelper('Group').string,
 		edge_style: 'Straight',
 		tags: []

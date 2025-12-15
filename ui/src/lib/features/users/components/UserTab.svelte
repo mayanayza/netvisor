@@ -131,7 +131,7 @@
 		<DataControls
 			items={combinedItems}
 			fields={userFields}
-			storageKey="netvisor-users-table-state"
+			storageKey="scanopy-users-table-state"
 			onBulkDelete={handleBulkDelete}
 			getItemId={(item) => item.id}
 		>

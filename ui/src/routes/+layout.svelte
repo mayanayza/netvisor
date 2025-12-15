@@ -22,6 +22,7 @@
 	import { daemons } from '$lib/features/daemons/store';
 	import posthog from 'posthog-js';
 	import { browser } from '$app/environment';
+	import CookieConsent from '$lib/shared/components/feedback/CookieConsent.svelte';
 
 	// Accept children as a snippet prop
 	let { children }: { children: Snippet } = $props();
@@ -44,16 +45,19 @@
 	let posthogInitialized = false;
 
 	$effect(() => {
-		const isSaas = $config.billing_enabled ?? false;
+		if (!$config) return;
 
-		if (browser && isSaas && !posthogInitialized) {
-			posthog.init('phc_9atkOQdO4ttxZwrpMRU42KazQcah6yQaU8aX9ts6SrK', {
-				api_host: 'https://ph.netvisor.io',
+		const posthogKey = $config.posthog_key;
+
+		if (browser && posthogKey && !posthogInitialized) {
+			posthog.init(posthogKey, {
+				api_host: 'https://ph.scanopy.net',
 				ui_host: 'https://us.posthog.com',
 				defaults: '2025-11-30',
 				secure_cookie: true,
-				cookieless_mode: 'always',
-				person_profiles: 'always'
+				cookieless_mode: 'on_reject',
+				person_profiles: 'always',
+				opt_out_capturing_by_default: true
 			});
 			posthogInitialized = true;
 		}
@@ -91,11 +95,27 @@
 		// Check authentication status and get public server config
 		await Promise.all([checkAuth(), getConfig()]);
 
-		// Redirect to auth page if not authenticated and not already there
+		// Redirect if not authenticated and not on an auth route
 		if (!$isAuthenticated) {
-			if ($page.url.pathname !== '/auth') {
-				// eslint-disable-next-line svelte/no-navigation-without-resolve
-				await goto(`${resolve('/auth')}${$page.url.search}`);
+			const isAuthRoute =
+				$page.url.pathname === '/auth' ||
+				$page.url.pathname === '/login' ||
+				$page.url.pathname === '/onboarding';
+
+			if (!isAuthRoute) {
+				// Check for password reset token - redirect to login with token
+				const token = $page.url.searchParams.get('token');
+				if (token) {
+					// eslint-disable-next-line svelte/no-navigation-without-resolve
+					await goto(`${resolve('/login')}?token=${token}`);
+				} else if (typeof localStorage !== 'undefined' && localStorage.getItem('hasAccount')) {
+					// Returning user (has logged in before) - redirect to login
+					await goto(resolve('/login'));
+				} else {
+					// New user - redirect to onboarding
+					// eslint-disable-next-line svelte/no-navigation-without-resolve
+					await goto(`${resolve('/onboarding')}${$page.url.search}`);
+				}
 			}
 		} else {
 			await getOrganization();
@@ -135,4 +155,8 @@
 	</div>
 {:else}
 	{@render children()}
+{/if}
+
+{#if $config && $config.needs_cookie_consent}
+	<CookieConsent />
 {/if}

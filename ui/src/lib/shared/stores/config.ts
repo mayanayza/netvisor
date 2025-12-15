@@ -18,6 +18,8 @@ export interface PublicServerConfig {
 	has_email_service: boolean;
 	has_email_opt_in: boolean;
 	public_url: string;
+	posthog_key: string | null;
+	needs_cookie_consent: boolean;
 }
 
 export async function getConfig() {

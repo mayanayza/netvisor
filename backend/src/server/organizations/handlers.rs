@@ -1,6 +1,8 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
+use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::auth::middleware::{
-    auth::AuthenticatedUser, features::InviteUsersFeature, features::RequireFeature,
+    auth::AuthenticatedUser,
+    features::{InviteUsersFeature, RequireFeature},
     permissions::RequireMember,
 };
 use crate::server::config::AppState;
@@ -15,6 +17,7 @@ use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::ApiResult;
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use anyhow::Error;
+use anyhow::anyhow;
 use axum::Json;
 use axum::Router;
 use axum::extract::Path;
@@ -27,13 +30,44 @@ use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/{id}", put(update_handler::<Organization>))
+        .route("/{id}", put(update_org_name))
         .route("/", get(get_by_id_handler))
         .route("/invites", post(create_invite))
         .route("/invites/{id}", get(get_invite))
         .route("/invites/{id}/revoke", delete(revoke_invite))
         .route("/invites/{id}/accept", get(accept_invite_link))
         .route("/invites", get(get_invites))
+}
+
+pub async fn update_org_name(
+    State(state): State<Arc<AppState>>,
+    RequireOwner(user): RequireOwner,
+    Path(id): Path<Uuid>,
+    Json(mut org): Json<Organization>,
+) -> ApiResult<Json<ApiResponse<Organization>>> {
+    if id != org.id {
+        return Err(ApiError::bad_request("Org ID must match path ID"));
+    }
+
+    let current_org = state
+        .services
+        .organization_service
+        .get_by_id(&org.id)
+        .await?
+        .ok_or_else(|| anyhow!("Could not find org"))?;
+
+    org.base.onboarding = current_org.base.onboarding;
+    org.base.plan = current_org.base.plan;
+    org.base.stripe_customer_id = current_org.base.stripe_customer_id;
+    org.base.plan_status = current_org.base.plan_status;
+
+    update_handler::<Organization>(
+        axum::extract::State(state),
+        RequireMember(user),
+        axum::extract::Path(id),
+        axum::extract::Json(org),
+    )
+    .await
 }
 
 pub async fn get_by_id_handler(
@@ -100,6 +134,22 @@ async fn create_invite(
         return Err(ApiError::forbidden(
             "Users can only create invites with permissions lower than their permission level",
         ));
+    }
+
+    // Check if invited user already has an account
+    if let Some(ref send_to) = request.send_to {
+        let all_users = state
+            .services
+            .user_service
+            .get_all(EntityFilter::unfiltered())
+            .await
+            .unwrap_or_default();
+
+        if all_users.iter().any(|u| &u.base.email == send_to) {
+            return Err(ApiError::bad_request(
+                "A user with this email already has an account. They must delete their account before joining a new organization.",
+            ));
+        }
     }
 
     let send_to = request.send_to.clone();
@@ -339,9 +389,9 @@ async fn accept_invite_link(
         return Ok(Redirect::to("/"));
     }
 
-    // User is not logged in - redirect to registration with message
+    // User is not logged in - redirect to onboarding/registration with invite params
     Ok(Redirect::to(&format!(
-        "/?org_name={}&invited_by={}",
+        "/onboarding?org_name={}&invited_by={}",
         org_name, inviting_user_email
     )))
 }

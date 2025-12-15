@@ -24,7 +24,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Environment:** 
- - NetVisor server & daemon version (can be found in logs)
+ - Scanopy server & daemon version (can be found in logs)
  - Host: [e.g bare metal, VM, LXC]
  - OS: [e.g. Ubuntu]
  - Browser [e.g. chrome, safari]
@@ -36,4 +36,4 @@ Add any other context about the problem here.
 If you have logs from the daemon or server, pleae provide them here.
 
 **Before submitting**
-[ ] I have reviewed [Troubleshooting](https://github.com/netvisor-io/netvisor#troubleshooting) in the readme
+[ ] I have reviewed [Troubleshooting](https://github.com/scanopy/scanopy#troubleshooting) in the readme

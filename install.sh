@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="netvisor-io/netvisor"
+REPO="scanopy/scanopy"
 PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
@@ -20,9 +20,9 @@ case "$ARCH" in
         ;;
 esac
 
-BINARY_NAME="netvisor-daemon-${PLATFORM}-${ARCH}"
+BINARY_NAME="scanopy-daemon-${PLATFORM}-${ARCH}"
 
-echo "Installing NetVisor daemon..."
+echo "Installing Scanopy daemon..."
 echo "Platform: $PLATFORM"
 echo "Architecture: $ARCH"
 echo "Binary: $BINARY_NAME"
@@ -32,7 +32,7 @@ echo ""
 BINARY_URL="https://github.com/${REPO}/releases/latest/download/${BINARY_NAME}"
 echo "Downloading from: $BINARY_URL"
 
-if ! curl -fL "$BINARY_URL" -o netvisor-daemon; then
+if ! curl -fL "$BINARY_URL" -o scanopy-daemon; then
     echo "Error: Failed to download binary from $BINARY_URL"
     echo "Please check:"
     echo "  1. Your internet connection"
@@ -41,33 +41,33 @@ if ! curl -fL "$BINARY_URL" -o netvisor-daemon; then
     exit 1
 fi
 
-chmod +x netvisor-daemon
+chmod +x scanopy-daemon
 
 # Install to system
 echo "Installing to /usr/local/bin (may require sudo)..."
 if [ -w "/usr/local/bin" ]; then
-    mv netvisor-daemon /usr/local/bin/
+    mv scanopy-daemon /usr/local/bin/
 else
-    sudo mv netvisor-daemon /usr/local/bin/ || {
-        echo "Error: Failed to install netvisor-daemon. Please check sudo permissions."
-        rm -f netvisor-daemon
+    sudo mv scanopy-daemon /usr/local/bin/ || {
+        echo "Error: Failed to install scanopy-daemon. Please check sudo permissions."
+        rm -f scanopy-daemon
         exit 1
     }
 fi
 
 # Verify installation
-if [ ! -f "/usr/local/bin/netvisor-daemon" ]; then
+if [ ! -f "/usr/local/bin/scanopy-daemon" ]; then
     echo "Error: Installation verification failed."
     exit 1
 fi
 
 echo ""
-echo "✓ NetVisor daemon installed successfully!"
+echo "✓ Scanopy daemon installed successfully!"
 echo ""
 
 # Ask about systemd service installation (Linux only)
 if [ "$PLATFORM" = "linux" ] && command -v systemctl &> /dev/null; then
-    echo "Would you like to install NetVisor daemon as a systemd service?"
+    echo "Would you like to install Scanopy daemon as a systemd service?"
     echo "This will allow the daemon to:"
     echo "  - Start automatically on boot"
     echo "  - Run in the background"
@@ -81,16 +81,16 @@ if [ "$PLATFORM" = "linux" ] && command -v systemctl &> /dev/null; then
         echo "Installing systemd service..."
         
         # Download service file
-        SERVICE_URL="https://raw.githubusercontent.com/${REPO}/main/netvisor-daemon.service"
+        SERVICE_URL="https://raw.githubusercontent.com/${REPO}/main/scanopy-daemon.service"
         
-        if ! curl -fL "$SERVICE_URL" -o netvisor-daemon.service; then
+        if ! curl -fL "$SERVICE_URL" -o scanopy-daemon.service; then
             echo "Warning: Failed to download service file from $SERVICE_URL"
             echo "You can manually install the service later."
         else
             # Install service file
-            sudo mv netvisor-daemon.service /etc/systemd/system/ || {
+            sudo mv scanopy-daemon.service /etc/systemd/system/ || {
                 echo "Error: Failed to install service file."
-                rm -f netvisor-daemon.service
+                rm -f scanopy-daemon.service
                 exit 1
             }
             
@@ -99,21 +99,21 @@ if [ "$PLATFORM" = "linux" ] && command -v systemctl &> /dev/null; then
             echo ""
             echo "⚠️  IMPORTANT: You must edit the service file with your daemon configuration:"
             echo ""
-            echo "  sudo nano /etc/systemd/system/netvisor-daemon.service"
+            echo "  sudo nano /etc/systemd/system/scanopy-daemon.service"
             echo ""
             echo "Add your daemon arguments to the ExecStart line:"
-            echo "  ExecStart=/usr/local/bin/netvisor-daemon --server-url http://YOUR_SERVER --server-port 60072 --network-id YOUR_NETWORK_ID --daemon-api-key YOUR_API_KEY"
+            echo "  ExecStart=/usr/local/bin/scanopy-daemon --server-url http://YOUR_SERVER --server-port 60072 --network-id YOUR_NETWORK_ID --daemon-api-key YOUR_API_KEY"
             echo ""
             echo "Then enable and start the service:"
             echo "  sudo systemctl daemon-reload"
-            echo "  sudo systemctl enable netvisor-daemon"
-            echo "  sudo systemctl start netvisor-daemon"
+            echo "  sudo systemctl enable scanopy-daemon"
+            echo "  sudo systemctl start scanopy-daemon"
             echo ""
             echo "Check status:"
-            echo "  sudo systemctl status netvisor-daemon"
+            echo "  sudo systemctl status scanopy-daemon"
             echo ""
             echo "View logs:"
-            echo "  sudo journalctl -u netvisor-daemon -f"
+            echo "  sudo journalctl -u scanopy-daemon -f"
             echo ""
         fi
     fi
@@ -122,6 +122,6 @@ fi
 # Show manual run instructions
 echo ""
 echo "To run daemon manually:"
-echo "  netvisor-daemon --server-url YOUR_SERVER_URL"
+echo "  scanopy-daemon --server-url YOUR_SERVER_URL"
 echo ""
 echo "Need help? Visit: https://github.com/${REPO}#readme"

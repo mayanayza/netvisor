@@ -66,8 +66,8 @@ jobs:
       
       - name: Create multi-arch manifest for Server (Docker Hub)
         run: |
-          docker buildx imagetools create -t mayanayza/netvisor-server:latest \
-            mayanayza/netvisor-server:${{ inputs.release_tag }}
+          docker buildx imagetools create -t mayanayza/scanopy-server:latest \
+            mayanayza/scanopy-server:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Server (GHCR)
         run: |
@@ -76,8 +76,8 @@ jobs:
 
       - name: Create multi-arch manifest for Server (Docker Hub)
         run: |
-          docker buildx imagetools create -t mayanayza/netvisor-server:latest \
-            mayanayza/netvisor-server-commercial:${{ inputs.release_tag }}
+          docker buildx imagetools create -t mayanayza/scanopy-server:latest \
+            mayanayza/scanopy-server-commercial:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Server (GHCR)
         run: |
@@ -86,8 +86,8 @@ jobs:
       
       - name: Create multi-arch manifest for Daemon (Docker Hub)
         run: |
-          docker buildx imagetools create -t mayanayza/netvisor-daemon:latest \
-            mayanayza/netvisor-daemon:${{ inputs.release_tag }}
+          docker buildx imagetools create -t mayanayza/scanopy-daemon:latest \
+            mayanayza/scanopy-daemon:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Daemon (GHCR)
         run: |
@@ -125,7 +125,7 @@ jobs:
                   \"inline\": true
                 }],
                 \"footer\": {
-                  \"text\": \"NetVisor Release\"
+                  \"text\": \"Scanopy Release\"
                 },
                 \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
               }]

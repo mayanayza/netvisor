@@ -2,79 +2,79 @@
   {
     "id": "name",
     "cliFlag": "--name",
-    "envVar": "NETVISOR_NAME",
+    "envVar": "SCANOPY_NAME",
     "helpText": "Name for this daemon"
   },
   {
     "id": "mode",
     "cliFlag": "--mode",
-    "envVar": "NETVISOR_MODE",
+    "envVar": "SCANOPY_MODE",
     "helpText": "Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed"
   },
   {
     "id": "daemon_port",
     "cliFlag": "--daemon-port",
-    "envVar": "NETVISOR_DAEMON_PORT",
+    "envVar": "SCANOPY_DAEMON_PORT",
     "helpText": "Port for daemon to listen on"
   },
   {
     "id": "bind_address",
     "cliFlag": "--bind-address",
-    "envVar": "NETVISOR_BIND_ADDRESS",
+    "envVar": "SCANOPY_BIND_ADDRESS",
     "helpText": "IP address to bind daemon to"
   },
   {
     "id": "daemon_url",
     "cliFlag": "--daemon-url",
-    "envVar": "NETVISOR_DAEMON_URL",
+    "envVar": "SCANOPY_DAEMON_URL",
     "helpText": "Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set"
   },
   {
     "id": "allow_self_signed_certs",
     "cliFlag": "--allow-self-signed-certs",
-    "envVar": "NETVISOR_ALLOW_SELF_SIGNED_CERTS",
+    "envVar": "SCANOPY_ALLOW_SELF_SIGNED_CERTS",
     "helpText": "Allow self-signed certs for daemon -> server connections"
   },
   {
     "id": "log_level",
     "cliFlag": "--log-level",
-    "envVar": "NETVISOR_LOG_LEVEL",
+    "envVar": "SCANOPY_LOG_LEVEL",
     "helpText": "Logging verbosity"
   },
   {
     "id": "heartbeat_interval",
     "cliFlag": "--heartbeat-interval",
-    "envVar": "NETVISOR_HEARTBEAT_INTERVAL",
+    "envVar": "SCANOPY_HEARTBEAT_INTERVAL",
     "helpText": "Seconds between heartbeat updates / work requests (for daemons in pull mode) to server"
   },
   {
     "id": "concurrent_scans",
     "cliFlag": "--concurrent-scans",
-    "envVar": "NETVISOR_CONCURRENT_SCANS",
+    "envVar": "SCANOPY_CONCURRENT_SCANS",
     "helpText": "Maximum parallel host scans"
   },
   {
     "id": "docker_proxy",
     "cliFlag": "--docker-proxy",
-    "envVar": "NETVISOR_DOCKER_PROXY",
+    "envVar": "SCANOPY_DOCKER_PROXY",
     "helpText": "Optional proxy for Docker API. Can use both non-SSL and SSL proxy; SSL proxy requires additional SSL config vars"
   },
   {
     "id": "docker_proxy_ssl_cert",
     "cliFlag": "--docker-proxy-ssl-cert",
-    "envVar": "NETVISOR_DOCKER_PROXY_SSL_CERT",
+    "envVar": "SCANOPY_DOCKER_PROXY_SSL_CERT",
     "helpText": "Path to SSL certificate if using a docker proxy with SSL"
   },
   {
     "id": "docker_proxy_ssl_key",
     "cliFlag": "--docker-proxy-ssl-key",
-    "envVar": "NETVISOR_DOCKER_PROXY_SSL_KEY",
+    "envVar": "SCANOPY_DOCKER_PROXY_SSL_KEY",
     "helpText": "Path to SSL private key if using a docker proxy with SSL"
   },
   {
     "id": "docker_proxy_ssl_chain",
     "cliFlag": "--docker-proxy-ssl-chain",
-    "envVar": "NETVISOR_DOCKER_PROXY_SSL_CHAIN",
+    "envVar": "SCANOPY_DOCKER_PROXY_SSL_CHAIN",
     "helpText": "Path to SSL chain if using a docker proxy with SSL"
   }
 ]

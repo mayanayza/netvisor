@@ -113,30 +113,30 @@ impl TypeMetadataProvider for Feature {
     fn description(&self) -> &'static str {
         match self {
             Feature::AuditLogs => {
-                "Comprehensive logs of all access and data modification actions performed in NetVisor"
+                "Comprehensive logs of all access and data modification actions performed in Scanopy"
             }
             Feature::Webhooks => {
                 "Push real-time events to external systems when hosts, services, or topology changes"
             }
             Feature::ShareViews => "Share live network diagrams with others",
             Feature::OnboardingCall => {
-                "30 minute onboarding call to ensure you're getting the most out of NetVisor"
+                "30 minute onboarding call to ensure you're getting the most out of Scanopy"
             }
-            Feature::CommercialLicense => "Use NetVisor under a commercial license",
+            Feature::CommercialLicense => "Use Scanopy under a commercial license",
             Feature::RemoveCreatedWith => {
-                "Remove 'Created using netvisor.io' in bottom right corner of visualization"
+                "Remove 'Created using scanopy.net' in bottom right corner of visualization"
             }
             Feature::PrioritySupport => "Prioritized email support with faster response times",
             Feature::Embeds => "Embed live network diagrams in wikis, dashboards, or documentation",
             Feature::CustomSso => "Configure your own OIDC identity provider for single sign-on",
             Feature::ManagedDeployment => {
-                "We deploy, configure, and manage NetVisor for you — on a dedicated instance or your own infrastructure"
+                "We deploy, configure, and manage Scanopy for you — on a dedicated instance or your own infrastructure"
             }
-            Feature::EmailSupport => "Access to the NetVisor team via email support tickets",
+            Feature::EmailSupport => "Access to the Scanopy team via email support tickets",
             Feature::Whitelabeling => "Custom domain with your branding",
             Feature::InvoiceBilling => "Pay via invoice with net terms instead of credit card",
             Feature::LiveChatSupport => {
-                "Access to the NetVisor team via live chat (Slack or Discord)"
+                "Access to the Scanopy team via live chat (Slack or Discord)"
             }
             Feature::CommunitySupport => "Community support via GitHub issues and discussions",
         }

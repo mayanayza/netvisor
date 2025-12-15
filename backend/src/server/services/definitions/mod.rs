@@ -242,6 +242,7 @@ pub mod proxmox_datacenter_manager;
 
 // Monitoring
 pub mod apc;
+pub mod cadvisor;
 pub mod coolercontrol;
 pub mod elastic_apm;
 pub mod gatus;
@@ -328,7 +329,7 @@ pub mod wizarr;
 
 // ============= SPECIAL =============
 
-// Netvisor
-pub mod netvisor_daemon;
-pub mod netvisor_server;
+// Scanopy
 pub mod open_ports;
+pub mod scanopy_daemon;
+pub mod scanopy_server;
