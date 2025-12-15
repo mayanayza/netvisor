@@ -119,16 +119,16 @@ jobs:
         working-directory: website
         run: |
           set -x
-          ls -la src/lib/fixtures/
+          
+          # What does git have tracked in this path?
+          git ls-files src/lib/fixtures/
+          
+          # What's the actual content difference?
+          cat src/lib/fixtures/services.json | head -20
+          git show HEAD:src/lib/fixtures/services.json | head -20 || echo "File not in HEAD"
+          
           git status
-          git add -A
-          git status
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update fixtures from release ${{ inputs.release_tag }}"
-            git push
-          fi
+          git diff
       
       - name: Send Discord Notification
         env:
