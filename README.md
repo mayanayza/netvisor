@@ -1,7 +1,7 @@
 # Scanopy
 
 <p align="left">
-  <img src="./media/logo.png" width="100" alt="Scanopy Logo">
+  <img src="./media/scanopy-logo.png" width="100" alt="Scanopy Logo">
 </p>
 
 **Automatically discover and visually document network infrastructure.**
