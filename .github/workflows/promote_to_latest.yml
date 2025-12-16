@@ -93,6 +93,38 @@ jobs:
         run: |
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/daemon:latest \
             ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
+
+      - name: Checkout current repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+      
+      - name: Checkout website repo
+        uses: actions/checkout@v4
+        with:
+          repository: scanopy/website
+          token: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
+          path: website
+      
+      - name: Copy fixtures to website repo
+        run: |
+          mkdir -p website/src/lib/fixtures/
+          cp ui/static/services.json website/src/lib/fixtures/
+          cp ui/static/features.json website/src/lib/fixtures/
+          cp ui/static/billing-plans.json website/src/lib/fixtures/
+      
+      - name: Commit and push to website repo
+        working-directory: website
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update fixtures from release ${{ inputs.release_tag }}"
+            git push
+          fi
       
       - name: Send Discord Notification
         env:
