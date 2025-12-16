@@ -67,16 +67,6 @@ jobs:
       - name: Create multi-arch manifest for Server (Docker Hub)
         run: |
           docker buildx imagetools create -t mayanayza/scanopy-server:latest \
-            mayanayza/scanopy-server:${{ inputs.release_tag }}
-      
-      - name: Create multi-arch manifest for Server (GHCR)
-        run: |
-          docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
-            ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
-
-      - name: Create multi-arch manifest for Server (Docker Hub)
-        run: |
-          docker buildx imagetools create -t mayanayza/scanopy-server:latest \
             mayanayza/scanopy-server-commercial:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Server (GHCR)
@@ -94,10 +84,10 @@ jobs:
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/daemon:latest \
             ghcr.io/${{ github.repository }}/daemon:${{ inputs.release_tag }}
 
-      - name: Checkout current repo
+      - name: Checkout scanopy repo (dev branch for latest fixtures)
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: dev
       
       - name: Checkout website repo
         uses: actions/checkout@v4
@@ -118,11 +108,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
+          git add src/lib/fixtures/
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update fixtures from release ${{ inputs.release_tag }}"
+            git commit -m "chore: sync fixtures from ${{ inputs.release_tag }}"
             git push
           fi
       

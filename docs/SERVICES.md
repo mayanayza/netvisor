@@ -356,12 +356,6 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #d1d5db;">In-memory data store and cache</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">6379/tcp is open</code></td>
 </tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png" alt="cAdvisor" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">cAdvisor</td>
-<td style="padding: 12px; color: #d1d5db;">Graph database</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/api/v1.0/containers/ contains "cAdvisor"</code></td>
-</tr>
 </tbody>
 </table>
 
@@ -952,6 +946,12 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">APC</td>
 <td style="padding: 12px; color: #d1d5db;">APC Network-Connected UPS</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/ contains "Schneider Electric"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png" alt="cAdvisor" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">cAdvisor</td>
+<td style="padding: 12px; color: #d1d5db;">Analyzes resource usage and performance characteristics of running containers</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/api/v1.0/containers/ contains "cAdvisor"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cooler-control.svg" alt="CoolerControl" width="32" height="32" /></td>
