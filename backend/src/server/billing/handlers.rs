@@ -1,7 +1,6 @@
 use crate::server::auth::middleware::auth::AuthenticatedUser;
 use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::billing::types::api::CreateCheckoutRequest;
-use crate::server::billing::types::base::BillingPlan;
 use crate::server::config::AppState;
 use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::{ApiError, ApiResult};
@@ -9,6 +8,8 @@ use axum::Json;
 use axum::Router;
 use axum::extract::State;
 use axum::http::HeaderMap;
+use axum::http::header::CACHE_CONTROL;
+use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use std::sync::Arc;
 
@@ -23,10 +24,13 @@ pub fn create_router() -> Router<Arc<AppState>> {
 async fn get_billing_plans(
     State(state): State<Arc<AppState>>,
     RequireOwner(_user): RequireOwner,
-) -> ApiResult<Json<ApiResponse<Vec<BillingPlan>>>> {
+) -> Result<impl IntoResponse, ApiError> {
     if let Some(billing_service) = state.services.billing_service.clone() {
         let plans = billing_service.get_plans();
-        Ok(Json(ApiResponse::success(plans)))
+        Ok((
+            [(CACHE_CONTROL, "no-store, no-cache, must-revalidate")],
+            Json(ApiResponse::success(plans)),
+        ))
     } else {
         Err(ApiError::bad_request(
             "Billing is not enabled on this server",

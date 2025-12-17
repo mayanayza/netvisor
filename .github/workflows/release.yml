@@ -135,7 +135,6 @@ jobs:
           workspaces: backend
           key: ${{ matrix.target }}
       
-      # Use pre-built cross binary instead of compiling from source
       - name: Install cross
         if: matrix.use_cross
         uses: taiki-e/install-action@cross
@@ -196,12 +195,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -220,7 +213,6 @@ jobs:
             PUBLIC_SERVER_HOSTNAME=default
             PUBLIC_SERVER_PORT=60072
           tags: |
-            mayanayza/scanopy-server:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
             ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
           cache-from: type=gha,scope=server-${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=server-${{ matrix.suffix }}
@@ -250,12 +242,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -275,7 +261,6 @@ jobs:
             PUBLIC_SERVER_PORT=60072
             CARGO_FEATURES=commercial
           tags: |
-            mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
             ghcr.io/${{ github.repository }}/server-commercial:${{ github.event.release.tag_name }}-${{ matrix.suffix }}
           cache-from: type=gha,scope=server-commercial-${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=server-commercial-${{ matrix.suffix }}
@@ -293,7 +278,6 @@ jobs:
           git fetch origin ${{ github.event.release.target_commitish }}
           git reset --hard origin/${{ github.event.release.target_commitish }}
       
-      # Download pre-built binaries
       - name: Download Linux amd64 binary
         uses: actions/download-artifact@v4
         with:
@@ -312,12 +296,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -325,7 +303,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      # Daemon uses pre-built binaries, so multi-platform is fast (no Rust compilation)
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -334,7 +311,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            mayanayza/scanopy-daemon:${{ github.event.release.tag_name }}
             ghcr.io/${{ github.repository }}/daemon:${{ github.event.release.tag_name }}
 
   # ============================================
@@ -347,12 +323,6 @@ jobs:
     needs: [build-docker-server-community, build-docker-server-commercial, build-docker-daemon]
     
     steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-      
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -360,23 +330,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Create manifest for Server Community (Docker Hub)
-        run: |
-          docker buildx imagetools create -t mayanayza/scanopy-server:${{ github.event.release.tag_name }} \
-            mayanayza/scanopy-server:${{ github.event.release.tag_name }}-amd64 \
-            mayanayza/scanopy-server:${{ github.event.release.tag_name }}-arm64
-      
       - name: Create manifest for Server Community (GHCR)
         run: |
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }} \
             ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-amd64 \
             ghcr.io/${{ github.repository }}/server:${{ github.event.release.tag_name }}-arm64
-      
-      - name: Create manifest for Server Commercial (Docker Hub)
-        run: |
-          docker buildx imagetools create -t mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }} \
-            mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }}-amd64 \
-            mayanayza/scanopy-server-commercial:${{ github.event.release.tag_name }}-arm64
       
       - name: Create manifest for Server Commercial (GHCR)
         run: |

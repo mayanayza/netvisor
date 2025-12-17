@@ -59,8 +59,7 @@ Choose the right option for your use case:
 For commercial licensing inquiries: **licensing@scanopy.net**
 
 **Choose Scanopy Cloud if:**
-- Want a fully managed solution without infrastructure setup
-- Prefer subscription pricing over self-hosting
+- You want a fully managed solution without infrastructure setup
 
 **[Scanopy Cloud Free Trial →](https://scanopy.net)**
 
