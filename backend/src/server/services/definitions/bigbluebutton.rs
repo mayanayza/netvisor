@@ -15,7 +15,7 @@ impl ServiceDefinition for BigBlueButton {
         "Web conferencing system"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Conferencing
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Http, "/bigbluebutton/api", "", Some(200..300))

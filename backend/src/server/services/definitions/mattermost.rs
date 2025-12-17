@@ -15,7 +15,7 @@ impl ServiceDefinition for Mattermost {
         "Team messaging platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Collaboration
+        ServiceCategory::Messaging
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::new_tcp(8065), "/api/v4/system/ping", "", None)

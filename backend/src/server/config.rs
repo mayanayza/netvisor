@@ -127,6 +127,14 @@ pub struct ServerConfig {
     pub enforce_billing_for_testing: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeploymentType {
+    Cloud,
+    Commercial,
+    Community,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PublicConfigResponse {
     pub server_port: u16,
@@ -139,6 +147,8 @@ pub struct PublicConfigResponse {
     pub public_url: String,
     pub posthog_key: Option<String>,
     pub needs_cookie_consent: bool,
+    pub deployment_type: DeploymentType,
+    pub plunk_key: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -289,6 +299,19 @@ pub async fn get_public_config(
         .map(|o| o.as_ref().list_providers())
         .unwrap_or_default();
 
+    let deployment_type = if state.config.stripe_secret.is_some() {
+        DeploymentType::Cloud
+    } else {
+        #[cfg(feature = "commercial")]
+        {
+            DeploymentType::Commercial
+        }
+        #[cfg(not(feature = "commercial"))]
+        {
+            DeploymentType::Community
+        }
+    };
+
     Json(ApiResponse::success(PublicConfigResponse {
         server_port: state.config.server_port,
         disable_registration: state.config.disable_registration,
@@ -304,5 +327,7 @@ pub async fn get_public_config(
         has_email_opt_in: state.config.plunk_secret.is_some(),
         posthog_key: state.config.posthog_key.clone(),
         needs_cookie_consent: state.config.posthog_key.is_some(),
+        deployment_type,
+        plunk_key: state.config.plunk_key.clone(),
     }))
 }

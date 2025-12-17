@@ -15,7 +15,7 @@ impl ServiceDefinition for FreshRSS {
         "A free, self-hostable news aggregator"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Publishing
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

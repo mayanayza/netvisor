@@ -15,7 +15,7 @@ impl ServiceDefinition for RocketChat {
         "Team communication platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Messaging
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Http3000, "/api/info", "rocket", None)

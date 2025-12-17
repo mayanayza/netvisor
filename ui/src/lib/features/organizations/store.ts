@@ -1,13 +1,13 @@
 import { writable } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { CreateInviteRequest, OrganizationInvite, Organization } from './types';
-import type { OnboardingRequest } from '../auth/types/base';
+import type { SetupRequest } from '../auth/types/base';
 import type { UserOrgPermissions } from '../users/types';
 
 export const organization = writable<Organization | null>();
 export const invites = writable<OrganizationInvite[]>([]);
 
-export async function onboard(request: OnboardingRequest): Promise<void> {
+export async function onboard(request: SetupRequest): Promise<void> {
 	await api.request<Organization, Organization | null>('/onboarding', organization, (org) => org, {
 		method: 'POST',
 		body: JSON.stringify(request)

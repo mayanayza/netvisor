@@ -19,7 +19,6 @@ pub enum Feature {
     CustomSso,
     ManagedDeployment,
     Whitelabeling,
-    InvoiceBilling,
     CommunitySupport,
     EmailSupport,
     LiveChatSupport,
@@ -39,7 +38,6 @@ impl HasId for Feature {
             Feature::CustomSso => "custom_sso",
             Feature::ManagedDeployment => "managed_deployment",
             Feature::Whitelabeling => "whitelabeling",
-            Feature::InvoiceBilling => "invoice_billing",
             Feature::LiveChatSupport => "live_chat_support",
             Feature::Embeds => "embeds",
             Feature::EmailSupport => "email_support",
@@ -77,7 +75,7 @@ impl TypeMetadataProvider for Feature {
             | Feature::PrioritySupport
             | Feature::OnboardingCall => "Support",
 
-            Feature::CommercialLicense | Feature::InvoiceBilling => "Licensing & Billing",
+            Feature::CommercialLicense => "Licensing",
 
             Feature::CustomSso
             | Feature::ManagedDeployment
@@ -101,7 +99,6 @@ impl TypeMetadataProvider for Feature {
             Feature::CustomSso => "Custom SSO",
             Feature::ManagedDeployment => "Managed Deployment",
             Feature::Whitelabeling => "Whitelabeling",
-            Feature::InvoiceBilling => "Invoice Billing",
             Feature::LiveChatSupport => "Live Chat Support",
             Feature::Embeds => "Embeds",
             Feature::EmailSupport => "Email Support",
@@ -133,8 +130,7 @@ impl TypeMetadataProvider for Feature {
                 "We deploy, configure, and manage Scanopy for you — on a dedicated instance or your own infrastructure"
             }
             Feature::EmailSupport => "Access to the Scanopy team via email support tickets",
-            Feature::Whitelabeling => "Custom domain with your branding",
-            Feature::InvoiceBilling => "Pay via invoice with net terms instead of credit card",
+            Feature::Whitelabeling => "We deploy Scanopy to a custom domain with your branding",
             Feature::LiveChatSupport => {
                 "Access to the Scanopy team via live chat (Slack or Discord)"
             }

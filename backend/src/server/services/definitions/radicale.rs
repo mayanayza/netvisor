@@ -15,7 +15,7 @@ impl ServiceDefinition for Radicale {
         "Free and Open-Source CalDAV and CardDAV Server"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Collaboration
+        ServiceCategory::Office
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(

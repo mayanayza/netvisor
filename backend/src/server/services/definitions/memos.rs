@@ -15,7 +15,7 @@ impl ServiceDefinition for Memos {
         "An open-source, self-hosted note-taking service."
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Media
+        ServiceCategory::Office
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

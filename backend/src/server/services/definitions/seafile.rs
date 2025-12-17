@@ -15,7 +15,7 @@ impl ServiceDefinition for Seafile {
         "File hosting platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Storage
+        ServiceCategory::Office
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::new_tcp(8000), "/api2/ping", "seafile", None)

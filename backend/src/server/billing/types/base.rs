@@ -139,7 +139,6 @@ pub struct BillingPlanFeatures {
     pub custom_sso: bool,
     pub managed_deployment: bool,
     pub whitelabeling: bool,
-    pub invoice_billing: bool,
     pub live_chat_support: bool,
     pub embeds: bool,
     pub email_support: bool,
@@ -250,7 +249,6 @@ impl BillingPlan {
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
-                invoice_billing: false,
                 live_chat_support: false,
                 embeds: true,
                 email_support: false,
@@ -267,7 +265,6 @@ impl BillingPlan {
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
-                invoice_billing: false,
                 live_chat_support: false,
                 embeds: false,
                 email_support: true,
@@ -284,7 +281,6 @@ impl BillingPlan {
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
-                invoice_billing: false,
                 live_chat_support: false,
                 embeds: true,
                 email_support: true,
@@ -301,7 +297,6 @@ impl BillingPlan {
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
-                invoice_billing: false,
                 live_chat_support: false,
                 embeds: true,
                 email_support: true,
@@ -318,7 +313,6 @@ impl BillingPlan {
                 custom_sso: false,
                 managed_deployment: false,
                 whitelabeling: false,
-                invoice_billing: false,
                 live_chat_support: false,
                 embeds: true,
                 email_support: true,
@@ -335,7 +329,6 @@ impl BillingPlan {
                 custom_sso: true,
                 managed_deployment: true,
                 whitelabeling: true,
-                invoice_billing: true,
                 live_chat_support: true,
                 embeds: true,
                 email_support: true,
@@ -352,7 +345,6 @@ impl BillingPlan {
                 custom_sso: true,
                 managed_deployment: true,
                 whitelabeling: true,
-                invoice_billing: true,
                 live_chat_support: true,
                 embeds: true,
                 email_support: true,
@@ -369,7 +361,6 @@ impl BillingPlan {
                 custom_sso: true,
                 managed_deployment: false,
                 whitelabeling: false,
-                invoice_billing: true,
                 live_chat_support: false,
                 embeds: true,
                 email_support: true,
@@ -395,7 +386,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             custom_sso,
             managed_deployment,
             whitelabeling,
-            invoice_billing,
             live_chat_support,
             embeds,
             email_support,
@@ -421,10 +411,6 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
 
         if whitelabeling {
             features.push(Feature::Whitelabeling)
-        }
-
-        if invoice_billing {
-            features.push(Feature::InvoiceBilling)
         }
 
         if live_chat_support {
@@ -511,7 +497,7 @@ impl TypeMetadataProvider for BillingPlan {
             BillingPlan::Business { .. } => "Business",
             BillingPlan::Enterprise { .. } => "Enterprise",
             BillingPlan::Demo { .. } => "Demo",
-            BillingPlan::CommercialSelfHosted { .. } => "Self Hosted",
+            BillingPlan::CommercialSelfHosted { .. } => "On-Premise",
         }
     }
 

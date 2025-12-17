@@ -1,4 +1,6 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
+use crate::server::billing::plans::YEARLY_DISCOUNT;
+use crate::server::billing::plans::get_enterprise_plan;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
 use crate::server::networks::service::NetworkService;
@@ -278,6 +280,9 @@ impl BillingService {
 
             created_plans.push(plan)
         }
+
+        created_plans.push(get_enterprise_plan());
+        created_plans.push(get_enterprise_plan().to_yearly(YEARLY_DISCOUNT));
 
         let _ = self.plans.set(created_plans.clone());
 

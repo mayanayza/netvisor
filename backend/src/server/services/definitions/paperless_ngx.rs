@@ -15,7 +15,7 @@ impl ServiceDefinition for PaperlessNGX {
         "Community-supported document management system"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Office
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

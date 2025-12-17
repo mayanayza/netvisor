@@ -12,10 +12,10 @@ impl ServiceDefinition for Cadvisor {
         "cAdvisor"
     }
     fn description(&self) -> &'static str {
-        "Graph database"
+        "Monitoring for container"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Database
+        ServiceCategory::Monitoring
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(

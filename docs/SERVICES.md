@@ -92,7 +92,7 @@ This document lists all services that Scanopy can automatically discover and ide
 </tbody>
 </table>
 
-## Collaboration
+## Conferencing
 
 <table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
 <thead>
@@ -105,67 +105,16 @@ This document lists all services that Scanopy can automatically discover and ide
 </thead>
 <tbody>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/confluence.svg" alt="Confluence" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Confluence</td>
-<td style="padding: 12px; color: #d1d5db;">Team collaboration wiki</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8090/ contains "confluence"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jira.svg" alt="Jira" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Jira</td>
-<td style="padding: 12px; color: #d1d5db;">Project management platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response status is between 200 and 300, and response body from <ip>:8080/rest/api/2/serverInfo contains "jira"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mattermost.svg" alt="Mattermost" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Mattermost</td>
-<td style="padding: 12px; color: #d1d5db;">Team messaging platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8065/api/v4/system/ping contains ""</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/radicale.svg" alt="Radicale" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Radicale</td>
-<td style="padding: 12px; color: #d1d5db;">Free and Open-Source CalDAV and CardDAV Server</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5232/.web/ contains "Radicale Web Interface"</code></td>
-</tr>
-</tbody>
-</table>
-
-## Communication
-
-<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
-<thead>
-<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
-<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
-<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
-<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
-<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
-</tr>
-</thead>
-<tbody>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/asterisk.png" alt="Asterisk" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Asterisk</td>
-<td style="padding: 12px; color: #d1d5db;">PBX and VoIP server</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8088/httpstatus contains "asterisk"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freepbx.svg" alt="FreePBX" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">FreePBX</td>
-<td style="padding: 12px; color: #d1d5db;">PBX web interface</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">All of: (Endpoint response body from <ip>:80/ contains "freepbx", 5060/tcp is open)</code></td>
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://simpleicons.org/icons/bigbluebutton.svg" alt="BigBlueButton" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">BigBlueButton</td>
+<td style="padding: 12px; color: #d1d5db;">Web conferencing system</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response status is between 200 and 300, and response body from <ip>:80/bigbluebutton/api contains ""</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jitsi-meet.svg" alt="Jitsi Meet" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Jitsi Meet</td>
 <td style="padding: 12px; color: #d1d5db;">Video conferencing</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8443/ contains "jitsilogo.png"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailcow.svg" alt="mailcow" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">mailcow</td>
-<td style="padding: 12px; color: #d1d5db;">Open-source mail server suite (Dockerized)</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:443/api/v1/get/status contains "mailcow"</code></td>
 </tr>
 </tbody>
 </table>
@@ -356,12 +305,6 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #d1d5db;">In-memory data store and cache</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">6379/tcp is open</code></td>
 </tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png" alt="cAdvisor" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">cAdvisor</td>
-<td style="padding: 12px; color: #d1d5db;">Graph database</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/api/v1.0/containers/ contains "cAdvisor"</code></td>
-</tr>
 </tbody>
 </table>
 
@@ -432,6 +375,12 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:11434/ contains "Ollama is running"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/open-webui-light.svg" alt="Open WebUI" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Open WebUI</td>
+<td style="padding: 12px; color: #d1d5db;">Open, extensible, user-friendly interface for AI</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/manifest.json contains "Open WebUI"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://simpleicons.org/icons/spinnaker.svg" alt="Spinnaker" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Spinnaker</td>
 <td style="padding: 12px; color: #d1d5db;">Multi-cloud CD platform</td>
@@ -443,10 +392,16 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #d1d5db;">CI/CD server</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8111/ contains "teamcity"</code></td>
 </tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/apache-tomcat.svg" alt="Tomcat" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Tomcat</td>
+<td style="padding: 12px; color: #d1d5db;">Java servlet container</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/ contains "apache tomcat"</code></td>
+</tr>
 </tbody>
 </table>
 
-## FileSharing
+## Email
 
 <table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
 <thead>
@@ -459,10 +414,10 @@ This document lists all services that Scanopy can automatically discover and ide
 </thead>
 <tbody>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/owncloud.svg" alt="ownCloud" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">ownCloud</td>
-<td style="padding: 12px; color: #d1d5db;">File sync and share</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/status.php contains "owncloud"</code></td>
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mailcow.svg" alt="mailcow" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">mailcow</td>
+<td style="padding: 12px; color: #d1d5db;">Open-source mail server suite (Dockerized)</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:443/api/v1/get/status contains "mailcow"</code></td>
 </tr>
 </tbody>
 </table>
@@ -729,6 +684,12 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">6767/tcp is open</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/book-lore.svg" alt="BookLore" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">BookLore</td>
+<td style="padding: 12px; color: #d1d5db;">A self-hosted, multi-user digital library.</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:6060/ contains "booklore-app"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/cleanuperr.svg" alt="Cleanuparr" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Cleanuparr</td>
 <td style="padding: 12px; color: #d1d5db;">Torrent cleanup tool for Sonarr and Radarr</td>
@@ -789,10 +750,10 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8686/Content/manifest.json contains "Lidarr"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/memos.png" alt="Memos" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Memos</td>
-<td style="padding: 12px; color: #d1d5db;">An open-source, self-hosted note-taking service.</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5230/explore contains "Memos"</code></td>
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/metube.svg" alt="MeTube" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">MeTube</td>
+<td style="padding: 12px; color: #d1d5db;">Self-hosted YouTube downloader</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8081/manifest.webmanifest contains "MeTube"</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/overseerr.svg" alt="Overseerr" width="32" height="32" /></td>
@@ -910,6 +871,33 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">RabbitMQ</td>
 <td style="padding: 12px; color: #d1d5db;">Message broker</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:15672/ contains "rabbitmq"</code></td>
+</tr>
+</tbody>
+</table>
+
+## Messaging
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mattermost.svg" alt="Mattermost" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Mattermost</td>
+<td style="padding: 12px; color: #d1d5db;">Team messaging platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8065/api/v4/system/ping contains ""</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/rocket-chat.svg" alt="Rocket.Chat" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Rocket.Chat</td>
+<td style="padding: 12px; color: #d1d5db;">Team communication platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:3000/api/info contains "rocket"</code></td>
 </tr>
 </tbody>
 </table>
@@ -1078,6 +1066,12 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Zipkin</td>
 <td style="padding: 12px; color: #d1d5db;">Distributed tracing system</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:9411/api/v2/services contains ""</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png" alt="cAdvisor" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">cAdvisor</td>
+<td style="padding: 12px; color: #d1d5db;">Monitoring for container</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/api/v1.0/containers/ contains "cAdvisor"</code></td>
 </tr>
 </tbody>
 </table>
@@ -1265,6 +1259,69 @@ This document lists all services that Scanopy can automatically discover and ide
 </tbody>
 </table>
 
+## Office
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/actual-budget.svg" alt="Actual Budget" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Actual Budget</td>
+<td style="padding: 12px; color: #d1d5db;">A local-first personal finance app</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5006/manifest.webmanifest contains "@actual-app/web"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jotty.svg" alt="Jotty" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Jotty</td>
+<td style="padding: 12px; color: #d1d5db;">A simple, self-hosted app for your checklists and notes</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:3000/site.webmanifest contains "jotty"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/memos.png" alt="Memos" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Memos</td>
+<td style="padding: 12px; color: #d1d5db;">An open-source, self-hosted note-taking service.</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5230/explore contains "Memos"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nextcloud.svg" alt="NextCloud" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">NextCloud</td>
+<td style="padding: 12px; color: #d1d5db;">Self-hosted cloud storage and collaboration platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/core/css/server.css contains "Nextcloud GmbH"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/paperless-ngx.svg" alt="Paperless-NGX" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Paperless-NGX</td>
+<td style="padding: 12px; color: #d1d5db;">Community-supported document management system</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8000/static/frontend/en-US/manifest.webmanifest contains "Paperless-ngx"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/radicale.svg" alt="Radicale" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Radicale</td>
+<td style="padding: 12px; color: #d1d5db;">Free and Open-Source CalDAV and CardDAV Server</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5232/.web/ contains "Radicale Web Interface"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/seafile.svg" alt="Seafile" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Seafile</td>
+<td style="padding: 12px; color: #d1d5db;">File hosting platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8000/api2/ping contains "seafile"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/owncloud.svg" alt="ownCloud" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">ownCloud</td>
+<td style="padding: 12px; color: #d1d5db;">File sync and share</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/status.php contains "owncloud"</code></td>
+</tr>
+</tbody>
+</table>
+
 ## OpenPorts
 
 <table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
@@ -1315,6 +1372,72 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Print Server</td>
 <td style="padding: 12px; color: #d1d5db;">A generic printing service</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (631/tcp is open, 515/tcp is open, 515/udp is open)</code></td>
+</tr>
+</tbody>
+</table>
+
+## ProjectManagement
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/confluence.svg" alt="Confluence" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Confluence</td>
+<td style="padding: 12px; color: #d1d5db;">Team collaboration wiki</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8090/ contains "confluence"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jira.svg" alt="Jira" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Jira</td>
+<td style="padding: 12px; color: #d1d5db;">Project management platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response status is between 200 and 300, and response body from <ip>:8080/rest/api/2/serverInfo contains "jira"</code></td>
+</tr>
+</tbody>
+</table>
+
+## Publishing
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/discourse.svg" alt="Discourse" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Discourse</td>
+<td style="padding: 12px; color: #d1d5db;">Discussion platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/srv/status contains "discourse"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freshrss.svg" alt="FreshRSS" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">FreshRSS</td>
+<td style="padding: 12px; color: #d1d5db;">A free, self-hostable news aggregator</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/themes/manifest.json contains "FreshRSS feed aggregator"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/ghost.png" alt="Ghost" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Ghost</td>
+<td style="padding: 12px; color: #d1d5db;">Publishing platform</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:2368/ contains "ghost"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wordpress.svg" alt="WordPress" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">WordPress</td>
+<td style="padding: 12px; color: #d1d5db;">Content management system</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/ contains "wp-content"</code></td>
 </tr>
 </tbody>
 </table>
@@ -1470,12 +1593,6 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">445/tcp is open</code></td>
 </tr>
 <tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/seafile.svg" alt="Seafile" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Seafile</td>
-<td style="padding: 12px; color: #d1d5db;">File hosting platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8000/api2/ping contains "seafile"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
 <td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/synology.svg" alt="Synology DSM" width="32" height="32" /></td>
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Synology DSM</td>
 <td style="padding: 12px; color: #d1d5db;">Synology DiskStation Manager NAS system</td>
@@ -1486,6 +1603,60 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">TrueNAS</td>
 <td style="padding: 12px; color: #d1d5db;">Open-source network attached storage system</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">All of: (445/tcp is open, Endpoint response body from <ip>:80/ contains "TrueNAS")</code></td>
+</tr>
+</tbody>
+</table>
+
+## Telephony
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/asterisk.png" alt="Asterisk" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Asterisk</td>
+<td style="padding: 12px; color: #d1d5db;">PBX and VoIP server</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8088/httpstatus contains "asterisk"</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freepbx.svg" alt="FreePBX" width="32" height="32" /></td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">FreePBX</td>
+<td style="padding: 12px; color: #d1d5db;">PBX web interface</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">All of: (Endpoint response body from <ip>:80/ contains "freepbx", 5060/tcp is open)</code></td>
+</tr>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">SIP Server</td>
+<td style="padding: 12px; color: #d1d5db;">Session initiation protocol</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (5060/tcp is open, 5061/tcp is open)</code></td>
+</tr>
+</tbody>
+</table>
+
+## Unknown
+
+<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
+<thead>
+<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
+<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
+<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
+<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
+<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #374151;">
+<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
+<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Web Service</td>
+<td style="padding: 12px; color: #d1d5db;">A generic web service</td>
+<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">No match pattern provided</code></td>
 </tr>
 </tbody>
 </table>
@@ -1582,111 +1753,6 @@ This document lists all services that Scanopy can automatically discover and ide
 <td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Rancher</td>
 <td style="padding: 12px; color: #d1d5db;">Kubernetes management</td>
 <td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/v3 contains "rancher"</code></td>
-</tr>
-</tbody>
-</table>
-
-## Web
-
-<table style="background-color: #1a1d29; border-collapse: collapse; width: 100%;">
-<thead>
-<tr style="background-color: #1f2937; border-bottom: 2px solid #374151;">
-<th width="60" style="padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;">Logo</th>
-<th width="200" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Name</th>
-<th width="300" style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Description</th>
-<th style="padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;">Discovery Pattern</th>
-</tr>
-</thead>
-<tbody>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/actual-budget.svg" alt="Actual Budget" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Actual Budget</td>
-<td style="padding: 12px; color: #d1d5db;">A local-first personal finance app</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:5006/manifest.webmanifest contains "@actual-app/web"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://simpleicons.org/icons/bigbluebutton.svg" alt="BigBlueButton" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">BigBlueButton</td>
-<td style="padding: 12px; color: #d1d5db;">Web conferencing system</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response status is between 200 and 300, and response body from <ip>:80/bigbluebutton/api contains ""</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/discourse.svg" alt="Discourse" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Discourse</td>
-<td style="padding: 12px; color: #d1d5db;">Discussion platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/srv/status contains "discourse"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/freshrss.svg" alt="FreshRSS" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">FreshRSS</td>
-<td style="padding: 12px; color: #d1d5db;">A free, self-hostable news aggregator</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/themes/manifest.json contains "FreshRSS feed aggregator"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/ghost.png" alt="Ghost" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Ghost</td>
-<td style="padding: 12px; color: #d1d5db;">Publishing platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:2368/ contains "ghost"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jotty.svg" alt="Jotty" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Jotty</td>
-<td style="padding: 12px; color: #d1d5db;">A simple, self-hosted app for your checklists and notes</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:3000/site.webmanifest contains "jotty"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/metube.svg" alt="MeTube" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">MeTube</td>
-<td style="padding: 12px; color: #d1d5db;">Self-hosted YouTube downloader</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8081/manifest.webmanifest contains "MeTube"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/nextcloud.svg" alt="NextCloud" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">NextCloud</td>
-<td style="padding: 12px; color: #d1d5db;">Self-hosted cloud storage and collaboration platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/core/css/server.css contains "Nextcloud GmbH"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/open-webui-light.svg" alt="Open WebUI" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Open WebUI</td>
-<td style="padding: 12px; color: #d1d5db;">Open, extensible, user-friendly interface for AI</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/manifest.json contains "Open WebUI"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/paperless-ngx.svg" alt="Paperless-NGX" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Paperless-NGX</td>
-<td style="padding: 12px; color: #d1d5db;">Community-supported document management system</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8000/static/frontend/en-US/manifest.webmanifest contains "Paperless-ngx"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/rocket-chat.svg" alt="Rocket.Chat" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Rocket.Chat</td>
-<td style="padding: 12px; color: #d1d5db;">Team communication platform</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:3000/api/info contains "rocket"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">SIP Server</td>
-<td style="padding: 12px; color: #d1d5db;">Session initiation protocol</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Any of: (5060/tcp is open, 5061/tcp is open)</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/apache-tomcat.svg" alt="Tomcat" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Tomcat</td>
-<td style="padding: 12px; color: #d1d5db;">Java servlet container</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:8080/ contains "apache tomcat"</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;">—</td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">Web Service</td>
-<td style="padding: 12px; color: #d1d5db;">A generic web service</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">No match pattern provided</code></td>
-</tr>
-<tr style="border-bottom: 1px solid #374151;">
-<td align="center" style="padding: 12px; color: #d1d5db;"><img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/wordpress.svg" alt="WordPress" width="32" height="32" /></td>
-<td style="padding: 12px; color: #f3f4f6; font-weight: 500;">WordPress</td>
-<td style="padding: 12px; color: #d1d5db;">Content management system</td>
-<td style="padding: 12px;"><code style="background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;">Endpoint response body from <ip>:80/ contains "wp-content"</code></td>
 </tr>
 </tbody>
 </table>

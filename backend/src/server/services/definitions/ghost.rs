@@ -15,7 +15,7 @@ impl ServiceDefinition for Ghost {
         "Publishing platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Publishing
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::new_tcp(2368), "/", "ghost", None)

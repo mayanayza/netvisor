@@ -100,13 +100,8 @@
 					Back to Login
 				</button>
 			{:else}
-				<!-- Send Reset Link Button -->
-				<button
-					type="button"
-					disabled={requesting}
-					on:click={handleSubmit}
-					class="btn-primary w-full"
-				>
+				<!-- Send Reset Link Button (type="submit" triggers form validation) -->
+				<button type="submit" disabled={requesting} class="btn-primary w-full">
 					{requesting ? 'Sending...' : 'Send Reset Link'}
 				</button>
 
