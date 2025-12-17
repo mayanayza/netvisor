@@ -25,7 +25,7 @@
     "id": "commercial_license",
     "name": "Commercial License",
     "description": "Use Scanopy under a commercial license",
-    "category": "Licensing & Billing",
+    "category": "Licensing",
     "icon": null,
     "color": null,
     "metadata": {
@@ -90,19 +90,8 @@
   {
     "id": "whitelabeling",
     "name": "Whitelabeling",
-    "description": "Custom domain with your branding",
+    "description": "We deploy Scanopy to a custom domain with your branding",
     "category": "Enterprise",
-    "icon": null,
-    "color": null,
-    "metadata": {
-      "is_coming_soon": false
-    }
-  },
-  {
-    "id": "invoice_billing",
-    "name": "Invoice Billing",
-    "description": "Pay via invoice with net terms instead of credit card",
-    "category": "Licensing & Billing",
     "icon": null,
     "color": null,
     "metadata": {

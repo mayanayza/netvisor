@@ -63,7 +63,7 @@
     "name": "PeaNUT"
   },
   {
-    "category": "Web",
+    "category": "Office",
     "color": "blue",
     "description": "Community-supported document management system",
     "discovery_pattern": "Endpoint response body from <ip>:8000/static/frontend/en-US/manifest.webmanifest contains \"Paperless-ngx\"",
@@ -72,8 +72,8 @@
     "name": "Paperless-NGX"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Development",
+    "color": "red",
     "description": "Open, extensible, user-friendly interface for AI",
     "discovery_pattern": "Endpoint response body from <ip>:8080/manifest.json contains \"Open WebUI\"",
     "logo_needs_white_background": false,
@@ -108,7 +108,7 @@
     "name": "Netbootxyz"
   },
   {
-    "category": "Media",
+    "category": "Office",
     "color": "blue",
     "description": "An open-source, self-hosted note-taking service.",
     "discovery_pattern": "Endpoint response body from <ip>:5230/explore contains \"Memos\"",
@@ -126,7 +126,7 @@
     "name": "Mealie"
   },
   {
-    "category": "Web",
+    "category": "Media",
     "color": "blue",
     "description": "Self-hosted YouTube downloader",
     "discovery_pattern": "Endpoint response body from <ip>:8081/manifest.webmanifest contains \"MeTube\"",
@@ -162,7 +162,7 @@
     "name": "Karakeep"
   },
   {
-    "category": "Web",
+    "category": "Office",
     "color": "blue",
     "description": "A simple, self-hosted app for your checklists and notes",
     "discovery_pattern": "Endpoint response body from <ip>:3000/site.webmanifest contains \"jotty\"",
@@ -189,8 +189,8 @@
     "name": "Grocy"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Publishing",
+    "color": "violet",
     "description": "A free, self-hostable news aggregator",
     "discovery_pattern": "Endpoint response body from <ip>:80/themes/manifest.json contains \"FreshRSS feed aggregator\"",
     "logo_needs_white_background": false,
@@ -225,7 +225,7 @@
     "name": "Autobrr"
   },
   {
-    "category": "Web",
+    "category": "Office",
     "color": "blue",
     "description": "A local-first personal finance app",
     "discovery_pattern": "Endpoint response body from <ip>:5006/manifest.webmanifest contains \"@actual-app/web\"",
@@ -378,8 +378,8 @@
     "name": "Workstation"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Telephony",
+    "color": "orange",
     "description": "Session initiation protocol",
     "discovery_pattern": "Any of: (5060/tcp is open, 5061/tcp is open)",
     "logo_needs_white_background": false,
@@ -387,8 +387,8 @@
     "name": "SIP Server"
   },
   {
-    "category": "Communication",
-    "color": "orange",
+    "category": "Email",
+    "color": "rose",
     "description": "Open-source mail server suite (Dockerized)",
     "discovery_pattern": "Endpoint response body from <ip>:443/api/v1/get/status contains \"mailcow\"",
     "logo_needs_white_background": false,
@@ -396,8 +396,8 @@
     "name": "mailcow"
   },
   {
-    "category": "Communication",
-    "color": "orange",
+    "category": "Conferencing",
+    "color": "teal",
     "description": "Video conferencing",
     "discovery_pattern": "Endpoint response body from <ip>:8443/ contains \"jitsilogo.png\"",
     "logo_needs_white_background": false,
@@ -405,7 +405,7 @@
     "name": "Jitsi Meet"
   },
   {
-    "category": "Communication",
+    "category": "Telephony",
     "color": "orange",
     "description": "PBX web interface",
     "discovery_pattern": "All of: (Endpoint response body from <ip>:80/ contains \"freepbx\", 5060/tcp is open)",
@@ -414,8 +414,8 @@
     "name": "FreePBX"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Conferencing",
+    "color": "teal",
     "description": "Web conferencing system",
     "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:80/bigbluebutton/api contains \"\"",
     "logo_needs_white_background": false,
@@ -423,7 +423,7 @@
     "name": "BigBlueButton"
   },
   {
-    "category": "Communication",
+    "category": "Telephony",
     "color": "orange",
     "description": "PBX and VoIP server",
     "discovery_pattern": "Endpoint response body from <ip>:8088/httpstatus contains \"asterisk\"",
@@ -603,9 +603,9 @@
     "name": "CoolerControl"
   },
   {
-    "category": "Database",
-    "color": "gray",
-    "description": "Graph database",
+    "category": "Monitoring",
+    "color": "orange",
+    "description": "Monitoring for container",
     "discovery_pattern": "Endpoint response body from <ip>:8080/api/v1.0/containers/ contains \"cAdvisor\"",
     "logo_needs_white_background": false,
     "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/cadvisor.png",
@@ -756,8 +756,8 @@
     "name": "Active Directory"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Publishing",
+    "color": "violet",
     "description": "Content management system",
     "discovery_pattern": "Endpoint response body from <ip>:80/ contains \"wp-content\"",
     "logo_needs_white_background": false,
@@ -765,8 +765,8 @@
     "name": "WordPress"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Unknown",
+    "color": "gray",
     "description": "A generic web service",
     "discovery_pattern": "No match pattern provided",
     "logo_needs_white_background": false,
@@ -774,8 +774,8 @@
     "name": "Web Service"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Development",
+    "color": "red",
     "description": "Java servlet container",
     "discovery_pattern": "Endpoint response body from <ip>:8080/ contains \"apache tomcat\"",
     "logo_needs_white_background": false,
@@ -783,8 +783,8 @@
     "name": "Tomcat"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Publishing",
+    "color": "violet",
     "description": "Publishing platform",
     "discovery_pattern": "Endpoint response body from <ip>:2368/ contains \"ghost\"",
     "logo_needs_white_background": true,
@@ -891,8 +891,8 @@
     "name": "AWX"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Messaging",
+    "color": "green",
     "description": "Team communication platform",
     "discovery_pattern": "Endpoint response body from <ip>:3000/api/info contains \"rocket\"",
     "logo_needs_white_background": false,
@@ -900,7 +900,7 @@
     "name": "Rocket.Chat"
   },
   {
-    "category": "Collaboration",
+    "category": "Office",
     "color": "blue",
     "description": "Free and Open-Source CalDAV and CardDAV Server",
     "discovery_pattern": "Endpoint response body from <ip>:5232/.web/ contains \"Radicale Web Interface\"",
@@ -909,8 +909,8 @@
     "name": "Radicale"
   },
   {
-    "category": "Collaboration",
-    "color": "blue",
+    "category": "Messaging",
+    "color": "green",
     "description": "Team messaging platform",
     "discovery_pattern": "Endpoint response body from <ip>:8065/api/v4/system/ping contains \"\"",
     "logo_needs_white_background": true,
@@ -918,8 +918,8 @@
     "name": "Mattermost"
   },
   {
-    "category": "Collaboration",
-    "color": "blue",
+    "category": "ProjectManagement",
+    "color": "indigo",
     "description": "Project management platform",
     "discovery_pattern": "Endpoint response status is between 200 and 300, and response body from <ip>:8080/rest/api/2/serverInfo contains \"jira\"",
     "logo_needs_white_background": false,
@@ -927,8 +927,8 @@
     "name": "Jira"
   },
   {
-    "category": "Web",
-    "color": "blue",
+    "category": "Publishing",
+    "color": "violet",
     "description": "Discussion platform",
     "discovery_pattern": "Endpoint response body from <ip>:80/srv/status contains \"discourse\"",
     "logo_needs_white_background": false,
@@ -936,8 +936,8 @@
     "name": "Discourse"
   },
   {
-    "category": "Collaboration",
-    "color": "blue",
+    "category": "ProjectManagement",
+    "color": "indigo",
     "description": "Team collaboration wiki",
     "discovery_pattern": "Endpoint response body from <ip>:8090/ contains \"confluence\"",
     "logo_needs_white_background": false,
@@ -1181,15 +1181,6 @@
   {
     "category": "Virtualization",
     "color": "indigo",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_needs_white_background": false,
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
-  },
-  {
-    "category": "Virtualization",
-    "color": "indigo",
     "description": "A generic docker container",
     "discovery_pattern": "All of: (Service is running in a docker container, A custom match pattern evaluated at runtime)",
     "logo_needs_white_background": false,
@@ -1361,6 +1352,15 @@
   {
     "category": "Media",
     "color": "blue",
+    "description": "A self-hosted, multi-user digital library.",
+    "discovery_pattern": "Endpoint response body from <ip>:6060/ contains \"booklore-app\"",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/book-lore.svg",
+    "name": "BookLore"
+  },
+  {
+    "category": "Media",
+    "color": "blue",
     "description": "A companion application to Sonarr and Radarr that manages and downloads subtitles",
     "discovery_pattern": "6767/tcp is open",
     "logo_needs_white_background": false,
@@ -1449,8 +1449,8 @@
     "name": "Syncthing"
   },
   {
-    "category": "Storage",
-    "color": "green",
+    "category": "Office",
+    "color": "blue",
     "description": "File hosting platform",
     "discovery_pattern": "Endpoint response body from <ip>:8000/api2/ping contains \"seafile\"",
     "logo_needs_white_background": false,
@@ -1476,7 +1476,7 @@
     "name": "QNAP NAS"
   },
   {
-    "category": "FileSharing",
+    "category": "Office",
     "color": "blue",
     "description": "File sync and share",
     "discovery_pattern": "Endpoint response body from <ip>:80/status.php contains \"owncloud\"",
@@ -1503,7 +1503,7 @@
     "name": "NFS"
   },
   {
-    "category": "Web",
+    "category": "Office",
     "color": "blue",
     "description": "Self-hosted cloud storage and collaboration platform",
     "discovery_pattern": "Endpoint response body from <ip>:80/core/css/server.css contains \"Nextcloud GmbH\"",
@@ -1906,5 +1906,14 @@
     "logo_needs_white_background": false,
     "logo_url": "",
     "name": "Dhcp Server"
+  },
+  {
+    "category": "Virtualization",
+    "color": "indigo",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
   }
 ]
