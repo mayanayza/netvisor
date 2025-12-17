@@ -42,9 +42,11 @@
 		<div class="flex items-start gap-2">
 			<Icon class="mt-0.5 h-4 w-4 shrink-0 {textColor}" />
 			<div class="flex-1">
-				<p class="text-sm font-medium {textColor}">{title}</p>
+				{#if title}
+					<p class="text-sm font-medium {textColor}">{title}</p>
+				{/if}
 				{#if body}
-					<p class="mt-1 text-sm {textColor}">{body}</p>
+					<p class={`${title ? 'mt-1' : ''} text-sm ${textColor}`}>{body}</p>
 				{/if}
 			</div>
 			{#if dismissableKey}

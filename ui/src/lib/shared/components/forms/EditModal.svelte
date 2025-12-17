@@ -98,7 +98,7 @@
 		<slot name="header-icon" />
 	</svelte:fragment>
 
-	<!-- Main content -->
+	<!-- Main content wrapped in form (includes footer so type="submit" works) -->
 	<form on:submit|preventDefault={handleFormSubmit} class="flex h-full flex-col">
 		<!-- Form content -->
 		<div class="flex-1 overflow-auto p-6">
@@ -106,64 +106,59 @@
 			<!-- eslint-disable-next-line svelte/require-store-reactive-access -->
 			<slot {form} {formApi} />
 		</div>
+
+		<!-- Footer inside form so type="submit" triggers validation -->
+		<div class="modal-footer">
+			{#if hasCustomFooter}
+				<!-- Custom footer provided by parent -->
+				<slot
+					name="footer"
+					{handleFormSubmit}
+					{handleCancel}
+					{handleDelete}
+					{loading}
+					{deleting}
+					{actualDisableSave}
+					{formApi}
+				/>
+			{:else}
+				<!-- Default footer -->
+				<div class="flex items-center justify-between">
+					<!-- Delete button (if editing) -->
+					<div>
+						{#if onDelete}
+							<button
+								type="button"
+								disabled={deleting || loading}
+								on:click={handleDelete}
+								class="btn-danger"
+							>
+								{deleting ? 'Deleting...' : 'Delete'}
+							</button>
+						{/if}
+					</div>
+
+					<!-- Cancel and Save buttons -->
+					<div class="flex items-center gap-3">
+						{#if showCancel}
+							<button
+								type="button"
+								disabled={loading || deleting}
+								on:click={handleCancel}
+								class="btn-secondary"
+							>
+								{cancelLabel}
+							</button>
+						{/if}
+
+						{#if showSave}
+							<button type="submit" disabled={actualDisableSave} class="btn-primary">
+								{loading ? 'Saving...' : saveLabel}
+							</button>
+						{/if}
+					</div>
+				</div>
+			{/if}
+		</div>
 	</form>
-
-	<!-- Footer actions -->
-	<svelte:fragment slot="footer">
-		{#if hasCustomFooter}
-			<!-- Custom footer provided by parent -->
-			<slot
-				name="footer"
-				{handleFormSubmit}
-				{handleCancel}
-				{handleDelete}
-				{loading}
-				{deleting}
-				{actualDisableSave}
-				{formApi}
-			/>
-		{:else}
-			<!-- Default footer -->
-			<div class="flex items-center justify-between">
-				<!-- Delete button (if editing) -->
-				<div>
-					{#if onDelete}
-						<button
-							type="button"
-							disabled={deleting || loading}
-							on:click={handleDelete}
-							class="btn-danger"
-						>
-							{deleting ? 'Deleting...' : 'Delete'}
-						</button>
-					{/if}
-				</div>
-
-				<!-- Cancel and Save buttons -->
-				<div class="flex items-center gap-3">
-					{#if showCancel}
-						<button
-							type="button"
-							disabled={loading || deleting}
-							on:click={handleCancel}
-							class="btn-secondary"
-						>
-							{cancelLabel}
-						</button>
-					{/if}
-
-					{#if showSave}
-						<button
-							type="button"
-							disabled={actualDisableSave}
-							on:click={handleFormSubmit}
-							class="btn-primary"
-						>
-							{loading ? 'Saving...' : saveLabel}
-						</button>
-					{/if}
-				</div>
-			</div>
-		{/if}
-	</svelte:fragment>
 </GenericModal>

@@ -1,6 +1,6 @@
 use super::types::base::{BillingPlan, BillingRate, PlanConfig};
 
-const YEARLY_DISCOUNT: f32 = 0.2;
+pub const YEARLY_DISCOUNT: f32 = 0.2;
 
 /// Returns the canonical list of billing plans for Scanopy.
 /// This is the single source of truth for plan definitions.
@@ -45,7 +45,7 @@ fn get_default_plans() -> Vec<BillingPlan> {
     ]
 }
 
-fn get_enterprise_plan() -> BillingPlan {
+pub fn get_enterprise_plan() -> BillingPlan {
     BillingPlan::Enterprise(PlanConfig {
         base_cents: 0,
         rate: BillingRate::Month,
@@ -90,7 +90,7 @@ pub fn get_website_fixture_plans() -> Vec<BillingPlan> {
 
     let non_saas_yearly = non_saas_plans.iter().map(|p| p.to_yearly(YEARLY_DISCOUNT));
 
-    let mut all_plans = get_all_plans();
+    let mut all_plans = get_purchasable_plans();
     all_plans.extend(non_saas_plans);
     all_plans.extend(non_saas_yearly);
 
@@ -99,7 +99,7 @@ pub fn get_website_fixture_plans() -> Vec<BillingPlan> {
 
 /// Returns both monthly and yearly versions of all plans.
 /// Yearly plans get a 20% discount.
-pub fn get_all_plans() -> Vec<BillingPlan> {
+pub fn get_purchasable_plans() -> Vec<BillingPlan> {
     let monthly_plans = get_default_plans();
     let mut all_plans = monthly_plans.clone();
 

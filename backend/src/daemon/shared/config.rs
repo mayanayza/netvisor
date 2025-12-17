@@ -77,7 +77,7 @@ pub struct DaemonCli {
     #[arg(long)]
     allow_self_signed_certs: Option<bool>,
 
-    /// Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set.
+    /// Public URL where server can reach daemon, if running in Push mode. Defaults to auto-detected IP + Daemon Port if not set.
     #[arg(long)]
     daemon_url: Option<String>,
 }

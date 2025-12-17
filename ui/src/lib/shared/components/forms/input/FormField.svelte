@@ -30,19 +30,21 @@
 
 {#if inline}
 	<div class="space-y-2">
-		<label
-			for={id}
-			class="text-secondary flex flex-grow cursor-pointer items-center gap-2 text-sm font-medium"
-		>
-			<slot />
-			<div>
-				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-				{@html label}
-				{#if required}
-					<span class="text-danger">*</span>
-				{/if}
-			</div>
-		</label>
+		{#if label.length > 0}
+			<label
+				for={id}
+				class="text-secondary flex flex-grow cursor-pointer items-center gap-2 text-sm font-medium"
+			>
+				<slot />
+				<div>
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					{@html label}
+					{#if required}
+						<span class="text-danger">*</span>
+					{/if}
+				</div>
+			</label>
+		{/if}
 
 		{#if showValidation && errors.length > 0}
 			<div class="text-danger flex items-center gap-2">
@@ -58,13 +60,15 @@
 	</div>
 {:else}
 	<div class="space-y-2">
-		<label for={id} class="text-secondary block text-sm font-medium">
-			<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-			{@html label}
-			{#if required}
-				<span class="text-danger ml-1">*</span>
-			{/if}
-		</label>
+		{#if label.length > 0}
+			<label for={id} class="text-secondary block text-sm font-medium">
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+				{@html label}
+				{#if required}
+					<span class="text-danger ml-1">*</span>
+				{/if}
+			</label>
+		{/if}
 
 		<slot />
 

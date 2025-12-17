@@ -6,10 +6,12 @@
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import { field } from 'svelte-forms';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
+	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
 	import { emailValidator } from '$lib/shared/components/forms/validators';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import { config, getConfig } from '$lib/shared/stores/config';
 	import { loadData } from '$lib/shared/utils/dataLoader';
+	import { onboardingStore } from '../stores/onboarding';
 
 	let {
 		orgName = null,
@@ -32,6 +34,22 @@
 	let hasOidcProviders = $derived(oidcProviders.length > 0);
 	let enableEmailOptIn = $derived($loading ? false : ($config?.has_email_opt_in ?? false));
 	let enableTermsCheckbox = $derived($loading ? false : ($config?.billing_enabled ?? false));
+
+	// Get networks with daemon setups that will scan after registration
+	let networksWithDaemons = $derived.by(() => {
+		const networks = $onboardingStore.networks;
+		const daemonSetups = $onboardingStore.daemonSetups;
+
+		// Find networks where user chose to install a daemon (installNow = true)
+		return networks.filter((n) => {
+			if (!n.id) return false;
+			const setup = daemonSetups.get(n.id);
+			return setup?.installNow === true;
+		});
+	});
+
+	let hasPendingDaemons = $derived(networksWithDaemons.length > 0);
+	let pendingNetworkNames = $derived(networksWithDaemons.map((n) => n.name).join(', '));
 
 	let formData: RegisterRequest & { confirmPassword: string } = $state({
 		email: '',
@@ -123,6 +141,17 @@
 		</div>
 	{/if}
 
+	{#if hasPendingDaemons}
+		<div class="mb-6">
+			<InlineSuccess
+				title="Ready to scan"
+				body={networksWithDaemons.length === 1
+					? `Your daemon for "${pendingNetworkNames}" will begin scanning after you register.`
+					: `Your daemons for "${pendingNetworkNames}" will begin scanning after you register.`}
+			/>
+		</div>
+	{/if}
+
 	<!-- Content -->
 	<div class="space-y-6">
 		<TextInput
@@ -158,11 +187,10 @@
 				{/if}
 			</div>
 
-			<!-- Create Account Button -->
+			<!-- Create Account Button (type="submit" triggers form validation) -->
 			<button
-				type="button"
+				type="submit"
 				disabled={registering || (enableTermsCheckbox && !$termsField.value)}
-				onclick={handleSubmit}
 				class="btn-primary w-full"
 			>
 				{registering ? 'Creating account...' : 'Create Account with Email'}

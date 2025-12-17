@@ -27,7 +27,7 @@
     "id": "daemon_url",
     "cliFlag": "--daemon-url",
     "envVar": "SCANOPY_DAEMON_URL",
-    "helpText": "Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set"
+    "helpText": "Public URL where server can reach daemon, if running in Push mode. Defaults to auto-detected IP + Daemon Port if not set"
   },
   {
     "id": "allow_self_signed_certs",

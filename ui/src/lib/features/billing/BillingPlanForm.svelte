@@ -37,10 +37,13 @@
 		billingPlanHelpers: MetadataHelpers<BillingPlanMetadata>;
 		featureHelpers: MetadataHelpers<FeatureMetadata>;
 		onPlanSelect: (plan: BillingPlan) => void | Promise<void>;
+		onEnterpriseInquiry?: () => void | Promise<void>;
 		initialPlanFilter?: 'all' | 'personal' | 'commercial';
 		showGithubStars?: boolean;
 		showHosting?: boolean;
 		class?: string;
+		recommendedPlan?: string | null;
+		forceCommercial?: boolean;
 	}
 
 	// eslint-disable-next-line svelte/no-unused-props
@@ -49,10 +52,13 @@
 		billingPlanHelpers,
 		featureHelpers,
 		onPlanSelect,
+		onEnterpriseInquiry,
 		initialPlanFilter = 'commercial',
 		showGithubStars = true,
 		class: className = '',
-		showHosting = false
+		showHosting = false,
+		recommendedPlan = null,
+		forceCommercial = false
 	}: Props = $props();
 
 	let collapsedCategories = $state<Record<string, boolean>>({});
@@ -101,11 +107,19 @@
 		};
 	});
 
-	const planTypeOptions = [
-		{ value: 'all', label: 'All Plans' },
-		{ value: 'personal', label: 'Personal' },
-		{ value: 'commercial', label: 'Commercial' }
-	];
+	// Filter out personal option when forceCommercial is true
+	let planTypeOptions = $derived(
+		forceCommercial
+			? [
+					{ value: 'all', label: 'All Plans' },
+					{ value: 'commercial', label: 'Commercial' }
+				]
+			: [
+					{ value: 'all', label: 'All Plans' },
+					{ value: 'personal', label: 'Personal' },
+					{ value: 'commercial', label: 'Commercial' }
+				]
+	);
 
 	const billingPeriodOptions = [
 		{ value: 'monthly', label: 'Monthly' },
@@ -271,6 +285,10 @@
 	function categoryHasVisibleFeatures(categoryFeatures: string[]): boolean {
 		return categoryFeatures.some((featureKey) => anyPlanHasFeature(featureKey));
 	}
+
+	function isEnterprise(plan: BillingPlan): boolean {
+		return plan.type === 'Enterprise';
+	}
 </script>
 
 <div class="space-y-6 {className}">
@@ -307,12 +325,18 @@
 				{#each filteredPlans as plan (plan.type)}
 					{@const IconComponent = billingPlanHelpers.getIconComponent(plan.type)}
 					{@const colorHelper = billingPlanHelpers.getColorHelper(plan.type)}
+					{@const isRecommended = recommendedPlan === plan.type}
 					<div class="grid-cell plan-cell">
-						<div class="flex items-center justify-center gap-2 py-2 lg:py-3">
-							<IconComponent class="{colorHelper.icon} h-4 w-4 lg:h-8 lg:w-8" />
-							<span class="text-primary text-sm font-semibold lg:text-lg"
-								>{billingPlanHelpers.getName(plan.type)}</span
-							>
+						<div class="flex flex-col items-center gap-1 py-2 lg:py-3">
+							<div class="flex items-center justify-center gap-2">
+								<IconComponent class="{colorHelper.icon} h-4 w-4 lg:h-8 lg:w-8" />
+								<span class="text-primary text-sm font-semibold lg:text-lg"
+									>{billingPlanHelpers.getName(plan.type)}</span
+								>
+							</div>
+							{#if isRecommended}
+								<Tag label="Recommended" color="yellow" />
+							{/if}
 						</div>
 					</div>
 				{/each}
@@ -487,9 +511,19 @@
 					{@const hosting = getHosting(plan)}
 					{@const commercial = isCommercial(plan)}
 					{@const trial = hasTrial(plan)}
+					{@const enterprise = isEnterprise(plan)}
 					<div class="grid-cell plan-cell footer-plan-cell">
 						<div class="flex w-full flex-col gap-3">
-							{#if hosting === 'Cloud'}
+							{#if enterprise && onEnterpriseInquiry}
+								<!-- Enterprise plan: Request Information button -->
+								<button
+									type="button"
+									onclick={() => onEnterpriseInquiry()}
+									class="btn-primary w-full whitespace-nowrap px-2 text-xs lg:text-sm"
+								>
+									Request Information
+								</button>
+							{:else if hosting === 'Cloud'}
 								<button
 									type="button"
 									onclick={() => onPlanSelect(plan)}
