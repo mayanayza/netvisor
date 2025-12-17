@@ -43,6 +43,18 @@ const defaultOptions: TopologyOptions = {
 export const topologyOptions = writable<TopologyOptions>(loadOptionsFromStorage());
 export const optionsPanelExpanded = writable<boolean>(loadExpandedFromStorage());
 
+const PREFERRED_NETWORK_KEY = 'scanopy_preferred_network_id';
+
+/**
+ * Set a preferred network to select when topology loads.
+ * Used after onboarding to ensure the scanned network's topology is shown.
+ */
+export function setPreferredNetwork(networkId: string): void {
+	if (browser) {
+		localStorage.setItem(PREFERRED_NETWORK_KEY, networkId);
+	}
+}
+
 function initializeSubscriptions() {
 	if (initialized) {
 		return;
@@ -53,10 +65,23 @@ function initializeSubscriptions() {
 	if (browser) {
 		topologies.subscribe(($topologies) => {
 			if (!topologyInitialized && $topologies.length > 0) {
-				const currentTopology = $topologies[0];
-				topology.set(currentTopology);
-				topologyOptions.set(currentTopology.options);
-				lastTopologyId = currentTopology.id;
+				// Check for a preferred network from onboarding
+				const preferredNetworkId = localStorage.getItem(PREFERRED_NETWORK_KEY);
+				let selectedTopology = $topologies[0];
+
+				if (preferredNetworkId) {
+					// Find topology for the preferred network
+					const preferredTopology = $topologies.find((t) => t.network_id === preferredNetworkId);
+					if (preferredTopology) {
+						selectedTopology = preferredTopology;
+					}
+					// Clear the preference after using it
+					localStorage.removeItem(PREFERRED_NETWORK_KEY);
+				}
+
+				topology.set(selectedTopology);
+				topologyOptions.set(selectedTopology.options);
+				lastTopologyId = selectedTopology.id;
 				topologyInitialized = true;
 			}
 		});

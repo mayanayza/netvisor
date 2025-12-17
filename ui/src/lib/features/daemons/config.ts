@@ -25,7 +25,7 @@ export const fieldDefs: FieldDef[] = [
 		type: 'string',
 		cliFlag: '--name',
 		envVar: 'SCANOPY_NAME',
-		helpText: '',
+		helpText: 'Name for this daemon',
 		placeholder: 'Enter a name for this daemon...',
 		validators: [required(), maxLength(100)],
 		required: true
@@ -77,7 +77,7 @@ export const fieldDefs: FieldDef[] = [
 		cliFlag: '--daemon-url',
 		envVar: 'SCANOPY_DAEMON_URL',
 		helpText:
-			'Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set',
+			'Public URL where server can reach daemon, if running in Push mode. Defaults to auto-detected IP + Daemon Port if not set',
 		placeholder: 'https://daemon.example.com',
 		section: 'Network',
 		validators: []

@@ -79,28 +79,37 @@ pub struct ResetPasswordRequest {
     pub password: String,
 }
 
+/// Network configuration for setup
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkSetup {
+    pub name: String,
+}
+
 /// Setup request for pre-registration org/network configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetupRequest {
     pub organization_name: String,
-    pub network_name: String,
+    pub networks: Vec<NetworkSetup>,
     pub populate_seed_data: bool,
 }
 
 /// Response from setup endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetupResponse {
-    pub network_id: Uuid,
+    pub network_ids: Vec<Uuid>,
 }
 
 /// Daemon setup request for pre-registration daemon configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonSetupRequest {
     pub daemon_name: String,
+    pub network_id: Uuid,
+    #[serde(default)]
+    pub install_later: bool,
 }
 
 /// Response from daemon setup endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonSetupResponse {
-    pub api_key: String,
+    pub api_key: Option<String>,
 }

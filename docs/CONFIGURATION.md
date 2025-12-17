@@ -67,7 +67,7 @@ The config file stores runtime state (daemon ID, host ID) alongside your setting
 | **API Key** | `--daemon-api-key` | `SCANOPY_DAEMON_API_KEY` | `api_key` | *Required* | Authentication key for daemon (generated via UI) |
 | **Mode** | `--mode` | `SCANOPY_MODE` | `mode` | Push | Select whether the daemon will Pull work from the server or have work Pushed to it. If set to Push, you will need to ensure that network you are deploying the daemon on can be reached by the server by opening/forwarding the port to the daemon. If set to Pull, no port opening/forwarding is needed |
 | **Network ID** | `--network-id` | `SCANOPY_NETWORK_ID` | `network_id` | *Auto-assigned* | UUID of the network to scan |
-| **Daemon URL** | `--daemon-url` | `SCANOPY_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon. Defaults to auto-detected IP + Daemon Port if not set |
+| **Daemon URL** | `--daemon-url` | `SCANOPY_DAEMON_URL` | `daemon_url` | detected IP + Daemon Port | Public URL where server can reach daemon, if running in Push mode. Defaults to auto-detected IP + Daemon Port if not set |
 | **Daemon Port** | `--daemon-port` or `-p` | `SCANOPY_DAEMON_PORT` | `port` | `60073` | Port for daemon to listen on |
 | **Bind Address** | `--bind-address` | `SCANOPY_BIND_ADDRESS` | `bind_address` | `0.0.0.0` | IP address to bind daemon to |
 | **Daemon Name** | `--name` | `SCANOPY_NAME` | `name` | `scanopy-daemon` | Name for this daemon |

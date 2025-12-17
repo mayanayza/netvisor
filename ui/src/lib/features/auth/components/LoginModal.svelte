@@ -141,8 +141,8 @@
 	<!-- Custom footer with register link -->
 	<svelte:fragment slot="footer">
 		<div class="flex w-full flex-col gap-4">
-			<!-- Sign In Button -->
-			<button type="button" disabled={signingIn} onclick={handleSubmit} class="btn-primary w-full">
+			<!-- Sign In Button (type="submit" triggers form validation) -->
+			<button type="submit" disabled={signingIn} class="btn-primary w-full">
 				{signingIn ? 'Signing in...' : 'Sign In with Email'}
 			</button>
 

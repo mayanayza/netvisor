@@ -10,7 +10,7 @@ use clap::Parser;
 use reqwest::header;
 use scanopy::server::{
     auth::middleware::{logging::request_logging_middleware, rate_limit::rate_limit_middleware},
-    billing::plans::get_all_plans,
+    billing::plans::get_purchasable_plans,
     config::{AppState, ServerCli, ServerConfig},
     shared::handlers::{cache::AppCache, factory::create_router},
 };
@@ -195,7 +195,9 @@ async fn main() -> anyhow::Result<()> {
     discovery_service.start_scheduler().await?;
 
     if let Some(billing_service) = billing_service {
-        billing_service.initialize_products(get_all_plans()).await?;
+        billing_service
+            .initialize_products(get_purchasable_plans())
+            .await?;
     }
 
     tokio::signal::ctrl_c().await?;

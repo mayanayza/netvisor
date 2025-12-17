@@ -3,7 +3,7 @@
 use email_address::EmailAddress;
 use reqwest::StatusCode;
 use scanopy::server::auth::r#impl::api::{
-    LoginRequest, RegisterRequest, SetupRequest, SetupResponse,
+    LoginRequest, NetworkSetup, RegisterRequest, SetupRequest, SetupResponse,
 };
 use scanopy::server::daemons::r#impl::base::Daemon;
 use scanopy::server::networks::r#impl::Network;
@@ -375,13 +375,18 @@ pub async fn setup_authenticated_user(client: &TestClient) -> Result<User, Strin
 
     let setup_request = SetupRequest {
         organization_name: "My Organization".to_string(),
-        network_name: "My Network".to_string(),
+        networks: vec![NetworkSetup {
+            name: "My Network".to_string(),
+        }],
         populate_seed_data: true,
     };
 
     match client.setup(&setup_request).await {
         Ok(response) => {
-            println!("✅ Setup completed, network_id: {}", response.network_id);
+            println!(
+                "✅ Setup completed, network_ids: {:?}",
+                response.network_ids
+            );
         }
         Err(e) => {
             println!("⚠️  Setup failed (may already be registered): {}", e);

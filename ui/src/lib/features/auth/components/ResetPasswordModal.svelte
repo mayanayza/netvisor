@@ -86,13 +86,8 @@
 					Go to Login
 				</button>
 			{:else}
-				<!-- Reset Password Button -->
-				<button
-					type="button"
-					disabled={resetting}
-					on:click={handleSubmit}
-					class="btn-primary w-full"
-				>
+				<!-- Reset Password Button (type="submit" triggers form validation) -->
+				<button type="submit" disabled={resetting} class="btn-primary w-full">
 					{resetting ? 'Resetting...' : 'Reset Password'}
 				</button>
 

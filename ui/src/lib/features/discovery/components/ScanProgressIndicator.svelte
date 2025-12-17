@@ -4,14 +4,35 @@
 	import { Loader2, SatelliteDish } from 'lucide-svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 
-	// Get the session with highest progress, or first active session
+	// Track the session ID we're showing (stick to first session until done)
+	let currentSessionId = $state<string | null>(null);
+
+	// Update tracking when sessions change (separate from derived to avoid mutation in derived)
+	$effect(() => {
+		// If we have a tracked session, check if it's still valid
+		if (currentSessionId) {
+			const tracked = $sessions.find((s) => s.session_id === currentSessionId);
+			if (tracked) {
+				// If session completed (100%), clear tracking to pick up new one
+				if ((tracked.progress ?? 0) >= 100) {
+					currentSessionId = null;
+				}
+				// Otherwise keep tracking it
+			} else {
+				// Session no longer in list, clear tracking
+				currentSessionId = null;
+			}
+		}
+
+		// If no tracked session and there are sessions available, track the first one
+		if (!currentSessionId && $sessions.length > 0) {
+			currentSessionId = $sessions[0].session_id;
+		}
+	});
+
+	// Get the session to display based on tracked ID
 	let activeSession = $derived(
-		$sessions.length > 0
-			? $sessions.reduce(
-					(max, s) => ((s.progress ?? 0) > (max.progress ?? 0) ? s : max),
-					$sessions[0]
-				)
-			: null
+		currentSessionId ? ($sessions.find((s) => s.session_id === currentSessionId) ?? null) : null
 	);
 
 	let scanProgress = $derived(activeSession?.progress ?? 0);

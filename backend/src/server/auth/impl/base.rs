@@ -26,12 +26,18 @@ pub struct ProvisionUserParams {
     pub billing_enabled: bool,
 }
 
-/// Setup data collected before registration (org name, network name, seed preference)
+/// Network setup data for a single network
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingNetworkSetup {
+    pub name: String,
+    pub network_id: Uuid,
+}
+
+/// Setup data collected before registration (org name, networks, seed preference)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingSetup {
     pub org_name: String,
-    pub network_name: String,
-    pub network_id: Uuid,
+    pub networks: Vec<PendingNetworkSetup>,
     pub seed_data: bool,
 }
 
@@ -39,5 +45,6 @@ pub struct PendingSetup {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingDaemonSetup {
     pub daemon_name: String,
-    pub api_key_raw: String,
+    pub network_id: Uuid,
+    pub api_key_raw: Option<String>, // None if install_later
 }
