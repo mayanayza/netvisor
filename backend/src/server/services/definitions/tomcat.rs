@@ -16,7 +16,7 @@ impl ServiceDefinition for Tomcat {
         "Java servlet container"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Development
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Http8080, "/", "apache tomcat", None)

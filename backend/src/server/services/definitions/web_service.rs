@@ -14,7 +14,7 @@ impl ServiceDefinition for WebService {
         "A generic web service"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Unknown
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

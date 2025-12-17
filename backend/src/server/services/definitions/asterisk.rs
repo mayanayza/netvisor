@@ -15,7 +15,7 @@ impl ServiceDefinition for Asterisk {
         "PBX and VoIP server"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Communication
+        ServiceCategory::Telephony
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::new_tcp(8088), "/httpstatus", "asterisk", None)

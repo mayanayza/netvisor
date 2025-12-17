@@ -15,7 +15,7 @@ impl ServiceDefinition for Jotty {
         "A simple, self-hosted app for your checklists and notes"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Office
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

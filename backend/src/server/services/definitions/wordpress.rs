@@ -15,7 +15,7 @@ impl ServiceDefinition for WordPress {
         "Content management system"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Publishing
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Http, "/", "wp-content", None)

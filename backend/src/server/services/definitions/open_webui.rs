@@ -15,7 +15,7 @@ impl ServiceDefinition for OpenWebUI {
         "Open, extensible, user-friendly interface for AI"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Development
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

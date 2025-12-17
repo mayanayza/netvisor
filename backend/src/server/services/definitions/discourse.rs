@@ -15,7 +15,7 @@ impl ServiceDefinition for Discourse {
         "Discussion platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Publishing
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Http, "/srv/status", "discourse", None)

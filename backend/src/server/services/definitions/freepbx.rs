@@ -15,7 +15,7 @@ impl ServiceDefinition for FreePBX {
         "PBX web interface"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Communication
+        ServiceCategory::Telephony
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![

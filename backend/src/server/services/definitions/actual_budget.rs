@@ -15,7 +15,7 @@ impl ServiceDefinition for ActualBudget {
         "A local-first personal finance app"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Office
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
