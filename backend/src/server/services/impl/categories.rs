@@ -33,7 +33,6 @@ pub enum ServiceCategory {
     Media,          // Plex, Jellyfin
     HomeAutomation, // Home Assistant
     Virtualization, // Proxmox, ESXi
-    FileSharing,
 
     // Network Services
     DNS,        // All DNS services
@@ -49,14 +48,24 @@ pub enum ServiceCategory {
     Printer,     // All printing devices
 
     // Applications
-    Web,         // Web servers
     Database,    // DB servers
     Development, // Dev tools, CI/CD
     Dashboard,
     MessageQueue,
-    Collaboration,
-    Communication,
     IdentityAndAccess,
+
+    // Office & Productivity
+    Office,            // Document editing, notes, file management
+    ProjectManagement, // Task tracking, wikis, kanban boards
+
+    // Communication
+    Messaging,    // Team chat (text-based)
+    Conferencing, // Video/audio meetings
+    Telephony,    // VoIP/PBX infrastructure
+    Email,        // Email servers
+
+    // Content
+    Publishing, // CMS, blogs, forums
 
     // Special
     Unknown,
@@ -84,14 +93,13 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::Media => "PlayCircle",
             ServiceCategory::HomeAutomation => "Home",
             ServiceCategory::Virtualization => Concept::Virtualization.icon(),
-            ServiceCategory::FileSharing => "Folder",
+            ServiceCategory::Backup => "DatabaseBackup",
 
             // Network Services
             ServiceCategory::DNS => Concept::Dns.icon(),
             ServiceCategory::VPN => Concept::Vpn.icon(),
             ServiceCategory::Monitoring => "Activity",
             ServiceCategory::AdBlock => "ShieldCheck",
-            ServiceCategory::Backup => "DatabaseBackup",
             ServiceCategory::ReverseProxy => Concept::ReverseProxy.icon(),
 
             // End devices
@@ -100,15 +108,25 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::IoT => Concept::IoT.icon(),
             ServiceCategory::Printer => "Printer",
 
-            // Application
-            ServiceCategory::Web => "Globe",
+            // Applications
             ServiceCategory::Database => "Database",
             ServiceCategory::Development => "Code",
             ServiceCategory::MessageQueue => "MessageSquareCode",
             ServiceCategory::Dashboard => "LayoutDashboard",
-            ServiceCategory::Collaboration => "Users",
             ServiceCategory::IdentityAndAccess => "KeyRound",
-            ServiceCategory::Communication => "Speech",
+
+            // Office & Productivity
+            ServiceCategory::Office => "FileText",
+            ServiceCategory::ProjectManagement => "KanbanSquare",
+
+            // Communication
+            ServiceCategory::Messaging => "MessageCircle",
+            ServiceCategory::Conferencing => "Video",
+            ServiceCategory::Telephony => "Phone",
+            ServiceCategory::Email => "Mail",
+
+            // Content
+            ServiceCategory::Publishing => "PenLine",
 
             // Special
             ServiceCategory::Scanopy => "Zap",
@@ -131,7 +149,6 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::HomeAutomation => "blue",
             ServiceCategory::Virtualization => Concept::Virtualization.color(),
             ServiceCategory::Backup => "gray",
-            ServiceCategory::FileSharing => "blue",
 
             // Network Services
             ServiceCategory::DNS => Concept::Dns.color(),
@@ -146,17 +163,27 @@ impl EntityMetadataProvider for ServiceCategory {
             ServiceCategory::IoT => Concept::IoT.color(),
             ServiceCategory::Printer => "gray",
 
-            // Application
-            ServiceCategory::Web => "blue",
+            // Applications
             ServiceCategory::Database => "gray",
             ServiceCategory::Development => "red",
             ServiceCategory::Dashboard => "purple",
             ServiceCategory::MessageQueue => "green",
-            ServiceCategory::Collaboration => "blue",
             ServiceCategory::IdentityAndAccess => "yellow",
-            ServiceCategory::Communication => "orange",
 
-            // Unknown
+            // Office & Productivity
+            ServiceCategory::Office => "blue",
+            ServiceCategory::ProjectManagement => "indigo",
+
+            // Communication
+            ServiceCategory::Messaging => "green",
+            ServiceCategory::Conferencing => "teal",
+            ServiceCategory::Telephony => "orange",
+            ServiceCategory::Email => "rose",
+
+            // Content
+            ServiceCategory::Publishing => "violet",
+
+            // Special
             ServiceCategory::Scanopy => "purple",
             ServiceCategory::Custom => "rose",
             ServiceCategory::OpenPorts => EntityDiscriminants::Port.color(),

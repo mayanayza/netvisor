@@ -15,7 +15,7 @@ impl ServiceDefinition for ConfluenceServer {
         "Team collaboration wiki"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Collaboration
+        ServiceCategory::ProjectManagement
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::new_tcp(8090), "/", "confluence", None)

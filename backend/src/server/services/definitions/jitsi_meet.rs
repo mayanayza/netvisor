@@ -15,7 +15,7 @@ impl ServiceDefinition for JitsiMeet {
         "Video conferencing"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Communication
+        ServiceCategory::Conferencing
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Https8443, "/", "jitsilogo.png", None)

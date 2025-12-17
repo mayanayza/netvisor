@@ -17,7 +17,7 @@ impl ServiceDefinition for Mailcow {
     }
 
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Communication
+        ServiceCategory::Email
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

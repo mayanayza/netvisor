@@ -15,7 +15,7 @@ impl ServiceDefinition for JiraServer {
         "Project management platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Collaboration
+        ServiceCategory::ProjectManagement
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(

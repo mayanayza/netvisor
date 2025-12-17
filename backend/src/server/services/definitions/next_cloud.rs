@@ -15,7 +15,7 @@ impl ServiceDefinition for NextCloud {
         "Self-hosted cloud storage and collaboration platform"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Office
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {

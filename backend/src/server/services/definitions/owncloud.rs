@@ -15,7 +15,7 @@ impl ServiceDefinition for OwnCloud {
         "File sync and share"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::FileSharing
+        ServiceCategory::Office
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::Endpoint(PortBase::Http, "/status.php", "owncloud", None)

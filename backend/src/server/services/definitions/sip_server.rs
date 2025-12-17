@@ -15,7 +15,7 @@ impl ServiceDefinition for SIPServer {
         "Session initiation protocol"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Telephony
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![

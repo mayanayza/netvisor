@@ -15,7 +15,7 @@ impl ServiceDefinition for MeTube {
         "Self-hosted YouTube downloader"
     }
     fn category(&self) -> ServiceCategory {
-        ServiceCategory::Web
+        ServiceCategory::Media
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
