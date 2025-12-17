@@ -212,6 +212,7 @@
 						<button
 							onclick={() => handleOidcRegister(provider.slug)}
 							disabled={enableTermsCheckbox && !$termsField.value}
+							type="button"
 							class="btn-secondary flex w-full items-center justify-center gap-3"
 						>
 							{#if provider.logo}
