@@ -4,6 +4,7 @@ use anyhow::{Error, bail};
 use reqwest::{Client, Method, RequestBuilder};
 use serde::{Serialize, de::DeserializeOwned};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::OnceCell;
 
 pub struct DaemonApiClient {
@@ -164,5 +165,51 @@ impl DaemonApiClient {
     /// Access config store for cases that need custom handling
     pub fn config(&self) -> &Arc<ConfigStore> {
         &self.config_store
+    }
+
+    /// POST request with automatic retry on transient failures
+    /// Uses exponential backoff starting at 500ms, capped at 30s
+    pub async fn post_with_retry<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+        context: &str,
+        max_retries: u32,
+    ) -> Result<T, Error> {
+        let mut attempt = 0;
+        let mut delay = Duration::from_millis(500);
+
+        loop {
+            match self.post(path, body, context).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    attempt += 1;
+                    if attempt > max_retries || !Self::is_retriable_error(&e) {
+                        return Err(e);
+                    }
+                    tracing::warn!(
+                        "Retrying {} (attempt {}/{}): {}",
+                        path,
+                        attempt,
+                        max_retries,
+                        e
+                    );
+                    tokio::time::sleep(delay).await;
+                    delay = std::cmp::min(delay * 2, Duration::from_secs(30));
+                }
+            }
+        }
+    }
+
+    /// Check if an error is retriable (transient network/server issues)
+    fn is_retriable_error(e: &Error) -> bool {
+        let err_str = e.to_string().to_lowercase();
+        err_str.contains("connection refused")
+            || err_str.contains("error sending request")
+            || err_str.contains("connection reset")
+            || err_str.contains("timeout")
+            || err_str.contains("http 502")
+            || err_str.contains("http 503")
+            || err_str.contains("http 504")
     }
 }

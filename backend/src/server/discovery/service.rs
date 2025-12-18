@@ -479,6 +479,8 @@ impl DiscoveryService {
     }
 
     /// Update progress for a session
+    /// If the session doesn't exist (e.g., server restarted during discovery),
+    /// auto-creates it from the payload context to maintain resilience.
     pub async fn update_session(&self, update: DiscoveryUpdatePayload) -> Result<(), Error> {
         tracing::debug!("Updated session {:?}", update);
 
@@ -488,9 +490,28 @@ impl DiscoveryService {
         // Track last update time
         last_updated.insert(update.session_id, Utc::now());
 
-        let session = sessions
-            .get_mut(&update.session_id)
-            .ok_or_else(|| anyhow::anyhow!("Session not found"))?;
+        // Auto-create session if it doesn't exist (handles server restarts during discovery)
+        if let std::collections::hash_map::Entry::Vacant(e) = sessions.entry(update.session_id) {
+            tracing::info!(
+                session_id = %update.session_id,
+                daemon_id = %update.daemon_id,
+                network_id = %update.network_id,
+                "Auto-creating session from daemon update"
+            );
+
+            // Track in daemon_sessions map
+            let mut daemon_sessions = self.daemon_sessions.write().await;
+            daemon_sessions
+                .entry(update.daemon_id)
+                .or_default()
+                .push(update.session_id);
+            drop(daemon_sessions);
+
+            // Insert the session
+            e.insert(update.clone());
+        }
+
+        let session = sessions.get_mut(&update.session_id).unwrap();
 
         let daemon_id = session.daemon_id;
         tracing::debug!(

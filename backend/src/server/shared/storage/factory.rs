@@ -7,10 +7,10 @@ use tower_sessions_sqlx_store::PostgresStore;
 use crate::server::{
     api_keys::r#impl::base::ApiKey, daemons::r#impl::base::Daemon,
     discovery::r#impl::base::Discovery, groups::r#impl::base::Group, hosts::r#impl::base::Host,
-    networks::r#impl::Network, organizations::r#impl::base::Organization,
-    services::r#impl::base::Service, shared::storage::generic::GenericPostgresStorage,
-    subnets::r#impl::base::Subnet, tags::r#impl::base::Tag, topology::types::base::Topology,
-    users::r#impl::base::User,
+    invites::r#impl::base::Invite, networks::r#impl::Network,
+    organizations::r#impl::base::Organization, services::r#impl::base::Service,
+    shared::storage::generic::GenericPostgresStorage, subnets::r#impl::base::Subnet,
+    tags::r#impl::base::Tag, topology::types::base::Topology, users::r#impl::base::User,
 };
 
 pub struct StorageFactory {
@@ -24,6 +24,7 @@ pub struct StorageFactory {
     pub subnets: Arc<GenericPostgresStorage<Subnet>>,
     pub services: Arc<GenericPostgresStorage<Service>>,
     pub organizations: Arc<GenericPostgresStorage<Organization>>,
+    pub invites: Arc<GenericPostgresStorage<Invite>>,
     pub discovery: Arc<GenericPostgresStorage<Discovery>>,
     pub topologies: Arc<GenericPostgresStorage<Topology>>,
     pub tags: Arc<GenericPostgresStorage<Tag>>,
@@ -57,6 +58,7 @@ impl StorageFactory {
             sessions,
             discovery: Arc::new(GenericPostgresStorage::new(pool.clone())),
             organizations: Arc::new(GenericPostgresStorage::new(pool.clone())),
+            invites: Arc::new(GenericPostgresStorage::new(pool.clone())),
             api_keys: Arc::new(GenericPostgresStorage::new(pool.clone())),
             users: Arc::new(GenericPostgresStorage::new(pool.clone())),
             networks: Arc::new(GenericPostgresStorage::new(pool.clone())),

@@ -18,8 +18,8 @@ use crate::server::{
         oidc::OidcService,
     },
     config::AppState,
+    invites::handlers::process_pending_invite,
     networks::r#impl::{Network, NetworkBase},
-    organizations::handlers::process_pending_invite,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
         services::traits::CrudService,

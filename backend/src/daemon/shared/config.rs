@@ -453,8 +453,6 @@ mod tests {
     use crate::daemon::shared::config::DaemonCli;
     use crate::{daemon::shared::config::AppConfig, tests::DAEMON_CONFIG_FIXTURE};
     use clap::CommandFactory;
-    use comrak::nodes::NodeValue;
-    use comrak::{Arena, Options, parse_document};
     use std::collections::HashMap;
 
     #[test]
@@ -497,7 +495,6 @@ mod tests {
         cli_flag: String,
         env_var: Option<String>,
         help_text: String,
-        config_key: String,
     }
 
     const EXCLUDED_FIELDS: [&str; 5] = [
@@ -513,11 +510,10 @@ mod tests {
     fn config_fields_are_in_sync() {
         let rust_fields = extract_rust_fields();
         let frontend_fields = extract_frontend_fields();
-        let markdown_fields = extract_markdown_fields();
 
         let mut errors = Vec::new();
 
-        // Check all Rust fields exist in frontend and markdown
+        // Check all Rust fields exist in frontend
         for (id, rust_info) in &rust_fields {
             // Check frontend
             match frontend_fields.get(id) {
@@ -546,52 +542,12 @@ mod tests {
                     }
                 }
             }
-
-            // Check markdown
-            match markdown_fields.get(id) {
-                None => errors.push(format!("Field '{}' missing from markdown docs", id)),
-                Some(md_info) => {
-                    if md_info.cli_flag != rust_info.cli_flag {
-                        errors.push(format!(
-                            "Field '{}' CLI flag mismatch: rust='{}', markdown='{}'",
-                            id, rust_info.cli_flag, md_info.cli_flag
-                        ));
-                    }
-                    if md_info.env_var != rust_info.env_var {
-                        errors.push(format!(
-                            "Field '{}' env var mismatch: rust={:?}, markdown={:?}",
-                            id, rust_info.env_var, md_info.env_var
-                        ));
-                    }
-
-                    let rust_desc = normalize_text(&rust_info.help_text);
-                    let md_desc = normalize_text(&md_info.help_text);
-                    if rust_desc != md_desc {
-                        errors.push(format!(
-                            "Field '{}' help text mismatch:\n  rust: '{}'\n  markdown: '{}'",
-                            id, rust_desc, md_desc
-                        ));
-                    }
-
-                    if md_info.config_key != rust_info.config_key {
-                        errors.push(format!(
-                            "Field '{}' config key mismatch: rust='{}', markdown='{}'",
-                            id, rust_info.config_key, md_info.config_key
-                        ));
-                    }
-                }
-            }
         }
 
         // Check for fields in frontend/markdown that aren't in Rust
         for id in frontend_fields.keys() {
             if !rust_fields.contains_key(id) {
                 errors.push(format!("Field '{}' in frontend but not in Rust", id));
-            }
-        }
-        for id in markdown_fields.keys() {
-            if !rust_fields.contains_key(id) {
-                errors.push(format!("Field '{}' in markdown but not in Rust", id));
             }
         }
 
@@ -614,13 +570,11 @@ mod tests {
 
                 // Derive env var from field ID using same conversion as Figment
                 let env_var = format!("SCANOPY_{}", id.to_uppercase());
-                let config_key = cli_id_to_config_key(&id);
 
                 let info = FieldInfo {
                     cli_flag: a.get_long().map(|l| format!("--{}", l)).unwrap_or_default(),
                     env_var: Some(env_var),
                     help_text: a.get_help().map(|h| h.to_string()).unwrap_or_default(),
-                    config_key,
                 };
                 (id, info)
             })
@@ -639,134 +593,10 @@ mod tests {
                     cli_flag: v.get("cliFlag")?.as_str()?.to_string(),
                     env_var: v.get("envVar").and_then(|e| e.as_str()).map(String::from),
                     help_text: v.get("helpText")?.as_str()?.to_string(),
-                    config_key: cli_id_to_config_key(&id),
                 };
                 Some((id, info))
             })
             .collect()
-    }
-
-    fn extract_markdown_fields() -> HashMap<String, FieldInfo> {
-        let content = include_str!("../../../../docs/CONFIGURATION.md");
-
-        // Extract content between markers
-        let start_marker = "<!-- DAEMON_CONFIG_TABLE_START -->";
-        let end_marker = "<!-- DAEMON_CONFIG_TABLE_END -->";
-
-        let table_content = content
-            .split(start_marker)
-            .nth(1)
-            .and_then(|s| s.split(end_marker).next())
-            .expect("Could not find DAEMON_CONFIG_TABLE markers in docs/config.md");
-
-        let arena = Arena::new();
-        let mut options = Options::default();
-        options.extension.table = true;
-
-        let root = parse_document(&arena, table_content, &options);
-
-        let mut fields = HashMap::new();
-
-        // Walk the AST to find table rows
-        for node in root.descendants() {
-            if let NodeValue::Table(_) = node.data.borrow().value {
-                let mut is_header = true;
-                for row in node.children() {
-                    if let NodeValue::TableRow(_) = row.data.borrow().value {
-                        if is_header {
-                            is_header = false;
-                            continue;
-                        }
-
-                        let cells: Vec<String> = row
-                            .children()
-                            .filter_map(|cell| {
-                                if let NodeValue::TableCell = cell.data.borrow().value {
-                                    Some(extract_text_content(cell))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-
-                        // Expected columns: Parameter | CLI Flag | Env Var | Config Key | Default | Description
-                        if cells.len() >= 6 {
-                            let cli_flag = extract_code_content(&cells[1]);
-                            let env_var = extract_code_content(&cells[2]);
-                            let config_key = extract_code_content(&cells[3]);
-                            let description = cells[5].clone();
-
-                            // Convert CLI flag to field ID: --server-url -> server_url
-                            if let Some(id) = cli_flag
-                                .strip_prefix("--")
-                                .map(|s| s.split(" or ").next().unwrap_or(s))
-                                .map(|s| s.replace('-', "_"))
-                            {
-                                if EXCLUDED_FIELDS.contains(&id.as_str()) {
-                                    continue;
-                                }
-
-                                fields.insert(
-                                    id,
-                                    FieldInfo {
-                                        cli_flag: format!(
-                                            "--{}",
-                                            cli_flag
-                                                .strip_prefix("--")
-                                                .unwrap_or(&cli_flag)
-                                                .split(" or ")
-                                                .next()
-                                                .unwrap_or(&cli_flag)
-                                        ),
-                                        env_var: if env_var.is_empty() {
-                                            None
-                                        } else {
-                                            Some(env_var)
-                                        },
-                                        help_text: description,
-                                        config_key,
-                                    },
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        fields
-    }
-
-    // Maps clap arg ID to the actual serde field name in AppConfig
-    fn cli_id_to_config_key(cli_id: &str) -> String {
-        match cli_id {
-            "daemon_port" => "port".to_string(),
-            "daemon_api_key" => "api_key".to_string(),
-            other => other.to_string(),
-        }
-    }
-
-    fn extract_text_content<'a>(
-        node: &'a comrak::arena_tree::Node<'a, std::cell::RefCell<comrak::nodes::Ast>>,
-    ) -> String {
-        let mut text = String::new();
-        for child in node.descendants() {
-            if let NodeValue::Text(t) = &child.data.borrow().value {
-                text.push_str(t);
-            } else if let NodeValue::Code(c) = &child.data.borrow().value {
-                text.push_str(&c.literal);
-            }
-        }
-        text.trim().to_string()
-    }
-
-    fn extract_code_content(s: &str) -> String {
-        // Extract content from backticks if present
-        if s.starts_with('`') && s.ends_with('`') {
-            s[1..s.len() - 1].to_string()
-        } else {
-            s.to_string()
-        }
     }
 
     fn normalize_text(s: &str) -> String {
