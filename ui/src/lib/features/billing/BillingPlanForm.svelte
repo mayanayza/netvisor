@@ -37,7 +37,7 @@
 		billingPlanHelpers: MetadataHelpers<BillingPlanMetadata>;
 		featureHelpers: MetadataHelpers<FeatureMetadata>;
 		onPlanSelect: (plan: BillingPlan) => void | Promise<void>;
-		onEnterpriseInquiry?: () => void | Promise<void>;
+		onPlanInquiry?: (plan: BillingPlan) => void | Promise<void>;
 		initialPlanFilter?: 'all' | 'personal' | 'commercial';
 		showGithubStars?: boolean;
 		showHosting?: boolean;
@@ -52,7 +52,7 @@
 		billingPlanHelpers,
 		featureHelpers,
 		onPlanSelect,
-		onEnterpriseInquiry,
+		onPlanInquiry,
 		initialPlanFilter = 'commercial',
 		showGithubStars = true,
 		class: className = '',
@@ -514,11 +514,11 @@
 					{@const enterprise = isEnterprise(plan)}
 					<div class="grid-cell plan-cell footer-plan-cell">
 						<div class="flex w-full flex-col gap-3">
-							{#if enterprise && onEnterpriseInquiry}
+							{#if enterprise && onPlanInquiry}
 								<!-- Enterprise plan: Request Information button -->
 								<button
 									type="button"
-									onclick={() => onEnterpriseInquiry()}
+									onclick={() => onPlanInquiry(plan)}
 									class="btn-primary w-full whitespace-nowrap px-2 text-xs lg:text-sm"
 								>
 									Request Information
@@ -531,28 +531,24 @@
 								>
 									{trial ? 'Start Free Trial' : 'Get Started'}
 								</button>
-								{#if commercial}
-									{@const subject = encodeURIComponent(`Scanopy ${plan.type} Plan Inquiry`)}
-									{@const body = encodeURIComponent(
-										`Hi,\n\nI'm interested in the ${plan.type} plan.`
-									)}
-									<a
-										href="mailto:maya@scanopy.net?subject={subject}&body={body}"
-										class="btn-secondary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
-										>Contact Us</a
+								{#if commercial && onPlanInquiry}
+									<button
+										type="button"
+										onclick={() => onPlanInquiry(plan)}
+										class="btn-secondary w-full whitespace-nowrap text-xs lg:text-sm"
 									>
+										Contact Us
+									</button>
 								{/if}
 							{:else if hosting === 'Self-Hosted'}
-								{#if commercial}
-									{@const subject = encodeURIComponent(`Scanopy ${plan.type} Plan Inquiry`)}
-									{@const body = encodeURIComponent(
-										`Hi,\n\nI'm interested in the ${plan.type} plan.`
-									)}
-									<a
-										href="mailto:maya@scanopy.net?subject={subject}&body={body}"
-										class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
-										>Contact Us</a
+								{#if commercial && onPlanInquiry}
+									<button
+										type="button"
+										onclick={() => onPlanInquiry(plan)}
+										class="btn-primary w-full whitespace-nowrap text-xs lg:text-sm"
 									>
+										Contact Us
+									</button>
 								{:else}
 									<a
 										href="https://github.com/scanopy/scanopy"
@@ -562,12 +558,14 @@
 										>View on GitHub</a
 									>
 								{/if}
-							{:else if commercial}
-								<a
-									href="mailto:maya@scanopy.net"
-									class="btn-primary inline-block w-full whitespace-nowrap text-center text-xs lg:text-sm"
-									>Contact Us</a
+							{:else if commercial && onPlanInquiry}
+								<button
+									type="button"
+									onclick={() => onPlanInquiry(plan)}
+									class="btn-primary w-full whitespace-nowrap text-xs lg:text-sm"
 								>
+									Contact Us
+								</button>
 							{/if}
 						</div>
 					</div>

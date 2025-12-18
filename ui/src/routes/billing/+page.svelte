@@ -11,6 +11,7 @@
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { currentUser } from '$lib/features/auth/store';
 	import { pushSuccess, pushError } from '$lib/shared/stores/feedback';
+	import PlanInquiryModal from '$lib/features/billing/PlanInquiryModal.svelte';
 
 	const loading = loadData([getCurrentBillingPlans, getConfig, getMetadata], { loadingDelay: 0 });
 
@@ -39,24 +40,25 @@
 		}
 	}
 
-	async function handleEnterpriseInquiry() {
+	// Plan inquiry modal state
+	let inquiryModalOpen = $state(false);
+	let selectedPlan = $state<BillingPlan | null>(null);
+
+	function handlePlanInquiry(plan: BillingPlan) {
+		selectedPlan = plan;
+		inquiryModalOpen = true;
+	}
+
+	async function handleInquirySubmit(email: string, message: string) {
 		const plunkKey = $config?.plunk_key;
 		if (!plunkKey) {
-			pushError('Unable to send inquiry. Please contact enterprise@scanopy.net directly.');
-			return;
-		}
-
-		const user = $currentUser;
-		if (!user) {
-			pushError('Unable to send inquiry. Please try again.');
+			pushError('Unable to send inquiry. Please contact sales@scanopy.net directly.');
 			return;
 		}
 
 		try {
-			// Get PostHog distinct ID
 			const posthogId = posthog.__loaded ? posthog.get_distinct_id() : null;
 
-			// Send enterprise inquiry via Plunk
 			await fetch('https://next-api.useplunk.com/v1/track', {
 				method: 'POST',
 				headers: {
@@ -64,22 +66,24 @@
 					Authorization: `Bearer ${plunkKey}`
 				},
 				body: JSON.stringify({
-					event: 'enterprise_inquiry',
-					email: 'enterprise@scanopy.net',
+					event: 'plan_inquiry',
+					email: 'sales@scanopy.net',
 					subscribed: false,
 					data: {
-						user_email: user.email,
-						organization_id: user.organization_id,
+						user_email: email,
+						organization_id: $currentUser?.organization_id,
+						plan_type: selectedPlan?.type,
+						message,
 						use_case: useCase,
 						posthog_id: posthogId
 					}
 				})
 			});
 
-			pushSuccess("We'll reach out shortly to discuss our Enterprise plan!");
+			pushSuccess("Thanks for your interest! We'll be in touch soon.");
 		} catch (error) {
-			console.error('Failed to send enterprise inquiry:', error);
-			pushError('Unable to send inquiry. Please contact enterprise@scanopy.net directly.');
+			console.error('Failed to send plan inquiry:', error);
+			pushError('Unable to send inquiry. Please contact sales@scanopy.net directly.');
 		}
 	}
 </script>
@@ -105,7 +109,7 @@
 					billingPlanHelpers={billingPlans}
 					featureHelpers={features}
 					onPlanSelect={handlePlanSelect}
-					onEnterpriseInquiry={handleEnterpriseInquiry}
+					onPlanInquiry={handlePlanInquiry}
 					{initialPlanFilter}
 					{recommendedPlan}
 					{forceCommercial}
@@ -114,5 +118,13 @@
 		</section>
 
 		<Toast />
+
+		<PlanInquiryModal
+			isOpen={inquiryModalOpen}
+			planName={selectedPlan ? billingPlans.getName(selectedPlan.type) : ''}
+			userEmail={$currentUser?.email ?? ''}
+			onClose={() => (inquiryModalOpen = false)}
+			onSubmit={handleInquirySubmit}
+		/>
 	</div>
 {/if}
