@@ -146,8 +146,8 @@
 			<InlineSuccess
 				title="Ready to scan"
 				body={networksWithDaemons.length === 1
-					? `Your daemon for "${pendingNetworkNames}" will begin scanning after you register.`
-					: `Your daemons for "${pendingNetworkNames}" will begin scanning after you register.`}
+					? `Your daemon for "${pendingNetworkNames}" will begin scanning, and your visualization will start building, after you register.`
+					: `Your daemons for "${pendingNetworkNames}" will begin scanning, and your visualization will start building, after you register.`}
 			/>
 		</div>
 	{/if}
@@ -212,6 +212,7 @@
 						<button
 							onclick={() => handleOidcRegister(provider.slug)}
 							disabled={enableTermsCheckbox && !$termsField.value}
+							type="button"
 							class="btn-secondary flex w-full items-center justify-center gap-3"
 						>
 							{#if provider.logo}

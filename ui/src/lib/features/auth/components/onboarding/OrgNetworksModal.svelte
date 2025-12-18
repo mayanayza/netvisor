@@ -10,6 +10,7 @@
 	import type { TextFieldType } from '$lib/shared/components/forms/types';
 	import { get } from 'svelte/store';
 	import { Plus, Trash2 } from 'lucide-svelte';
+	import { trackEvent } from '$lib/shared/utils/analytics';
 
 	let {
 		isOpen = false,
@@ -68,6 +69,12 @@
 			networks: networkFields.map((n) => ({ name: get(n).value.trim() })),
 			populate_seed_data: $seedDataField.value
 		};
+
+		trackEvent('onboarding_org_networks_selected', {
+			networks_count: networkFields.length,
+			populate_seed_data: $seedDataField.value,
+			use_case: useCase
+		});
 
 		// Update store with final values
 		onboardingStore.setOrganizationName(formData.organization_name);

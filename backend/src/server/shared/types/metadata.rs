@@ -1,4 +1,6 @@
 use axum::Json;
+use axum::http::header::CACHE_CONTROL;
+use axum::response::IntoResponse;
 use serde::Serialize;
 use strum::{IntoDiscriminant, IntoEnumIterator};
 
@@ -112,9 +114,7 @@ where
     }
 }
 
-pub async fn get_metadata_registry(
-    _user: AuthenticatedUser,
-) -> Json<ApiResponse<MetadataRegistry>> {
+pub async fn get_metadata_registry(_user: AuthenticatedUser) -> impl IntoResponse {
     let registry = MetadataRegistry {
         service_definitions: ServiceDefinitionRegistry::all_service_definitions()
             .iter()
@@ -138,5 +138,8 @@ pub async fn get_metadata_registry(
             .collect(),
     };
 
-    Json(ApiResponse::success(registry))
+    (
+        [(CACHE_CONTROL, "no-store, no-cache, must-revalidate")],
+        Json(ApiResponse::success(registry)),
+    )
 }

@@ -127,13 +127,11 @@ impl TypeMetadataProvider for Feature {
             Feature::Embeds => "Embed live network diagrams in wikis, dashboards, or documentation",
             Feature::CustomSso => "Configure your own OIDC identity provider for single sign-on",
             Feature::ManagedDeployment => {
-                "We deploy, configure, and manage Scanopy for you — on a dedicated instance or your own infrastructure"
+                "We deploy, configure, and manage Scanopy for you on a dedicated instance"
             }
             Feature::EmailSupport => "Access to the Scanopy team via email support tickets",
             Feature::Whitelabeling => "We deploy Scanopy to a custom domain with your branding",
-            Feature::LiveChatSupport => {
-                "Access to the Scanopy team via live chat (Slack or Discord)"
-            }
+            Feature::LiveChatSupport => "Access to the Scanopy team via live chat",
             Feature::CommunitySupport => "Community support via GitHub issues and discussions",
         }
     }

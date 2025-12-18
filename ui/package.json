@@ -1,7 +1,7 @@
 {
 	"name": "scanopy-ui",
 	"private": true,
-	"version": "0.12.2",
+	"version": "0.12.3",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -36,6 +36,9 @@
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.20.0"
+	},
+	"overrides": {
+		"cookie": "^0.7.0"
 	},
 	"dependencies": {
 		"@beyonk/gdpr-cookie-consent-banner": "^16.0.2",

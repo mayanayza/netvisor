@@ -6,6 +6,8 @@ use crate::server::{
 use anyhow::{Error, Result};
 use axum::Json;
 use axum::extract::State;
+use axum::http::header::CACHE_CONTROL;
+use axum::response::IntoResponse;
 use clap::Parser;
 use figment::{
     Figment,
@@ -289,9 +291,7 @@ impl AppState {
     }
 }
 
-pub async fn get_public_config(
-    State(state): State<Arc<AppState>>,
-) -> Json<ApiResponse<PublicConfigResponse>> {
+pub async fn get_public_config(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let oidc_providers = state
         .services
         .oidc_service
@@ -312,22 +312,25 @@ pub async fn get_public_config(
         }
     };
 
-    Json(ApiResponse::success(PublicConfigResponse {
-        server_port: state.config.server_port,
-        disable_registration: state.config.disable_registration,
-        oidc_providers,
-        billing_enabled: state.config.stripe_secret.is_some(),
-        has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
-        has_email_service: (state.config.smtp_password.is_some()
-            && state.config.smtp_username.is_some()
-            && state.config.smtp_email.is_some()
-            && state.config.smtp_relay.is_some())
-            || (state.config.plunk_secret.is_some() && state.config.plunk_key.is_some()),
-        public_url: state.config.public_url.clone(),
-        has_email_opt_in: state.config.plunk_secret.is_some(),
-        posthog_key: state.config.posthog_key.clone(),
-        needs_cookie_consent: state.config.posthog_key.is_some(),
-        deployment_type,
-        plunk_key: state.config.plunk_key.clone(),
-    }))
+    (
+        [(CACHE_CONTROL, "no-store, no-cache, must-revalidate")],
+        Json(ApiResponse::success(PublicConfigResponse {
+            server_port: state.config.server_port,
+            disable_registration: state.config.disable_registration,
+            oidc_providers,
+            billing_enabled: state.config.stripe_secret.is_some(),
+            has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
+            has_email_service: (state.config.smtp_password.is_some()
+                && state.config.smtp_username.is_some()
+                && state.config.smtp_email.is_some()
+                && state.config.smtp_relay.is_some())
+                || (state.config.plunk_secret.is_some() && state.config.plunk_key.is_some()),
+            public_url: state.config.public_url.clone(),
+            has_email_opt_in: state.config.plunk_secret.is_some(),
+            posthog_key: state.config.posthog_key.clone(),
+            needs_cookie_consent: state.config.posthog_key.is_some(),
+            deployment_type,
+            plunk_key: state.config.plunk_key.clone(),
+        })),
+    )
 }

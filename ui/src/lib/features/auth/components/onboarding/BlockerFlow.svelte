@@ -16,6 +16,7 @@
 
 	// Track which blocker is expanded (null = none)
 	let expandedBlocker: BlockerType | null = null;
+	let expandedBlockers: BlockerType[] = [];
 
 	// Get blocker options for the current use case
 	$: blockerOptions = getBlockerOptions(useCase);
@@ -25,15 +26,16 @@
 			expandedBlocker = null;
 		} else {
 			expandedBlocker = blocker;
+			expandedBlockers.push(blocker);
 			onboardingStore.setCurrentBlocker(blocker);
-			trackEvent('onboarding_blocker_selected', { blocker });
+			trackEvent('onboarding_blocker_selected', { blocker, useCase });
 		}
 	}
 
 	function handleContinueSetup() {
-		trackEvent('onboarding_blocker_resolved', {
-			blocker: expandedBlocker,
-			continued: true
+		trackEvent('onboarding_blockers_resolved', {
+			blockers: expandedBlockers,
+			useCase
 		});
 		onboardingStore.setReadyToScan(true);
 		onResolved();
@@ -84,7 +86,7 @@
 				{#if isExpanded}
 					<div class="px-3 py-2">
 						{#if blockerId === 'compatibility'}
-							<CompatibilityChecker onResolved={handleContinueSetup} showActions={false} />
+							<CompatibilityChecker {useCase} />
 						{:else if blockerId === 'something_else'}
 							<FeedbackForm blocker="something_else" />
 						{:else}
