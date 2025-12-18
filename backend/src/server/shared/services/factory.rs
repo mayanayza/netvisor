@@ -8,6 +8,7 @@ use crate::server::{
     email::{plunk::PlunkEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
     groups::service::GroupService,
     hosts::service::HostService,
+    invites::service::InviteService,
     logging::service::LoggingService,
     networks::service::NetworkService,
     organizations::service::OrganizationService,
@@ -34,6 +35,7 @@ pub struct ServiceFactory {
     pub discovery_service: Arc<DiscoveryService>,
     pub api_key_service: Arc<ApiKeyService>,
     pub organization_service: Arc<OrganizationService>,
+    pub invite_service: Arc<InviteService>,
     pub oidc_service: Option<Arc<OidcService>>,
     pub billing_service: Option<Arc<BillingService>>,
     pub email_service: Option<Arc<EmailService>>,
@@ -59,6 +61,10 @@ impl ServiceFactory {
         let group_service = Arc::new(GroupService::new(storage.groups.clone(), event_bus.clone()));
         let organization_service = Arc::new(OrganizationService::new(
             storage.organizations.clone(),
+            event_bus.clone(),
+        ));
+        let invite_service = Arc::new(InviteService::new(
+            storage.invites.clone(),
             event_bus.clone(),
         ));
 
@@ -143,6 +149,7 @@ impl ServiceFactory {
                     strip_secret,
                     webhook_secret,
                     organization_service.clone(),
+                    invite_service.clone(),
                     user_service.clone(),
                     network_service.clone(),
                     event_bus.clone(),
@@ -203,6 +210,7 @@ impl ServiceFactory {
             discovery_service,
             api_key_service,
             organization_service,
+            invite_service,
             oidc_service,
             billing_service,
             email_service,

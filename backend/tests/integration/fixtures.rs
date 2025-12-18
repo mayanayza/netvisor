@@ -15,10 +15,6 @@ pub async fn generate_fixtures() {
         .await
         .expect("Failed to generate services json");
 
-    generate_services_markdown()
-        .await
-        .expect("Failed to generate services markdown");
-
     generate_billing_plans_json()
         .await
         .expect("Failed to generate billing and features json");
@@ -132,89 +128,6 @@ async fn generate_services_json() -> Result<(), Box<dyn std::error::Error>> {
     let json_string = serde_json::to_string_pretty(&services)?;
     let json_path = std::path::Path::new("../ui/static/services-next.json");
     tokio::fs::write(json_path, json_string).await?;
-
-    Ok(())
-}
-
-async fn generate_services_markdown() -> Result<(), Box<dyn std::error::Error>> {
-    use std::collections::HashMap;
-
-    let services = ServiceDefinitionRegistry::all_service_definitions();
-
-    let mut by_category: HashMap<String, Vec<&Box<dyn ServiceDefinition>>> = HashMap::new();
-    for service in &services {
-        let category = service.category().to_string();
-        by_category.entry(category).or_default().push(service);
-    }
-
-    let mut categories: Vec<String> = by_category.keys().cloned().collect();
-    categories.sort();
-
-    let mut markdown = String::from("# Scanopy Service Definitions\n\n");
-    markdown.push_str(
-        "This document lists all services that Scanopy can automatically discover and identify.\n\n",
-    );
-
-    for category in categories {
-        let services = by_category.get(&category).unwrap();
-
-        markdown.push_str(&format!("## {}\n\n", category));
-        markdown.push_str(
-            "<table style=\"background-color: #1a1d29; border-collapse: collapse; width: 100%;\">\n",
-        );
-        markdown.push_str("<thead>\n");
-        markdown.push_str(
-            "<tr style=\"background-color: #1f2937; border-bottom: 2px solid #374151;\">\n",
-        );
-        markdown.push_str("<th width=\"60\" style=\"padding: 12px; text-align: center; color: #e5e7eb; font-weight: 600;\">Logo</th>\n");
-        markdown.push_str("<th width=\"200\" style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Name</th>\n");
-        markdown.push_str("<th width=\"300\" style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Description</th>\n");
-        markdown.push_str("<th style=\"padding: 12px; text-align: left; color: #e5e7eb; font-weight: 600;\">Discovery Pattern</th>\n");
-        markdown.push_str("</tr>\n");
-        markdown.push_str("</thead>\n");
-        markdown.push_str("<tbody>\n");
-
-        let mut sorted_services = services.clone();
-        sorted_services.sort_by_key(|s| s.name());
-
-        for service in sorted_services {
-            let logo_url = service.logo_url();
-            let name = service.name();
-            let description = service.description();
-            let pattern = service.discovery_pattern().to_string();
-
-            let logo = if !logo_url.is_empty() {
-                format!(
-                    "<img src=\"{}\" alt=\"{}\" width=\"32\" height=\"32\" />",
-                    logo_url, name
-                )
-            } else {
-                "—".to_string()
-            };
-
-            markdown.push_str("<tr style=\"border-bottom: 1px solid #374151;\">\n");
-            markdown.push_str(&format!(
-                "<td align=\"center\" style=\"padding: 12px; color: #d1d5db;\">{}</td>\n",
-                logo
-            ));
-            markdown.push_str(&format!(
-                "<td style=\"padding: 12px; color: #f3f4f6; font-weight: 500;\">{}</td>\n",
-                name
-            ));
-            markdown.push_str(&format!(
-                "<td style=\"padding: 12px; color: #d1d5db;\">{}</td>\n",
-                description
-            ));
-            markdown.push_str(&format!("<td style=\"padding: 12px;\"><code style=\"background-color: #374151; color: #e5e7eb; padding: 2px 6px; border-radius: 3px; font-size: 0.875em;\">{}</code></td>\n", pattern));
-            markdown.push_str("</tr>\n");
-        }
-
-        markdown.push_str("</tbody>\n");
-        markdown.push_str("</table>\n\n");
-    }
-
-    let md_path = std::path::Path::new("../docs/SERVICES-NEXT.md");
-    tokio::fs::write(md_path, markdown).await?;
 
     Ok(())
 }

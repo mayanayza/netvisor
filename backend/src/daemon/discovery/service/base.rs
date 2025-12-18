@@ -198,15 +198,24 @@ pub trait RunsDiscovery: AsRef<DaemonDiscoveryService> + Send + Sync {
 
         let path = format!("/api/discovery/{}/update", session.info.session_id);
 
-        self.as_ref()
+        // Progress updates are non-critical - log errors but don't fail discovery
+        if let Err(e) = self
+            .as_ref()
             .api_client
             .post_no_data(&path, &payload, "Failed to report discovery update")
-            .await?;
-
-        tracing::trace!(
-            "Discovery update reported for session {}",
-            session.info.session_id
-        );
+            .await
+        {
+            tracing::warn!(
+                session_id = %session.info.session_id,
+                error = %e,
+                "Failed to report discovery update"
+            );
+        } else {
+            tracing::trace!(
+                "Discovery update reported for session {}",
+                session.info.session_id
+            );
+        }
 
         Ok(())
     }
@@ -565,6 +574,10 @@ pub trait DiscoversNetworkedEntities:
     }
 }
 
+/// Default number of retries for entity creation during discovery.
+/// This handles transient failures during server switchovers (blue-green deployments).
+const ENTITY_CREATION_MAX_RETRIES: u32 = 5;
+
 #[async_trait]
 pub trait CreatesDiscoveredEntities:
     AsRef<DaemonDiscoveryService> + Send + Sync + RunsDiscovery
@@ -581,7 +594,12 @@ pub trait CreatesDiscoveredEntities:
         let HostWithServicesRequest { host, services } = self
             .as_ref()
             .api_client
-            .post("/api/hosts", &request, "Failed to create host")
+            .post_with_retry(
+                "/api/hosts",
+                &request,
+                "Failed to create host",
+                ENTITY_CREATION_MAX_RETRIES,
+            )
             .await?;
         Ok((host, services.unwrap_or_default()))
     }
@@ -589,21 +607,36 @@ pub trait CreatesDiscoveredEntities:
     async fn create_subnet(&self, subnet: &Subnet) -> Result<Subnet, Error> {
         self.as_ref()
             .api_client
-            .post("/api/subnets", subnet, "Failed to create subnet")
+            .post_with_retry(
+                "/api/subnets",
+                subnet,
+                "Failed to create subnet",
+                ENTITY_CREATION_MAX_RETRIES,
+            )
             .await
     }
 
     async fn create_service(&self, service: &Service) -> Result<Service, Error> {
         self.as_ref()
             .api_client
-            .post("/api/services", service, "Failed to create service")
+            .post_with_retry(
+                "/api/services",
+                service,
+                "Failed to create service",
+                ENTITY_CREATION_MAX_RETRIES,
+            )
             .await
     }
 
     async fn create_group(&self, group: &Group) -> Result<Group, Error> {
         self.as_ref()
             .api_client
-            .post("/api/groups", group, "Failed to create group")
+            .post_with_retry(
+                "/api/groups",
+                group,
+                "Failed to create group",
+                ENTITY_CREATION_MAX_RETRIES,
+            )
             .await
     }
 }

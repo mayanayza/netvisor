@@ -39,7 +39,7 @@
 			{
 				title: 'User Guide',
 				description: 'Read the full documentation and guides',
-				url: 'https://github.com/scanopy/scanopy/blob/main/docs/USER_GUIDE.md',
+				url: 'https://scanopy.net/docs/',
 				color: 'gray',
 				icon: BookOpen
 			},

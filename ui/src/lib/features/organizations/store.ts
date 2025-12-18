@@ -55,7 +55,7 @@ export async function createInvite(
 	};
 
 	const result = await api.request<OrganizationInvite, OrganizationInvite[]>(
-		`/organizations/invites`,
+		`/invites`,
 		invites,
 		(created, current) => [...current, created],
 		{
@@ -72,7 +72,7 @@ export async function createInvite(
 
 export async function getInvites(): Promise<OrganizationInvite[]> {
 	const result = await api.request<OrganizationInvite[]>(
-		`/organizations/invites`,
+		`/invites`,
 		invites,
 		(invites) => invites,
 		{
@@ -88,7 +88,7 @@ export async function getInvites(): Promise<OrganizationInvite[]> {
 
 export async function revokeInvite(id: string): Promise<void> {
 	await api.request<void, OrganizationInvite[]>(
-		`/organizations/invites/${id}/revoke`,
+		`/invites/${id}/revoke`,
 		invites,
 		(_, current) => current.filter((i) => i.id != id),
 		{
@@ -98,5 +98,5 @@ export async function revokeInvite(id: string): Promise<void> {
 }
 
 export function formatInviteUrl(invite: OrganizationInvite): string {
-	return `${invite.url}/api/organizations/invites/${invite.id}/accept`;
+	return `${invite.url}/api/invites/${invite.id}/accept`;
 }
