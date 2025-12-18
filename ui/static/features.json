@@ -79,7 +79,7 @@
   {
     "id": "managed_deployment",
     "name": "Managed Deployment",
-    "description": "We deploy, configure, and manage Scanopy for you — on a dedicated instance or your own infrastructure",
+    "description": "We deploy, configure, and manage Scanopy for you on a dedicated instance",
     "category": "Enterprise",
     "icon": null,
     "color": null,
@@ -123,7 +123,7 @@
   {
     "id": "live_chat_support",
     "name": "Live Chat Support",
-    "description": "Access to the Scanopy team via live chat (Slack or Discord)",
+    "description": "Access to the Scanopy team via live chat",
     "category": "Support",
     "icon": null,
     "color": null,
