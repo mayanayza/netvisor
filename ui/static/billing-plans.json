@@ -7,7 +7,7 @@
     "icon": "ThumbsUp",
     "color": "blue",
     "metadata": {
-      "base_cents": 1499,
+      "base_cents": 999,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -32,7 +32,7 @@
       "network_cents": null,
       "rate": "Month",
       "seat_cents": null,
-      "trial_days": 0
+      "trial_days": 7
     }
   },
   {
@@ -43,7 +43,7 @@
     "icon": "Zap",
     "color": "yellow",
     "metadata": {
-      "base_cents": 2499,
+      "base_cents": 1999,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -79,7 +79,7 @@
     "icon": "Users",
     "color": "orange",
     "metadata": {
-      "base_cents": 7999,
+      "base_cents": 3999,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -115,7 +115,7 @@
     "icon": "Briefcase",
     "color": "indigo",
     "metadata": {
-      "base_cents": 14999,
+      "base_cents": 5999,
       "custom_price": null,
       "features": {
         "audit_logs": true,
@@ -151,7 +151,7 @@
     "icon": "ThumbsUp",
     "color": "blue",
     "metadata": {
-      "base_cents": 14400,
+      "base_cents": 9600,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -176,7 +176,7 @@
       "network_cents": null,
       "rate": "Year",
       "seat_cents": null,
-      "trial_days": 0
+      "trial_days": 7
     }
   },
   {
@@ -187,7 +187,7 @@
     "icon": "Zap",
     "color": "yellow",
     "metadata": {
-      "base_cents": 24000,
+      "base_cents": 19200,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -223,7 +223,7 @@
     "icon": "Users",
     "color": "orange",
     "metadata": {
-      "base_cents": 76800,
+      "base_cents": 38400,
       "custom_price": null,
       "features": {
         "audit_logs": false,
@@ -259,7 +259,7 @@
     "icon": "Briefcase",
     "color": "indigo",
     "metadata": {
-      "base_cents": 144000,
+      "base_cents": 57600,
       "custom_price": null,
       "features": {
         "audit_logs": true,

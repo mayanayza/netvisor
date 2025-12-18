@@ -3,6 +3,7 @@ use crate::server::billing::plans::YEARLY_DISCOUNT;
 use crate::server::billing::plans::get_enterprise_plan;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::billing::types::features::Feature;
+use crate::server::invites::service::InviteService;
 use crate::server::networks::service::NetworkService;
 use crate::server::organizations::r#impl::base::Organization;
 use crate::server::organizations::service::OrganizationService;
@@ -51,6 +52,7 @@ pub struct BillingService {
     pub stripe: stripe::Client,
     pub webhook_secret: String,
     pub organization_service: Arc<OrganizationService>,
+    pub invite_service: Arc<InviteService>,
     pub user_service: Arc<UserService>,
     pub network_service: Arc<NetworkService>,
     pub plans: OnceLock<Vec<BillingPlan>>,
@@ -67,6 +69,7 @@ impl BillingService {
         stripe_secret: String,
         webhook_secret: String,
         organization_service: Arc<OrganizationService>,
+        invite_service: Arc<InviteService>,
         user_service: Arc<UserService>,
         network_service: Arc<NetworkService>,
         event_bus: Arc<EventBus>,
@@ -75,6 +78,7 @@ impl BillingService {
             stripe: Client::new(stripe_secret),
             webhook_secret,
             organization_service,
+            invite_service,
             network_service,
             user_service,
             plans: OnceLock::new(),
@@ -780,7 +784,7 @@ impl BillingService {
             .await?
             .ok_or_else(|| anyhow!("Could not find organization to update subscriptions status"))?;
 
-        self.organization_service
+        self.invite_service
             .revoke_org_invites(&organization.id)
             .await?;
 

@@ -1,6 +1,6 @@
 use crate::server::hosts::r#impl::interfaces::Interface;
 use crate::server::hosts::r#impl::ports::Port;
-use crate::server::organizations::r#impl::invites::Invite;
+use crate::server::invites::r#impl::base::Invite;
 use crate::server::services::r#impl::base::Service;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::base::Topology;

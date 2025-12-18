@@ -47,7 +47,6 @@ async fn main() -> anyhow::Result<()> {
     // Create app state
     let state = AppState::new(config).await?;
     let discovery_service = state.services.discovery_service.clone();
-    let organization_service = state.services.organization_service.clone();
     let billing_service = state.services.billing_service.clone();
 
     // Create discovery cleanup task
@@ -94,12 +93,12 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // Create invite link cleanup task
-    let organization_service_invite_cleanup = organization_service.clone();
+    let invite_service_cleanup = state.services.invite_service.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(15 * 60)); // 15 minutes
         loop {
             interval.tick().await;
-            organization_service_invite_cleanup.cleanup_expired().await;
+            invite_service_cleanup.cleanup_expired().await;
         }
     });
 

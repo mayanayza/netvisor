@@ -6,10 +6,11 @@ use crate::server::{
     auth::handlers as auth_handlers, billing::handlers as billing_handlers, config::AppState,
     daemons::handlers as daemon_handlers, discovery::handlers as discovery_handlers,
     groups::handlers as group_handlers, hosts::handlers as host_handlers,
-    networks::handlers as network_handlers, organizations::handlers as organization_handlers,
-    services::handlers as service_handlers, shared::types::api::ApiResponse,
-    subnets::handlers as subnet_handlers, tags::handlers as tag_handlers,
-    topology::handlers as topology_handlers, users::handlers as user_handlers,
+    invites::handlers as invite_handlers, networks::handlers as network_handlers,
+    organizations::handlers as organization_handlers, services::handlers as service_handlers,
+    shared::types::api::ApiResponse, subnets::handlers as subnet_handlers,
+    tags::handlers as tag_handlers, topology::handlers as topology_handlers,
+    users::handlers as user_handlers,
 };
 use axum::http::HeaderValue;
 use axum::middleware;
@@ -31,6 +32,7 @@ pub fn create_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .nest("/api/networks", network_handlers::create_router())
         .nest("/api/users", user_handlers::create_router())
         .nest("/api/organizations", organization_handlers::create_router())
+        .nest("/api/invites", invite_handlers::create_router())
         .nest("/api/tags", tag_handlers::create_router())
         .layer(middleware::from_fn_with_state(
             state,

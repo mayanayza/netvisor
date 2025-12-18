@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use email_address::EmailAddress;
 use uuid::Uuid;
 
@@ -161,6 +162,13 @@ impl EntityFilter {
         self.conditions
             .push(format!("permissions = ${}", self.values.len() + 1));
         self.values.push(SqlValue::UserOrgPermissions(*permissions));
+        self
+    }
+
+    pub fn expires_before(mut self, timestamp: DateTime<Utc>) -> Self {
+        self.conditions
+            .push(format!("expires_at < ${}", self.values.len() + 1));
+        self.values.push(SqlValue::Timestamp(timestamp));
         self
     }
 
