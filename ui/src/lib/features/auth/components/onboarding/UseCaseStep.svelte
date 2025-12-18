@@ -40,13 +40,14 @@
 		showLicenseWarning = false;
 	}
 
+	// Self hosted handlers
 	function handleContinue() {
 		if (!selectedUseCase) return;
-		trackEvent('onboarding_use_case_selected', { use_case: selectedUseCase });
 		onboardingStore.setUseCase(selectedUseCase);
 		onNext();
 	}
 
+	// Cloud handlers
 	function handleReadyYes() {
 		if (!selectedUseCase) return;
 		trackEvent('onboarding_use_case_selected', { use_case: selectedUseCase });

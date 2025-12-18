@@ -3,15 +3,19 @@
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
+	import type { UseCase } from '../../types/base';
 
-	export let onResolved: () => void;
-	export let showActions: boolean = true;
+	let {
+		useCase
+	}: {
+		useCase: UseCase;
+	} = $props();
 
 	type OS = 'linux' | 'macos' | 'windows' | 'freebsd' | 'openbsd' | null;
 	type InstallMethod = 'binary' | 'docker' | null;
 
-	let selectedOS: OS = null;
-	let selectedMethod: InstallMethod = null;
+	let selectedOS: OS = $state(null);
+	let selectedMethod: InstallMethod = $state(null);
 
 	const osOptions: { id: OS; label: string }[] = [
 		{ id: 'linux', label: 'Linux' },
@@ -27,10 +31,10 @@
 	];
 
 	// Check if OS is unsupported (BSD variants)
-	$: isUnsupportedOS = selectedOS === 'freebsd' || selectedOS === 'openbsd';
+	let isUnsupportedOS = $derived(selectedOS === 'freebsd' || selectedOS === 'openbsd');
 
 	// Compatibility matrix
-	$: compatibility = getCompatibility(selectedOS, selectedMethod);
+	let compatibility = $derived(getCompatibility(selectedOS, selectedMethod));
 
 	function getCompatibility(
 		os: OS,
@@ -54,27 +58,42 @@
 		return 'compatible';
 	}
 
-	$: warningBody =
+	let warningBody = $derived(
 		selectedOS === 'macos'
 			? "Docker Compose deployment with network_mode: host is only fully supported on Linux. On macOS, you'll need to use the binary install method."
 			: selectedOS === 'windows'
 				? "Docker Compose deployment with network_mode: host is only fully supported on Linux. On Windows, you'll need to use the binary install method."
-				: 'Docker Compose deployment with network_mode: host is only fully supported on Linux.';
+				: 'Docker Compose deployment with network_mode: host is only fully supported on Linux.'
+	);
 
-	$: incompatibleBody =
+	let incompatibleBody = $derived(
 		selectedOS === 'freebsd'
 			? "Scanopy's daemon currently doesn't support FreeBSD. We recommend running the daemon on a Linux host or VM on your network instead."
 			: selectedOS === 'openbsd'
 				? "Scanopy's daemon currently doesn't support OpenBSD. We recommend running the daemon on a Linux host or VM on your network instead."
-				: 'This operating system is not currently supported.';
+				: 'This operating system is not currently supported.'
+	);
 
-	function handleContinue() {
-		trackEvent('onboarding_compatibility_check', {
+	function handleOsSelect(os: OS) {
+		selectedOS = os;
+
+		trackEvent('onboarding_compatibility_os_selected', {
 			os: selectedOS,
 			install_method: selectedMethod,
-			result: compatibility
+			result: compatibility,
+			use_case: useCase
 		});
-		onResolved();
+	}
+
+	function handleInstallSelect(method: InstallMethod) {
+		selectedMethod = method;
+
+		trackEvent('onboarding_compatibility_os_selected', {
+			os: selectedOS,
+			install_method: selectedMethod,
+			result: compatibility,
+			use_case: useCase
+		});
 	}
 </script>
 
@@ -89,7 +108,7 @@
 				<button
 					type="button"
 					class="btn-secondary flex-1 {selectedOS === option.id ? 'ring-primary ring-2' : ''}"
-					on:click={() => (selectedOS = option.id)}
+					onclick={() => handleOsSelect(option.id)}
 				>
 					{option.label}
 				</button>
@@ -108,7 +127,7 @@
 					<button
 						type="button"
 						class="btn-secondary flex-1 {selectedMethod === option.id ? 'ring-primary ring-2' : ''}"
-						on:click={() => (selectedMethod = option.id)}
+						onclick={() => handleInstallSelect(option.id)}
 					>
 						{option.label}
 					</button>
@@ -127,12 +146,5 @@
 		/>
 	{:else if compatibility === 'incompatible'}
 		<InlineDanger title="Not currently supported" body={incompatibleBody} />
-	{/if}
-
-	<!-- Actions -->
-	{#if showActions && compatibility}
-		<div class="flex justify-end pt-2">
-			<button type="button" class="btn-primary" on:click={handleContinue}> Continue Setup </button>
-		</div>
 	{/if}
 </div>

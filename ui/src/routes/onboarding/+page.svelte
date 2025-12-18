@@ -125,8 +125,7 @@
 		).length;
 		trackEvent('onboarding_registration_completed', {
 			use_case: state.useCase,
-			daemons_installed: daemonsInstalled,
-			had_blockers: state.readyToScan === false
+			daemons_installed: daemonsInstalled
 		});
 
 		// Set preferred network for topology view
