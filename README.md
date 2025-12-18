@@ -68,12 +68,9 @@ For detailed setup options and configuration, see the [Installation Guide](https
 Full documentation at **[scanopy.net/docs](https://scanopy.net/docs)**
 
 ## 📋 Licensing
-
-**Personal/Home Use**: Free under [AGPL-3.0](LICENSE.md)
-
-**Commercial Use**: 
-- **Self-hosted**: [Commercial license](COMMERCIAL-LICENSE.md) required for businesses, MSPs, or proprietary integrations. Contact licensing@scanopy.net
-- **Hosted Solution**: [Scanopy Cloud](https://scanopy.net) subscription for zero infrastructure management
+**Self-hosted ([AGPL-3.0](LICENSE.md)):** Free for all use. Requires source disclosure for network services and copyleft compliance.   
+**Self-hosted ([Commercial license](COMMERCIAL-LICENSE.md)):** For those who cannot comply with AGPL-3.0 terms. Contact licensing@scanopy.net  
+**Hosted Solution:** [Scanopy Cloud](https://scanopy.net) subscription for zero infrastructure management  
 
 ## 🤝 Contributing
 
