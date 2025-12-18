@@ -8,6 +8,10 @@ use dhcproto::Encodable;
 use dhcproto::v4::{self, Decodable, Encoder, Message, MessageType};
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
+use hickory_resolver::Resolver;
+use hickory_resolver::config::{NameServerConfig, ResolverConfig};
+use hickory_resolver::name_server::TokioConnectionProvider;
+use hickory_resolver::proto::xfer::Protocol;
 use mac_address::MacAddress;
 use pnet::datalink;
 use pnet::datalink::Channel;
@@ -26,8 +30,6 @@ use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_util::sync::CancellationToken;
-use trust_dns_resolver::TokioAsyncResolver;
-use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 
 use crate::server::hosts::r#impl::ports::{PortBase, TransportProtocol};
 
@@ -706,16 +708,16 @@ pub async fn scan_endpoints(
 }
 
 pub async fn test_dns_service(ip: IpAddr) -> Result<Option<u16>, Error> {
-    // Use the simpler approach - create resolver with custom config directly
     let mut config = ResolverConfig::new();
     let name_server = NameServerConfig::new(SocketAddr::new(ip, 53), Protocol::Udp);
     config.add_name_server(name_server);
 
-    let test_resolver = TokioAsyncResolver::tokio(config, ResolverOpts::default());
+    let resolver =
+        Resolver::builder_with_config(config, TokioConnectionProvider::default()).build();
 
     match timeout(
         Duration::from_millis(2000),
-        test_resolver.lookup_ip("google.com"),
+        resolver.lookup_ip("google.com"),
     )
     .await
     {
