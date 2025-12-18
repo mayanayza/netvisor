@@ -67,7 +67,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backend/Cargo.toml backend/Cargo.lock ui/package.json ui/package-lock.json
-          git add backend/src/tests/scanopy.sql backend/src/tests/daemon_config.json ui/static/services.json docs/SERVICES.md ui/static/billing-plans.json ui/static/features.json
+          git add backend/src/tests/scanopy.sql backend/src/tests/daemon_config.json ui/static/services.json ui/static/billing-plans.json ui/static/features.json
           
           if git diff --staged --quiet; then
             echo "No fixture changes to commit"
