@@ -7,16 +7,16 @@ pub const YEARLY_DISCOUNT: f32 = 0.2;
 fn get_default_plans() -> Vec<BillingPlan> {
     vec![
         BillingPlan::Starter(PlanConfig {
-            base_cents: 1499,
+            base_cents: 999,
             rate: BillingRate::Month,
-            trial_days: 0,
+            trial_days: 7,
             seat_cents: None,
             network_cents: None,
             included_seats: Some(1),
             included_networks: Some(1),
         }),
         BillingPlan::Pro(PlanConfig {
-            base_cents: 2499,
+            base_cents: 1999,
             rate: BillingRate::Month,
             trial_days: 7,
             seat_cents: None,
@@ -25,7 +25,7 @@ fn get_default_plans() -> Vec<BillingPlan> {
             included_networks: Some(3),
         }),
         BillingPlan::Team(PlanConfig {
-            base_cents: 7999,
+            base_cents: 3999,
             rate: BillingRate::Month,
             trial_days: 7,
             seat_cents: Some(1000),
@@ -34,7 +34,7 @@ fn get_default_plans() -> Vec<BillingPlan> {
             included_networks: Some(5),
         }),
         BillingPlan::Business(PlanConfig {
-            base_cents: 14999,
+            base_cents: 5999,
             rate: BillingRate::Month,
             trial_days: 14,
             seat_cents: Some(800),
