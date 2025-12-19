@@ -91,6 +91,19 @@ impl CrudService<Host> for HostService {
                     .await?
             }
             _ => {
+                // Check if host exists in a different network (network_id mismatch)
+                if let Some(existing_host) = self.storage.get_by_id(&host.id).await? {
+                    return Err(anyhow!(
+                        "Network mismatch: Daemon is trying to update host '{}' (id: {}) but cannot proceed. \
+                        The host belongs to network {} while the daemon is assigned to network {}. \
+                        To resolve this, either reassign the daemon to the correct network or delete the mismatched host.",
+                        existing_host.base.name,
+                        host.id,
+                        existing_host.base.network_id,
+                        host.base.network_id
+                    ));
+                }
+
                 let created = self.storage.create(&host).await?;
                 let trigger_stale = created.triggers_staleness(None);
 
