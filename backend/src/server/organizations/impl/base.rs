@@ -19,7 +19,7 @@ pub struct OrganizationBase {
     pub onboarding: Vec<TelemetryOperation>,
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Organization {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

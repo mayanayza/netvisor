@@ -1,6 +1,6 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::{
-    features::{InviteUsersFeature, RequireFeature},
+    features::{BlockedInDemoMode, InviteUsersFeature, RequireFeature},
     permissions::RequireMember,
 };
 use crate::server::config::AppState;
@@ -37,6 +37,7 @@ async fn create_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     RequireFeature { plan, .. }: RequireFeature<InviteUsersFeature>,
+    _demo_check: RequireFeature<BlockedInDemoMode>,
     Json(request): Json<CreateInviteRequest>,
 ) -> ApiResult<Json<ApiResponse<Invite>>> {
     // Seat limit check - only applies if permissions count towards seats
@@ -175,6 +176,7 @@ async fn get_invites(
 async fn revoke_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
+    _demo_check: RequireFeature<BlockedInDemoMode>,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
     // Get the invite to verify ownership

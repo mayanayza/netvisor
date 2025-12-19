@@ -23,7 +23,7 @@ use uuid::Uuid;
 #[async_trait]
 pub trait CrudHandlers: StorableEntity + Serialize + for<'de> Deserialize<'de>
 where
-    Self: Display + ChangeTriggersTopologyStaleness<Self>,
+    Self: Display + ChangeTriggersTopologyStaleness<Self> + Default,
     Entity: From<Self>,
 {
     /// Get the service from AppState (must implement CrudService)
@@ -44,7 +44,7 @@ where
 /// Create a standard CRUD router
 pub fn create_crud_router<T>() -> Router<Arc<AppState>>
 where
-    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
     Router::new()
@@ -62,7 +62,7 @@ pub async fn create_handler<T>(
     Json(entity): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
-    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
     if let Err(err) = entity.validate() {
@@ -118,7 +118,7 @@ pub async fn get_all_handler<T>(
     user: AuthenticatedUser,
 ) -> ApiResult<Json<ApiResponse<Vec<T>>>>
 where
-    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
     let network_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
@@ -144,7 +144,7 @@ pub async fn get_by_id_handler<T>(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
-    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
     let service = T::get_service(&state);
@@ -197,7 +197,7 @@ pub async fn update_handler<T>(
     Json(mut entity): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
-    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
     let service = T::get_service(&state);
@@ -313,7 +313,7 @@ pub async fn delete_handler<T>(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<()>>>
 where
-    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T>,
+    T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
     let service = T::get_service(&state);

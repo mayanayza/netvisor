@@ -9,7 +9,7 @@ use crate::server::{
     shared::entities::ChangeTriggersTopologyStaleness,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
 pub struct DiscoveryBase {
     pub discovery_type: DiscoveryType,
     pub run_type: RunType,
@@ -20,7 +20,7 @@ pub struct DiscoveryBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Discovery {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

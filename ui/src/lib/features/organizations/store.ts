@@ -100,3 +100,15 @@ export async function revokeInvite(id: string): Promise<void> {
 export function formatInviteUrl(invite: OrganizationInvite): string {
 	return `${invite.url}/api/invites/${invite.id}/accept`;
 }
+
+export async function resetOrganizationData(orgId: string) {
+	return await api.request<void>(`/organizations/${orgId}/reset`, null, () => null, {
+		method: 'POST'
+	});
+}
+
+export async function populateDemoData(orgId: string) {
+	return await api.request<void>(`/organizations/${orgId}/populate-demo`, null, () => null, {
+		method: 'POST'
+	});
+}

@@ -214,4 +214,24 @@ where
 
         Ok(deleted_count)
     }
+
+    async fn delete_by_filter(&self, filter: EntityFilter) -> Result<usize, anyhow::Error> {
+        let query_str = format!(
+            "DELETE FROM {} {}",
+            T::table_name(),
+            filter.to_where_clause()
+        );
+
+        let mut query = sqlx::query(&query_str);
+        for value in filter.values() {
+            query = Self::bind_value(query, value)?;
+        }
+
+        let result = query.execute(&self.pool).await?;
+        let deleted_count = result.rows_affected() as usize;
+
+        tracing::trace!("Deleted {} {}s by filter", deleted_count, T::table_name());
+
+        Ok(deleted_count)
+    }
 }

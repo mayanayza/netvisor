@@ -97,7 +97,7 @@ impl UserBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct User {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

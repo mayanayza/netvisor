@@ -19,12 +19,14 @@ use crate::server::shared::{
     EnumIter,
     IntoStaticStr,
     Hash,
+    Default,
 )]
 pub enum UserOrgPermissions {
     Owner,
     Admin,
     Member,
     Visualizer,
+    #[default]
     None,
 }
 

@@ -12,6 +12,7 @@
 	let {
 		orgName = null,
 		invitedBy = null,
+		demoMode = false,
 		isOpen = false,
 		onLogin,
 		onClose,
@@ -20,6 +21,7 @@
 	}: {
 		orgName?: string | null;
 		invitedBy?: string | null;
+		demoMode?: boolean;
 		isOpen?: boolean;
 		onLogin: (data: LoginRequest) => Promise<void> | void;
 		onClose: () => void;
@@ -107,7 +109,24 @@
 		/>
 	</svelte:fragment>
 
-	{#if orgName && invitedBy}
+	{#if demoMode}
+		<div class="mb-6">
+			<InlineInfo
+				title="Demo Mode"
+				body="You're about to log in to a demo account. Use the credentials below to explore Scanopy. Note that some actions are disabled in demo mode."
+			/>
+			<div class="mt-3 rounded-md bg-gray-800 p-3 font-mono text-sm">
+				<div class="text-secondary">
+					<span class="text-gray-400">Email:</span>
+					<span class="text-primary ml-2">admin</span>
+				</div>
+				<div class="text-secondary mt-1">
+					<span class="text-gray-400">Password:</span>
+					<span class="text-primary ml-2">password</span>
+				</div>
+			</div>
+		</div>
+	{:else if orgName && invitedBy}
 		<div class="mb-6">
 			<InlineInfo
 				title="You're invited!"
@@ -172,8 +191,8 @@
 				</div>
 			{/if}
 
-			<!-- Register Link -->
-			{#if onSwitchToRegister && !disableRegistration}
+			<!-- Register Link (hidden in demo mode) -->
+			{#if onSwitchToRegister && !disableRegistration && !demoMode}
 				<div class="text-center">
 					<p class="text-sm text-gray-400">
 						Don't have an account?
@@ -187,7 +206,7 @@
 					</p>
 				</div>
 			{/if}
-			{#if enablePasswordReset}
+			{#if enablePasswordReset && !demoMode}
 				<div class="text-center">
 					<p class="text-sm text-gray-400">
 						Forgot your password?

@@ -29,7 +29,7 @@ pub struct GroupBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Group {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

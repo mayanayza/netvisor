@@ -17,7 +17,7 @@ use crate::server::{
     users::r#impl::permissions::UserOrgPermissions,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct InviteBase {
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
@@ -28,7 +28,7 @@ pub struct InviteBase {
     pub send_to: Option<EmailAddress>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Invite {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
