@@ -33,6 +33,24 @@ impl DaemonRuntimeService {
         }
     }
 
+    /// Check if an error indicates the API key is no longer valid (rotated/revoked).
+    /// Returns Some(error) if authorization failed and the daemon should stop, None otherwise.
+    fn check_authorization_error(error: &anyhow::Error, daemon_id: &Uuid) -> Option<anyhow::Error> {
+        let error_str = error.to_string();
+        if error_str.contains("Invalid API key") || error_str.contains("HTTP 401") {
+            tracing::error!(
+                daemon_id = %daemon_id,
+                "API key is no longer valid. The key may have been rotated or revoked. \
+                 Please reconfigure the daemon with a valid API key."
+            );
+            Some(anyhow::anyhow!(
+                "Daemon authorization failed: API key is no longer valid"
+            ))
+        } else {
+            None
+        }
+    }
+
     pub async fn request_work(&self) -> Result<()> {
         let interval = Duration::from_secs(self.config.get_heartbeat_interval().await?);
         let daemon_id = self.config.get_id().await?;
@@ -95,6 +113,9 @@ impl DaemonRuntimeService {
                     }
                 }
                 Err(e) => {
+                    if let Some(auth_error) = Self::check_authorization_error(&e, &daemon_id) {
+                        return Err(auth_error);
+                    }
                     tracing::error!(daemon_id = %daemon_id, error = %e, "Failed to request work");
                 }
             }
@@ -140,6 +161,9 @@ impl DaemonRuntimeService {
                     }
                 }
                 Err(e) => {
+                    if let Some(auth_error) = Self::check_authorization_error(&e, &daemon_id) {
+                        return Err(auth_error);
+                    }
                     tracing::error!(daemon_id = %daemon_id, error = %e, "Heartbeat failed");
                 }
             }
@@ -262,6 +286,19 @@ impl DaemonRuntimeService {
                 }
                 Err(e) => {
                     let error_str = e.to_string();
+
+                    // Check if this is a demo mode error - provide friendly message
+                    if error_str.contains("demo mode") || error_str.contains("HTTP 403") {
+                        tracing::error!(
+                            daemon_id = %daemon_id,
+                            "This Scanopy instance is running in demo mode. \
+                             Daemon registration is disabled. \
+                             To use daemons, please create an account."
+                        );
+                        return Err(anyhow::anyhow!(
+                            "Demo mode: Daemon registration is disabled on this server"
+                        ));
+                    }
 
                     // Check if this is an "Invalid API key" error
                     // This can happen when daemon is installed before user completes registration

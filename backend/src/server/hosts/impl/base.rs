@@ -59,7 +59,7 @@ impl Default for HostBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default)]
 pub struct Host {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

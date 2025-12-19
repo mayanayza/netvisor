@@ -13,7 +13,7 @@ use std::{fmt::Display, hash::Hash};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Topology {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -22,7 +22,7 @@ pub struct Topology {
     pub base: TopologyBase,
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct TopologyBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,

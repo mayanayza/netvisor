@@ -15,6 +15,7 @@
 	type ModalType = 'login' | 'forgot' | 'reset';
 	let activeModal = $state<ModalType>('login');
 	let resetToken = $state<string>('');
+	let demoMode = $state(false);
 
 	onMount(() => {
 		// Check if we have a reset token in the URL
@@ -23,6 +24,10 @@
 			activeModal = 'reset';
 			resetToken = token;
 		}
+
+		// Check if demo mode is requested
+		demoMode = $page.url.searchParams.has('demo');
+
 		// Note: Auth check is handled by +layout.svelte - no need to check here
 	});
 
@@ -90,6 +95,7 @@
 			{#if activeModal === 'login'}
 				<LoginModal
 					isOpen={true}
+					{demoMode}
 					onLogin={handleLogin}
 					onClose={handleClose}
 					onSwitchToRegister={switchToSignUp}

@@ -6,7 +6,7 @@ export interface BillingPlan {
 	included_networks: number | null;
 	rate: string;
 	trial_days: number;
-	type: 'Community' | 'Starter' | 'Pro' | 'Team' | 'Business' | 'Enterprise';
+	type: 'Community' | 'Starter' | 'Pro' | 'Team' | 'Business' | 'Enterprise' | 'Demo';
 }
 
 export function formatPrice(cents: number, rate: string): string {

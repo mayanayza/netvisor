@@ -9,7 +9,13 @@
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
-	import { getOrganization, organization, updateOrganization } from './store';
+	import {
+		getOrganization,
+		organization,
+		updateOrganization,
+		resetOrganizationData,
+		populateDemoData
+	} from './store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
@@ -20,6 +26,8 @@
 	});
 
 	let saving = $state(false);
+	let resetting = $state(false);
+	let populating = $state(false);
 	let activeSection = $state<'main' | 'edit'>('main');
 
 	$effect(() => {
@@ -34,6 +42,8 @@
 	}
 
 	let org = $derived($organization);
+	let isOwner = $derived($currentUser?.permissions === 'Owner');
+	let isDemoOrg = $derived(org?.plan?.type === 'Demo');
 
 	// Form data
 	let formData = $state({
@@ -82,6 +92,54 @@
 			name.set(org?.name || '');
 		} else {
 			onClose();
+		}
+	}
+
+	async function handleReset() {
+		if (!org) return;
+
+		if (
+			!confirm(
+				'Are you sure you want to reset all organization data? This will delete all networks, hosts, daemons, API keys, and invites. This action cannot be undone.'
+			)
+		) {
+			return;
+		}
+
+		resetting = true;
+		try {
+			const result = await resetOrganizationData(org.id);
+			if (result?.success) {
+				pushSuccess('Organization data has been reset');
+			} else {
+				pushError(result?.error || 'Failed to reset organization data');
+			}
+		} finally {
+			resetting = false;
+		}
+	}
+
+	async function handlePopulateDemo() {
+		if (!org) return;
+
+		if (
+			!confirm(
+				'Are you sure you want to populate demo data? This will add sample networks, hosts, and services to your organization.'
+			)
+		) {
+			return;
+		}
+
+		populating = true;
+		try {
+			const result = await populateDemoData(org.id);
+			if (result?.success) {
+				pushSuccess('Demo data has been populated');
+			} else {
+				pushError(result?.error || 'Failed to populate demo data');
+			}
+		} finally {
+			populating = false;
 		}
 	}
 
@@ -142,6 +200,40 @@
 						</button>
 					</div>
 				</InfoCard>
+
+				{#if isOwner}
+					<!-- Reset Organization Data (available to all org owners) -->
+					<InfoCard>
+						<div class="flex items-center justify-between">
+							<div>
+								<p class="text-primary text-sm font-medium">Reset Organization Data</p>
+								<p class="text-secondary text-xs">
+									Delete all networks, hosts, daemons, and invites. This cannot be undone.
+								</p>
+							</div>
+							<button onclick={handleReset} disabled={resetting} class="btn-danger">
+								{resetting ? 'Resetting...' : 'Reset'}
+							</button>
+						</div>
+					</InfoCard>
+
+					{#if isDemoOrg}
+						<!-- Populate Demo Data (only for Demo orgs) -->
+						<InfoCard>
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-primary text-sm font-medium">Populate Demo Data</p>
+									<p class="text-secondary text-xs">
+										Fill the organization with sample data for demonstration purposes.
+									</p>
+								</div>
+								<button onclick={handlePopulateDemo} disabled={populating} class="btn-primary">
+									{populating ? 'Populating...' : 'Populate'}
+								</button>
+							</div>
+						</InfoCard>
+					{/if}
+				{/if}
 			</div>
 		{:else if activeSection === 'edit'}
 			<div class="space-y-6">

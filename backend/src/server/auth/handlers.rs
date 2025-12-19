@@ -14,7 +14,10 @@ use crate::server::{
             base::{LoginRegisterParams, PendingDaemonSetup, PendingNetworkSetup, PendingSetup},
             oidc::{OidcFlow, OidcPendingAuth, OidcProviderMetadata, OidcRegisterParams},
         },
-        middleware::auth::{AuthenticatedEntity, AuthenticatedUser},
+        middleware::{
+            auth::{AuthenticatedEntity, AuthenticatedUser},
+            features::{BlockedInDemoMode, RequireFeature},
+        },
         oidc::OidcService,
     },
     config::AppState,
@@ -496,6 +499,7 @@ async fn update_password_auth(
     ClientIp(ip): ClientIp,
     user_agent: Option<TypedHeader<UserAgent>>,
     auth_user: AuthenticatedUser,
+    _demo_check: RequireFeature<BlockedInDemoMode>,
     Json(request): Json<UpdateEmailPasswordRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     let user_id: Uuid = session
@@ -1082,6 +1086,7 @@ async fn unlink_oidc_account(
     session: Session,
     ClientIp(ip): ClientIp,
     user_agent: Option<TypedHeader<UserAgent>>,
+    _demo_check: RequireFeature<BlockedInDemoMode>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
     let user_agent = user_agent.map(|u| u.to_string());
 

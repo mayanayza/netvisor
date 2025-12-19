@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct ApiKeyBase {
     #[serde(serialize_with = "serialize_api_key_status")]
     pub key: String,
@@ -26,7 +26,7 @@ where
     serializer.serialize_str("***REDACTED***")
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct ApiKey {
     pub id: Uuid,
     pub updated_at: DateTime<Utc>,

@@ -3,7 +3,10 @@ use crate::server::{
         r#impl::{api::ApiKeyResponse, base::ApiKey},
         service::generate_api_key_for_storage,
     },
-    auth::middleware::permissions::RequireMember,
+    auth::middleware::{
+        features::{BlockedInDemoMode, RequireFeature},
+        permissions::RequireMember,
+    },
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
@@ -41,6 +44,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
 pub async fn create_api_key(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
+    _demo_check: RequireFeature<BlockedInDemoMode>,
     Json(mut api_key): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKeyResponse>>> {
     tracing::debug!(
@@ -99,6 +103,7 @@ pub async fn create_api_key(
 pub async fn rotate_key_handler(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
+    _demo_check: RequireFeature<BlockedInDemoMode>,
     ClientIp(ip): ClientIp,
     user_agent: Option<TypedHeader<UserAgent>>,
     Path(api_key_id): Path<Uuid>,

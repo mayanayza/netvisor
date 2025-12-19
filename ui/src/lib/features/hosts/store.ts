@@ -110,7 +110,7 @@ export function getHostTargetString(host: Host): Readable<string> {
 					return 'None';
 				}
 				case 'Hostname': {
-					if (host.hostname.length > 0) return host.hostname;
+					if (host && host.hostname && host.hostname.length > 0) return host.hostname;
 					return 'Unknown Binding';
 				}
 			}

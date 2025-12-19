@@ -14,6 +14,7 @@ pub struct FeatureCheckContext<'a> {
     pub organization: &'a Organization,
     pub plan: BillingPlan,
     pub app_state: &'a AppState,
+    pub permissions: UserOrgPermissions,
 }
 
 pub enum FeatureCheckResult {
@@ -84,6 +85,7 @@ where
             organization: &organization,
             plan,
             app_state,
+            permissions,
         };
 
         let checker = T::default();
@@ -202,5 +204,30 @@ impl FeatureCheck for ActivePlanFeature {
                 "Active billing plan required. Please select a plan.",
             ),
         }
+    }
+}
+
+/// Feature check that blocks non-owner users on demo organizations.
+///
+/// Demo mode allows users to explore the UI without making destructive changes.
+/// Owners of demo organizations retain full access to all features.
+#[derive(Default)]
+pub struct BlockedInDemoMode;
+
+#[async_trait]
+impl FeatureCheck for BlockedInDemoMode {
+    async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
+        // Allow if not demo plan
+        if !matches!(ctx.plan, BillingPlan::Demo(_)) {
+            return FeatureCheckResult::Allowed;
+        }
+
+        // Allow owners full access
+        if ctx.permissions == UserOrgPermissions::Owner {
+            return FeatureCheckResult::Allowed;
+        }
+
+        // Block non-owners on demo plan
+        FeatureCheckResult::denied("This action is disabled in demo mode")
     }
 }

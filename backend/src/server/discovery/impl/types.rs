@@ -41,6 +41,14 @@ pub enum DiscoveryType {
     },
 }
 
+impl Default for DiscoveryType {
+    fn default() -> Self {
+        Self::SelfReport {
+            host_id: Uuid::nil(),
+        }
+    }
+}
+
 impl Display for DiscoveryType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -72,6 +80,12 @@ pub enum RunType {
     AdHoc {
         last_run: Option<DateTime<Utc>>,
     },
+}
+
+impl Default for RunType {
+    fn default() -> Self {
+        Self::AdHoc { last_run: None }
+    }
 }
 
 impl HasId for DiscoveryType {
