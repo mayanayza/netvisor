@@ -67,6 +67,10 @@ For detailed setup options and configuration, see the [Installation Guide](https
 
 Full documentation at **[scanopy.net/docs](https://scanopy.net/docs)**
 
+## 🖼️ Examples
+
+**[scanopy.net/showcase](https://scanopy.net/showcase)**
+
 ## 📋 Licensing
 **Self-hosted ([AGPL-3.0](LICENSE.md)):** Free for all use. Requires source disclosure for network services and copyleft compliance.   
 **Self-hosted ([Commercial license](COMMERCIAL-LICENSE.md)):** For those who cannot comply with AGPL-3.0 terms. Contact licensing@scanopy.net  
