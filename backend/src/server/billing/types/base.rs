@@ -184,6 +184,10 @@ impl BillingPlan {
         )
     }
 
+    pub fn is_demo(&self) -> bool {
+        matches!(self, BillingPlan::Demo(_))
+    }
+
     pub fn hosting(&self) -> &str {
         match self {
             BillingPlan::Community(_) => "Self-Hosted",

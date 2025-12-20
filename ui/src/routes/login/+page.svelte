@@ -25,8 +25,8 @@
 			resetToken = token;
 		}
 
-		// Check if demo mode is requested
-		demoMode = $page.url.searchParams.has('demo');
+		// Check if demo mode based on hostname
+		demoMode = $page.url.hostname === 'demo.scanopy.net';
 
 		// Note: Auth check is handled by +layout.svelte - no need to check here
 	});
