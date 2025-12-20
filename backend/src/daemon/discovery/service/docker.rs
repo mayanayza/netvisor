@@ -107,22 +107,34 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
 
         self.start_discovery(request).await?;
 
-        // Create service for docker daemon
-        let (_, services) = self.create_docker_daemon_service().await?;
-
-        let docker_daemon_service = services
-            .first()
-            .ok_or_else(|| anyhow!("Docker daemon service was not created, aborting"))?;
-
         // Get and create docker and host subnets
         let subnets = self.discover_create_subnets().await?;
 
-        // Get host interfaces
+        // Get host interfaces (needed for docker daemon service host matching)
         let (mut host_interfaces, _, _) = self
             .as_ref()
             .utils
             .get_own_interfaces(self.discovery_type(), daemon_id, network_id)
             .await?;
+
+        // Update interface subnet IDs to match created subnets (they may differ if subnets already existed)
+        for interface in &mut host_interfaces {
+            if let Some(subnet) = subnets
+                .iter()
+                .find(|s| s.base.cidr.contains(&interface.base.ip_address))
+            {
+                interface.base.subnet_id = subnet.id;
+            }
+        }
+
+        // Create service for docker daemon (pass interfaces for proper host matching)
+        let (_, services) = self
+            .create_docker_daemon_service(&host_interfaces)
+            .await?;
+
+        let docker_daemon_service = services
+            .first()
+            .ok_or_else(|| anyhow!("Docker daemon service was not created, aborting"))?;
 
         // Get container info
         let containers = self.get_containers_and_summaries().await?;
@@ -255,7 +267,11 @@ impl DiscoversNetworkedEntities for DiscoveryRunner<DockerScanDiscovery> {
 
 impl DiscoveryRunner<DockerScanDiscovery> {
     /// Create docker daemon service which has container relationship with docker daemon service
-    pub async fn create_docker_daemon_service(&self) -> Result<(Host, Vec<Service>), Error> {
+    /// Takes host_interfaces to enable proper host matching via MAC/IP addresses
+    pub async fn create_docker_daemon_service(
+        &self,
+        host_interfaces: &[Interface],
+    ) -> Result<(Host, Vec<Service>), Error> {
         let daemon_id = self.as_ref().config_store.get_id().await?;
         let network_id = self
             .as_ref()
@@ -288,6 +304,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         let mut temp_docker_daemon_host = Host::new(HostBase::default());
         temp_docker_daemon_host.id = self.domain.host_id;
         temp_docker_daemon_host.base.network_id = network_id;
+        // Include host interfaces to enable proper host matching via MAC/IP addresses
+        // This prevents creating a separate host when the discovery's host_id doesn't match
+        // an existing host but the MAC addresses do (e.g., stale host_id from old config)
+        temp_docker_daemon_host.base.interfaces = host_interfaces.to_vec();
         temp_docker_daemon_host.base.source = EntitySource::Discovery {
             metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
         };

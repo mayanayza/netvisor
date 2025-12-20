@@ -79,7 +79,21 @@ impl CrudService<Host> for HostService {
                         == EntitySourceDiscriminants::Discovery)
                     || host.id == existing_host.id =>
             {
-                tracing::warn!(
+                // Warn if matched via MAC/IP but host IDs differ - this indicates a daemon
+                // may be using a stale config with an old host_id that doesn't match reality
+                if host.id != existing_host.id {
+                    tracing::warn!(
+                        incoming_host_id = %host.id,
+                        matched_host_id = %existing_host.id,
+                        matched_host_name = %existing_host.base.name,
+                        "Host matched via MAC/IP address but discovery reported a different host ID. \
+                         This may indicate a daemon is using a stale configuration. \
+                         To fix, update the daemon's config file with: host_id = \"{}\"",
+                        existing_host.id
+                    );
+                }
+
+                tracing::debug!(
                     "Duplicate host for {}: {} found, {}: {} - upserting discovery data...",
                     host.base.name,
                     host.id,
