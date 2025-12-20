@@ -39,13 +39,15 @@ use axum::{
     routing::{get, post},
 };
 use axum_client_ip::ClientIp;
-use axum_extra::{TypedHeader, headers::UserAgent};
+use axum_extra::{TypedHeader, extract::Host, headers::UserAgent};
 use bad_email::is_email_unwanted;
 use chrono::{DateTime, Utc};
 use std::{net::IpAddr, sync::Arc};
 use tower_sessions::Session;
 use url::Url;
 use uuid::Uuid;
+
+pub const DEMO_HOST: &str = "demo.scanopy.net";
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -67,11 +69,19 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 async fn register(
     State(state): State<Arc<AppState>>,
+    Host(host): Host,
     ClientIp(ip): ClientIp,
     user_agent: Option<TypedHeader<UserAgent>>,
     session: Session,
     Json(request): Json<RegisterRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
+    // Block registration on demo domain
+    if host == DEMO_HOST {
+        return Err(ApiError::forbidden(
+            "Account creation is disabled on the demo site",
+        ));
+    }
+
     if state.config.disable_registration {
         return Err(ApiError::forbidden("User registration is disabled"));
     }
@@ -429,6 +439,7 @@ async fn apply_pending_setup(
 async fn login(
     State(state): State<Arc<AppState>>,
     ClientIp(ip): ClientIp,
+    Host(host): Host,
     user_agent: Option<TypedHeader<UserAgent>>,
     session: Session,
     Json(request): Json<LoginRequest>,
@@ -440,6 +451,31 @@ async fn login(
         .auth_service
         .login(request, ip, user_agent)
         .await?;
+
+    // Check if user is trying to log into demo account on non-demo and visa versa
+    if let Some(organization) = state
+        .services
+        .organization_service
+        .get_by_id(&user.base.organization_id)
+        .await?
+        && let Some(plan) = organization.base.plan
+    {
+        if plan.is_demo() && host != DEMO_HOST {
+            return Err(ApiError::forbidden(
+                "You can't log in to the demo account on this instance.",
+            ));
+        } else if !plan.is_demo() && host == DEMO_HOST {
+            return Err(ApiError::forbidden(
+                "You can only log in to the demo account on this instance.",
+            ));
+        }
+
+    // Couldn't get organization for some reason and user is on demo site - block login
+    } else if host == DEMO_HOST {
+        return Err(ApiError::forbidden(
+            "You can only log in to the demo account on this instance.",
+        ));
+    }
 
     session
         .insert("user_id", user.id)
@@ -585,6 +621,7 @@ async fn list_oidc_providers(
 
 async fn oidc_authorize(
     State(state): State<Arc<AppState>>,
+    Host(host): Host,
     Path(slug): Path<String>,
     session: Session,
     Query(params): Query<OidcAuthorizeParams>,
@@ -606,6 +643,13 @@ async fn oidc_authorize(
     let flow = match params.flow.as_deref() {
         Some("login") => OidcFlow::Login,
         Some("register") => {
+            // Block registration on demo domain
+            if host == DEMO_HOST {
+                return Err(ApiError::forbidden(
+                    "Account creation is disabled on the demo site",
+                ));
+            }
+
             if state.config.disable_registration {
                 return Err(ApiError::forbidden("User registration is disabled"));
             }
@@ -677,6 +721,7 @@ async fn oidc_authorize(
 
 async fn oidc_callback(
     State(state): State<Arc<AppState>>,
+    Host(host): Host,
     Path(slug): Path<String>,
     session: Session,
     ClientIp(ip): ClientIp,
@@ -781,20 +826,25 @@ async fn oidc_callback(
                 user_agent,
                 session,
                 return_url: return_url_parsed,
+                host,
             })
             .await
         }
         OidcFlow::Login => {
-            handle_login_flow(HandleLinkFlowParams {
-                oidc_service,
-                slug: &slug,
-                code: &params.code,
-                pending_auth,
-                ip,
-                user_agent,
-                session,
-                return_url: return_url_parsed,
-            })
+            handle_login_flow(
+                state.clone(),
+                HandleLinkFlowParams {
+                    oidc_service,
+                    slug: &slug,
+                    code: &params.code,
+                    pending_auth,
+                    ip,
+                    user_agent,
+                    session,
+                    return_url: return_url_parsed,
+                    host,
+                },
+            )
             .await
         }
         OidcFlow::Register => {
@@ -824,6 +874,7 @@ async fn oidc_callback(
                     user_agent,
                     session,
                     return_url: return_url_parsed,
+                    host,
                 },
             )
             .await
@@ -840,6 +891,7 @@ struct HandleLinkFlowParams<'a> {
     user_agent: Option<String>,
     session: Session,
     return_url: Url,
+    host: String,
 }
 
 async fn handle_link_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect, Redirect> {
@@ -852,6 +904,7 @@ async fn handle_link_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect, 
         user_agent,
         session,
         mut return_url,
+        host: _,
     } = params;
 
     // Add auth_modal query param to return URL
@@ -896,7 +949,10 @@ async fn handle_link_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect, 
     }
 }
 
-async fn handle_login_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect, Redirect> {
+async fn handle_login_flow(
+    state: Arc<AppState>,
+    params: HandleLinkFlowParams<'_>,
+) -> Result<Redirect, Redirect> {
     let HandleLinkFlowParams {
         oidc_service,
         slug,
@@ -906,6 +962,7 @@ async fn handle_login_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect,
         user_agent,
         session,
         return_url,
+        host,
     } = params;
 
     // Login user
@@ -914,6 +971,42 @@ async fn handle_login_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect,
         .await
     {
         Ok(user) => {
+            // Validate host matches user's org plan (same as regular login)
+            if let Ok(Some(organization)) = state
+                .services
+                .organization_service
+                .get_by_id(&user.base.organization_id)
+                .await
+                && let Some(plan) = organization.base.plan
+            {
+                if plan.is_demo() && host != DEMO_HOST {
+                    return Err(Redirect::to(&format!(
+                        "{}?error={}",
+                        return_url,
+                        urlencoding::encode(
+                            "You can't log in to the demo account on this instance."
+                        )
+                    )));
+                } else if !plan.is_demo() && host == DEMO_HOST {
+                    return Err(Redirect::to(&format!(
+                        "{}?error={}",
+                        return_url,
+                        urlencoding::encode(
+                            "You can only log in to the demo account on this instance."
+                        )
+                    )));
+                }
+            } else if host == DEMO_HOST {
+                // Couldn't get organization - block login on demo site
+                return Err(Redirect::to(&format!(
+                    "{}?error={}",
+                    return_url,
+                    urlencoding::encode(
+                        "You can only log in to the demo account on this instance."
+                    )
+                )));
+            }
+
             // Save user_id to session
             if let Err(e) = session.insert("user_id", user.id).await {
                 tracing::error!("Failed to save session: {}", e);
@@ -956,6 +1049,7 @@ async fn handle_register_flow(
         user_agent,
         session,
         return_url,
+        host: _,
     } = params;
 
     // Process pending invite if present
