@@ -63,7 +63,7 @@
 	);
 
 	// Create form field with validation
-	const permissionsField = field('permissions', 'Visualizer', [required()]);
+	const permissionsField = field('permissions', 'Viewer', [required()]);
 	const emailField = field('email', '', [email()]);
 
 	let usingEmail = $derived(enableEmail && $emailField.value && $emailField.valid);
@@ -102,7 +102,7 @@
 	// Reset form when modal opens
 	$effect(() => {
 		if (isOpen && !invite) {
-			permissionsField.set('Visualizer');
+			permissionsField.set('Viewer');
 		}
 	});
 

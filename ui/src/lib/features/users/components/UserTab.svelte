@@ -17,8 +17,9 @@
 	import { UserPlus } from 'lucide-svelte';
 	import { isUser, type User, type UserOrInvite } from '../types';
 	import InviteModal from './InviteModal.svelte';
-	import { billingPlans, metadata } from '$lib/shared/stores/metadata';
+	import { metadata, permissions } from '$lib/shared/stores/metadata';
 	import UserEditModal from './UserEditModal.svelte';
+	import { currentUser } from '$lib/features/auth/store';
 
 	// Force Svelte to track metadata reactivity
 	$effect(() => {
@@ -47,12 +48,11 @@
 	}
 
 	// Check if user can invite
-	let canInviteUsers = $derived.by(() => {
-		if (!$organization || !$organization.plan) return [];
-
-		let features = billingPlans.getMetadata($organization.plan.type).features;
-		return features.share_views;
-	});
+	let canInviteUsers = $derived(
+		$currentUser
+			? permissions.getMetadata($currentUser.permissions).can_manage_user_permissions.length > 0
+			: false
+	);
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Users?`)) {

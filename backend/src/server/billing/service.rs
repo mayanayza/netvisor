@@ -13,7 +13,7 @@ use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
-use crate::server::users::r#impl::permissions::UserOrgPermissions;
+use crate::server::shares::service::ShareService;
 use crate::server::users::service::UserService;
 use anyhow::Error;
 use anyhow::anyhow;
@@ -55,6 +55,7 @@ pub struct BillingService {
     pub invite_service: Arc<InviteService>,
     pub user_service: Arc<UserService>,
     pub network_service: Arc<NetworkService>,
+    pub share_service: Arc<ShareService>,
     pub plans: OnceLock<Vec<BillingPlan>>,
     pub event_bus: Arc<EventBus>,
 }
@@ -64,22 +65,37 @@ const SEAT_PRODUCT_NAME: &str = "Extra Seats";
 const NETWORK_PRODUCT_ID: &str = "extra_networks";
 const NETWORK_PRODUCT_NAME: &str = "Extra Networks";
 
+pub struct BillingServiceParams {
+    pub stripe_secret: String,
+    pub webhook_secret: String,
+    pub organization_service: Arc<OrganizationService>,
+    pub invite_service: Arc<InviteService>,
+    pub user_service: Arc<UserService>,
+    pub network_service: Arc<NetworkService>,
+    pub share_service: Arc<ShareService>,
+    pub event_bus: Arc<EventBus>,
+}
+
 impl BillingService {
-    pub fn new(
-        stripe_secret: String,
-        webhook_secret: String,
-        organization_service: Arc<OrganizationService>,
-        invite_service: Arc<InviteService>,
-        user_service: Arc<UserService>,
-        network_service: Arc<NetworkService>,
-        event_bus: Arc<EventBus>,
-    ) -> Self {
+    pub fn new(params: BillingServiceParams) -> Self {
+        let BillingServiceParams {
+            stripe_secret,
+            webhook_secret,
+            organization_service,
+            invite_service,
+            user_service,
+            network_service,
+            share_service,
+            event_bus,
+        } = params;
+
         Self {
             stripe: Client::new(stripe_secret),
             webhook_secret,
             organization_service,
             invite_service,
             network_service,
+            share_service,
             user_service,
             plans: OnceLock::new(),
             event_bus,
@@ -690,14 +706,13 @@ impl BillingService {
                 .await?;
         }
 
+        let org_filter = EntityFilter::unfiltered().organization_id(&org_id);
+
         // If they can't pay for networks, remove them
         if let Some(included_networks) = plan.config().included_networks
             && plan.config().network_cents.is_none()
         {
-            let networks = self
-                .network_service
-                .get_all(EntityFilter::unfiltered().organization_id(&org_id))
-                .await?;
+            let networks = self.network_service.get_all(org_filter.clone()).await?;
             let keep_ids = networks
                 .iter()
                 .take(included_networks.try_into().unwrap_or(3))
@@ -718,42 +733,19 @@ impl BillingService {
             }
         }
 
-        // Downgrade permissions if needed
-        match plan {
-            BillingPlan::Community { .. } => {}
-            BillingPlan::Starter { .. } => {
-                let mut users = self
-                    .user_service
-                    .get_all(EntityFilter::unfiltered().organization_id(&org_id))
-                    .await?;
-                for user in &mut users {
-                    if user.base.permissions != UserOrgPermissions::Owner {
-                        user.base.permissions = UserOrgPermissions::None;
-                        self.user_service
-                            .update(user, AuthenticatedEntity::System)
-                            .await?;
-                    }
-                }
-            }
-            BillingPlan::Pro { .. } => {
-                let mut users = self
-                    .user_service
-                    .get_all(EntityFilter::unfiltered().organization_id(&org_id))
-                    .await?;
-                for user in &mut users {
-                    if user.base.permissions != UserOrgPermissions::Owner {
-                        user.base.permissions = UserOrgPermissions::Visualizer;
-                        self.user_service
-                            .update(user, AuthenticatedEntity::System)
-                            .await?;
-                    }
-                }
-            }
-            BillingPlan::Team { .. } => {}
-            BillingPlan::Business { .. } => {}
-            BillingPlan::Enterprise { .. } => {}
-            BillingPlan::Demo { .. } => {}
-            BillingPlan::CommercialSelfHosted { .. } => {}
+        // Remove embeds if not supported
+        if !plan.features().embeds {
+            let embed_ids: Vec<Uuid> = self
+                .share_service
+                .get_all(org_filter)
+                .await?
+                .iter()
+                .filter_map(|s| if s.is_embed_share() { Some(s.id) } else { None })
+                .collect();
+
+            self.share_service
+                .delete_many(&embed_ids, AuthenticatedEntity::System)
+                .await?;
         }
 
         organization.base.plan_status = Some(sub.status.to_string());

@@ -43,10 +43,12 @@
 			<Icon class="mt-0.5 h-4 w-4 shrink-0 {textColor}" />
 			<div class="flex-1">
 				{#if title}
-					<p class="text-sm font-medium {textColor}">{title}</p>
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					<p class="text-sm font-medium {textColor}">{@html title}</p>
 				{/if}
 				{#if body}
-					<p class={`${title ? 'mt-1' : ''} text-sm ${textColor}`}>{body}</p>
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+					<p class={`${title ? 'mt-1' : ''} text-sm ${textColor}`}>{@html body}</p>
 				{/if}
 			</div>
 			{#if dismissableKey}

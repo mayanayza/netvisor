@@ -14,6 +14,7 @@ pub mod networks;
 pub mod organizations;
 pub mod services;
 pub mod shared;
+pub mod shares;
 pub mod subnets;
 pub mod tags;
 pub mod topology;

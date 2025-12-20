@@ -2,26 +2,28 @@
 	import type { Edge } from '@xyflow/svelte';
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
-	import { getSubnetFromId } from '$lib/features/subnets/store';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
-	import { topology, topologyOptions } from '$lib/features/topology/store';
-	import { getInterfaceFromId } from '$lib/features/hosts/store';
-	import { get } from 'svelte/store';
+	import { topology as globalTopology, topologyOptions } from '$lib/features/topology/store';
+	import type { Topology } from '$lib/features/topology/types/base';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import type { Subnet } from '$lib/features/subnets/types/base';
+	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
 	let { edge, containerizingServiceId }: { edge: Edge; containerizingServiceId: string } = $props();
 
+	// Try to get topology from context (for share/embed pages), fallback to global store
+	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
+	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
+
 	let containerizingService = $derived(
-		$topology ? $topology.services.find((s) => s.id == containerizingServiceId) : null
+		topology ? topology.services.find((s) => s.id == containerizingServiceId) : null
 	);
 
 	let containerizingHost = $derived(
-		containerizingService
-			? $topology
-				? $topology.hosts.find((h) => h.id == containerizingService.host_id)
-				: null
+		containerizingService && topology
+			? topology.hosts.find((h) => h.id == containerizingService.host_id)
 			: null
 	);
 
@@ -30,15 +32,33 @@
 
 	// Get containerized services - all if grouped, or just the one in edge.target if not
 	let containerizedServices = $derived(
-		isGrouped
-			? $topology.services.filter(
-					(s) =>
-						s.virtualization &&
-						s.virtualization.type === 'Docker' &&
-						s.virtualization.details.service_id === containerizingServiceId
-				)
-			: $topology.services.filter((s) => s.bindings.some((b) => b.interface_id == edge.target))
+		topology
+			? isGrouped
+				? topology.services.filter(
+						(s) =>
+							s.virtualization &&
+							s.virtualization.type === 'Docker' &&
+							s.virtualization.details.service_id === containerizingServiceId
+					)
+				: topology.services.filter((s) => s.bindings.some((b) => b.interface_id == edge.target))
+			: []
 	);
+
+	// Helper to get interface from topology
+	function getInterfaceFromTopology(ifaceId: string) {
+		if (!topology) return null;
+		for (const host of topology.hosts) {
+			const iface = host.interfaces.find((i) => i.id === ifaceId);
+			if (iface) return iface;
+		}
+		return null;
+	}
+
+	// Helper to get subnet from topology
+	function getSubnetFromTopology(subnetId: string) {
+		if (!topology) return null;
+		return topology.subnets.find((s) => s.id === subnetId) || null;
+	}
 
 	// Get all Docker Bridge subnets for those containerized services
 	let allDockerSubnets = $derived.by(() => {
@@ -56,10 +76,10 @@
 
 				if (!ifaceId) continue;
 
-				const iface = get(getInterfaceFromId(ifaceId));
+				const iface = getInterfaceFromTopology(ifaceId);
 				if (!iface?.subnet_id) continue;
 
-				const subnet = get(getSubnetFromId(iface.subnet_id));
+				const subnet = getSubnetFromTopology(iface.subnet_id);
 				if (subnet?.subnet_type === 'DockerBridge') {
 					subnets.set(subnet.id, subnet);
 				}

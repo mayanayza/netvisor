@@ -49,10 +49,7 @@ impl HasId for Feature {
 
 impl Feature {
     pub fn is_coming_soon(&self) -> bool {
-        matches!(
-            self,
-            Feature::Webhooks | Feature::AuditLogs | Feature::Embeds
-        )
+        matches!(self, Feature::Webhooks | Feature::AuditLogs)
     }
 }
 
