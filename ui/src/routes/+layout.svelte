@@ -125,14 +125,13 @@
 			if (!isPublicRoute) {
 				// Check for password reset token - redirect to login with token
 				const token = $page.url.searchParams.get('token');
-				const isDemo = $page.url.searchParams.has('demo');
+				const isDemo = $page.url.hostname === 'demo.scanopy.net';
 				if (token) {
 					// eslint-disable-next-line svelte/no-navigation-without-resolve
 					await goto(`${resolve('/login')}?token=${token}`);
 				} else if (isDemo) {
-					// Demo mode - redirect to login with demo param
-					// eslint-disable-next-line svelte/no-navigation-without-resolve
-					await goto(`${resolve('/login')}?demo`);
+					// Demo mode - redirect to login
+					await goto(resolve('/login'));
 				} else if (typeof localStorage !== 'undefined' && localStorage.getItem('hasAccount')) {
 					// Returning user (has logged in before) - redirect to login
 					await goto(resolve('/login'));

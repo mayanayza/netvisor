@@ -40,7 +40,7 @@ async fn create_invite(
     _demo_check: RequireFeature<BlockedInDemoMode>,
     Json(request): Json<CreateInviteRequest>,
 ) -> ApiResult<Json<ApiResponse<Invite>>> {
-    // Seat limit check - only applies if permissions count towards seats
+    // Seat limit check
     if let Some(max_seats) = plan.config().included_seats
         && plan.config().seat_cents.is_none()
     {

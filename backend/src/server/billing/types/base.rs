@@ -192,8 +192,12 @@ impl BillingPlan {
         )
     }
 
+    pub fn is_demo(&self) -> bool {
+        matches!(self, BillingPlan::Demo(_))
+    }
+
     pub fn can_invite_users(&self) -> bool {
-        self.config().seat_cents.is_some()
+        self.config().included_seats.unwrap_or(u64::MAX) > 1 && self.config().seat_cents.is_some()
     }
 
     pub fn hosting(&self) -> Hosting {
