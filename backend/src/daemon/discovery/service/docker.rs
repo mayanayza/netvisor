@@ -128,9 +128,7 @@ impl RunsDiscovery for DiscoveryRunner<DockerScanDiscovery> {
         }
 
         // Create service for docker daemon (pass interfaces for proper host matching)
-        let (_, services) = self
-            .create_docker_daemon_service(&host_interfaces)
-            .await?;
+        let (_, services) = self.create_docker_daemon_service(&host_interfaces).await?;
 
         let docker_daemon_service = services
             .first()

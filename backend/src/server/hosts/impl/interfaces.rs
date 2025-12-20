@@ -41,6 +41,7 @@ impl Hash for Interface {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.base.ip_address.hash(state);
         self.base.subnet_id.hash(state);
+        self.base.mac_address.hash(state);
     }
 }
 
@@ -48,6 +49,9 @@ impl PartialEq for Interface {
     fn eq(&self, other: &Self) -> bool {
         (self.base.ip_address == other.base.ip_address
             && self.base.subnet_id == other.base.subnet_id)
+            || (self.base.mac_address == other.base.mac_address
+                && self.base.mac_address.is_some()
+                && other.base.mac_address.is_some())
             || (self.id == other.id)
     }
 }
