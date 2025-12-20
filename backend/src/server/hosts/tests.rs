@@ -51,7 +51,7 @@ async fn test_host_deduplication_on_create() {
     host2.base.source = EntitySource::Discovery {
         metadata: vec![DiscoveryMetadata::default()],
     };
-    host2.base.interfaces = vec!(host1_interface.clone());
+    host2.base.interfaces = vec![host1_interface.clone()];
     let (created2, _) = services
         .host_service
         .create_host_with_services(host2.clone(), vec![], AuthenticatedEntity::System)
