@@ -14,13 +14,14 @@ let lastTopologyId = '';
 export const topologies = writable<Topology[]>([]);
 export const topology = writable<Topology>();
 export const selectedNetwork = writable<string>('');
-export const autoRebuild = writable<boolean>(true);
+export const autoRebuild = writable<boolean>(loadAutoRebuildFromStorage());
 
 export const selectedNode = writable<Node | null>(null);
 export const selectedEdge = writable<Edge | null>(null);
 
 const OPTIONS_STORAGE_KEY = 'scanopy_topology_options';
 const EXPANDED_STORAGE_KEY = 'scanopy_topology_options_expanded_state';
+const AUTO_REBUILD_STORAGE_KEY = 'scanopy_topology_auto_rebuild';
 
 // Default options
 const defaultOptions: TopologyOptions = {
@@ -120,6 +121,19 @@ function initializeSubscriptions() {
 			optionsPanelExpanded.subscribe((expanded) => {
 				saveExpandedToStorage(expanded);
 			});
+
+			// Load autoRebuild from localStorage and set up persistence
+			const storedAutoRebuild = loadAutoRebuildFromStorage();
+			autoRebuild.set(storedAutoRebuild);
+			let autoRebuildInitialized = false;
+			autoRebuild.subscribe((value) => {
+				// Skip the first subscription call to avoid overwriting localStorage
+				if (!autoRebuildInitialized) {
+					autoRebuildInitialized = true;
+					return;
+				}
+				saveAutoRebuildToStorage(value);
+			});
 		}
 	}
 }
@@ -191,6 +205,32 @@ function saveExpandedToStorage(expanded: boolean): void {
 		localStorage.setItem(EXPANDED_STORAGE_KEY, JSON.stringify(expanded));
 	} catch (error) {
 		console.error('Failed to save topology expanded state to localStorage:', error);
+	}
+}
+
+// Load auto rebuild state from localStorage or use default (true)
+function loadAutoRebuildFromStorage(): boolean {
+	if (typeof window === 'undefined') return true;
+
+	try {
+		const stored = localStorage.getItem(AUTO_REBUILD_STORAGE_KEY);
+		if (stored !== null) {
+			return JSON.parse(stored);
+		}
+	} catch (error) {
+		console.warn('Failed to load auto rebuild state from localStorage:', error);
+	}
+	return true;
+}
+
+// Save auto rebuild state to localStorage
+function saveAutoRebuildToStorage(autoRebuild: boolean): void {
+	if (typeof window === 'undefined') return;
+
+	try {
+		localStorage.setItem(AUTO_REBUILD_STORAGE_KEY, JSON.stringify(autoRebuild));
+	} catch (error) {
+		console.error('Failed to save auto rebuild state to localStorage:', error);
 	}
 }
 

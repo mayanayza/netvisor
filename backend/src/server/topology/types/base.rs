@@ -156,7 +156,7 @@ pub struct TopologyRequestOptions {
 impl Default for TopologyRequestOptions {
     fn default() -> Self {
         Self {
-            group_docker_bridges_by_host: false,
+            group_docker_bridges_by_host: true,
             hide_vm_title_on_docker_container: false,
             hide_ports: false,
             left_zone_service_categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],
