@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::topology::{
@@ -11,6 +11,7 @@ use crate::server::topology::{
 
 const GRID_SIZE: isize = 25;
 const CONVERGENCE_THRESHOLD: f64 = 1.0; // Stop when improvement < 1.0 pixels
+const SUBNET_PADDING: isize = 125;
 
 /// Subnet positioner using layer-by-layer sweep with barycenter heuristic
 ///
@@ -411,6 +412,7 @@ impl<'a> SubnetPositioner<'a> {
     }
 
     /// Apply constraint to prevent overlapping with other subnets in the same row
+    /// Loops until the position doesn't overlap with ANY other subnet
     fn apply_non_overlap_constraint(
         &self,
         nodes: &[Node],
@@ -425,44 +427,353 @@ impl<'a> SubnetPositioner<'a> {
 
         let y = current_subnet.position.y;
         let width = current_subnet.size.x as isize;
-        let padding = 50;
 
-        // Check against other subnets in the same row
-        for other in nodes.iter() {
-            if !matches!(other.node_type, NodeType::SubnetNode { .. })
-                || other.id == subnet_id
-                || other.position.y != y
-            {
-                continue;
-            }
+        // Collect all other subnets in the same row with their positions
+        let mut other_subnets: Vec<(Uuid, isize, isize)> = nodes
+            .iter()
+            .filter(|other| {
+                matches!(other.node_type, NodeType::SubnetNode { .. })
+                    && other.id != subnet_id
+                    && other.position.y == y
+            })
+            .map(|other| {
+                let other_x = already_positioned
+                    .get(&other.id)
+                    .copied()
+                    .unwrap_or(other.position.x);
+                (other.id, other_x, other.size.x as isize)
+            })
+            .collect();
 
-            let other_x = already_positioned
-                .get(&other.id)
-                .copied()
-                .unwrap_or(other.position.x);
-            let other_width = other.size.x as isize;
+        // Sort by X position for predictable collision resolution
+        other_subnets.sort_by_key(|(_, x, _)| *x);
 
-            let proposed_right = proposed_x + width;
-            let other_right = other_x + other_width;
+        // Check if proposed position has no overlaps
+        let has_overlap = |x: isize| -> bool {
+            let right = x + width;
+            other_subnets.iter().any(|&(_, other_x, other_width)| {
+                let other_right = other_x + other_width;
+                x < other_right + SUBNET_PADDING && right + SUBNET_PADDING > other_x
+            })
+        };
 
-            // Check for overlap
-            if proposed_x < other_right + padding && proposed_right + padding > other_x {
-                // Overlap detected - push to the nearest non-overlapping position
-                let push_left = other_x - width - padding;
-                let push_right = other_right + padding;
+        if !has_overlap(proposed_x) {
+            return proposed_x;
+        }
 
-                // Choose the direction that moves the subnet less
-                let constrained_x =
-                    if (proposed_x - push_left).abs() < (proposed_x - push_right).abs() {
-                        push_left
-                    } else {
-                        push_right
-                    };
+        // Find all candidate positions (gaps between subnets and edges of subnets)
+        let mut candidates: Vec<isize> = Vec::new();
 
-                return constrained_x;
+        // Add position to the left of each subnet
+        for &(_, other_x, _) in &other_subnets {
+            candidates.push(other_x - width - SUBNET_PADDING);
+        }
+
+        // Add position to the right of each subnet
+        for &(_, other_x, other_width) in &other_subnets {
+            candidates.push(other_x + other_width + SUBNET_PADDING);
+        }
+
+        // Find the valid candidate closest to proposed_x
+        let mut best_x = proposed_x;
+        let mut best_distance = isize::MAX;
+
+        for candidate in candidates {
+            if !has_overlap(candidate) {
+                let distance = (proposed_x - candidate).abs();
+                if distance < best_distance {
+                    best_distance = distance;
+                    best_x = candidate;
+                }
             }
         }
 
-        proposed_x
+        best_x
+    }
+
+    /// Compress horizontal spacing between subnets while preserving edge-optimized positions
+    ///
+    /// This runs AFTER edge-based optimization as a lower-priority pass.
+    /// Subnets with non-horizontal edges are "locked" (already optimally positioned).
+    /// Unlocked subnets are compressed to minimize empty space.
+    ///
+    /// Algorithm:
+    /// 1. Identify locked subnets (those with vertical or mixed inter-subnet edges)
+    /// 2. For each layer (row), sort subnets by X position
+    /// 3. Compress unlocked subnets toward locked ones or toward left edge
+    pub fn compress_horizontal_spacing(&self, nodes: &mut [Node], edges: &[Edge]) {
+        // Find subnets with non-horizontal edges (these are "locked")
+        let locked_subnets = self.find_locked_subnets(nodes, edges);
+
+        // Group subnets by layer (Y position)
+        let layers = self.group_subnets_by_layer(
+            nodes,
+            &nodes
+                .iter()
+                .filter_map(|n| match n.node_type {
+                    NodeType::SubnetNode { .. } => Some(n.id),
+                    _ => None,
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        // Compress each layer
+        for layer in &layers {
+            self.compress_layer(nodes, layer, &locked_subnets, SUBNET_PADDING);
+        }
+
+        // Snap all positions to grid
+        for node in nodes.iter_mut() {
+            if matches!(node.node_type, NodeType::SubnetNode { .. }) {
+                node.position.x = Self::snap_to_grid(node.position.x as f64);
+            }
+        }
+    }
+
+    /// Find subnets that have non-horizontal inter-subnet edges (vertical or mixed)
+    /// These subnets should not be moved as they're positioned for optimal edge routing
+    fn find_locked_subnets(&self, nodes: &[Node], edges: &[Edge]) -> HashSet<Uuid> {
+        let mut locked = HashSet::new();
+
+        for edge in edges {
+            // Skip intra-subnet and multi-hop edges
+            if self.context.edge_is_intra_subnet(edge) || edge.is_multi_hop {
+                continue;
+            }
+
+            let source_is_horizontal = edge.source_handle.is_horizontal();
+            let target_is_horizontal = edge.target_handle.is_horizontal();
+
+            // If edge is not fully horizontal, lock both connected subnets
+            if !(source_is_horizontal && target_is_horizontal) {
+                if let Some(source_subnet) = self.context.get_node_subnet(edge.source, nodes) {
+                    locked.insert(source_subnet);
+                }
+                if let Some(target_subnet) = self.context.get_node_subnet(edge.target, nodes) {
+                    locked.insert(target_subnet);
+                }
+            }
+        }
+
+        locked
+    }
+
+    /// Compress a single layer of subnets
+    ///
+    /// Strategy: Push unlocked subnets toward locked ones (or toward left edge if no locked subnets)
+    fn compress_layer(
+        &self,
+        nodes: &mut [Node],
+        layer: &[Uuid],
+        locked_subnets: &HashSet<Uuid>,
+        padding: isize,
+    ) {
+        if layer.len() < 2 {
+            return;
+        }
+
+        // Get subnet info and sort by X position
+        let mut subnet_info: Vec<(Uuid, isize, isize, bool)> = layer
+            .iter()
+            .filter_map(|&id| {
+                nodes.iter().find(|n| n.id == id).map(|n| {
+                    (
+                        id,
+                        n.position.x,
+                        n.size.x as isize,
+                        locked_subnets.contains(&id),
+                    )
+                })
+            })
+            .collect();
+
+        subnet_info.sort_by_key(|(_, x, _, _)| *x);
+
+        // Find locked subnet indices
+        let locked_indices: Vec<usize> = subnet_info
+            .iter()
+            .enumerate()
+            .filter_map(|(i, (_, _, _, is_locked))| if *is_locked { Some(i) } else { None })
+            .collect();
+
+        if locked_indices.is_empty() {
+            // No locked subnets - compress everything toward the left
+            self.compress_toward_left(nodes, &subnet_info, padding);
+        } else {
+            // Compress unlocked subnets toward nearest locked subnet
+            self.compress_toward_locked(nodes, &subnet_info, &locked_indices, padding);
+        }
+    }
+
+    /// Compress all subnets toward the left edge
+    fn compress_toward_left(
+        &self,
+        nodes: &mut [Node],
+        subnet_info: &[(Uuid, isize, isize, bool)],
+        padding: isize,
+    ) {
+        if subnet_info.is_empty() {
+            return;
+        }
+
+        // Start from the leftmost subnet's current position (preserve it as anchor)
+        let first_x = subnet_info[0].1;
+        let mut current_x = first_x;
+
+        for (id, _, width, _) in subnet_info {
+            if let Some(node) = nodes.iter_mut().find(|n| n.id == *id) {
+                node.position.x = current_x;
+                current_x += width + padding;
+            }
+        }
+    }
+
+    /// Compress unlocked subnets toward the nearest locked subnet
+    fn compress_toward_locked(
+        &self,
+        nodes: &mut [Node],
+        subnet_info: &[(Uuid, isize, isize, bool)],
+        locked_indices: &[usize],
+        padding: isize,
+    ) {
+        // For each unlocked subnet, find the nearest locked subnet and compress toward it
+        // Process in order from left to right
+
+        let mut new_positions: HashMap<Uuid, isize> = HashMap::new();
+
+        // First, record locked positions
+        for &idx in locked_indices {
+            let (id, x, _, _) = subnet_info[idx];
+            new_positions.insert(id, x);
+        }
+
+        // Process subnets between/around locked ones
+        // Split into segments defined by locked subnets
+        let mut segments: Vec<(Option<usize>, Option<usize>, Vec<usize>)> = Vec::new();
+
+        let mut current_segment_start: Option<usize> = None;
+        let mut current_segment: Vec<usize> = Vec::new();
+
+        for (idx, (_, _, _, is_locked)) in subnet_info.iter().enumerate() {
+            if *is_locked {
+                if !current_segment.is_empty() {
+                    segments.push((current_segment_start, Some(idx), current_segment.clone()));
+                    current_segment.clear();
+                }
+                current_segment_start = Some(idx);
+            } else {
+                current_segment.push(idx);
+            }
+        }
+
+        // Handle trailing segment (after last locked subnet)
+        if !current_segment.is_empty() {
+            segments.push((current_segment_start, None, current_segment));
+        }
+
+        // Process each segment
+        for (left_anchor, right_anchor, unlocked_indices) in segments {
+            match (left_anchor, right_anchor) {
+                (Some(left_idx), Some(right_idx)) => {
+                    // Subnets between two locked subnets - compress toward the left anchor
+                    let anchor_x = subnet_info[left_idx].1;
+                    let anchor_width = subnet_info[left_idx].2;
+                    let mut current_x = anchor_x + anchor_width + padding;
+
+                    for &idx in &unlocked_indices {
+                        let (id, _, width, _) = subnet_info[idx];
+                        // Only move if it would compress (move left)
+                        let original_x = subnet_info[idx].1;
+                        let new_x = current_x.min(original_x);
+                        new_positions.insert(id, new_x);
+                        current_x = new_x + width + padding;
+                    }
+
+                    // Ensure we don't overlap with the right anchor
+                    let right_anchor_x = subnet_info[right_idx].1;
+                    let last_unlocked_idx = *unlocked_indices.last().unwrap();
+                    let last_unlocked_id = subnet_info[last_unlocked_idx].0;
+                    let last_unlocked_width = subnet_info[last_unlocked_idx].2;
+
+                    if let Some(&last_x) = new_positions.get(&last_unlocked_id)
+                        && last_x + last_unlocked_width + padding > right_anchor_x
+                    {
+                        // Would overlap - leave original positions
+                        for &idx in &unlocked_indices {
+                            let (id, original_x, _, _) = subnet_info[idx];
+                            new_positions.insert(id, original_x);
+                        }
+                    }
+                }
+                (Some(left_idx), None) => {
+                    // Subnets after the last locked subnet - compress toward it
+                    let anchor_x = subnet_info[left_idx].1;
+                    let anchor_width = subnet_info[left_idx].2;
+                    let mut current_x = anchor_x + anchor_width + padding;
+
+                    for &idx in &unlocked_indices {
+                        let (id, _, width, _) = subnet_info[idx];
+                        let original_x = subnet_info[idx].1;
+                        let new_x = current_x.min(original_x);
+                        new_positions.insert(id, new_x);
+                        current_x = new_x + width + padding;
+                    }
+                }
+                (None, Some(right_idx)) => {
+                    // Subnets before the first locked subnet - compress toward left edge
+                    // But stop before hitting the locked subnet
+                    let right_anchor_x = subnet_info[right_idx].1;
+
+                    if unlocked_indices.is_empty() {
+                        continue;
+                    }
+
+                    // Start from first subnet position and compress
+                    let first_unlocked_x = subnet_info[unlocked_indices[0]].1;
+                    let mut current_x = first_unlocked_x;
+
+                    for &idx in &unlocked_indices {
+                        let (id, _, width, _) = subnet_info[idx];
+                        new_positions.insert(id, current_x);
+                        current_x += width + padding;
+                    }
+
+                    // Check if we'd overlap with right anchor
+                    let last_idx = *unlocked_indices.last().unwrap();
+                    let last_id = subnet_info[last_idx].0;
+                    let last_width = subnet_info[last_idx].2;
+
+                    if let Some(&last_x) = new_positions.get(&last_id)
+                        && last_x + last_width + padding > right_anchor_x
+                    {
+                        // Would overlap - leave original positions
+                        for &idx in &unlocked_indices {
+                            let (id, original_x, _, _) = subnet_info[idx];
+                            new_positions.insert(id, original_x);
+                        }
+                    }
+                }
+                (None, None) => {
+                    // No locked subnets at all - shouldn't happen since we check earlier
+                    // but handle gracefully by compressing toward left
+                    self.compress_toward_left(
+                        nodes,
+                        &unlocked_indices
+                            .iter()
+                            .map(|&idx| subnet_info[idx])
+                            .collect::<Vec<_>>(),
+                        padding,
+                    );
+                    return;
+                }
+            }
+        }
+
+        // Apply new positions
+        for (id, new_x) in new_positions {
+            if let Some(node) = nodes.iter_mut().find(|n| n.id == id) {
+                node.position.x = new_x;
+            }
+        }
     }
 }

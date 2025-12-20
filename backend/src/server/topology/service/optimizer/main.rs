@@ -71,6 +71,11 @@ impl<'a> TopologyOptimizer<'a> {
             prev_quality = current_quality;
         }
 
+        // Compress horizontal spacing between subnets (lower priority than edge optimization)
+        // This locks subnets with non-horizontal edges and compresses unlocked ones
+        self.subnet_positioner
+            .compress_horizontal_spacing(nodes, &optimized_edges);
+
         self.child_positioner.compress_vertical_spacing(nodes);
 
         optimized_edges = self
