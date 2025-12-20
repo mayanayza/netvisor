@@ -38,23 +38,16 @@ pub async fn update_org_name(
     RequireOwner(user): RequireOwner,
     _demo_check: RequireFeature<BlockedInDemoMode>,
     Path(id): Path<Uuid>,
-    Json(mut org): Json<Organization>,
+    Json(name): Json<String>,
 ) -> ApiResult<Json<ApiResponse<Organization>>> {
-    if id != org.id {
-        return Err(ApiError::bad_request("Org ID must match path ID"));
-    }
-
-    let current_org = state
+    let mut org = state
         .services
         .organization_service
-        .get_by_id(&org.id)
+        .get_by_id(&id)
         .await?
         .ok_or_else(|| anyhow!("Could not find org"))?;
 
-    org.base.onboarding = current_org.base.onboarding;
-    org.base.plan = current_org.base.plan;
-    org.base.stripe_customer_id = current_org.base.stripe_customer_id;
-    org.base.plan_status = current_org.base.plan_status;
+    org.base.name = name;
 
     update_handler::<Organization>(
         axum::extract::State(state),

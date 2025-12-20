@@ -14,7 +14,7 @@ export interface User {
 	tags: string[];
 }
 
-export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Visualizer' | 'None';
+export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Viewer';
 
 export type UserOrInvite =
 	| { type: 'user'; data: User; id: string }

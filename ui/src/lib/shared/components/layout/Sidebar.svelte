@@ -38,6 +38,7 @@
 	import OrganizationSettingsModal from '$lib/features/organizations/OrganizationSettingsModal.svelte';
 	import TagTab from '$lib/features/tags/components/TagTab.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
+	import ShareTab from '$lib/features/shares/components/ShareTab.svelte';
 
 	let {
 		activeTab = $bindable('topology'),
@@ -95,6 +96,13 @@
 					label: 'Topology',
 					icon: entities.getIconComponent('Topology'),
 					component: TopologyTab
+				},
+				{
+					id: 'shares',
+					label: 'Sharing',
+					icon: entities.getIconComponent('Share'),
+					component: ShareTab,
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				}
 			]
 		},

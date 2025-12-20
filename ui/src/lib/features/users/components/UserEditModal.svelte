@@ -165,7 +165,7 @@
 				helpText="Choose the access level for this user"
 			/>
 
-			<!-- Network Assignment (only for Member/Visualizer) -->
+			<!-- Network Assignment (only for Member/Viewer) -->
 			{#if !networksNotNeeded.includes($permissionsField.value as UserOrgPermissions)}
 				<ListManager
 					label="Networks"

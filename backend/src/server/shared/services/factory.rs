@@ -1,7 +1,7 @@
 use crate::server::{
     api_keys::service::ApiKeyService,
     auth::{oidc::OidcService, service::AuthService},
-    billing::service::BillingService,
+    billing::service::{BillingService, BillingServiceParams},
     config::ServerConfig,
     daemons::service::DaemonService,
     discovery::service::DiscoveryService,
@@ -14,6 +14,7 @@ use crate::server::{
     organizations::service::OrganizationService,
     services::service::ServiceService,
     shared::{events::bus::EventBus, storage::factory::StorageFactory},
+    shares::service::ShareService,
     subnets::service::SubnetService,
     tags::service::TagService,
     topology::service::main::TopologyService,
@@ -36,6 +37,7 @@ pub struct ServiceFactory {
     pub api_key_service: Arc<ApiKeyService>,
     pub organization_service: Arc<OrganizationService>,
     pub invite_service: Arc<InviteService>,
+    pub share_service: Arc<ShareService>,
     pub oidc_service: Option<Arc<OidcService>>,
     pub billing_service: Option<Arc<BillingService>>,
     pub email_service: Option<Arc<EmailService>>,
@@ -67,6 +69,8 @@ impl ServiceFactory {
             storage.invites.clone(),
             event_bus.clone(),
         ));
+
+        let share_service = Arc::new(ShareService::new(storage.shares.clone(), event_bus.clone()));
 
         let tag_service = Arc::new(TagService::new(storage.tags.clone(), event_bus.clone()));
 
@@ -142,18 +146,19 @@ impl ServiceFactory {
         });
 
         let billing_service = config.clone().and_then(|c| {
-            if let Some(strip_secret) = c.stripe_secret
+            if let Some(stripe_secret) = c.stripe_secret
                 && let Some(webhook_secret) = c.stripe_webhook_secret
             {
-                return Some(Arc::new(BillingService::new(
-                    strip_secret,
+                return Some(Arc::new(BillingService::new(BillingServiceParams {
+                    stripe_secret,
                     webhook_secret,
-                    organization_service.clone(),
-                    invite_service.clone(),
-                    user_service.clone(),
-                    network_service.clone(),
-                    event_bus.clone(),
-                )));
+                    organization_service: organization_service.clone(),
+                    invite_service: invite_service.clone(),
+                    user_service: user_service.clone(),
+                    network_service: network_service.clone(),
+                    share_service: share_service.clone(),
+                    event_bus: event_bus.clone(),
+                })));
             }
             None
         });
@@ -211,6 +216,7 @@ impl ServiceFactory {
             api_key_service,
             organization_service,
             invite_service,
+            share_service,
             oidc_service,
             billing_service,
             email_service,

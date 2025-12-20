@@ -1,5 +1,5 @@
 use axum::{Json, http::StatusCode, response::Response};
-use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -131,6 +131,23 @@ impl<T> EmptyToOption<Vec<T>> for Vec<T> {
     fn empty_to_option(self) -> Option<Vec<T>> {
         if self.is_empty() { None } else { Some(self) }
     }
+}
+
+pub fn serialize_sensitive_info<S>(_key: &String, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str("**********")
+}
+
+pub fn serialize_optional_sensitive_info<S>(
+    _key: &Option<String>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str("**********")
 }
 
 pub fn deserialize_empty_string_as_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>

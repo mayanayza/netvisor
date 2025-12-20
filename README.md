@@ -29,7 +29,7 @@ Scanopy scans your network, identifies hosts and services, and generates an inte
 - **Interactive Topology**: Generates visual network diagrams with extensive customization options
 - **Multi-VLAN Support**: Deploy daemons and scan across network segments to map complex topologies
 - **Docker Integration**: Discovers containerized services automatically
-- **Organization Management**: Multi-user support with role-based permissions (Owner, Admin, Member, Visualizer)
+- **Organization Management**: Multi-user support with role-based permissions (Owner, Admin, Member, Viewer)
 - **Scheduled Discovery**: Automated scanning to keep documentation current
 - **Export & Share**: Download topology diagrams as PNG images
 

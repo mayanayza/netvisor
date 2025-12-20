@@ -169,7 +169,10 @@ impl TopologyService {
     ) -> Result<(Vec<Host>, Vec<Subnet>, Vec<Group>), Error> {
         let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
         // Fetch all data
-        let hosts = self.host_service.get_all(network_filter.clone()).await?;
+        let hosts = self
+            .host_service
+            .get_all(network_filter.clone().hidden_is(false))
+            .await?;
         let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
         let groups = self.group_service.get_all(network_filter.clone()).await?;
 

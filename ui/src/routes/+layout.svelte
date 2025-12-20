@@ -94,14 +94,15 @@
 		// Check authentication status and get public server config
 		await Promise.all([checkAuth(), getConfig()]);
 
-		// Redirect if not authenticated and not on an auth route
+		// Redirect if not authenticated and not on an auth/public route
 		if (!$isAuthenticated) {
-			const isAuthRoute =
+			const isPublicRoute =
 				$page.url.pathname === '/auth' ||
 				$page.url.pathname === '/login' ||
-				$page.url.pathname === '/onboarding';
+				$page.url.pathname === '/onboarding' ||
+				$page.url.pathname.startsWith('/share/');
 
-			if (!isAuthRoute) {
+			if (!isPublicRoute) {
 				// Check for password reset token - redirect to login with token
 				const token = $page.url.searchParams.get('token');
 				const isDemo = $page.url.searchParams.has('demo');
@@ -141,10 +142,14 @@
 				}
 
 				// Check if current page matches where user should be
-				const correctRoute = getRoute();
-				if ($page.url.pathname !== correctRoute) {
-					// eslint-disable-next-line svelte/no-navigation-without-resolve
-					await goto(correctRoute);
+				// Skip redirect for public share pages - authenticated users can still view them
+				const isSharePage = $page.url.pathname.startsWith('/share/');
+				if (!isSharePage) {
+					const correctRoute = getRoute();
+					if ($page.url.pathname !== correctRoute) {
+						// eslint-disable-next-line svelte/no-navigation-without-resolve
+						await goto(correctRoute);
+					}
 				}
 			} else {
 				pushError('Failed to load organization. Please refresh the page.');

@@ -1,32 +1,50 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
-	import { getPortFromId } from '$lib/features/hosts/store';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { isContainerSubnet } from '$lib/features/subnets/store';
-	import { selectedEdge, selectedNode, topology, topologyOptions } from '../../store';
-	import type { InterfaceNode, NodeRenderData } from '../../types/base';
-	import { get } from 'svelte/store';
+	import {
+		selectedEdge,
+		selectedNode,
+		topology as globalTopology,
+		topologyOptions
+	} from '../../store';
+	import type {
+		InterfaceNode as InterfaceNodeType,
+		NodeRenderData,
+		Topology
+	} from '../../types/base';
+	import { get, type Writable } from 'svelte/store';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { connectedNodeIds } from '../../interactions';
+	import { getContext } from 'svelte';
+	import type { Port } from '$lib/features/hosts/types/base';
 
 	let { id, data, width, height }: NodeProps = $props();
 
-	let nodeData = data as InterfaceNode;
+	// Try to get topology from context (for share/embed pages), fallback to global store
+	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
+	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
+
+	let nodeData = data as InterfaceNodeType;
 
 	height = height ? height : 0;
 	width = width ? width : 0;
 
-	$effect(() => {
-		void $topology;
-	});
-
-	let host = $derived(
-		$topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : undefined
-	);
+	let host = $derived(topology ? topology.hosts.find((h) => h.id == nodeData.host_id) : undefined);
 
 	let servicesForHost = $derived(
-		$topology ? $topology.services.filter((s) => s.host_id == nodeData.host_id) : []
+		topology ? topology.services.filter((s) => s.host_id == nodeData.host_id) : []
 	);
+
+	// Look up port from topology hosts (works for both main app and share pages)
+	function getPortById(portId: string): Port | null {
+		if (!topology) return null;
+		for (const h of topology.hosts) {
+			const port = h.ports.find((p) => p.id === portId);
+			if (port) return port;
+		}
+		return null;
+	}
 
 	// Compute nodeRenderData reactively
 	let nodeRenderData: NodeRenderData | null = $derived(
@@ -160,7 +178,7 @@
 												(b.interface_id == nodeRenderData.interface_id || b.interface_id == null) &&
 												b.type == 'Port'
 											) {
-												const port = get(getPortFromId(b.port_id));
+												const port = getPortById(b.port_id);
 												if (port) {
 													return formatPort(port);
 												}

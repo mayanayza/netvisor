@@ -57,13 +57,7 @@ impl EventSubscriber for BillingService {
                         let network_count =
                             self.network_service.get_all(filter.clone()).await?.len();
 
-                        let seat_count = self
-                            .user_service
-                            .get_all(filter)
-                            .await?
-                            .iter()
-                            .filter(|u| u.base.permissions.counts_towards_seats())
-                            .count();
+                        let seat_count = self.user_service.get_all(filter).await?.len();
 
                         // When user has just been created org won't yet have a billing plan
                         if org.base.plan.is_none() {

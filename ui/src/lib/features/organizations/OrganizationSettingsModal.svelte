@@ -12,9 +12,9 @@
 	import {
 		getOrganization,
 		organization,
-		updateOrganization,
+		populateDemoData,
 		resetOrganizationData,
-		populateDemoData
+		updateOrganizationName
 	} from './store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
@@ -68,10 +68,7 @@
 
 		saving = true;
 		try {
-			const result = await updateOrganization({
-				...org,
-				name: formData.name.trim()
-			});
+			const result = await updateOrganizationName(org.id, formData.name);
 
 			if (result?.success) {
 				pushSuccess('Organization updated successfully');
@@ -100,7 +97,7 @@
 
 		if (
 			!confirm(
-				'Are you sure you want to reset all organization data? This will delete all networks, hosts, daemons, API keys, and invites. This action cannot be undone.'
+				'Are you sure you want to reset all organization data? This will delete all entities and users from your organization. This action cannot be undone.'
 			)
 		) {
 			return;
