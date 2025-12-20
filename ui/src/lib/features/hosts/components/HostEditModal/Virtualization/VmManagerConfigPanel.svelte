@@ -22,9 +22,11 @@
 	);
 	$: vmIds = managedVms.map((h) => h.id);
 	// Filter out the parent host and already managed VMs
-	$: selectableVms = $hosts.filter(
-		(host) => service.host_id !== host.id && !vmIds.includes(host.id)
-	);
+	$: selectableVms = $hosts
+		.filter(
+			(host) => service.host_id !== host.id && !vmIds.includes(host.id)
+		)
+		.filter((h) => h.network_id == service.network_id)
 
 	function handleAddVm(vmId: string) {
 		const hostStore = getHostFromId(vmId);
