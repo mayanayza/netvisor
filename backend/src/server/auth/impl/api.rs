@@ -4,7 +4,6 @@ use uuid::Uuid;
 use validator::Validate;
 
 /// Login request from client
-/// Note: 'name' is used as the username
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct LoginRequest {
     pub email: EmailAddress,
@@ -14,7 +13,6 @@ pub struct LoginRequest {
 }
 
 /// Registration request from client
-/// Note: 'name' is used as the username
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct RegisterRequest {
     pub email: EmailAddress,
@@ -22,7 +20,6 @@ pub struct RegisterRequest {
     #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
     #[validate(custom(function = "validate_password_complexity"))]
     pub password: String,
-    pub subscribed: bool,
     pub terms_accepted: bool,
 }
 
@@ -64,7 +61,6 @@ pub struct UpdateEmailPasswordRequest {
 pub struct OidcAuthorizeParams {
     pub flow: Option<String>, // "login", "register", or "link"
     pub return_url: Option<String>,
-    pub subscribed: Option<bool>,
     pub terms_accepted: Option<bool>,
 }
 

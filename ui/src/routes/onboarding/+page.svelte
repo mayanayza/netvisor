@@ -8,7 +8,7 @@
 	import UseCaseStep from '$lib/features/auth/components/onboarding/UseCaseStep.svelte';
 	import BlockerFlow from '$lib/features/auth/components/onboarding/BlockerFlow.svelte';
 	import MultiDaemonSetup from '$lib/features/auth/components/onboarding/MultiDaemonSetup.svelte';
-	import type { SetupRequest, RegisterRequest } from '$lib/features/auth/types/base';
+	import type { RegisterRequest, SetupRequest } from '$lib/features/auth/types/base';
 	import { submitSetup, register, checkAuth } from '$lib/features/auth/store';
 	import { getOrganization } from '$lib/features/organizations/store';
 	import { navigate } from '$lib/shared/utils/navigation';
@@ -16,7 +16,7 @@
 	import { resolve } from '$app/paths';
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { setPreferredNetwork } from '$lib/features/topology/store';
-	import { trackEvent } from '$lib/shared/utils/analytics';
+	import { trackEvent, trackPlunkEvent } from '$lib/shared/utils/analytics';
 
 	// URL params for invite flow
 	let orgName = $derived($page.url.searchParams.get('org_name'));
@@ -112,9 +112,13 @@
 		}
 	}
 
-	async function handleRegister(data: RegisterRequest) {
+	async function handleRegister(data: RegisterRequest, subscribed: boolean) {
+		// Extract subscribed for Plunk, send rest to backend
 		const user = await register(data);
 		if (!user) return;
+
+		// Track registration in Plunk for email marketing
+		trackPlunkEvent('register', user.email, subscribed);
 
 		// Before clearing onboarding store, get state for tracking and network preference
 		const state = onboardingStore.getState();

@@ -133,8 +133,7 @@ impl AuthService {
                 ip_address: ip,
                 user_agent,
                 metadata: serde_json::json!({
-                    "method": "password",
-                    "subscribed": request.subscribed
+                    "method": "password"
                 }),
                 authentication: user.clone().into(),
             })

@@ -3,7 +3,13 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
-	import { checkAuth, isCheckingAuth, isAuthenticated } from '$lib/features/auth/store';
+	import {
+		checkAuth,
+		isCheckingAuth,
+		isAuthenticated,
+		currentUser
+	} from '$lib/features/auth/store';
+	import { identifyUser, trackPlunkEvent, disableAnalytics } from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import '../app.css';
 	import { resolve } from '$app/paths';
@@ -59,6 +65,20 @@
 				opt_out_capturing_by_default: true
 			});
 			posthogInitialized = true;
+		}
+	});
+
+	// Identify user in PostHog when authenticated (skipped in demo mode by identifyUser)
+	$effect(() => {
+		if (posthogInitialized && $currentUser) {
+			identifyUser($currentUser.id, $currentUser.email, $currentUser.organization_id);
+		}
+	});
+
+	// Disable all analytics in demo mode to prevent data pollution
+	$effect(() => {
+		if (posthogInitialized && $organization?.plan?.type === 'Demo') {
+			disableAnalytics();
 		}
 	});
 
@@ -122,6 +142,13 @@
 				}
 			}
 		} else {
+			// Check for pending Plunk tracking after OIDC registration
+			const pendingPlunk = sessionStorage.getItem('pendingPlunkRegistration');
+			if (pendingPlunk && $currentUser) {
+				sessionStorage.removeItem('pendingPlunkRegistration');
+				trackPlunkEvent('register', $currentUser.email, pendingPlunk === 'true');
+			}
+
 			await getOrganization();
 
 			if ($organization) {

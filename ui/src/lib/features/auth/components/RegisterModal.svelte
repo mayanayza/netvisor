@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { RegisterRequest } from '../types/base';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import { required } from 'svelte-forms/validators';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
@@ -12,6 +11,7 @@
 	import { config, getConfig } from '$lib/shared/stores/config';
 	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { onboardingStore } from '../stores/onboarding';
+	import type { RegisterRequest } from '../types/base';
 
 	let {
 		orgName = null,
@@ -23,7 +23,7 @@
 		orgName?: string | null;
 		invitedBy?: string | null;
 		isOpen?: boolean;
-		onRegister: (data: RegisterRequest) => Promise<void> | void;
+		onRegister: (data: RegisterRequest, subscribed: boolean) => Promise<void> | void;
 		onClose: () => void;
 	} = $props();
 
@@ -78,9 +78,13 @@
 	});
 
 	function handleOidcRegister(providerSlug: string) {
+		// Store subscribed preference for post-registration Plunk tracking
+		if ($subscribedField.value) {
+			sessionStorage.setItem('pendingPlunkRegistration', 'true');
+		}
+
 		const returnUrl = encodeURIComponent(window.location.origin);
-		const subscribed = formData.subscribed ? '&subscribed=true' : '';
-		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}${subscribed}&terms_accepted=${enableTermsCheckbox && $termsField.value}`;
+		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}&terms_accepted=${enableTermsCheckbox && $termsField.value}`;
 	}
 
 	function resetForm() {
@@ -88,7 +92,6 @@
 			email: '',
 			password: '',
 			confirmPassword: '',
-			subscribed: true,
 			terms_accepted: false
 		};
 	}
@@ -96,12 +99,14 @@
 	async function handleSubmit() {
 		registering = true;
 		try {
-			await onRegister({
-				email: formData.email,
-				password: formData.password,
-				subscribed: formData.subscribed,
-				terms_accepted: enableTermsCheckbox && $termsField.value
-			});
+			await onRegister(
+				{
+					email: formData.email,
+					password: formData.password,
+					terms_accepted: enableTermsCheckbox && $termsField.value
+				},
+				$subscribedField.value
+			);
 		} finally {
 			registering = false;
 		}

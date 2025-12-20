@@ -84,7 +84,7 @@ async fn register(
         ));
     }
 
-    if is_email_unwanted(request.email.as_str()) {
+    if is_email_unwanted(request.email.as_str()) && request.email.domain() != "gmx.net" {
         return Err(ApiError::conflict(
             "Email address uses a disposable domain. Please register with a non-disposable email address.",
         ));
@@ -672,13 +672,6 @@ async fn oidc_authorize(
             })?;
     }
 
-    if let Some(subscribed) = params.subscribed {
-        session
-            .insert("oidc_subscribed", subscribed)
-            .await
-            .map_err(|e| ApiError::internal_error(&format!("Failed to save subscribed: {}", e)))?;
-    }
-
     Ok(Redirect::to(&auth_url))
 }
 
@@ -805,14 +798,6 @@ async fn oidc_callback(
             .await
         }
         OidcFlow::Register => {
-            // Get subscribed flag from session
-            let subscribed: bool = session
-                .get("oidc_subscribed")
-                .await
-                .ok()
-                .flatten()
-                .unwrap_or(false);
-
             // Get terms_accepted_at flag from session
             let terms_accepted: bool = session
                 .get("oidc_terms_accepted")
@@ -829,7 +814,6 @@ async fn oidc_callback(
 
             handle_register_flow(
                 state.clone(),
-                subscribed,
                 terms_accepted_at,
                 HandleLinkFlowParams {
                     oidc_service,
@@ -893,7 +877,6 @@ async fn handle_link_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect, 
             let _ = session.remove::<OidcPendingAuth>("oidc_pending_auth").await;
             let _ = session.remove::<String>("oidc_provider_slug").await;
             let _ = session.remove::<String>("oidc_return_url").await;
-            let _ = session.remove::<bool>("oidc_subscribed").await;
 
             Ok(Redirect::to(return_url.as_str()))
         }
@@ -904,7 +887,6 @@ async fn handle_link_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect, 
             let _ = session.remove::<OidcPendingAuth>("oidc_pending_auth").await;
             let _ = session.remove::<String>("oidc_provider_slug").await;
             let _ = session.remove::<String>("oidc_return_url").await;
-            let _ = session.remove::<bool>("oidc_subscribed").await;
 
             return_url
                 .query_pairs_mut()
@@ -946,7 +928,6 @@ async fn handle_login_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect,
             let _ = session.remove::<OidcPendingAuth>("oidc_pending_auth").await;
             let _ = session.remove::<String>("oidc_provider_slug").await;
             let _ = session.remove::<String>("oidc_return_url").await;
-            let _ = session.remove::<bool>("oidc_subscribed").await;
 
             Ok(Redirect::to(return_url.as_str()))
         }
@@ -963,7 +944,6 @@ async fn handle_login_flow(params: HandleLinkFlowParams<'_>) -> Result<Redirect,
 
 async fn handle_register_flow(
     state: Arc<AppState>,
-    subscribed: bool,
     terms_accepted_at: Option<DateTime<Utc>>,
     params: HandleLinkFlowParams<'_>,
 ) -> Result<Redirect, Redirect> {
@@ -1024,7 +1004,6 @@ async fn handle_register_flow(
                 network_ids,
             },
             OidcRegisterParams {
-                subscribed,
                 terms_accepted_at,
                 billing_enabled,
                 provider_slug: slug,
@@ -1064,7 +1043,6 @@ async fn handle_register_flow(
             let _ = session.remove::<OidcPendingAuth>("oidc_pending_auth").await;
             let _ = session.remove::<String>("oidc_provider_slug").await;
             let _ = session.remove::<String>("oidc_return_url").await;
-            let _ = session.remove::<bool>("oidc_subscribed").await;
             let _ = session.remove::<bool>("oidc_terms_accepted").await;
 
             Ok(Redirect::to(return_url.as_str()))

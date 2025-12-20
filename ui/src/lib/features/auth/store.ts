@@ -12,6 +12,7 @@ import type {
 } from './types/base';
 import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 import type { User } from '../users/types';
+import { resetIdentity } from '$lib/shared/utils/analytics';
 
 export const currentUser = writable<User | null>(null);
 export const isAuthenticated = writable<boolean>(false);
@@ -103,6 +104,7 @@ export async function logout(): Promise<void> {
 	if (result && result.success) {
 		isAuthenticated.set(false);
 		currentUser.set(null);
+		resetIdentity();
 		pushSuccess('Logged out successfully');
 	} else {
 		pushError('Logout failed');
