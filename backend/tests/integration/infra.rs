@@ -121,7 +121,6 @@ impl TestClient {
         let register_request = RegisterRequest {
             email: email.clone(),
             password: password.to_string(),
-            subscribed: false,
             terms_accepted: false,
         };
 

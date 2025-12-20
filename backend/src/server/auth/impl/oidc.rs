@@ -18,7 +18,6 @@ pub struct OidcPendingAuth {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OidcRegisterParams<'a> {
-    pub subscribed: bool,
     pub terms_accepted_at: Option<DateTime<Utc>>,
     pub billing_enabled: bool,
     pub provider_slug: &'a str,

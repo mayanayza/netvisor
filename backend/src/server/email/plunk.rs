@@ -93,16 +93,10 @@ impl EmailProvider for PlunkEmailProvider {
         .map(|_| ())
     }
 
-    async fn track_event(
-        &self,
-        event: String,
-        email: EmailAddress,
-        subscribed: bool,
-    ) -> Result<(), Error> {
+    async fn track_event(&self, event: String, email: EmailAddress) -> Result<(), Error> {
         let body = serde_json::json!({
             "event": event,
             "email": email.to_string(),
-            "subscribed": subscribed,
         });
 
         let response = self

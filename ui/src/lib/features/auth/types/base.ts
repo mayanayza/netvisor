@@ -19,7 +19,6 @@ export interface LoginRequest {
 export interface RegisterRequest {
 	email: string;
 	password: string;
-	subscribed: boolean;
 	terms_accepted: boolean;
 }
 
