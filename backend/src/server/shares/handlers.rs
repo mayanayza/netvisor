@@ -206,11 +206,10 @@ async fn verify_share_password(
     };
 
     // Return with cache headers
-    Ok(Json(ApiResponse::success(response)))
-    // Ok((
-    //     [(header::CACHE_CONTROL, "public, max-age=300")],
-    //     Json(ApiResponse::success(response)),
-    // ))
+    Ok((
+        [(header::CACHE_CONTROL, "public, max-age=300")],
+        Json(ApiResponse::success(response)),
+    ))
 }
 
 /// Get topology data for a public share (non-password-protected)
@@ -269,9 +268,8 @@ async fn get_share_topology(
     };
 
     // Return with cache headers (5 minute cache)
-    Ok(Json(ApiResponse::success(response)))
-    // Ok((
-    //     [(header::CACHE_CONTROL, "public, max-age=300")],
-    //     Json(ApiResponse::success(response)),
-    // ))
+    Ok((
+        [(header::CACHE_CONTROL, "public, max-age=300")],
+        Json(ApiResponse::success(response)),
+    ))
 }
