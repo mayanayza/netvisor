@@ -344,12 +344,20 @@ impl EdgeBuilder {
                                     is_multi_hop,
                                 )?;
 
+                            // Hide label if both interfaces are on the same subnet
+                            let label =
+                                if origin_interface.base.subnet_id == interface.base.subnet_id {
+                                    None
+                                } else {
+                                    Some(host.base.name.to_string())
+                                };
+
                             Some(Edge {
                                 id: Uuid::new_v4(),
                                 source: origin_interface.id,
                                 target: interface.id,
                                 edge_type: EdgeType::Interface { host_id: host.id },
-                                label: Some(host.base.name.to_string()),
+                                label,
                                 source_handle,
                                 target_handle,
                                 is_multi_hop,
