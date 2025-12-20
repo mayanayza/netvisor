@@ -40,8 +40,7 @@ async fn create_invite(
     Json(request): Json<CreateInviteRequest>,
 ) -> ApiResult<Json<ApiResponse<Invite>>> {
     // Seat limit check - only applies if permissions count towards seats
-    if request.permissions.counts_towards_seats()
-        && let Some(max_seats) = plan.config().included_seats
+    if let Some(max_seats) = plan.config().included_seats
         && plan.config().seat_cents.is_none()
     {
         let org_filter = EntityFilter::unfiltered().organization_id(&user.organization_id);
@@ -52,9 +51,7 @@ async fn create_invite(
             .get_all(org_filter)
             .await
             .unwrap_or_default()
-            .iter()
-            .filter(|u| u.base.permissions.counts_towards_seats())
-            .count();
+            .len();
 
         let pending_invites = state
             .services
@@ -62,9 +59,7 @@ async fn create_invite(
             .get_org_invites(&user.organization_id)
             .await
             .unwrap_or_default()
-            .iter()
-            .filter(|i| i.base.permissions.counts_towards_seats())
-            .count();
+            .len();
 
         let total_seats_used = current_members + pending_invites;
 
@@ -76,9 +71,9 @@ async fn create_invite(
         }
     }
 
-    if user.permissions < request.permissions {
+    if user.permissions < UserOrgPermissions::Admin {
         return Err(ApiError::forbidden(
-            "Users can only create invites with permissions lower than their permission level",
+            "Only admins and above can invite users to this organization",
         ));
     }
 

@@ -112,4 +112,7 @@ pub enum SqlValue {
     Services(Vec<Service>),
     Groups(Vec<Group>),
     TelemetryOperation(Vec<TelemetryOperation>),
+    StringArray(Vec<String>),
+    OptionalStringArray(Option<Vec<String>>),
+    JsonValue(serde_json::Value),
 }

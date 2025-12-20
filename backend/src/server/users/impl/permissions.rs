@@ -24,17 +24,13 @@ pub enum UserOrgPermissions {
     Owner,
     Admin,
     Member,
-    Visualizer,
-    None,
+    #[serde(alias = "Visualizer")]
+    Viewer,
 }
 
 impl UserOrgPermissions {
     pub fn as_str(&self) -> &'static str {
         self.into()
-    }
-
-    pub fn counts_towards_seats(&self) -> bool {
-        *self >= UserOrgPermissions::Member
     }
 }
 
@@ -46,8 +42,7 @@ impl FromStr for UserOrgPermissions {
             "Owner" => Ok(UserOrgPermissions::Owner),
             "Admin" => Ok(UserOrgPermissions::Admin),
             "Member" => Ok(UserOrgPermissions::Member),
-            "Visualizer" => Ok(UserOrgPermissions::Visualizer),
-            "None" => Ok(UserOrgPermissions::None),
+            "Viewer" | "Visualizer" | "None" => Ok(UserOrgPermissions::Viewer),
             _ => Err(()),
         }
     }
@@ -65,16 +60,14 @@ impl Ord for UserOrgPermissions {
             UserOrgPermissions::Owner => 4,
             UserOrgPermissions::Admin => 3,
             UserOrgPermissions::Member => 2,
-            UserOrgPermissions::Visualizer => 1,
-            UserOrgPermissions::None => 0,
+            UserOrgPermissions::Viewer => 1,
         };
 
         let other_rank = match other {
             UserOrgPermissions::Owner => 4,
             UserOrgPermissions::Admin => 3,
             UserOrgPermissions::Member => 2,
-            UserOrgPermissions::Visualizer => 1,
-            UserOrgPermissions::None => 0,
+            UserOrgPermissions::Viewer => 1,
         };
 
         self_rank.cmp(&other_rank)
@@ -104,17 +97,10 @@ impl TypeMetadataProvider for UserOrgPermissions {
                 "Full organization control: manage billing, invite any role, and access all administrative features"
             }
             UserOrgPermissions::Admin => {
-                "Manage users and invites, create and modify all infrastructure, but cannot access billing"
+                "Manage users and invites, create and modify all entities, but cannot access billing"
             }
-            UserOrgPermissions::Member => {
-                "Create and modify hosts, services, run discovery scans, and invite Visualizers to networks they have access to"
-            }
-            UserOrgPermissions::Visualizer => {
-                "Read-only access: view network topology. Does not count towards seat usage."
-            }
-            UserOrgPermissions::None => {
-                "No permissions assigned. Does not count towards seat usage."
-            }
+            UserOrgPermissions::Member => "Create and modify entities for specific networks",
+            UserOrgPermissions::Viewer => "View entities.",
         }
     }
 
@@ -123,15 +109,16 @@ impl TypeMetadataProvider for UserOrgPermissions {
             UserOrgPermissions::Owner => "Owner",
             UserOrgPermissions::Admin => "Admin",
             UserOrgPermissions::Member => "Member",
-            UserOrgPermissions::Visualizer => "Visualizer",
-            UserOrgPermissions::None => "None",
+            UserOrgPermissions::Viewer => "Viewer",
         }
     }
 
     fn metadata(&self) -> serde_json::Value {
         let can_manage_user_permissions: Vec<UserOrgPermissions> = match self {
             UserOrgPermissions::Owner => UserOrgPermissions::iter().collect(),
-            _ => UserOrgPermissions::iter().filter(|p| p < self).collect(),
+            UserOrgPermissions::Admin => UserOrgPermissions::iter().filter(|p| p < self).collect(),
+            // Non-admins can't manage permissions
+            _ => vec![],
         };
 
         let manage_org_entities: bool =
@@ -140,7 +127,6 @@ impl TypeMetadataProvider for UserOrgPermissions {
         serde_json::json!({
             "can_manage_user_permissions": can_manage_user_permissions,
             "manage_org_entities": manage_org_entities,
-            "counts_towards_seats": self.counts_towards_seats()
         })
     }
 }

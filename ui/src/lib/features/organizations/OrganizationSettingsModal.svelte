@@ -9,7 +9,7 @@
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
-	import { getOrganization, organization, updateOrganization } from './store';
+	import { getOrganization, organization, updateOrganizationName } from './store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
@@ -58,10 +58,7 @@
 
 		saving = true;
 		try {
-			const result = await updateOrganization({
-				...org,
-				name: formData.name.trim()
-			});
+			const result = await updateOrganizationName(org.id, formData.name);
 
 			if (result?.success) {
 				pushSuccess('Organization updated successfully');

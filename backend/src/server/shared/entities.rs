@@ -2,6 +2,7 @@ use crate::server::hosts::r#impl::interfaces::Interface;
 use crate::server::hosts::r#impl::ports::Port;
 use crate::server::invites::r#impl::base::Invite;
 use crate::server::services::r#impl::base::Service;
+use crate::server::shares::r#impl::base::Share;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::base::Topology;
 use crate::server::{groups::r#impl::base::Group, tags::r#impl::base::Tag};
@@ -40,6 +41,7 @@ pub trait ChangeTriggersTopologyStaleness<T> {
 pub enum Entity {
     Organization(Organization),
     Invite(Invite),
+    Share(Share),
     Network(Network),
     ApiKey(ApiKey),
     User(User),
@@ -74,6 +76,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::ApiKey => "yellow",
             EntityDiscriminants::User => "blue",
             EntityDiscriminants::Invite => "green",
+            EntityDiscriminants::Share => "teal",
             EntityDiscriminants::Tag => "yellow",
 
             EntityDiscriminants::Host => "blue",
@@ -94,6 +97,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::User => "User",
             EntityDiscriminants::Tag => "Tag",
             EntityDiscriminants::Invite => "UserPlus",
+            EntityDiscriminants::Share => "Share2",
             EntityDiscriminants::ApiKey => "Key",
             EntityDiscriminants::Daemon => "SatelliteDish",
             EntityDiscriminants::Discovery => "Radar",
@@ -117,6 +121,12 @@ impl From<Organization> for Entity {
 impl From<Invite> for Entity {
     fn from(value: Invite) -> Self {
         Self::Invite(value)
+    }
+}
+
+impl From<Share> for Entity {
+    fn from(value: Share) -> Self {
+        Self::Share(value)
     }
 }
 

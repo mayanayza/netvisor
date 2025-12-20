@@ -11,22 +11,23 @@
 	import { createColorHelper, twColorToRgba } from '$lib/shared/utils/styling';
 	import { subnetTypes } from '$lib/shared/stores/metadata';
 	import { isContainerSubnet } from '$lib/features/subnets/store';
-	import { topology, topologyOptions, updateTopology } from '../../store';
-	import type { SubnetRenderData } from '../../types/base';
-	import { get } from 'svelte/store';
+	import { topology as globalTopology, topologyOptions, updateTopology } from '../../store';
+	import type { SubnetRenderData, Topology } from '../../types/base';
+	import { get, type Writable } from 'svelte/store';
+	import { getContext } from 'svelte';
 
 	let { id, data, selected, width, height }: NodeProps = $props();
+
+	// Try to get topology from context (for share/embed pages), fallback to global store
+	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
+	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
 
 	let leftZoneTitle = $derived($topologyOptions.local.left_zone_title);
 	let infra_width = $derived((data.infra_width as number) || 0);
 	let nodeStyle = $derived(`width: ${width}px; height: ${height}px;`);
 	let hasInfra = $derived(infra_width > 0);
 
-	$effect(() => {
-		void $topology;
-	});
-
-	let subnet = $derived($topology ? $topology.subnets.find((s) => s.id == id) : undefined);
+	let subnet = $derived(topology ? topology.subnets.find((s) => s.id == id) : undefined);
 
 	const viewport = useViewport();
 	let resizeHandleZoomLevel = $derived(viewport.current.zoom > 0.5);
@@ -55,7 +56,8 @@
 			: null
 	);
 	async function onResize(event: ResizeDragEvent, params: ResizeParams) {
-		let node = $topology.nodes.find((n) => n.id == id);
+		if (!topology) return;
+		let node = topology.nodes.find((n) => n.id == id);
 		if (node && params.width && params.height) {
 			// Round to grid
 			let roundedWidth = Math.round(params.width / 25) * 25;
@@ -68,7 +70,7 @@
 			node.position.x = roundedX;
 			node.position.y = roundedY;
 
-			await updateTopology($topology);
+			await updateTopology(topology);
 		}
 	}
 </script>

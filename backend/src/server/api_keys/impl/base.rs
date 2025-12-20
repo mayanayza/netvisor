@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize, Serializer};
-use uuid::Uuid;
-
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
+use crate::server::shared::types::api::serialize_sensitive_info;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ApiKeyBase {
-    #[serde(serialize_with = "serialize_api_key_status")]
+    #[serde(serialize_with = "serialize_sensitive_info")]
     pub key: String,
     pub name: String,
     pub last_used: Option<DateTime<Utc>>,
@@ -17,13 +17,6 @@ pub struct ApiKeyBase {
     pub is_enabled: bool,
     #[serde(default)]
     pub tags: Vec<Uuid>,
-}
-
-fn serialize_api_key_status<S>(_key: &String, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str("***REDACTED***")
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]

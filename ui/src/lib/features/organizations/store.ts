@@ -30,14 +30,14 @@ export async function getOrganization(): Promise<Organization | null> {
 	return null;
 }
 
-export async function updateOrganization(org: Organization) {
+export async function updateOrganizationName(id: string, name: string) {
 	return await api.request<Organization, Organization | null>(
-		`/organizations/${org.id}`,
+		`/organizations/${id}`,
 		organization,
 		(updated) => updated,
 		{
 			method: 'PUT',
-			body: JSON.stringify(org)
+			body: JSON.stringify(name)
 		}
 	);
 }

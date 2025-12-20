@@ -5,7 +5,7 @@
 	import { organization, getOrganization } from '$lib/features/organizations/store';
 	import { isBillingPlanActive } from '../organizations/types';
 	import { currentUser } from '$lib/features/auth/store';
-	import { billingPlans, permissions } from '$lib/shared/stores/metadata';
+	import { billingPlans } from '$lib/shared/stores/metadata';
 	import { openCustomerPortal } from './store';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import { users } from '../users/store';
@@ -15,9 +15,7 @@
 
 	let org = $derived($organization);
 
-	let seatCount = $derived(
-		$users.filter((u) => permissions.getMetadata(u.permissions).counts_towards_seats).length
-	);
+	let seatCount = $derived($users.length);
 	let networkCount = $derived($networks.length);
 
 	let extraSeats = $derived.by(() => {
