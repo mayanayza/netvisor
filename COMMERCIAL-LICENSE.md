@@ -12,9 +12,8 @@ The open source version is available under the GNU Affero General Public License
 For organizations that want to use Scanopy without AGPL-3.0 obligations, we offer commercial licenses.
 
 ### What You Get
-- Right to use Scanopy without source code disclosure requirements
-- Right to modify Scanopy for internal use
-- No copyleft obligations
+- No source code disclosure requirements when running Scanopy as a network service
+- No copyleft obligations when distributing modifications
 - Optional support from project maintainers
 
 ### Pricing
