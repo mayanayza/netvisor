@@ -196,7 +196,11 @@ impl BillingPlan {
         matches!(self, BillingPlan::Demo(_))
     }
 
-    pub fn hosting(&self) -> &str {
+    pub fn can_invite_users(&self) -> bool {
+        self.config().included_seats.unwrap_or(u64::MAX) > 1 && self.config().seat_cents.is_some()
+    }
+
+    pub fn hosting(&self) -> Hosting {
         match self {
             BillingPlan::Community(_) => Hosting::SelfHosted,
             BillingPlan::CommercialSelfHosted(_) => Hosting::SelfHosted,
