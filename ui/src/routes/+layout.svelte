@@ -9,7 +9,7 @@
 		isAuthenticated,
 		currentUser
 	} from '$lib/features/auth/store';
-	import { identifyUser, trackPlunkEvent, disableAnalytics } from '$lib/shared/utils/analytics';
+	import { identifyUser, trackPlunkEvent } from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import '../app.css';
 	import { resolve } from '$app/paths';
@@ -72,13 +72,6 @@
 	$effect(() => {
 		if (posthogInitialized && $currentUser) {
 			identifyUser($currentUser.id, $currentUser.email, $currentUser.organization_id);
-		}
-	});
-
-	// Disable all analytics in demo mode to prevent data pollution
-	$effect(() => {
-		if (posthogInitialized && $organization?.plan?.type === 'Demo') {
-			disableAnalytics();
 		}
 	});
 

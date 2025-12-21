@@ -15,7 +15,7 @@ export function isDemo(): boolean {
 /**
  * Track an analytics event via PostHog.
  * PostHog is already initialized in +layout.svelte, this is just a helper.
- * Skips tracking in demo mode.
+ * In demo mode, events are tracked with a demo=true flag.
  *
  * Events focused on understanding friction:
  * - onboarding_blocker_selected - What's blocking users?
@@ -24,7 +24,6 @@ export function isDemo(): boolean {
  * - onboarding_feedback_submitted - "Something else" friction
  */
 export function trackEvent(event: string, properties?: Record<string, unknown>) {
-	if (isDemo()) return;
 	if (posthog.__loaded) {
 		posthog.capture(event, properties);
 	}
@@ -53,16 +52,6 @@ export function identifyUser(userId: string, email: string, organizationId: stri
 export function resetIdentity() {
 	if (posthog.__loaded) {
 		posthog.reset();
-	}
-}
-
-/**
- * Disable all PostHog tracking and cookies for demo mode.
- * Should be called when demo mode is detected.
- */
-export function disableAnalytics() {
-	if (posthog.__loaded) {
-		posthog.opt_out_capturing();
 	}
 }
 
