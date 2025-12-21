@@ -17,7 +17,11 @@ jobs:
   promote-to-latest:
     name: Promote Release to Latest
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write
+      packages: write
+      models: read
+
     steps:
       - name: Validate release exists and get details
         id: release
