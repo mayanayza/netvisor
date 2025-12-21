@@ -83,7 +83,7 @@ impl EntityFilter {
 
     pub fn hidden_is(mut self, hidden: bool) -> Self {
         self.conditions
-            .push(format!("hidden = {}", self.values.len() + 1));
+            .push(format!("hidden = ${}", self.values.len() + 1));
         self.values.push(SqlValue::Bool(hidden));
         self
     }
