@@ -8,6 +8,8 @@ on:
         required: true
         type: string
 
+permissions: {}
+
 jobs:
   prepare-release:
     name: Bump Version and Create Release

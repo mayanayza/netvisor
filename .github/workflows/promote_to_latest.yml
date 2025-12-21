@@ -9,7 +9,8 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
+  packages: write
   models: read
 
 jobs:
