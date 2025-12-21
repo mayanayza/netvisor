@@ -36,4 +36,4 @@ Add any other context about the problem here.
 If you have logs from the daemon or server, pleae provide them here.
 
 **Before submitting**
-[ ] I have reviewed [Troubleshooting](https://github.com/scanopy/scanopy#troubleshooting) in the readme
+[ ] I have reviewed [The docs](https://scanopy.net/docs)
