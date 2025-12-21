@@ -44,7 +44,7 @@
 
 	// Create form fields with validation
 	const email = field('email', formData.email, [required(), emailValidator()]);
-	const password = field('password', formData.password, [required(), minLength(10)]);
+	const password = field('password', formData.password, [required()]);
 
 	// Update formData when field values change
 	$effect(() => {
