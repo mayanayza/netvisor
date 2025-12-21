@@ -1181,6 +1181,15 @@
   {
     "category": "Virtualization",
     "color": "indigo",
+    "description": "Docker",
+    "discovery_pattern": "No match pattern provided",
+    "logo_needs_white_background": false,
+    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
+    "name": "Docker"
+  },
+  {
+    "category": "Virtualization",
+    "color": "indigo",
     "description": "A generic docker container",
     "discovery_pattern": "All of: (Service is running in a docker container, A custom match pattern evaluated at runtime)",
     "logo_needs_white_background": false,
@@ -1906,14 +1915,5 @@
     "logo_needs_white_background": false,
     "logo_url": "",
     "name": "Dhcp Server"
-  },
-  {
-    "category": "Virtualization",
-    "color": "indigo",
-    "description": "Docker",
-    "discovery_pattern": "No match pattern provided",
-    "logo_needs_white_background": false,
-    "logo_url": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/docker.svg",
-    "name": "Docker"
   }
 ]
