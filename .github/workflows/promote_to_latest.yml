@@ -188,12 +188,11 @@ jobs:
             Requirements:
             1. TITLE: A short, descriptive title (3-6 words) summarizing the key changes. NOT promotional. Examples: "Topology Sharing & Demo Mode", "Performance Improvements & Bug Fixes", "Enhanced Network Discovery"
 
-            2. SOCIAL_POST: A tweet-length post (max 250 characters, leaving room for URL and hashtags). Include:
-               - Version number
+            2. SOCIAL_POST: A short post for Twitter/Bluesky (max 180 characters). A changelog URL will be auto-appended, so keep it brief. Include:
+               - Version number ONLY at the start (e.g., "Scanopy v0.12.5:") - do not repeat it elsewhere
                - 1-2 key highlights
                - NOT promotional language
-               - No hashtags (they'll be added separately)
-               - No URL (it'll be added separately)
+               - No hashtags or URLs (added separately)
 
             Output format (exactly like this):
             TITLE: Your Title Here
