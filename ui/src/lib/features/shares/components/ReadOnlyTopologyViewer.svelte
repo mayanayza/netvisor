@@ -7,6 +7,7 @@
 	import { writable } from 'svelte/store';
 	import ReadOnlyInspectorPanel from './ReadOnlyInspectorPanel.svelte';
 	import ExportButton from '$lib/features/topology/components/ExportButton.svelte';
+	import { Share2 } from 'lucide-svelte';
 
 	export let topology: Topology;
 	export let showControls: boolean = true;
@@ -50,25 +51,13 @@
 				class="flex flex-shrink-0 items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-3"
 			>
 				<div class="flex items-center gap-3">
-					<img
-						src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
-						alt="Scanopy Logo"
-						class="h-8 w-8"
-					/>
-					<h1 class="font-semibold text-white">{shareName}</h1>
+					<Share2 class="text-info h-8 w-8" />
+					<h1 class="text-primary font-semibold">{shareName}</h1>
 				</div>
 				<div class="flex items-center gap-4">
 					{#if showExport}
 						<ExportButton />
 					{/if}
-					<a
-						href="https://scanopy.net"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-sm text-gray-400 hover:text-white"
-					>
-						Powered by Scanopy
-					</a>
 				</div>
 			</header>
 		{/if}
@@ -81,6 +70,7 @@
 				readonly={true}
 				{showControls}
 				{isEmbed}
+				showBranding={true}
 				bind:selectedNode={localSelectedNode}
 				bind:selectedEdge={localSelectedEdge}
 				onNodeSelect={handleNodeSelect}

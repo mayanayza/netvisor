@@ -4,14 +4,12 @@ CREATE TABLE shares (
     topology_id UUID NOT NULL REFERENCES topologies(id) ON DELETE CASCADE,
     network_id UUID NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
     created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    share_type TEXT NOT NULL,
     name TEXT NOT NULL,
     is_enabled BOOLEAN NOT NULL DEFAULT true,
     expires_at TIMESTAMPTZ,
     password_hash TEXT,
-    has_password BOOLEAN,
     allowed_domains TEXT[],
-    embed_options JSONB NOT NULL,
+    options JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Copy, Edit, ExternalLink, Trash2, Check, Link, Code } from 'lucide-svelte';
+	import { Copy, Edit, ExternalLink, Trash2, Check, Link } from 'lucide-svelte';
 	import type { Share } from '../types/base';
-	import { generateShareUrl, generateEmbedUrl } from '../store';
+	import { generateShareUrl } from '../store';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { topologies } from '$lib/features/topology/store';
 	import { networks } from '$lib/features/networks/store';
@@ -26,7 +26,7 @@
 	let copied = $state(false);
 
 	function getUrl(): string {
-		return share.share_type === 'embed' ? generateEmbedUrl(share.id) : generateShareUrl(share.id);
+		return generateShareUrl(share.id);
 	}
 
 	async function copyUrl() {
@@ -51,14 +51,9 @@
 
 		return {
 			title: share.name,
-			subtitle: share.has_password ? 'Password Protected' : undefined,
 			iconColor: entities.getColorHelper('Share').icon,
-			Icon: share.share_type === 'embed' ? Code : Link,
+			Icon: Link,
 			fields: [
-				{
-					label: 'Type',
-					value: share.share_type === 'link' ? 'Link Share' : 'Embed'
-				},
 				{
 					label: 'Topology',
 					value: topology
@@ -91,9 +86,7 @@
 					label: 'Expires',
 					value: formatExpiry(share.expires_at)
 				},
-				...(share.share_type === 'embed' &&
-				share.allowed_domains &&
-				share.allowed_domains.length > 0
+				...(share.allowed_domains && share.allowed_domains.length > 0
 					? [{ label: 'Allowed Domains', value: share.allowed_domains.join(', ') }]
 					: [])
 			],

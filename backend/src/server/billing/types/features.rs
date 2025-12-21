@@ -118,7 +118,7 @@ impl TypeMetadataProvider for Feature {
             }
             Feature::CommercialLicense => "Use Scanopy under a commercial license",
             Feature::RemoveCreatedWith => {
-                "Remove 'Created using scanopy.net' in bottom right corner of visualization"
+                "Remove 'Created using scanopy.net' in bottom right corner of exported images"
             }
             Feature::PrioritySupport => "Prioritized email support with faster response times",
             Feature::Embeds => "Embed live network diagrams in wikis, dashboards, or documentation",

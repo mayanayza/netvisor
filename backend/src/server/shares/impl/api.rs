@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::base::{EmbedOptions, Share, ShareType};
+use super::base::{Share, ShareOptions};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateUpdateShareRequest {
@@ -14,9 +14,8 @@ pub struct CreateUpdateShareRequest {
 pub struct PublicShareMetadata {
     pub id: Uuid,
     pub name: String,
-    pub share_type: ShareType,
     pub requires_password: bool,
-    pub embed_options: EmbedOptions,
+    pub options: ShareOptions,
 }
 
 impl From<&Share> for PublicShareMetadata {
@@ -24,9 +23,8 @@ impl From<&Share> for PublicShareMetadata {
         Self {
             id: share.id,
             name: share.base.name.clone(),
-            share_type: share.base.share_type,
             requires_password: share.requires_password(),
-            embed_options: share.base.embed_options.clone(),
+            options: share.base.options.clone(),
         }
     }
 }

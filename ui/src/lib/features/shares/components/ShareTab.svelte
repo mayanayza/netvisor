@@ -50,23 +50,6 @@
 			}
 		},
 		{
-			key: 'share_type',
-			label: 'Type',
-			type: 'string',
-			searchable: false,
-			filterable: true,
-			sortable: true,
-			getValue: (share) => (share.share_type === 'link' ? 'Link' : 'Embed')
-		},
-		{
-			key: 'has_password',
-			label: 'Password Protected',
-			type: 'boolean',
-			searchable: false,
-			filterable: true,
-			sortable: false
-		},
-		{
 			key: 'is_enabled',
 			label: 'Enabled',
 			type: 'boolean',

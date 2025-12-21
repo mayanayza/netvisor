@@ -90,7 +90,7 @@ export async function getPublicShareMetadata(
 export async function verifySharePassword(
 	shareId: string,
 	password: string
-): Promise<{ success: boolean; data?: ShareWithTopology; error?: string }> {
+): Promise<{ success: boolean; error?: string }> {
 	try {
 		const response = await fetch(`/api/shares/public/${shareId}/verify`, {
 			method: 'POST',
@@ -106,21 +106,26 @@ export async function verifySharePassword(
 			return { success: false, error: result.error || 'Invalid password' };
 		}
 
-		return { success: true, data: result.data };
+		return { success: true };
 	} catch {
 		return { success: false, error: 'Failed to verify password' };
 	}
 }
 
 export async function getPublicShareTopology(
-	shareId: string
+	shareId: string,
+	options: { embed?: boolean; password?: string } = {}
 ): Promise<{ success: boolean; data?: ShareWithTopology; error?: string }> {
 	try {
-		const response = await fetch(`/api/shares/public/${shareId}/topology`, {
-			method: 'GET',
+		const url = options.embed
+			? `/api/shares/public/${shareId}/topology?embed=true`
+			: `/api/shares/public/${shareId}/topology`;
+		const response = await fetch(url, {
+			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
-			}
+			},
+			body: JSON.stringify({ password: options.password })
 		});
 
 		const result = await response.json();

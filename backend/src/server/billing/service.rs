@@ -733,20 +733,9 @@ impl BillingService {
             }
         }
 
-        // Remove embeds if not supported
-        if !plan.features().embeds {
-            let embed_ids: Vec<Uuid> = self
-                .share_service
-                .get_all(org_filter)
-                .await?
-                .iter()
-                .filter_map(|s| if s.is_embed_share() { Some(s.id) } else { None })
-                .collect();
-
-            self.share_service
-                .delete_many(&embed_ids, AuthenticatedEntity::System)
-                .await?;
-        }
+        // Note: We don't delete shares when embeds feature is removed.
+        // Instead, embed access is gated at the handler level, so existing shares
+        // remain accessible as links but not as embeds.
 
         organization.base.plan_status = Some(sub.status.to_string());
         organization.base.plan = Some(plan);

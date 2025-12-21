@@ -3,12 +3,11 @@
 	import TopologyViewer from './visualization/TopologyViewer.svelte';
 	import TopologyOptionsPanel from './panel/TopologyOptionsPanel.svelte';
 	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { Edit, Lock, Plus, Radio, RefreshCcw, Trash2 } from 'lucide-svelte';
+	import { Edit, Globe, Lock, Plus, Radio, RefreshCcw, Share2, Trash2 } from 'lucide-svelte';
 	import { getHosts } from '$lib/features/hosts/store';
 	import { getServices } from '$lib/features/services/store';
 	import { getSubnets } from '$lib/features/subnets/store';
 	import ExportButton from './ExportButton.svelte';
-	import ShareButton from './ShareButton.svelte';
 	import ShareModal from '$lib/features/shares/components/ShareModal.svelte';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
 	import { getGroups } from '$lib/features/groups/store';
@@ -158,10 +157,23 @@
 <SvelteFlowProvider>
 	<div class="space-y-6">
 		<!-- Header -->
-		<div class="card card-static flex items-center justify-between gap-4 px-4 py-2">
+		<div class="card card-static flex items-center justify-evenly gap-4 px-4 py-2">
 			{#if $topology}
-				<ExportButton />
-				<ShareButton onclick={() => (isShareModalOpen = true)} />
+				<div class="flex items-center gap-4 py-2">
+					<ExportButton />
+					<button class="btn-secondary" onclick={() => (isShareModalOpen = true)}>
+						<Share2 class="my-1 h-5 w-5" />
+					</button>
+					<a
+						href="https://tally.so/r/lbqLAv"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="btn-secondary"
+						title="Submit to Community Showcase"
+					>
+						<Globe class="my-1 h-5 w-5" />
+					</a>
+				</div>
 
 				<div class="card-divider-v self-stretch"></div>
 
@@ -222,15 +234,13 @@
 				<div class="card-divider-v self-stretch"></div>
 
 				{#if $topologies}
-					<div class="min-w-[300px]">
-						<RichSelect
-							label=""
-							selectedValue={$topology.id}
-							displayComponent={TopologyDisplay}
-							onSelect={handleTopologyChange}
-							options={$topologies}
-						/>
-					</div>
+					<RichSelect
+						label=""
+						selectedValue={$topology.id}
+						displayComponent={TopologyDisplay}
+						onSelect={handleTopologyChange}
+						options={$topologies}
+					/>
 				{/if}
 			{/if}
 
@@ -241,12 +251,12 @@
 			<div class="flex items-center gap-4 py-2">
 				{#if $topology}
 					<button class="btn-primary" onclick={handleEditTopology}>
-						<Edit class="mr-2 h-4 w-4" /> Edit
+						<Edit class="my-1 h-4 w-4" />
 					</button>
 				{/if}
 
 				<button class="btn-primary" onclick={handleCreateTopology}>
-					<Plus class="h-4 w-4" /> New
+					<Plus class="my-1 h-4 w-4" />
 				</button>
 
 				{#if $topology}

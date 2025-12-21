@@ -29,6 +29,7 @@
 	export let readonly: boolean = false;
 	export let showControls: boolean = true;
 	export let isEmbed: boolean = false;
+	export let showBranding: boolean = false;
 
 	// Create a context store for the topology so child nodes can access it
 	const topologyContext = svelteWritable<Topology>(topology);
@@ -321,6 +322,24 @@
 				class="!rounded !border !border-gray-600 !bg-gray-800 !shadow-lg [&_button:hover]:!bg-gray-600 [&_button]:!border-gray-600 [&_button]:!bg-gray-700 [&_button]:!text-gray-100"
 			/>
 		{/if}
+
+		{#if showBranding}
+			<a
+				href="https://scanopy.net?utm_source={isEmbed
+					? 'embed'
+					: 'share'}&utm_medium=referral&utm_campaign=created_with"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="branding-badge"
+			>
+				<img
+					src="https://cdn.jsdelivr.net/gh/scanopy/website@main/static/scanopy-logo.png"
+					alt="Scanopy"
+					class="h-4 w-4"
+				/>
+				<span>Created with Scanopy</span>
+			</a>
+		{/if}
 	</SvelteFlow>
 </div>
 
@@ -332,7 +351,8 @@
 	}
 
 	:global(.svelte-flow__attribution.right) {
-		right: 10px;
+		right: unset;
+		left: 10px;
 	}
 
 	:global(.svelte-flow__attribution.bottom) {
@@ -347,6 +367,24 @@
 		color: rgba(255, 255, 255, 0.3);
 	}
 
+	.branding-badge {
+		position: absolute;
+		bottom: 10px;
+		right: 10px;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: rgba(255, 255, 255, 0.5);
+		font-size: 12px;
+		text-decoration: none;
+		z-index: 5;
+		transition: color 0.2s;
+	}
+
+	.branding-badge:hover {
+		color: rgba(255, 255, 255, 0.8);
+	}
+
 	:global(.hide-for-export .svelte-flow__attribution) {
 		opacity: 0;
 	}
@@ -356,6 +394,10 @@
 	}
 
 	:global(.hide-for-export .svelte-flow__resize-control) {
+		opacity: 0;
+	}
+
+	:global(.hide-for-export .branding-badge) {
 		opacity: 0;
 	}
 </style>

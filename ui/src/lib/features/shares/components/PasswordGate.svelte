@@ -8,7 +8,6 @@
 
 	export let isOpen: boolean = true;
 	export let title: string = 'Password Required';
-	export let subtitle: string = 'This topology is password protected';
 	export let onSubmit: (password: string) => Promise<boolean>;
 	export let submitLabel: string = 'View Topology';
 
@@ -58,8 +57,6 @@
 	</svelte:fragment>
 
 	<div class="space-y-4">
-		<p class="text-center text-sm text-gray-400">{subtitle}</p>
-
 		<TextInput
 			label="Password"
 			id="password"

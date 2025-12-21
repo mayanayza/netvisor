@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
-	import { isContainerSubnet } from '$lib/features/subnets/store';
 	import {
 		selectedEdge,
 		selectedNode,
@@ -13,7 +12,7 @@
 		NodeRenderData,
 		Topology
 	} from '../../types/base';
-	import { get, type Writable } from 'svelte/store';
+	import type { Writable } from 'svelte/store';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { connectedNodeIds } from '../../interactions';
 	import { getContext } from 'svelte';
@@ -36,6 +35,14 @@
 		topology ? topology.services.filter((s) => s.host_id == nodeData.host_id) : []
 	);
 
+	// Get the interface for this node
+	let iface = $derived(host ? host.interfaces.find((i) => i.id === data.interface_id) : null);
+
+	// Reactively subscribe to the container subnet store
+	let isContainerSubnetValue = $derived(
+		iface ? topology?.subnets.find((s) => s.id == iface.subnet_id)?.cidr == '0.0.0.0/0' : false
+	);
+
 	// Look up port from topology hosts (works for both main app and share pages)
 	function getPortById(portId: string): Port | null {
 		if (!topology) return null;
@@ -50,8 +57,6 @@
 	let nodeRenderData: NodeRenderData | null = $derived(
 		host && data.host_id
 			? (() => {
-					const iface = host.interfaces.find((i) => i.id === data.interface_id);
-
 					const servicesOnInterface = servicesForHost
 						? servicesForHost.filter((s) =>
 								s.bindings.some(
@@ -65,7 +70,7 @@
 					let headerText: string | null = data.header ? (data.header as string) : null;
 					let showServices = servicesOnInterface.length != 0;
 
-					if (iface && !get(isContainerSubnet(iface?.subnet_id))) {
+					if (iface && !isContainerSubnetValue) {
 						footerText = (iface.name ? iface.name + ': ' : '') + iface.ip_address;
 					}
 
