@@ -61,7 +61,7 @@ jobs:
       - name: Create multi-arch manifest for Server (GHCR)
         run: |
           docker buildx imagetools create -t ghcr.io/${{ github.repository }}/server:latest \
-            ghcr.io/${{ github.repository }}/server-commercial:${{ inputs.release_tag }}
+            ghcr.io/${{ github.repository }}/server:${{ inputs.release_tag }}
       
       - name: Create multi-arch manifest for Daemon (GHCR)
         run: |
