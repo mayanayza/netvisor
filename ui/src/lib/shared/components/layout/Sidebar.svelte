@@ -300,13 +300,11 @@
 
 	// Helper to check demo mode requirements
 	function meetsDemoModeRequirements(item: NavItem): boolean {
-		// If billing not required, always show
-		if (item.hideInDemo && userPermissions != 'Owner') {
+		// Only hide items marked hideInDemo when in demo mode and user is not Owner
+		if (item.hideInDemo && isDemoOrg && userPermissions != 'Owner') {
 			return false;
 		}
-
-		// If billing is required, check if it's enabled
-		return isDemoOrg;
+		return true;
 	}
 
 	// Helper to check if item should be visible
