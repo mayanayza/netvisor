@@ -8,6 +8,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+  models: read
+
 jobs:
   promote-to-latest:
     name: Promote Release to Latest
@@ -72,6 +76,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: dev
+          fetch-depth: 0
+          fetch-tags: true
       
       - name: Checkout website repo
         uses: actions/checkout@v4
@@ -86,54 +92,212 @@ jobs:
           cp ui/static/services.json website/src/lib/fixtures/
           cp ui/static/features.json website/src/lib/fixtures/
           cp ui/static/billing-plans.json website/src/lib/fixtures/
-      
-      - name: Commit and push to website repo
+
+      - name: Get previous release tag
+        id: prev_tag
+        run: |
+          # Get all version tags sorted, find the one before current release
+          PREV_TAG=$(git tag -l 'v*' | sort -V | grep -B1 "^${{ inputs.release_tag }}$" | head -1)
+          if [ "$PREV_TAG" = "${{ inputs.release_tag }}" ] || [ -z "$PREV_TAG" ]; then
+            # Fallback: get the tag before this one by commit order
+            PREV_TAG=$(git describe --tags --abbrev=0 ${{ inputs.release_tag }}^ 2>/dev/null || echo "")
+          fi
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, using initial commit"
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
+
+      - name: Generate commit diff for AI
+        id: diff
+        run: |
+          # Get commits between tags (non-merge commits only)
+          COMMITS=$(git log --pretty=format:"- %s" --no-merges \
+            ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
+            | head -100)
+
+          # Get contributors
+          CONTRIBUTORS=$(git log --pretty=format:"%an" \
+            ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
+            | sort -u | grep -v "github-actions" | tr '\n' ', ' | sed 's/,$//')
+
+          # Store for AI prompt
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "commits<<$EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+          echo "contributors=$CONTRIBUTORS" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes with AI
+        id: ai_notes
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          system-prompt: |
+            You are a technical writer creating release notes for Scanopy, a network discovery and topology visualization tool. Write user-focused release notes that emphasize benefits over technical details.
+
+            Format requirements:
+            - Use markdown with headers and bullet points
+            - Categorize into sections: ## New Features, ## Improvements, ## Bug Fixes (only include sections that have content)
+            - Start each item with an action verb (Add, Fix, Improve, Update, etc.)
+            - Include PR/issue numbers in parentheses where mentioned in commits
+            - Keep descriptions concise but informative (1-2 sentences max per item)
+            - Focus on user impact, not implementation details
+            - Combine related commits into single items where appropriate
+
+            Do NOT include:
+            - Version bump commits
+            - Merge commits
+            - CI/CD or workflow changes
+            - Test-only changes (unless they fix user-facing issues)
+            - Internal refactoring unless it has user-visible benefits
+          prompt: |
+            Generate release notes for Scanopy ${{ inputs.release_tag }}.
+            Previous version: ${{ steps.prev_tag.outputs.prev_tag }}
+
+            Commits since last release:
+            ${{ steps.diff.outputs.commits }}
+
+      - name: Generate title and social post
+        id: social
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4.1
+          system-prompt: |
+            Generate a title and social media post for a software release.
+
+            Requirements:
+            1. TITLE: A short, descriptive title (3-6 words) summarizing the key changes. NOT promotional. Examples: "Topology Sharing & Demo Mode", "Performance Improvements & Bug Fixes", "Enhanced Network Discovery"
+
+            2. SOCIAL_POST: A tweet-length post (max 250 characters, leaving room for URL and hashtags). Include:
+               - Version number
+               - 1-2 key highlights
+               - NOT promotional language
+               - No hashtags (they'll be added separately)
+               - No URL (it'll be added separately)
+
+            Output format (exactly like this):
+            TITLE: Your Title Here
+            SOCIAL_POST: Your social post text here
+          prompt: |
+            Based on these release notes for Scanopy ${{ inputs.release_tag }}:
+
+            ${{ steps.ai_notes.outputs.response }}
+
+      - name: Parse social outputs
+        id: parsed
+        run: |
+          RESPONSE='${{ steps.social.outputs.response }}'
+
+          # Extract title
+          TITLE=$(echo "$RESPONSE" | grep "^TITLE:" | sed 's/^TITLE: //')
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+
+          # Extract social post
+          SOCIAL_POST=$(echo "$RESPONSE" | grep "^SOCIAL_POST:" | sed 's/^SOCIAL_POST: //')
+          echo "social_post=$SOCIAL_POST" >> $GITHUB_OUTPUT
+
+          # Get version without v prefix
+          VERSION=$(echo "${{ inputs.release_tag }}" | sed 's/^v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          echo "Title: $TITLE"
+          echo "Social post: $SOCIAL_POST"
+
+      - name: Create changelog file
+        run: |
+          mkdir -p website/src/lib/changelog
+
+          cat > website/src/lib/changelog/${{ inputs.release_tag }}.md << 'CHANGELOG_EOF'
+          ---
+          version: ${{ steps.parsed.outputs.version }}
+          date: $(date -u +%Y-%m-%d)
+          title: ${{ steps.parsed.outputs.title }}
+          social_post: ${{ steps.parsed.outputs.social_post }}
+          contributors: ${{ steps.diff.outputs.contributors }}
+          ---
+
+          ${{ steps.ai_notes.outputs.response }}
+
+          ---
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.prev_tag }}...${{ inputs.release_tag }}
+          CHANGELOG_EOF
+
+          # Fix the date (heredoc doesn't expand $(date))
+          sed -i "s/date: \$(date -u +%Y-%m-%d)/date: $(date -u +%Y-%m-%d)/" website/src/lib/changelog/${{ inputs.release_tag }}.md
+
+      - name: Commit and push fixtures to website repo
         working-directory: website
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/lib/fixtures/
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No fixture changes to commit"
           else
             git commit -m "chore: sync fixtures from ${{ inputs.release_tag }}"
             git push
           fi
-      
-      - name: Send Discord Notification
+
+      - name: Create PR for changelog review
+        working-directory: website
         env:
-          RELEASE_CHANNEL_WEBHOOK: ${{ secrets.RELEASE_CHANNEL_WEBHOOK }}
-          RELEASE_NAME: ${{ steps.release.outputs.release_name }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
-          RELEASE_URL: ${{ steps.release.outputs.release_url }}
-          RELEASE_BODY: ${{ steps.release.outputs.release_body }}
+          GH_TOKEN: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
         run: |
-          # Truncate body if too long for Discord (max 4096 for embed description)
-          BODY="${RELEASE_BODY:0:4000}"
-          if [ ${#RELEASE_BODY} -gt 4000 ]; then
-            BODY="${BODY}...\n\n[Read full release notes](${RELEASE_URL})"
+          BRANCH="changelog/${{ inputs.release_tag }}"
+
+          # Create and switch to new branch
+          git checkout -b "$BRANCH"
+
+          # Add changelog file
+          git add src/lib/changelog/
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changelog changes to commit"
+            exit 0
           fi
-          
-          # Escape special characters for JSON
-          BODY=$(echo "$BODY" | jq -Rs .)
-          
-          # Send to Discord
-          curl -H "Content-Type: application/json" \
-            -d "{
-              \"embeds\": [{
-                \"title\": \"🚀 ${RELEASE_NAME}\",
-                \"url\": \"${RELEASE_URL}\",
-                \"description\": ${BODY},
-                \"color\": 5814783,
-                \"fields\": [{
-                  \"name\": \"Version\",
-                  \"value\": \"\`${RELEASE_TAG}\`\",
-                  \"inline\": true
-                }],
-                \"footer\": {
-                  \"text\": \"Scanopy Release\"
-                },
-                \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
-              }]
-            }" \
-            "$RELEASE_CHANNEL_WEBHOOK"
+
+          git commit -m "docs: add release notes for ${{ inputs.release_tag }}"
+          git push -u origin "$BRANCH"
+
+          # Create PR with review checklist
+          gh pr create \
+            --title "Release Notes: ${{ inputs.release_tag }} - ${{ steps.parsed.outputs.title }}" \
+            --body "## AI-Generated Release Notes
+
+          This PR contains automatically generated release notes for **${{ inputs.release_tag }}**.
+
+          ### Preview
+
+          **Title:** ${{ steps.parsed.outputs.title }}
+
+          **Social Post:**
+          > ${{ steps.parsed.outputs.social_post }}
+
+          ### Review Checklist
+
+          - [ ] Verify accuracy of feature descriptions
+          - [ ] Check categorization (New Features, Improvements, Bug Fixes)
+          - [ ] Review the title - should be descriptive, not promotional
+          - [ ] Review the social post for Twitter/Bluesky
+          - [ ] Edit for clarity and user-focus if needed
+
+          ### What happens on merge
+
+          When you merge this PR, the following will be published automatically:
+          - ✅ Changelog added to scanopy.net
+          - 📢 Discord notification sent
+          - 🐦 Tweet posted to @scanopy
+          - 🦋 Post on Bluesky
+          - 📱 Post on r/scanopy
+
+          ---
+          *Generated with GitHub Models AI*" \
+            --base main \
+            --head "$BRANCH"
+
+          echo "PR created for changelog review"
