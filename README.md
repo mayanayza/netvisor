@@ -65,7 +65,7 @@ For detailed setup options and configuration, see the [Installation Guide](https
 
 ## 📚 Documentation
 
-Full documentation at **[scanopy.net/docs](https://scanopy.net/docs)**
+**[scanopy.net/docs](https://scanopy.net/docs)**
 
 ## 🖼️ Examples
 
