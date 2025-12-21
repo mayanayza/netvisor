@@ -63,7 +63,7 @@ impl ChangeTriggersTopologyStaleness<Service> for Service {
     }
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, Default)]
 pub struct Service {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -239,17 +239,6 @@ impl PartialEq for Service {
                 //          (creates duplicates - requires manual consolidation)
                 false
             }
-        }
-    }
-}
-
-impl Default for Service {
-    fn default() -> Self {
-        Self {
-            id: Uuid::nil(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            base: ServiceBase::default(),
         }
     }
 }

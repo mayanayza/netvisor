@@ -31,7 +31,7 @@ impl Default for TagBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct Tag {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

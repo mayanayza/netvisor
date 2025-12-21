@@ -3,7 +3,13 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
-	import { checkAuth, isCheckingAuth, isAuthenticated } from '$lib/features/auth/store';
+	import {
+		checkAuth,
+		isCheckingAuth,
+		isAuthenticated,
+		currentUser
+	} from '$lib/features/auth/store';
+	import { identifyUser, trackPlunkEvent, disableAnalytics } from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import '../app.css';
 	import { resolve } from '$app/paths';
@@ -62,6 +68,20 @@
 		}
 	});
 
+	// Identify user in PostHog when authenticated (skipped in demo mode by identifyUser)
+	$effect(() => {
+		if (posthogInitialized && $currentUser) {
+			identifyUser($currentUser.id, $currentUser.email, $currentUser.organization_id);
+		}
+	});
+
+	// Disable all analytics in demo mode to prevent data pollution
+	$effect(() => {
+		if (posthogInitialized && $organization?.plan?.type === 'Demo') {
+			disableAnalytics();
+		}
+	});
+
 	async function waitForBillingActivation(maxAttempts = 10) {
 		for (let i = 0; i < maxAttempts; i++) {
 			const organization = await getOrganization();
@@ -94,19 +114,24 @@
 		// Check authentication status and get public server config
 		await Promise.all([checkAuth(), getConfig()]);
 
-		// Redirect if not authenticated and not on an auth route
+		// Redirect if not authenticated and not on an auth/public route
 		if (!$isAuthenticated) {
-			const isAuthRoute =
+			const isPublicRoute =
 				$page.url.pathname === '/auth' ||
 				$page.url.pathname === '/login' ||
-				$page.url.pathname === '/onboarding';
+				$page.url.pathname === '/onboarding' ||
+				$page.url.pathname.startsWith('/share/');
 
-			if (!isAuthRoute) {
+			if (!isPublicRoute) {
 				// Check for password reset token - redirect to login with token
 				const token = $page.url.searchParams.get('token');
+				const isDemo = $page.url.hostname === 'demo.scanopy.net';
 				if (token) {
 					// eslint-disable-next-line svelte/no-navigation-without-resolve
 					await goto(`${resolve('/login')}?token=${token}`);
+				} else if (isDemo) {
+					// Demo mode - redirect to login
+					await goto(resolve('/login'));
 				} else if (typeof localStorage !== 'undefined' && localStorage.getItem('hasAccount')) {
 					// Returning user (has logged in before) - redirect to login
 					await goto(resolve('/login'));
@@ -117,6 +142,13 @@
 				}
 			}
 		} else {
+			// Check for pending Plunk tracking after OIDC registration
+			const pendingPlunk = sessionStorage.getItem('pendingPlunkRegistration');
+			if (pendingPlunk && $currentUser) {
+				sessionStorage.removeItem('pendingPlunkRegistration');
+				trackPlunkEvent('register', $currentUser.email, pendingPlunk === 'true');
+			}
+
 			await getOrganization();
 
 			if ($organization) {
@@ -136,10 +168,14 @@
 				}
 
 				// Check if current page matches where user should be
-				const correctRoute = getRoute();
-				if ($page.url.pathname !== correctRoute) {
-					// eslint-disable-next-line svelte/no-navigation-without-resolve
-					await goto(correctRoute);
+				// Skip redirect for public share pages - authenticated users can still view them
+				const isSharePage = $page.url.pathname.startsWith('/share/');
+				if (!isSharePage) {
+					const correctRoute = getRoute();
+					if ($page.url.pathname !== correctRoute) {
+						// eslint-disable-next-line svelte/no-navigation-without-resolve
+						await goto(correctRoute);
+					}
 				}
 			} else {
 				pushError('Failed to load organization. Please refresh the page.');

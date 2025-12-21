@@ -44,11 +44,14 @@ async fn test_host_deduplication_on_create() {
         .await
         .unwrap();
 
+    let host1_interface = created1.base.interfaces.first().unwrap();
+
     // Try to create duplicate (same interfaces)
     let mut host2 = host(&network.id);
     host2.base.source = EntitySource::Discovery {
         metadata: vec![DiscoveryMetadata::default()],
     };
+    host2.base.interfaces = vec![host1_interface.clone()];
     let (created2, _) = services
         .host_service
         .create_host_with_services(host2.clone(), vec![], AuthenticatedEntity::System)

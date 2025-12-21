@@ -4,14 +4,20 @@
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
-	import { topology } from '$lib/features/topology/store';
-	import type { InterfaceNode } from '$lib/features/topology/types/base';
+	import { topology as globalTopology } from '$lib/features/topology/store';
+	import type { InterfaceNode, Topology } from '$lib/features/topology/types/base';
+	import { getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
 	let { node }: { node: Node } = $props();
 
+	// Try to get topology from context (for share/embed pages), fallback to global store
+	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
+	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
+
 	let nodeData = node.data as InterfaceNode;
 
-	let host = $derived($topology ? $topology.hosts.find((h) => h.id == nodeData.host_id) : null);
+	let host = $derived(topology ? topology.hosts.find((h) => h.id == nodeData.host_id) : null);
 
 	// Get the interface for this node
 	let thisInterface = $derived(
@@ -19,7 +25,9 @@
 	);
 
 	// Get all services for this host
-	let servicesForHost = $derived($topology.services.filter((s) => s.host_id == nodeData.host_id));
+	let servicesForHost = $derived(
+		topology ? topology.services.filter((s) => s.host_id == nodeData.host_id) : []
+	);
 
 	// Filter services bound to this specific interface
 	let servicesOnThisInterface = $derived(

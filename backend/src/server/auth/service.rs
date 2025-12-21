@@ -133,8 +133,7 @@ impl AuthService {
                 ip_address: ip,
                 user_agent,
                 metadata: serde_json::json!({
-                    "method": "password",
-                    "subscribed": request.subscribed
+                    "method": "password"
                 }),
                 authentication: user.clone().into(),
             })
@@ -208,11 +207,11 @@ impl AuthService {
             organization.id
         };
 
-        // If being invited, will have permissions (default to None in case permissions were lost for some reason); otherwise, new user and should be owner of org
+        // If being invited, will have permissions (default to Viewer in case permissions were lost for some reason); otherwise, new user and should be owner of org
         let permissions = if is_new_org {
             UserOrgPermissions::Owner
         } else {
-            permissions.unwrap_or(UserOrgPermissions::None)
+            permissions.unwrap_or(UserOrgPermissions::Viewer)
         };
 
         // Create user based on auth method

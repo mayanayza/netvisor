@@ -99,7 +99,6 @@ impl OidcService {
         let OidcRegisterParams {
             provider_slug,
             code,
-            subscribed,
             billing_enabled,
             terms_accepted_at,
         } = oidc_register_params;
@@ -142,7 +141,7 @@ impl OidcService {
             Ok::<EmailAddress, Error>(EmailAddress::new_unchecked(fallback_email_str))
         })?;
 
-        if is_email_unwanted(email.as_str()) {
+        if is_email_unwanted(email.as_str()) && email.domain() != "gmx.net" {
             return Err(anyhow!(
                 "Email address uses a disposable domain. Please register with a non-disposable email address."
             ));
@@ -180,8 +179,7 @@ impl OidcService {
                 metadata: serde_json::json!({
                     "method": "oidc",
                     "provider": provider.slug,
-                    "provider_name": provider.name,
-                    "subscribed": subscribed
+                    "provider_name": provider.name
                 }),
                 authentication: user.clone().into(),
             })

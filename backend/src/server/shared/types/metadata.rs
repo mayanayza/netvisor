@@ -5,7 +5,6 @@ use serde::Serialize;
 use strum::{IntoDiscriminant, IntoEnumIterator};
 
 use crate::server::{
-    auth::middleware::auth::AuthenticatedUser,
     billing::types::{base::BillingPlan, features::Feature},
     discovery::r#impl::types::DiscoveryType,
     groups::r#impl::types::GroupType,
@@ -114,7 +113,7 @@ where
     }
 }
 
-pub async fn get_metadata_registry(_user: AuthenticatedUser) -> impl IntoResponse {
+pub async fn get_metadata_registry() -> impl IntoResponse {
     let registry = MetadataRegistry {
         service_definitions: ServiceDefinitionRegistry::all_service_definitions()
             .iter()

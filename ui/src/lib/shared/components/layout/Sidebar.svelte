@@ -37,6 +37,8 @@
 	import UserTab from '$lib/features/users/components/UserTab.svelte';
 	import OrganizationSettingsModal from '$lib/features/organizations/OrganizationSettingsModal.svelte';
 	import TagTab from '$lib/features/tags/components/TagTab.svelte';
+	import Tag from '$lib/shared/components/data/Tag.svelte';
+	import ShareTab from '$lib/features/shares/components/ShareTab.svelte';
 
 	let {
 		activeTab = $bindable('topology'),
@@ -53,6 +55,7 @@
 	// Derived values from stores
 	let userPermissions = $derived($currentUser?.permissions);
 	let isBillingEnabled = $derived($organization ? isBillingPlanActive($organization) : false);
+	let isDemoOrg = $derived($organization?.plan?.type === 'Demo');
 
 	let showAuthSettings = $state(false);
 	let showSupport = $state(false);
@@ -68,6 +71,7 @@
 		onClick?: () => void | Promise<void>;
 		requiredPermissions?: UserOrgPermissions[]; // Which permissions can see this item
 		requiresBilling?: boolean; // Whether this requires billing to be enabled
+		hideInDemo?: boolean; // Whether to hide this in demo mode
 	}
 
 	interface NavSection {
@@ -92,6 +96,13 @@
 					label: 'Topology',
 					icon: entities.getIconComponent('Topology'),
 					component: TopologyTab
+				},
+				{
+					id: 'shares',
+					label: 'Sharing',
+					icon: entities.getIconComponent('Share'),
+					component: ShareTab,
+					requiredPermissions: ['Member', 'Admin', 'Owner']
 				}
 			]
 		},
@@ -201,7 +212,8 @@
 					icon: User as IconComponent,
 					onClick: async () => {
 						showAuthSettings = true;
-					}
+					},
+					hideInDemo: true
 				},
 				{
 					id: 'organization',
@@ -286,9 +298,24 @@
 		return isBillingEnabled;
 	}
 
+	// Helper to check demo mode requirements
+	function meetsDemoModeRequirements(item: NavItem): boolean {
+		// If billing not required, always show
+		if (item.hideInDemo && userPermissions != 'Owner') {
+			return false;
+		}
+
+		// If billing is required, check if it's enabled
+		return isDemoOrg;
+	}
+
 	// Helper to check if item should be visible
 	function isItemVisible(item: NavItem): boolean {
-		return hasRequiredPermissions(item) && meetsBillingRequirement(item);
+		return (
+			hasRequiredPermissions(item) &&
+			meetsBillingRequirement(item) &&
+			meetsDemoModeRequirements(item)
+		);
 	}
 
 	// Filter nav config based on user permissions and billing status
@@ -435,6 +462,11 @@
 					</div>
 				{/if}
 			</button>
+			{#if !collapsed && isDemoOrg}
+				<div class="mt-2 flex justify-center">
+					<Tag label="Demo" color="yellow" />
+				</div>
+			{/if}
 		</div>
 
 		<!-- Main Navigation -->

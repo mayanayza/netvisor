@@ -14,6 +14,7 @@ pub struct FeatureCheckContext<'a> {
     pub organization: &'a Organization,
     pub plan: BillingPlan,
     pub app_state: &'a AppState,
+    pub permissions: UserOrgPermissions,
 }
 
 pub enum FeatureCheckResult {
@@ -84,6 +85,7 @@ where
             organization: &organization,
             plan,
             app_state,
+            permissions,
         };
 
         let checker = T::default();
@@ -105,14 +107,23 @@ where
 // ============ Concrete Checkers ============
 
 #[derive(Default)]
+pub struct EmbedsFeature;
+
+#[async_trait]
+impl FeatureCheck for EmbedsFeature {
+    async fn check(&self, _ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
+        // Embed check happens in the handler where we have access to the request body
+        FeatureCheckResult::Allowed
+    }
+}
+
+#[derive(Default)]
 pub struct InviteUsersFeature;
 
 #[async_trait]
 impl FeatureCheck for InviteUsersFeature {
     async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
-        let features = ctx.plan.features();
-
-        if !features.share_views {
+        if ctx.plan.can_invite_users() {
             return FeatureCheckResult::denied("Your plan does not include inviting users");
         }
 
@@ -154,53 +165,27 @@ impl FeatureCheck for CreateNetworkFeature {
     }
 }
 
-/// Feature check that verifies the organization has an active billing plan.
+/// Feature check that blocks non-owner users on demo organizations.
 ///
-/// Exemptions:
-/// - Community plan (free tier, doesn't require Stripe)
-/// - CommercialSelfHosted plan (self-hosted, billing disabled)
-/// - Demo plan (demo accounts)
-/// - Self-hosted instances (when stripe_secret is None in config)
-///
-/// Blocks immediately for:
-/// - past_due subscription status (no grace period)
-/// - Missing plan_status when billing is enabled and plan requires it
+/// Demo mode allows users to explore the UI without making destructive changes.
+/// Owners of demo organizations retain full access to all features.
 #[derive(Default)]
-pub struct ActivePlanFeature;
+pub struct BlockedInDemoMode;
 
 #[async_trait]
-impl FeatureCheck for ActivePlanFeature {
+impl FeatureCheck for BlockedInDemoMode {
     async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
-        // Self-hosted instances with billing disabled are always allowed
-        // (unless enforce_billing_for_testing is set for integration tests)
-        let billing_enabled = ctx.app_state.config.stripe_secret.is_some()
-            || ctx.app_state.config.enforce_billing_for_testing;
-        if !billing_enabled {
+        // Allow if not demo plan
+        if !matches!(ctx.plan, BillingPlan::Demo(_)) {
             return FeatureCheckResult::Allowed;
         }
 
-        // Check plan type - some plans are exempt
-        match &ctx.plan {
-            BillingPlan::Community(_)
-            | BillingPlan::CommercialSelfHosted(_)
-            | BillingPlan::Demo(_) => {
-                return FeatureCheckResult::Allowed;
-            }
-            _ => {}
+        // Allow owners full access
+        if ctx.permissions == UserOrgPermissions::Owner {
+            return FeatureCheckResult::Allowed;
         }
 
-        // Check subscription status
-        match ctx.organization.base.plan_status.as_deref() {
-            Some("active") | Some("trialing") => FeatureCheckResult::Allowed,
-            Some("past_due") => FeatureCheckResult::payment_required(
-                "Your subscription is past due. Please update your payment method.",
-            ),
-            Some("canceled") => FeatureCheckResult::payment_required(
-                "Your subscription has been canceled. Please renew to continue.",
-            ),
-            _ => FeatureCheckResult::payment_required(
-                "Active billing plan required. Please select a plan.",
-            ),
-        }
+        // Block non-owners on demo plan
+        FeatureCheckResult::denied("This action is disabled in demo mode")
     }
 }

@@ -81,6 +81,13 @@ impl EntityFilter {
         self
     }
 
+    pub fn hidden_is(mut self, hidden: bool) -> Self {
+        self.conditions
+            .push(format!("hidden = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::Bool(hidden));
+        self
+    }
+
     pub fn host_id(mut self, id: &Uuid) -> Self {
         self.conditions
             .push(format!("host_id = ${}", self.values.len() + 1));
@@ -155,6 +162,13 @@ impl EntityFilter {
         self.conditions
             .push(format!("organization_id = ${}", self.values.len() + 1));
         self.values.push(SqlValue::Uuid(*organization_id));
+        self
+    }
+
+    pub fn topology_id(mut self, topology_id: &Uuid) -> Self {
+        self.conditions
+            .push(format!("topology_id = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(*topology_id));
         self
     }
 

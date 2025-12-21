@@ -1,3 +1,4 @@
+use crate::server::billing::types::base::BillingPlan;
 use crate::server::daemons::r#impl::api::DaemonHeartbeatPayload;
 use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::{
@@ -18,8 +19,7 @@ use crate::server::{
     shared::{
         events::types::TelemetryEvent,
         handlers::traits::{
-            bulk_delete_handler, create_handler, delete_handler, get_all_handler,
-            get_by_id_handler, update_handler,
+            bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
         },
         services::traits::{CrudService, EventBusService},
         storage::traits::StorableEntity,
@@ -38,7 +38,6 @@ use uuid::Uuid;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create_handler::<Daemon>))
         .route("/", get(get_all_handler::<Daemon>))
         .route("/{id}", put(update_handler::<Daemon>))
         .route("/{id}", delete(delete_handler::<Daemon>))
@@ -58,6 +57,27 @@ async fn register_daemon(
     auth_daemon: AuthenticatedDaemon,
     Json(request): Json<DaemonRegistrationRequest>,
 ) -> ApiResult<Json<ApiResponse<DaemonRegistrationResponse>>> {
+    // Check if this is a demo organization - block daemon registration
+    let network = state
+        .services
+        .network_service
+        .get_by_id(&auth_daemon.network_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Network not found".to_string()))?;
+
+    let org = state
+        .services
+        .organization_service
+        .get_by_id(&network.base.organization_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
+
+    if matches!(org.base.plan, Some(BillingPlan::Demo(_))) {
+        return Err(ApiError::forbidden(
+            "Daemon registration is disabled in demo mode",
+        ));
+    }
+
     let service = &state.services.daemon_service;
 
     tracing::info!("{:?}", request);

@@ -112,6 +112,14 @@ pub struct PlanConfig {
     pub included_networks: Option<u64>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Display, Copy, PartialEq, Eq, Default, Hash)]
+pub enum Hosting {
+    SelfHosted,
+    Managed,
+    #[default]
+    Cloud,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash)]
 pub enum BillingRate {
     #[default]
@@ -184,12 +192,20 @@ impl BillingPlan {
         )
     }
 
-    pub fn hosting(&self) -> &str {
+    pub fn is_demo(&self) -> bool {
+        matches!(self, BillingPlan::Demo(_))
+    }
+
+    pub fn can_invite_users(&self) -> bool {
+        self.config().included_seats.unwrap_or(u64::MAX) > 1 && self.config().seat_cents.is_some()
+    }
+
+    pub fn hosting(&self) -> Hosting {
         match self {
-            BillingPlan::Community(_) => "Self-Hosted",
-            BillingPlan::CommercialSelfHosted(_) => "Self-Hosted",
-            BillingPlan::Enterprise(_) => "Managed",
-            _ => "Cloud",
+            BillingPlan::Community(_) => Hosting::SelfHosted,
+            BillingPlan::CommercialSelfHosted(_) => Hosting::SelfHosted,
+            BillingPlan::Enterprise(_) => Hosting::Managed,
+            _ => Hosting::Cloud,
         }
     }
 
@@ -256,7 +272,7 @@ impl BillingPlan {
                 priority_support: false,
             },
             BillingPlan::Starter { .. } => BillingPlanFeatures {
-                share_views: false,
+                share_views: true,
                 onboarding_call: false,
                 commercial_license: false,
                 webhooks: false,

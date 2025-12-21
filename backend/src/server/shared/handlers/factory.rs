@@ -8,9 +8,9 @@ use crate::server::{
     groups::handlers as group_handlers, hosts::handlers as host_handlers,
     invites::handlers as invite_handlers, networks::handlers as network_handlers,
     organizations::handlers as organization_handlers, services::handlers as service_handlers,
-    shared::types::api::ApiResponse, subnets::handlers as subnet_handlers,
-    tags::handlers as tag_handlers, topology::handlers as topology_handlers,
-    users::handlers as user_handlers,
+    shared::types::api::ApiResponse, shares::handlers as share_handlers,
+    subnets::handlers as subnet_handlers, tags::handlers as tag_handlers,
+    topology::handlers as topology_handlers, users::handlers as user_handlers,
 };
 use axum::http::HeaderValue;
 use axum::middleware;
@@ -39,10 +39,11 @@ pub fn create_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
             require_billing_for_users,
         ));
 
-    // Routes exempt from billing checks
+    // Routes exempt from billing checks (includes shares which has public endpoints)
     let exempt_routes = Router::new()
         .nest("/api/billing", billing_handlers::create_router())
         .nest("/api/auth", auth_handlers::create_router())
+        .nest("/api/shares", share_handlers::create_router())
         .route("/api/health", get(get_health));
 
     // Cacheable routes (also exempt from billing)

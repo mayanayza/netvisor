@@ -13,7 +13,7 @@ use validator::Validate;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default)]
 pub struct NetworkBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -34,7 +34,7 @@ impl NetworkBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Network {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

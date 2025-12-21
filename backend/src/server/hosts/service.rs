@@ -79,7 +79,21 @@ impl CrudService<Host> for HostService {
                         == EntitySourceDiscriminants::Discovery)
                     || host.id == existing_host.id =>
             {
-                tracing::warn!(
+                // Warn if matched via MAC/IP but host IDs differ - this indicates a daemon
+                // may be using a stale config with an old host_id that doesn't match reality
+                if host.id != existing_host.id {
+                    tracing::warn!(
+                        incoming_host_id = %host.id,
+                        matched_host_id = %existing_host.id,
+                        matched_host_name = %existing_host.base.name,
+                        "Host matched via MAC/IP address but discovery reported a different host ID. \
+                         This may indicate a daemon is using a stale configuration. \
+                         To fix, update the daemon's config file with: host_id = \"{}\"",
+                        existing_host.id
+                    );
+                }
+
+                tracing::debug!(
                     "Duplicate host for {}: {} found, {}: {} - upserting discovery data...",
                     host.base.name,
                     host.id,
@@ -91,6 +105,19 @@ impl CrudService<Host> for HostService {
                     .await?
             }
             _ => {
+                // Check if host exists in a different network (network_id mismatch)
+                if let Some(existing_host) = self.storage.get_by_id(&host.id).await? {
+                    return Err(anyhow!(
+                        "Network mismatch: Daemon is trying to update host '{}' (id: {}) but cannot proceed. \
+                        The host belongs to network {} while the daemon is assigned to network {}. \
+                        To resolve this, either reassign the daemon to the correct network or delete the mismatched host.",
+                        existing_host.base.name,
+                        host.id,
+                        existing_host.base.network_id,
+                        host.base.network_id
+                    ));
+                }
+
                 let created = self.storage.create(&host).await?;
                 let trigger_stale = created.triggers_staleness(None);
 

@@ -53,14 +53,9 @@ pub trait EmailProvider: Send + Sync {
     ) -> Result<(), Error>;
 
     /// Track an event (optional, only for providers that support it)
-    async fn track_event(
-        &self,
-        event: String,
-        email: EmailAddress,
-        subscribed: bool,
-    ) -> Result<()> {
+    async fn track_event(&self, event: String, email: EmailAddress) -> Result<()> {
         // Default implementation does nothing
-        let _ = (event, email, subscribed);
+        let _ = (event, email);
         Ok(())
     }
 }
@@ -99,13 +94,8 @@ impl EmailService {
     }
 
     /// Track an event (delegates to provider)
-    pub async fn track_event(
-        &self,
-        event: String,
-        email: EmailAddress,
-        subscribed: bool,
-    ) -> Result<()> {
-        self.provider.track_event(event, email, subscribed).await
+    pub async fn track_event(&self, event: String, email: EmailAddress) -> Result<()> {
+        self.provider.track_event(event, email).await
     }
 }
 

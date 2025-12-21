@@ -10,7 +10,7 @@ use crate::server::{
     daemons::r#impl::api::DaemonCapabilities, shared::entities::ChangeTriggersTopologyStaleness,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct DaemonBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
@@ -24,7 +24,7 @@ pub struct DaemonBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Daemon {
     pub id: Uuid,
     pub updated_at: DateTime<Utc>,

@@ -13,7 +13,7 @@ use std::{fmt::Display, hash::Hash};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub struct Topology {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -22,7 +22,7 @@ pub struct Topology {
     pub base: TopologyBase,
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
 pub struct TopologyBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -156,7 +156,7 @@ pub struct TopologyRequestOptions {
 impl Default for TopologyRequestOptions {
     fn default() -> Self {
         Self {
-            group_docker_bridges_by_host: false,
+            group_docker_bridges_by_host: true,
             hide_vm_title_on_docker_container: false,
             hide_ports: false,
             left_zone_service_categories: vec![ServiceCategory::DNS, ServiceCategory::ReverseProxy],

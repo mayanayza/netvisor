@@ -109,10 +109,11 @@ pub fn host(network_id: &Uuid) -> Host {
 }
 
 pub fn interface(subnet_id: &Uuid) -> Interface {
+    let random_mac: [u8; 6] = [fastrand::u8(1..9); 6];
     Interface::new(InterfaceBase {
         subnet_id: *subnet_id,
         ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
-        mac_address: Some(MacAddress::new([1, 2, 3, 4, 5, 6])),
+        mac_address: Some(MacAddress::new(random_mac)),
         name: Some("eth0".to_string()),
     })
 }

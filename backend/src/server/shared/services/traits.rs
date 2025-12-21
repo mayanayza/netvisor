@@ -20,18 +20,26 @@ use crate::server::{
     },
 };
 
-pub trait EventBusService<T: Into<Entity>> {
+pub trait EventBusService<T: Into<Entity> + Default> {
     /// Event bus and helpers
     fn event_bus(&self) -> &Arc<EventBus>;
 
     fn get_network_id(&self, entity: &T) -> Option<Uuid>;
     fn get_organization_id(&self, entity: &T) -> Option<Uuid>;
+
+    fn is_network_keyed(&self) -> bool {
+        self.get_network_id(&T::default()).is_some()
+    }
+
+    fn is_organization_keyed(&self) -> bool {
+        self.get_organization_id(&T::default()).is_some()
+    }
 }
 
 /// Helper trait for services that use generic storage
 /// Provides default implementations for common CRUD operations
 #[async_trait]
-pub trait CrudService<T: StorableEntity + Into<Entity>>: EventBusService<T>
+pub trait CrudService<T: StorableEntity + Into<Entity> + Default>: EventBusService<T>
 where
     T: Display + ChangeTriggersTopologyStaleness<T>,
 {
@@ -194,5 +202,46 @@ where
         let deleted_count = self.storage().delete_many(ids).await?;
 
         Ok(deleted_count)
+    }
+
+    /// Delete all entities for an organization
+    async fn delete_all_for_org(
+        &self,
+        organization_id: &Uuid,
+        network_ids: &[Uuid],
+        authentication: AuthenticatedEntity,
+    ) -> Result<usize, anyhow::Error> {
+        let filter = if self.is_network_keyed() {
+            EntityFilter::unfiltered().network_ids(network_ids)
+        } else {
+            EntityFilter::unfiltered().organization_id(organization_id)
+        };
+
+        // Get entities for event publishing before deletion
+        let entities = self.get_all(filter.clone()).await?;
+
+        // Publish delete events
+        for entity in &entities {
+            let trigger_stale = entity.triggers_staleness(None);
+
+            self.event_bus()
+                .publish_entity(EntityEvent {
+                    id: Uuid::new_v4(),
+                    entity_id: entity.id(),
+                    network_id: self.get_network_id(entity),
+                    organization_id: self.get_organization_id(entity),
+                    entity_type: entity.clone().into(),
+                    operation: EntityOperation::Deleted,
+                    timestamp: Utc::now(),
+                    metadata: serde_json::json!({
+                        "trigger_stale": trigger_stale
+                    }),
+                    authentication: authentication.clone(),
+                })
+                .await?;
+        }
+
+        // Delete all matching entities
+        self.storage().delete_by_filter(filter).await
     }
 }
