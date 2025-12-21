@@ -7,7 +7,7 @@
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { field } from 'svelte-forms';
-	import { emailValidator, minLength } from '$lib/shared/components/forms/validators';
+	import { emailValidator } from '$lib/shared/components/forms/validators';
 
 	let {
 		orgName = null,
@@ -44,7 +44,7 @@
 
 	// Create form fields with validation
 	const email = field('email', formData.email, [required(), emailValidator()]);
-	const password = field('password', formData.password, [required(), minLength(10)]);
+	const password = field('password', formData.password, [required()]);
 
 	// Update formData when field values change
 	$effect(() => {
@@ -118,11 +118,11 @@
 			<div class="mt-3 rounded-md bg-gray-800 p-3 font-mono text-sm">
 				<div class="text-secondary">
 					<span class="text-gray-400">Email:</span>
-					<span class="text-primary ml-2">admin</span>
+					<span class="text-primary ml-2">demo@scanopy.net</span>
 				</div>
 				<div class="text-secondary mt-1">
 					<span class="text-gray-400">Password:</span>
-					<span class="text-primary ml-2">password</span>
+					<span class="text-primary ml-2">password123</span>
 				</div>
 			</div>
 		</div>
@@ -166,7 +166,7 @@
 			</button>
 
 			<!-- OIDC Providers -->
-			{#if hasOidcProviders}
+			{#if hasOidcProviders && !demoMode}
 				<div class="relative">
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-gray-600"></div>
