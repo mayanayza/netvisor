@@ -231,7 +231,7 @@ pub async fn populate_demo_data(
     }
 
     // Create admin user
-    let password = hash_password("password")?;
+    let password = hash_password("password123")?;
     let mut demo_admin = User::new(UserBase::new_password(
         EmailAddress::new_unchecked("demo@scanopy.net"),
         password,

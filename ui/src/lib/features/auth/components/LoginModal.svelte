@@ -118,11 +118,11 @@
 			<div class="mt-3 rounded-md bg-gray-800 p-3 font-mono text-sm">
 				<div class="text-secondary">
 					<span class="text-gray-400">Email:</span>
-					<span class="text-primary ml-2">admin</span>
+					<span class="text-primary ml-2">demo@scanopy.net</span>
 				</div>
 				<div class="text-secondary mt-1">
 					<span class="text-gray-400">Password:</span>
-					<span class="text-primary ml-2">password</span>
+					<span class="text-primary ml-2">password123</span>
 				</div>
 			</div>
 		</div>
