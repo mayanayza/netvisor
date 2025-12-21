@@ -7,7 +7,7 @@
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { field } from 'svelte-forms';
-	import { emailValidator, minLength } from '$lib/shared/components/forms/validators';
+	import { emailValidator } from '$lib/shared/components/forms/validators';
 
 	let {
 		orgName = null,
@@ -166,7 +166,7 @@
 			</button>
 
 			<!-- OIDC Providers -->
-			{#if hasOidcProviders}
+			{#if hasOidcProviders && !demoMode}
 				<div class="relative">
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-gray-600"></div>
