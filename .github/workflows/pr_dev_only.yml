@@ -2,6 +2,10 @@ name: Check pull request source branch
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+
 jobs:
   check-branches:
     name: pr_dev_only

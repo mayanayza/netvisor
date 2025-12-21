@@ -18,6 +18,9 @@ on:
       - 'backend/*'
       - '.github/workflows/daemon-ci.yml'
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: ./backend

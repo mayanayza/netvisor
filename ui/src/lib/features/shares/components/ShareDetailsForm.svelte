@@ -3,23 +3,26 @@
 	import { required } from 'svelte-forms/validators';
 	import { maxLength } from '$lib/shared/components/forms/validators';
 	import type { FormApi } from '$lib/shared/components/forms/types';
-	import type { Share, ShareType } from '../types/base';
+	import type { Share } from '../types/base';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
-	import { Code, Link, Globe } from 'lucide-svelte';
 	import DateInput from '$lib/shared/components/forms/input/DateInput.svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
-	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
+	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
+	import { generateShareUrl, generateEmbedCode } from '../store';
+	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Partial<Share>;
 	export let isEditing: boolean = false;
 	export let passwordValue: string = '';
-	export let showShowcase: boolean = false;
-	export let blockEmbeds: boolean = false;
+	export let hasEmbedsFeature: boolean = true;
+	export let createdShare: Share | null = null;
 
 	// Form fields
 	const name = field('name', formData.name || '', [required(), maxLength(100)]);
+	const embedWidth = field('embedWidth', '800', []);
+	const embedHeight = field('embedHeight', '600', []);
 	const password = field('password', '', []);
 
 	// Sync password field to exported value
@@ -28,12 +31,17 @@
 	const expiresAt = field('expiresAt', formData.expires_at || '', []);
 	const showZoomControls = field(
 		'showZoomControls',
-		formData.embed_options?.show_zoom_controls ?? true,
+		formData.options?.show_zoom_controls ?? true,
 		[]
 	);
 	const showInspectPanel = field(
 		'showInspectPanel',
-		formData.embed_options?.show_inspect_panel ?? true,
+		formData.options?.show_inspect_panel ?? true,
+		[]
+	);
+	const showExportButton = field(
+		'showExportButton',
+		formData.options?.show_export_button ?? true,
 		[]
 	);
 	const isEnabled = field('isEnabled', formData.is_enabled ?? true, []);
@@ -47,93 +55,24 @@
 				.filter(Boolean)
 		: undefined;
 	$: formData.expires_at = $expiresAt.value ? $expiresAt.value : undefined;
-	$: if (formData.embed_options) {
-		formData.embed_options.show_zoom_controls = $showZoomControls.value;
-		formData.embed_options.show_inspect_panel = $showInspectPanel.value;
+	$: if (formData.options) {
+		formData.options.show_zoom_controls = $showZoomControls.value;
+		formData.options.show_inspect_panel = $showInspectPanel.value;
+		formData.options.show_export_button = $showExportButton.value;
 	}
 	$: formData.is_enabled = $isEnabled.value;
-
-	function handleTypeChange(type: ShareType | 'showcase') {
-		if (type === 'showcase') {
-			showShowcase = true;
-			return;
-		}
-		showShowcase = false;
-		formData.share_type = type;
-		// Reset type-specific fields
-		if (type === 'link') {
-			allowedDomains.set('');
-		} else {
-			password.set('');
-		}
-	}
 </script>
 
 <div class="space-y-6">
-	<!-- Share Type Selector (only for new shares) -->
-	{#if !isEditing}
-		<div>
-			<span class="mb-2 block text-sm font-medium text-gray-300">Share Type</span>
-			<div class="flex gap-3">
-				<button
-					type="button"
-					on:click={() => handleTypeChange('link')}
-					class="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors {!showShowcase &&
-					formData.share_type === 'link'
-						? 'border-blue-500 bg-blue-500/10 text-blue-400'
-						: 'border-gray-600 bg-gray-700 text-gray-400 hover:border-gray-500'}"
-				>
-					<Link class="h-5 w-5" />
-					<span>Link</span>
-				</button>
-				<button
-					type="button"
-					on:click={() => handleTypeChange('embed')}
-					class="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors {!showShowcase &&
-					formData.share_type === 'embed'
-						? 'border-purple-500 bg-purple-500/10 text-purple-400'
-						: 'border-gray-600 bg-gray-700 text-gray-400 hover:border-gray-500'}"
-				>
-					<Code class="h-5 w-5" />
-					<span>Embed</span>
-				</button>
-				<button
-					type="button"
-					on:click={() => handleTypeChange('showcase')}
-					class="flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-colors {showShowcase
-						? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-						: 'border-gray-600 bg-gray-700 text-gray-400 hover:border-gray-500'}"
-				>
-					<Globe class="h-5 w-5" />
-					<span>Showcase</span>
-				</button>
-			</div>
-		</div>
-	{/if}
-
-	{#if showShowcase}
+	{#if isEditing}
 		<InlineInfo
-			title="Share on Scanopy"
-			body="Want to showcase your topology on the Scanopy website? Submit your topology for review and it may be featured in our <a class='underline hover:text-blue-300 transition-colors' href='https://scanopy.net/showcase' target='_blank' rel='noopener noreferrer'>public gallery</a>."
+			title="Changes may take up to 5 minutes to appear"
+			body="Share links and embeds are cached. Any updates you make won't be visible immediately."
+			dismissableKey="share-cache-info"
 		/>
-		<a
-			href="https://tally.so/r/lbqLAv"
-			target="_blank"
-			rel="noopener noreferrer"
-			class="btn-primary inline-flex w-full justify-center"
-		>
-			Submit for Community Showcase
-		</a>
 	{/if}
-
-	{#if !showShowcase}
-		{#if blockEmbeds}
-			<InlineWarning
-				title="Embeds not available on your plan"
-				body="Embeds are not available on your current plan. Please upgrade your plan to use this feature."
-			/>
-		{/if}
-		<!-- Name -->
+	<!-- Name -->
+	<div class="card card-static">
 		<TextInput
 			label="Name"
 			id="share-name"
@@ -141,74 +80,136 @@
 			placeholder="My shared topology"
 			required={true}
 			field={name}
+			disabled={!!createdShare}
 		/>
+	</div>
 
-		<!-- Password (Link only) -->
-		<div class="space-y-3">
-			<TextInput
-				label="Password"
-				id="share-password"
-				type="password"
-				{formApi}
-				placeholder="Enter password"
-				field={password}
-				helpText={isEditing
-					? 'Leave empty to keep the current password'
-					: 'Leave empty to allow public access with no password'}
-			/>
-		</div>
-
-		<!-- Allowed Domains (Embed only) -->
-		{#if formData.share_type === 'embed'}
-			<TextInput
-				label="Allowed Domains"
-				id="allowed-domains"
-				{formApi}
-				placeholder="example.com, *.mysite.com"
-				field={allowedDomains}
-				helpText="Comma-separated list. Supports wildcards (*.example.com). Leave empty to allow all domains."
-			/>
-		{/if}
-
-		<!-- Enabled -->
-		<Checkbox
-			label="Enabled"
-			id="is-enabled"
+	<div class="card card-static space-y-3">
+		<span class="text-secondary text-m">Access Control</span>
+		<!-- Password -->
+		<TextInput
+			label="Password"
+			id="share-password"
+			type="password"
 			{formApi}
-			field={isEnabled}
-			helpText="Disable to temporarily prevent access to this share"
+			placeholder="Enter password"
+			field={password}
+			disabled={!!createdShare}
+			helpText={isEditing
+				? 'Leave empty to keep the current password'
+				: 'Leave empty to allow public access with no password'}
 		/>
 
-		<!-- Expiration -->
-		<div class="space-y-3">
-			<div>
-				<DateInput
+		<!-- Enabled & Expiration -->
+		<div class="grid grid-cols-2 gap-4">
+			<DateInput
+				{formApi}
+				field={expiresAt}
+				label="Expiration Date"
+				id="expires-at"
+				disabled={!!createdShare}
+				helpText="Leave empty to never expire"
+			/>
+			<div class="flex items-center">
+				<Checkbox
+					label="Enabled"
+					id="is-enabled"
 					{formApi}
-					field={expiresAt}
-					label="Expiration Date"
-					id="expires-at"
-					helpText="Leave empty to never expire"
+					field={isEnabled}
+					disabled={!!createdShare}
+					helpText="Disable to temporarily prevent access"
 				/>
 			</div>
 		</div>
+		<!-- Allowed Domains -->
+		<TextInput
+			label="Allowed Embed Domains"
+			id="allowed-domains"
+			{formApi}
+			placeholder="example.com, *.mysite.com"
+			field={allowedDomains}
+			disabled={!!createdShare}
+			helpText="Restrict which domains can embed this share. Leave empty to allow all domains."
+		/>
+	</div>
 
-		<!-- Embed Options -->
-		{#if formData.embed_options}
-			<div class="space-y-3">
-				<span class="block text-sm font-medium text-gray-300">Display Options</span>
-				<Checkbox
-					label="Show zoom controls"
-					id="show-zoom-controls"
-					{formApi}
-					field={showZoomControls}
+	<div class="card card-static space-y-3">
+		<span class="text-secondary text-m">Display Options</span>
+		<Checkbox
+			label="Show zoom controls"
+			id="show-zoom-controls"
+			{formApi}
+			field={showZoomControls}
+			disabled={!!createdShare}
+		/>
+		<Checkbox
+			label="Show inspect panel"
+			id="show-inspect-panel"
+			{formApi}
+			field={showInspectPanel}
+			disabled={!!createdShare}
+		/>
+		<Checkbox
+			label="Show export button"
+			id="show-export-button"
+			{formApi}
+			field={showExportButton}
+			disabled={!!createdShare}
+		/>
+		<span class="block text-sm font-medium text-gray-300">Embed Dimensions</span>
+		<div class="grid grid-cols-2 gap-4">
+			<TextInput
+				label="Width"
+				id="embed-width"
+				type="number"
+				{formApi}
+				field={embedWidth}
+				placeholder="800"
+			/>
+			<TextInput
+				label="Height"
+				id="embed-height"
+				type="number"
+				{formApi}
+				field={embedHeight}
+				placeholder="600"
+			/>
+		</div>
+	</div>
+
+	<!-- Share URL / Embed Code (shown after creation or when editing) -->
+	{#if createdShare || isEditing}
+		{@const shareId = createdShare?.id || formData.id || ''}
+		<div class="space-y-4">
+			{#if createdShare}
+				<InlineSuccess
+					title="Share created"
+					body="To edit this share's settings, go to the Sharing tab."
 				/>
-				<Checkbox
-					label="Show inspect panel"
-					id="show-inspect-panel"
-					{formApi}
-					field={showInspectPanel}
-				/>
+			{/if}
+			<div>
+				<span class="mb-1 block text-sm font-medium text-gray-300">Share URL</span>
+				<CodeContainer language="bash" expandable={false} code={generateShareUrl(shareId)} />
 			</div>
-		{/if}
+			<div class="space-y-2">
+				<span class="mb-1 block text-sm font-medium text-gray-300">Embed Code</span>
+				{#if !hasEmbedsFeature}
+					<InlineInfo
+						title="Embeds require an upgraded plan"
+						body="Upgrade your plan to embed this share on external websites."
+					/>
+				{:else}
+					<CodeContainer
+						language="html"
+						expandable={false}
+						code={generateEmbedCode(
+							shareId,
+							parseInt($embedWidth.value) || 800,
+							parseInt($embedHeight.value) || 600
+						)}
+					/>
+				{/if}
+			</div>
+		</div>
 	{/if}
 </div>

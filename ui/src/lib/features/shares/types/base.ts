@@ -1,11 +1,10 @@
 import type { Topology } from '$lib/features/topology/types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 
-export type ShareType = 'link' | 'embed';
-
-export interface EmbedOptions {
+export interface ShareOptions {
 	show_inspect_panel: boolean;
 	show_zoom_controls: boolean;
+	show_export_button: boolean;
 }
 
 export interface CreateUpdateShareRequest {
@@ -18,13 +17,11 @@ export interface Share {
 	topology_id: string;
 	network_id: string;
 	created_by: string;
-	share_type: ShareType;
 	name: string;
 	is_enabled: boolean;
 	expires_at: string | null;
 	allowed_domains: string[] | null;
-	has_password: boolean;
-	embed_options: EmbedOptions;
+	options: ShareOptions;
 	created_at: string;
 	updated_at: string;
 }
@@ -32,9 +29,8 @@ export interface Share {
 export interface PublicShareMetadata {
 	id: string;
 	name: string;
-	share_type: ShareType;
 	requires_password: boolean;
-	embed_options: EmbedOptions;
+	options: ShareOptions;
 }
 
 export interface ShareWithTopology {
@@ -42,9 +38,10 @@ export interface ShareWithTopology {
 	topology: Topology;
 }
 
-export const defaultEmbedOptions: EmbedOptions = {
+export const defaultShareOptions: ShareOptions = {
 	show_inspect_panel: true,
-	show_zoom_controls: true
+	show_zoom_controls: true,
+	show_export_button: true
 };
 
 export function createEmptyShare(topology_id: string, network_id: string): Share {
@@ -57,10 +54,8 @@ export function createEmptyShare(topology_id: string, network_id: string): Share
 		created_by: uuidv4Sentinel,
 		expires_at: null,
 		allowed_domains: null,
-		share_type: 'link',
-		has_password: false,
 		name: '',
 		is_enabled: true,
-		embed_options: { ...defaultEmbedOptions }
+		options: { ...defaultShareOptions }
 	};
 }

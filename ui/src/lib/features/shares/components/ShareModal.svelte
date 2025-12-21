@@ -1,13 +1,12 @@
 <script lang="ts">
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
-	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
+	import { pushError } from '$lib/shared/stores/feedback';
 	import { Share2 } from 'lucide-svelte';
 	import type { Share } from '../types/base';
 	import { createEmptyShare } from '../types/base';
 	import { createShare, updateShare, deleteShare } from '../store';
 	import ShareDetailsForm from './ShareDetailsForm.svelte';
-	import EmbedCodeGenerator from './EmbedCodeGenerator.svelte';
 	import { currentUser } from '$lib/features/auth/store';
 	import { organization } from '$lib/features/organizations/store';
 	import { billingPlans } from '$lib/shared/stores/metadata';
@@ -26,14 +25,11 @@
 
 	let formData: Share = createEmptyShare('', '');
 	let passwordValue: string = '';
-	let showEmbedCode = false;
-	let showShowcase = false;
 	let createdShare: Share | null = null;
 
-	$: blockEmbeds =
-		$organization && formData.share_type == 'embed'
-			? billingPlans.getMetadata($organization.plan.type).features.embeds
-			: false;
+	$: hasEmbedsFeature = $organization
+		? billingPlans.getMetadata($organization.plan.type).features.embeds
+		: true;
 
 	$: if (isOpen) {
 		resetForm();
@@ -46,8 +42,6 @@
 			formData = createEmptyShare(topologyId, networkId);
 		}
 		passwordValue = '';
-		showEmbedCode = false;
-		showShowcase = false;
 		createdShare = null;
 	}
 
@@ -67,7 +61,6 @@
 				const password = passwordValue || undefined;
 				const result = await updateShare(share.id, { share: formData, password });
 				if (result?.success) {
-					pushSuccess('Share updated');
 					handleClose();
 				} else {
 					pushError(result?.error || 'Failed to update share');
@@ -76,13 +69,7 @@
 				// For create: send the password (empty string means no password)
 				const result = await createShare({ share: formData, password: passwordValue || undefined });
 				if (result?.success && result.data) {
-					pushSuccess('Share created');
-					if (formData.share_type === 'embed') {
-						createdShare = result.data;
-						showEmbedCode = true;
-					} else {
-						handleClose();
-					}
+					createdShare = result.data;
 				} else {
 					pushError(result?.error || 'Failed to create share');
 				}
@@ -98,7 +85,6 @@
 		deleting = true;
 		try {
 			await deleteShare(share.id);
-			pushSuccess('Share deleted');
 			handleClose();
 		} finally {
 			deleting = false;
@@ -114,10 +100,9 @@
 	{loading}
 	{deleting}
 	{saveLabel}
-	cancelLabel={showEmbedCode || showShowcase ? 'Done' : 'Cancel'}
-	onSave={showEmbedCode || showShowcase ? undefined : handleSubmit}
-	showSave={!showEmbedCode && !showShowcase}
-	disableSave={blockEmbeds}
+	cancelLabel={createdShare ? 'Done' : 'Cancel'}
+	onSave={createdShare ? undefined : handleSubmit}
+	showSave={!createdShare}
 	onCancel={handleClose}
 	onDelete={isEditing ? handleDelete : null}
 	size="xl"
@@ -127,18 +112,14 @@
 		<ModalHeaderIcon Icon={Share2} color="rgb(59, 130, 246)" />
 	</svelte:fragment>
 
-	{#if showEmbedCode && createdShare}
-		<EmbedCodeGenerator shareId={createdShare.id} />
-	{:else}
-		<div class="space-y-6">
-			<ShareDetailsForm
-				{formApi}
-				bind:formData
-				bind:passwordValue
-				bind:showShowcase
-				{isEditing}
-				{blockEmbeds}
-			/>
-		</div>
-	{/if}
+	<div class="space-y-6">
+		<ShareDetailsForm
+			{formApi}
+			bind:formData
+			bind:passwordValue
+			bind:createdShare
+			{isEditing}
+			{hasEmbedsFeature}
+		/>
+	</div>
 </EditModal>

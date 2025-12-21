@@ -10,47 +10,25 @@ use sqlx::Row;
 use sqlx::postgres::PgRow;
 use uuid::Uuid;
 
-/// Share type: link (password-protected) or embed (domain-restricted)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
-pub enum ShareType {
-    #[default]
-    Link,
-    Embed,
+fn default_true() -> bool {
+    true
 }
 
-impl Display for ShareType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ShareType::Link => write!(f, "Link"),
-            ShareType::Embed => write!(f, "Embed"),
-        }
-    }
-}
-
-impl std::str::FromStr for ShareType {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Link" => Ok(ShareType::Link),
-            "Embed" => Ok(ShareType::Embed),
-            _ => Err(anyhow::anyhow!("Invalid share type: {}", s)),
-        }
-    }
-}
-
-/// Embed display options
+/// Share display options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct EmbedOptions {
+pub struct ShareOptions {
     pub show_inspect_panel: bool,
     pub show_zoom_controls: bool,
+    #[serde(default = "default_true")]
+    pub show_export_button: bool,
 }
 
-impl Default for EmbedOptions {
+impl Default for ShareOptions {
     fn default() -> Self {
         Self {
             show_inspect_panel: true,
             show_zoom_controls: true,
+            show_export_button: true,
         }
     }
 }
@@ -60,16 +38,14 @@ pub struct ShareBase {
     pub topology_id: Uuid,
     pub network_id: Uuid,
     pub created_by: Uuid,
-    pub share_type: ShareType,
     pub name: String,
-    pub has_password: bool,
     pub is_enabled: bool,
     pub expires_at: Option<DateTime<Utc>>,
     /// Password hash - never sent to client, stored internally
     #[serde(skip_serializing)]
     pub password_hash: Option<String>,
     pub allowed_domains: Option<Vec<String>>,
-    pub embed_options: EmbedOptions,
+    pub options: ShareOptions,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
@@ -106,14 +82,12 @@ impl Share {
         self.base.password_hash.is_some()
     }
 
-    /// Check if this is a link share
-    pub fn is_link_share(&self) -> bool {
-        self.base.share_type == ShareType::Link
-    }
-
-    /// Check if this is an embed share
-    pub fn is_embed_share(&self) -> bool {
-        self.base.share_type == ShareType::Embed
+    /// Check if this share has domain restrictions configured
+    pub fn has_domain_restrictions(&self) -> bool {
+        self.base
+            .allowed_domains
+            .as_ref()
+            .is_some_and(|d| !d.is_empty())
     }
 }
 
@@ -175,13 +149,12 @@ impl StorableEntity for Share {
                 "topology_id",
                 "network_id",
                 "created_by",
-                "share_type",
                 "name",
                 "is_enabled",
                 "expires_at",
                 "password_hash",
                 "allowed_domains",
-                "embed_options",
+                "options",
                 "created_at",
                 "updated_at",
             ],
@@ -190,13 +163,12 @@ impl StorableEntity for Share {
                 SqlValue::Uuid(self.base.topology_id),
                 SqlValue::Uuid(self.base.network_id),
                 SqlValue::Uuid(self.base.created_by),
-                SqlValue::String(self.base.share_type.to_string()),
                 SqlValue::String(self.base.name.clone()),
                 SqlValue::Bool(self.base.is_enabled),
                 SqlValue::OptionTimestamp(self.base.expires_at),
                 SqlValue::OptionalString(self.base.password_hash.clone()),
                 SqlValue::OptionalStringArray(self.base.allowed_domains.clone()),
-                SqlValue::JsonValue(serde_json::to_value(&self.base.embed_options)?),
+                SqlValue::JsonValue(serde_json::to_value(&self.base.options)?),
                 SqlValue::Timestamp(self.created_at),
                 SqlValue::Timestamp(self.updated_at),
             ],
@@ -204,31 +176,23 @@ impl StorableEntity for Share {
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        let share_type_str: String = row.get("share_type");
-        let share_type: ShareType = share_type_str.parse()?;
-
-        let embed_options_value: serde_json::Value = row.get("embed_options");
-        let embed_options: EmbedOptions = serde_json::from_value(embed_options_value)?;
-        let password_hash: Option<String> = row.get("password_hash");
+        let options_value: serde_json::Value = row.get("options");
+        let options: ShareOptions = serde_json::from_value(options_value)?;
 
         Ok(Share {
             id: row.get("id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            base: {
-                ShareBase {
-                    topology_id: row.get("topology_id"),
-                    network_id: row.get("network_id"),
-                    created_by: row.get("created_by"),
-                    share_type,
-                    has_password: password_hash.is_some(),
-                    name: row.get("name"),
-                    is_enabled: row.get("is_enabled"),
-                    expires_at: row.get("expires_at"),
-                    password_hash,
-                    allowed_domains: row.get("allowed_domains"),
-                    embed_options,
-                }
+            base: ShareBase {
+                topology_id: row.get("topology_id"),
+                network_id: row.get("network_id"),
+                created_by: row.get("created_by"),
+                name: row.get("name"),
+                is_enabled: row.get("is_enabled"),
+                expires_at: row.get("expires_at"),
+                password_hash: row.get("password_hash"),
+                allowed_domains: row.get("allowed_domains"),
+                options,
             },
         })
     }

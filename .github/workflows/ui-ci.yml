@@ -12,6 +12,9 @@ on:
       - 'ui/**'
       - '.github/workflows/ui-ci.yml'
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: ./ui

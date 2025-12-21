@@ -57,8 +57,8 @@ impl ShareService {
         verify_password(password, hash)
     }
 
-    /// Validate that a domain is allowed for an embed share
-    pub fn validate_embed_domain(&self, share: &Share, referer: Option<&str>) -> bool {
+    /// Validate that a domain is allowed based on the share's allowed_domains setting
+    pub fn validate_allowed_domains(&self, share: &Share, referer: Option<&str>) -> bool {
         // If no allowed_domains set, allow all
         let Some(ref allowed) = share.base.allowed_domains else {
             return true;

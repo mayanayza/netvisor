@@ -221,5 +221,5 @@
 </script>
 
 <button class="btn-secondary" onclick={handleClick}>
-	<Download class="h-5 w-5" /> Export
+	<Download class="my-1 h-5 w-5" />
 </button>

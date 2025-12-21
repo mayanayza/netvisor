@@ -2,21 +2,17 @@ use std::sync::Arc;
 
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, header},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{delete, get, post, put},
 };
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::server::{
-    auth::{
-        middleware::{
-            features::{EmbedsFeature, RequireFeature},
-            permissions::RequireMember,
-        },
-        service::hash_password,
-    },
+    auth::{middleware::permissions::RequireMember, service::hash_password},
+    billing::types::base::BillingPlan,
     config::AppState,
     shared::{
         handlers::traits::{
@@ -33,6 +29,18 @@ use crate::server::{
     },
 };
 
+#[derive(Debug, Deserialize)]
+pub struct ShareQuery {
+    #[serde(default)]
+    pub embed: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ShareTopologyRequest {
+    #[serde(default)]
+    pub password: Option<String>,
+}
+
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
         // Authenticated routes - use generic handlers where possible
@@ -45,7 +53,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         // Public routes (no auth required)
         .route("/public/{id}", get(get_public_share_metadata))
         .route("/public/{id}/verify", post(verify_share_password))
-        .route("/public/{id}/topology", get(get_share_topology))
+        .route("/public/{id}/topology", post(get_share_topology))
 }
 
 // ============================================================================
@@ -56,23 +64,15 @@ pub fn create_router() -> Router<Arc<AppState>> {
 async fn create_share(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    RequireFeature { plan, .. }: RequireFeature<EmbedsFeature>,
     Json(CreateUpdateShareRequest {
         mut share,
         password,
     }): Json<CreateUpdateShareRequest>,
 ) -> ApiResult<Json<ApiResponse<Share>>> {
-    if !plan.features().embeds && share.is_embed_share() {
-        return Err(ApiError::payment_required(
-            "Your plan does not include embed shares",
-        ));
-    }
-
     // Hash password if provided
     if let Some(password) = password
         && !password.is_empty()
     {
-        share.base.has_password = true;
         share.base.password_hash =
             Some(hash_password(&password).map_err(|e| ApiError::internal_error(&e.to_string()))?);
     }
@@ -109,12 +109,10 @@ async fn update_share(
         }
         Some(password) if password.is_empty() => {
             // Remove password
-            share.base.has_password = false;
             share.base.password_hash = None;
         }
         Some(password) => {
             // Set new password
-            share.base.has_password = true;
             share.base.password_hash = Some(
                 hash_password(password).map_err(|e| ApiError::internal_error(&e.to_string()))?,
             );
@@ -128,6 +126,30 @@ async fn update_share(
 // ============================================================================
 // Public Routes (No Authentication Required)
 // ============================================================================
+
+/// Helper to get the organization's plan for a share
+async fn get_share_org_plan(state: &AppState, share: &Share) -> Result<BillingPlan, ApiError> {
+    // Get network to find organization
+    let network = state
+        .services
+        .network_service
+        .storage()
+        .get_by_id(&share.base.network_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?
+        .ok_or_else(|| ApiError::not_found("Network not found".to_string()))?;
+
+    // Get organization to find plan
+    let org = state
+        .services
+        .organization_service
+        .get_by_id(&network.base.organization_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?
+        .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
+
+    Ok(org.base.plan.unwrap_or_default())
+}
 
 /// Get public metadata about a share (no topology data)
 async fn get_public_share_metadata(
@@ -143,10 +165,9 @@ async fn get_public_share_metadata(
         .ok_or_else(|| ApiError::not_found("Share not found".to_string()))?;
 
     if !share.is_valid() {
-        return Err(ApiError::not_found(format!(
-            "{} not found or expired",
-            share.base.share_type
-        )));
+        return Err(ApiError::not_found(
+            "Share not found or expired".to_string(),
+        ));
     }
 
     Ok(Json(ApiResponse::success(PublicShareMetadata::from(
@@ -154,12 +175,12 @@ async fn get_public_share_metadata(
     ))))
 }
 
-/// Verify password for a password-protected share
+/// Verify password for a password-protected share (returns success/failure only)
 async fn verify_share_password(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Json(password): Json<String>,
-) -> ApiResult<impl IntoResponse> {
+) -> ApiResult<Json<ApiResponse<bool>>> {
     let share = state
         .services
         .share_service
@@ -169,55 +190,33 @@ async fn verify_share_password(
         .ok_or_else(|| ApiError::not_found("Share not found".to_string()))?;
 
     if !share.is_valid() {
-        return Err(ApiError::not_found(format!(
-            "{} not found or expired",
-            share.base.share_type
-        )));
+        return Err(ApiError::not_found(
+            "Share not found or expired".to_string(),
+        ));
     }
 
     if !share.requires_password() {
-        return Err(ApiError::bad_request(&format!(
-            "{} does not require a password",
-            share.base.share_type
-        )));
+        return Err(ApiError::bad_request("Share does not require a password"));
     }
 
-    // Verify password
+    // Verify password - returns error if invalid
     state
         .services
         .share_service
         .verify_share_password(&share, &password)
         .map_err(|_| ApiError::unauthorized("Invalid password".to_string()))?;
 
-    // Get topology data
-    let topology = state
-        .services
-        .topology_service
-        .storage()
-        .get_by_id(&share.base.topology_id)
-        .await
-        .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Topology not found".to_string()))?;
-
-    let response = ShareWithTopology {
-        share: PublicShareMetadata::from(&share),
-        topology: serde_json::to_value(&topology)
-            .map_err(|e| ApiError::internal_error(&e.to_string()))?,
-    };
-
-    // Return with cache headers
-    Ok((
-        [(header::CACHE_CONTROL, "public, max-age=300")],
-        Json(ApiResponse::success(response)),
-    ))
+    Ok(Json(ApiResponse::success(true)))
 }
 
-/// Get topology data for a public share (non-password-protected)
+/// Get topology data for a public share
 async fn get_share_topology(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-    headers: HeaderMap,
-) -> ApiResult<impl IntoResponse> {
+    Query(query): Query<ShareQuery>,
+    req_headers: HeaderMap,
+    Json(body): Json<ShareTopologyRequest>,
+) -> ApiResult<Response> {
     let share = state
         .services
         .share_service
@@ -227,25 +226,46 @@ async fn get_share_topology(
         .ok_or_else(|| ApiError::not_found("Share not found".to_string()))?;
 
     if !share.is_valid() {
-        return Err(ApiError::not_found(format!(
-            "{} not found or expired",
-            share.base.share_type
-        )));
+        return Err(ApiError::not_found("Share disabled or expired".to_string()));
     }
 
-    // Password-protected shares must use the verify endpoint
+    // Get org's plan to check embed feature
+    let plan = get_share_org_plan(&state, &share).await?;
+    let has_embeds_feature = plan.features().embeds;
+
+    // If requesting embed mode, check if org has embeds feature
+    if query.embed && !has_embeds_feature {
+        return Err(ApiError::payment_required(
+            "Embed access requires a plan with embeds feature",
+        ));
+    }
+
+    // Handle password-protected shares
     if share.requires_password() {
-        return Err(ApiError::unauthorized("Password required".to_string()));
+        match &body.password {
+            Some(password) => {
+                state
+                    .services
+                    .share_service
+                    .verify_share_password(&share, password)
+                    .map_err(|_| ApiError::unauthorized("Invalid password".to_string()))?;
+            }
+            None => {
+                return Err(ApiError::unauthorized("Password required".to_string()));
+            }
+        }
     }
 
-    // For embed shares, validate the domain
-    if share.is_embed_share() {
-        let referer = headers.get(header::REFERER).and_then(|v| v.to_str().ok());
+    // Validate allowed_domains only for embed requests
+    if query.embed && share.has_domain_restrictions() {
+        let referer = req_headers
+            .get(header::REFERER)
+            .and_then(|v| v.to_str().ok());
 
         if !state
             .services
             .share_service
-            .validate_embed_domain(&share, referer)
+            .validate_allowed_domains(&share, referer)
         {
             return Err(ApiError::forbidden("Domain not allowed"));
         }
@@ -261,15 +281,27 @@ async fn get_share_topology(
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
         .ok_or_else(|| ApiError::not_found("Topology not found".to_string()))?;
 
-    let response = ShareWithTopology {
+    let response_data = ShareWithTopology {
         share: PublicShareMetadata::from(&share),
         topology: serde_json::to_value(&topology)
             .map_err(|e| ApiError::internal_error(&e.to_string()))?,
     };
 
-    // Return with cache headers (5 minute cache)
-    Ok((
-        [(header::CACHE_CONTROL, "public, max-age=300")],
-        Json(ApiResponse::success(response)),
-    ))
+    // Build response with appropriate headers
+    let mut response = Json(ApiResponse::success(response_data)).into_response();
+    let headers = response.headers_mut();
+
+    // Add cache header
+    headers.insert(
+        header::CACHE_CONTROL,
+        "public, max-age=300".parse().unwrap(),
+    );
+
+    // Add X-Frame-Options: DENY if org doesn't have embeds feature
+    // This prevents iframing the share even via the regular link URL
+    if !has_embeds_feature {
+        headers.insert(header::X_FRAME_OPTIONS, "DENY".parse().unwrap());
+    }
+
+    Ok(response)
 }

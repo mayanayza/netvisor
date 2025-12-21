@@ -109,7 +109,7 @@ pub fn host(network_id: &Uuid) -> Host {
 }
 
 pub fn interface(subnet_id: &Uuid) -> Interface {
-    let random_mac: [u8; 6] = [fastrand::u8(1..9); 6];
+    let random_mac: [u8; 6] = std::array::from_fn(|_| fastrand::u8(1..=255));
     Interface::new(InterfaceBase {
         subnet_id: *subnet_id,
         ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),

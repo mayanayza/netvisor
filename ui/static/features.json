@@ -57,7 +57,7 @@
   {
     "id": "remove_created_with",
     "name": "Remove Watermark",
-    "description": "Remove 'Created using scanopy.net' in bottom right corner of visualization",
+    "description": "Remove 'Created using scanopy.net' in bottom right corner of exported images",
     "category": "Sharing",
     "icon": null,
     "color": null,
