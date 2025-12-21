@@ -21,7 +21,7 @@
         "onboarding_call": false,
         "priority_support": false,
         "remove_created_with": true,
-        "share_views": false,
+        "share_views": true,
         "webhooks": false,
         "whitelabeling": false
       },
@@ -165,7 +165,7 @@
         "onboarding_call": false,
         "priority_support": false,
         "remove_created_with": true,
-        "share_views": false,
+        "share_views": true,
         "webhooks": false,
         "whitelabeling": false
       },
@@ -349,7 +349,7 @@
         "webhooks": false,
         "whitelabeling": false
       },
-      "hosting": "Self-Hosted",
+      "hosting": "SelfHosted",
       "included_networks": null,
       "included_seats": null,
       "is_commercial": false,
@@ -385,7 +385,7 @@
         "webhooks": true,
         "whitelabeling": false
       },
-      "hosting": "Self-Hosted",
+      "hosting": "SelfHosted",
       "included_networks": null,
       "included_seats": null,
       "is_commercial": true,
@@ -457,7 +457,7 @@
         "webhooks": false,
         "whitelabeling": false
       },
-      "hosting": "Self-Hosted",
+      "hosting": "SelfHosted",
       "included_networks": null,
       "included_seats": null,
       "is_commercial": false,
@@ -493,7 +493,7 @@
         "webhooks": true,
         "whitelabeling": false
       },
-      "hosting": "Self-Hosted",
+      "hosting": "SelfHosted",
       "included_networks": null,
       "included_seats": null,
       "is_commercial": true,
