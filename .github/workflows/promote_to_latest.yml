@@ -118,9 +118,15 @@ jobs:
         id: diff
         run: |
           # Get commits between tags (non-merge commits only)
-          COMMITS=$(git log --pretty=format:"- %s" --no-merges \
+          # Include hash for potential PR lookup
+          COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges \
             ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
             | head -100)
+
+          # Get merge commits to extract PR numbers
+          MERGES=$(git log --pretty=format:"%s" --merges \
+            ${{ steps.prev_tag.outputs.prev_tag }}..${{ inputs.release_tag }} \
+            | grep -oE '#[0-9]+' | sort -u | tr '\n' ' ')
 
           # Get contributors
           CONTRIBUTORS=$(git log --pretty=format:"%an" \
@@ -131,6 +137,8 @@ jobs:
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "commits<<$EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "Related PRs: $MERGES" >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
 
           echo "contributors=$CONTRIBUTORS" >> $GITHUB_OUTPUT
@@ -141,26 +149,30 @@ jobs:
         with:
           model: openai/gpt-4.1
           system-prompt: |
-            You are a technical writer creating release notes for Scanopy, a network discovery and topology visualization tool. Write user-focused release notes that emphasize benefits over technical details.
+            You are a technical writer creating release notes for Scanopy, a network discovery and topology visualization tool. Write user-focused release notes that are informative and helpful.
 
             Format requirements:
-            - Use markdown with headers and bullet points
-            - Categorize into sections: ## New Features, ## Improvements, ## Bug Fixes (only include sections that have content)
-            - Start each item with an action verb (Add, Fix, Improve, Update, etc.)
-            - Include PR/issue numbers in parentheses where mentioned in commits
-            - Keep descriptions concise but informative (1-2 sentences max per item)
-            - Focus on user impact, not implementation details
-            - Combine related commits into single items where appropriate
+            - Use markdown with ## headers for sections: New Features, Improvements, Bug Fixes (only include sections with content)
+            - Each item should be a bullet point starting with an action verb (Add, Introduce, Improve, Fix, etc.)
+            - Each item should be 1-2 sentences explaining WHAT changed and WHY it benefits users
+            - Format PR/issue references as markdown links: ([#123](https://github.com/scanopy/scanopy/pull/123))
+            - Combine related commits into single items
+
+            Example of good release note items:
+            - Add topology sharing capabilities, allowing users to share network maps via direct link or embed code for easier collaboration and presentation ([#95](https://github.com/scanopy/scanopy/pull/95)).
+            - Improve subnet visualization by optimizing horizontal compression and preventing overlap, resulting in clearer network maps ([#107](https://github.com/scanopy/scanopy/pull/107)).
+            - Fix duplicate host entries that could appear after re-running network discovery ([#108](https://github.com/scanopy/scanopy/pull/108)).
 
             Do NOT include:
-            - Version bump commits
+            - Version bump commits (chore: bump version)
             - Merge commits
             - CI/CD or workflow changes
-            - Test-only changes (unless they fix user-facing issues)
-            - Internal refactoring unless it has user-visible benefits
+            - Test-only changes
+            - Internal refactoring unless user-visible
           prompt: |
             Generate release notes for Scanopy ${{ inputs.release_tag }}.
             Previous version: ${{ steps.prev_tag.outputs.prev_tag }}
+            Repository: https://github.com/scanopy/scanopy
 
             Commits since last release:
             ${{ steps.diff.outputs.commits }}
@@ -253,6 +265,9 @@ jobs:
           GH_TOKEN: ${{ secrets.SYNC_FIXTURES_TO_WEBSITE_TOKEN }}
         run: |
           BRANCH="changelog/${{ inputs.release_tag }}"
+
+          # Delete remote branch if it exists (from a previous failed run)
+          git push origin --delete "$BRANCH" 2>/dev/null || true
 
           # Create and switch to new branch
           git checkout -b "$BRANCH"
