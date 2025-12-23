@@ -1,4 +1,4 @@
-.PHONY: help build test clean format
+.PHONY: help build test clean format set-plan-community set-plan-starter set-plan-pro set-plan-team set-plan-business set-plan-enterprise
 
 help:
 	@echo "Scanopy Development Commands"
@@ -22,6 +22,14 @@ help:
 	@echo "  make clean          - Clean build artifacts and containers"
 	@echo "  make install-dev-mac    - Install development dependencies on macOS"
 	@echo "  make install-dev-linux  - Install development dependencies on Linux"
+	@echo ""
+	@echo "Plan Management (sets plan for all organizations):"
+	@echo "  make set-plan-community   - Set to Community (free)"
+	@echo "  make set-plan-starter     - Set to Starter"
+	@echo "  make set-plan-pro         - Set to Pro"
+	@echo "  make set-plan-team        - Set to Team"
+	@echo "  make set-plan-business    - Set to Business"
+	@echo "  make set-plan-enterprise  - Set to Enterprise"
 
 fresh-db:
 	make clean-db
@@ -134,3 +142,40 @@ install-dev-linux:
 	pre-commit install --hook-type pre-push
 	@echo ""
 	@echo "Development dependencies installed!"
+
+# Plan management commands - set all organizations to a specific plan
+set-plan-community:
+	@echo "Setting all organizations to Community plan..."
+	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
+		"UPDATE organizations SET plan = '{\"type\": \"Community\", \"base_cents\": 0, \"rate\": \"Month\", \"trial_days\": 0, \"seat_cents\": null, \"network_cents\": null, \"included_seats\": null, \"included_networks\": null}'::jsonb"
+	@echo "Done!"
+
+set-plan-starter:
+	@echo "Setting all organizations to Starter plan..."
+	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
+		"UPDATE organizations SET plan = '{\"type\": \"Starter\", \"base_cents\": 999, \"rate\": \"Month\", \"trial_days\": 7, \"seat_cents\": null, \"network_cents\": null, \"included_seats\": 1, \"included_networks\": 1}'::jsonb"
+	@echo "Done!"
+
+set-plan-pro:
+	@echo "Setting all organizations to Pro plan..."
+	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
+		"UPDATE organizations SET plan = '{\"type\": \"Pro\", \"base_cents\": 1999, \"rate\": \"Month\", \"trial_days\": 7, \"seat_cents\": null, \"network_cents\": null, \"included_seats\": 1, \"included_networks\": 3}'::jsonb"
+	@echo "Done!"
+
+set-plan-team:
+	@echo "Setting all organizations to Team plan..."
+	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
+		"UPDATE organizations SET plan = '{\"type\": \"Team\", \"base_cents\": 3999, \"rate\": \"Month\", \"trial_days\": 7, \"seat_cents\": 1000, \"network_cents\": 800, \"included_seats\": 5, \"included_networks\": 5}'::jsonb"
+	@echo "Done!"
+
+set-plan-business:
+	@echo "Setting all organizations to Business plan..."
+	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
+		"UPDATE organizations SET plan = '{\"type\": \"Business\", \"base_cents\": 5999, \"rate\": \"Month\", \"trial_days\": 14, \"seat_cents\": 800, \"network_cents\": 500, \"included_seats\": 10, \"included_networks\": 25}'::jsonb"
+	@echo "Done!"
+
+set-plan-enterprise:
+	@echo "Setting all organizations to Enterprise plan..."
+	@docker exec -t scanopy-postgres psql -U postgres -d scanopy -c \
+		"UPDATE organizations SET plan = '{\"type\": \"Enterprise\", \"base_cents\": 0, \"rate\": \"Month\", \"trial_days\": 0, \"seat_cents\": null, \"network_cents\": null, \"included_seats\": null, \"included_networks\": null}'::jsonb"
+	@echo "Done!"
