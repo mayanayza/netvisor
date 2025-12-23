@@ -123,7 +123,7 @@ pub struct InviteUsersFeature;
 #[async_trait]
 impl FeatureCheck for InviteUsersFeature {
     async fn check(&self, ctx: &FeatureCheckContext<'_>) -> FeatureCheckResult {
-        if ctx.plan.can_invite_users() {
+        if !ctx.plan.can_invite_users() {
             return FeatureCheckResult::denied("Your plan does not include inviting users");
         }
 
