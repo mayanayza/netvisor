@@ -74,8 +74,8 @@
 				};
 			}
 
-			// Check for Port binding conflict
-			const boundService = getConflictingService(binding.port_id, iface.id);
+			// Check for Port binding conflict (port_id is required for Port bindings)
+			const boundService = binding.port_id ? getConflictingService(binding.port_id, iface.id) : null;
 			return {
 				iface,
 				disabled: boundService !== null && iface.id !== binding.interface_id,
@@ -86,7 +86,7 @@
 
 	// Check ALL_INTERFACES option
 	$: allInterfacesOption = (() => {
-		const boundService = getConflictingService(binding.port_id, null);
+		const boundService = binding.port_id ? getConflictingService(binding.port_id, null) : null;
 		return {
 			iface: ALL_INTERFACES,
 			disabled: boundService !== null && binding.interface_id !== null,
@@ -119,7 +119,8 @@
 	};
 
 	const getPortField = () => {
-		return field(`binding_${binding.id}_port`, binding.port_id, [], {
+		// Port binding must have a port_id, use empty string as fallback for form state
+		return field(`binding_${binding.id}_port`, binding.port_id ?? '', [], {
 			checkOnInit: false
 		});
 	};
@@ -141,7 +142,7 @@
 		const interfaceId: string | null =
 			$interfaceField.value === ALL_INTERFACES.name ? null : $interfaceField.value;
 
-		const portId: string = $portField.value;
+		const portId = $portField.value;
 
 		// Only trigger onUpdate if values actually changed
 		if (interfaceId !== binding.interface_id || portId !== binding.port_id) {

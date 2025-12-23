@@ -1,6 +1,7 @@
-use crate::server::auth::middleware::permissions::MemberOrDaemon;
+use crate::server::auth::middleware::permissions::{MemberOrDaemon, RequireMember};
 use crate::server::shared::handlers::traits::{
-    CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler, update_handler,
+    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
+    update_handler,
 };
 use crate::server::shared::types::api::ApiError;
 use crate::server::{
@@ -12,21 +13,32 @@ use crate::server::{
     },
     subnets::r#impl::base::Subnet,
 };
-use axum::routing::{delete, get, post, put};
-use axum::{Router, extract::State, response::Json};
+use axum::extract::{Path, State};
+use axum::response::Json;
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
+use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", post(create_handler))
-        .route("/", get(get_all_subnets))
-        .route("/{id}", put(update_handler::<Subnet>))
-        .route("/{id}", delete(delete_handler::<Subnet>))
-        .route("/{id}", get(get_by_id_handler::<Subnet>))
-        .route("/bulk-delete", post(bulk_delete_handler::<Subnet>))
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(get_all_subnets, create_subnet))
+        .routes(routes!(get_subnet_by_id, update_subnet, delete_subnet))
+        .routes(routes!(bulk_delete_subnets))
 }
 
-pub async fn create_handler(
+/// Create a new subnet
+#[utoipa::path(
+    post,
+    path = "",
+    tag = "subnets",
+    request_body = Subnet,
+    responses(
+        (status = 200, description = "Subnet created successfully", body = Subnet),
+        (status = 400, description = "Invalid request"),
+    ),
+    security(("session" = []))
+)]
+async fn create_subnet(
     State(state): State<Arc<AppState>>,
     MemberOrDaemon { entity, .. }: MemberOrDaemon,
     Json(request): Json<Subnet>,
@@ -73,6 +85,16 @@ pub async fn create_handler(
     Ok(Json(ApiResponse::success(created)))
 }
 
+/// List all subnets
+#[utoipa::path(
+    get,
+    path = "",
+    tag = "subnets",
+    responses(
+        (status = 200, description = "List of subnets", body = Vec<Subnet>),
+    ),
+    security(("session" = []))
+)]
 async fn get_all_subnets(
     State(state): State<Arc<AppState>>,
     MemberOrDaemon { network_ids, .. }: MemberOrDaemon,
@@ -80,4 +102,85 @@ async fn get_all_subnets(
     let filter = EntityFilter::unfiltered().network_ids(&network_ids);
     let subnets = state.services.subnet_service.get_all(filter).await?;
     Ok(Json(ApiResponse::success(subnets)))
+}
+
+/// Get a subnet by ID
+#[utoipa::path(
+    get,
+    path = "/{id}",
+    tag = "subnets",
+    params(("id" = Uuid, Path, description = "Subnet ID")),
+    responses(
+        (status = 200, description = "Subnet found", body = Subnet),
+        (status = 404, description = "Subnet not found"),
+    ),
+    security(("session" = []))
+)]
+async fn get_subnet_by_id(
+    state: State<Arc<AppState>>,
+    user: RequireMember,
+    path: Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<Subnet>>> {
+    get_by_id_handler::<Subnet>(state, user, path).await
+}
+
+/// Update a subnet
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "subnets",
+    params(("id" = Uuid, Path, description = "Subnet ID")),
+    request_body = Subnet,
+    responses(
+        (status = 200, description = "Subnet updated", body = Subnet),
+        (status = 404, description = "Subnet not found"),
+    ),
+    security(("session" = []))
+)]
+async fn update_subnet(
+    state: State<Arc<AppState>>,
+    user: RequireMember,
+    path: Path<Uuid>,
+    json: Json<Subnet>,
+) -> ApiResult<Json<ApiResponse<Subnet>>> {
+    update_handler::<Subnet>(state, user, path, json).await
+}
+
+/// Delete a subnet
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = "subnets",
+    params(("id" = Uuid, Path, description = "Subnet ID")),
+    responses(
+        (status = 200, description = "Subnet deleted"),
+        (status = 404, description = "Subnet not found"),
+    ),
+    security(("session" = []))
+)]
+async fn delete_subnet(
+    state: State<Arc<AppState>>,
+    user: RequireMember,
+    path: Path<Uuid>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    delete_handler::<Subnet>(state, user, path).await
+}
+
+/// Bulk delete subnets
+#[utoipa::path(
+    post,
+    path = "/bulk-delete",
+    tag = "subnets",
+    request_body(content = Vec<Uuid>, description = "Array of subnet IDs to delete"),
+    responses(
+        (status = 200, description = "Subnets deleted successfully", body = BulkDeleteResponse),
+    ),
+    security(("session" = []))
+)]
+async fn bulk_delete_subnets(
+    state: State<Arc<AppState>>,
+    user: RequireMember,
+    json: Json<Vec<Uuid>>,
+) -> ApiResult<Json<ApiResponse<BulkDeleteResponse>>> {
+    bulk_delete_handler::<Subnet>(state, user, json).await
 }

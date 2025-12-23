@@ -181,16 +181,18 @@ pub async fn populate_demo_data(
     // 4. Hosts with Services - collect created services for group generation
     let mut all_created_services: Vec<Service> = Vec::new();
     for host_with_services in demo_data.hosts_with_services {
-        let (_host, services) = state
+        let host_response = state
             .services
             .host_service
-            .create_host_with_services(
+            .discover_host(
                 host_with_services.host,
+                host_with_services.interfaces,
+                host_with_services.ports,
                 host_with_services.services,
                 auth.clone(),
             )
             .await?;
-        all_created_services.extend(services);
+        all_created_services.extend(host_response.services);
     }
 
     // 5. Daemons (depends on hosts, networks, subnets)

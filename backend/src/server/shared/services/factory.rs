@@ -2,18 +2,25 @@ use crate::server::{
     api_keys::service::ApiKeyService,
     auth::{oidc::OidcService, service::AuthService},
     billing::service::{BillingService, BillingServiceParams},
+    bindings::{r#impl::base::Binding, service::BindingService},
     config::ServerConfig,
     daemons::service::DaemonService,
     discovery::service::DiscoveryService,
     email::{plunk::PlunkEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
+    group_bindings::GroupBindingStorage,
     groups::service::GroupService,
     hosts::service::HostService,
+    interfaces::service::InterfaceService,
     invites::service::InviteService,
     logging::service::LoggingService,
     networks::service::NetworkService,
     organizations::service::OrganizationService,
+    ports::service::PortService,
     services::service::ServiceService,
-    shared::{events::bus::EventBus, storage::factory::StorageFactory},
+    shared::{
+        events::bus::EventBus,
+        storage::{child::GenericChildStorage, factory::StorageFactory},
+    },
     shares::service::ShareService,
     subnets::service::SubnetService,
     tags::service::TagService,
@@ -28,6 +35,7 @@ pub struct ServiceFactory {
     pub auth_service: Arc<AuthService>,
     pub network_service: Arc<NetworkService>,
     pub host_service: Arc<HostService>,
+    pub interface_service: Arc<InterfaceService>,
     pub group_service: Arc<GroupService>,
     pub subnet_service: Arc<SubnetService>,
     pub daemon_service: Arc<DaemonService>,
@@ -44,6 +52,8 @@ pub struct ServiceFactory {
     pub event_bus: Arc<EventBus>,
     pub logging_service: Arc<LoggingService>,
     pub tag_service: Arc<TagService>,
+    pub port_service: Arc<PortService>,
+    pub binding_service: Arc<BindingService>,
 }
 
 impl ServiceFactory {
@@ -60,7 +70,12 @@ impl ServiceFactory {
             storage.daemons.clone(),
             event_bus.clone(),
         ));
-        let group_service = Arc::new(GroupService::new(storage.groups.clone(), event_bus.clone()));
+        let group_binding_storage = Arc::new(GroupBindingStorage::new(storage.pool.clone()));
+        let group_service = Arc::new(GroupService::new(
+            storage.groups.clone(),
+            group_binding_storage,
+            event_bus.clone(),
+        ));
         let organization_service = Arc::new(OrganizationService::new(
             storage.organizations.clone(),
             event_bus.clone(),
@@ -74,6 +89,12 @@ impl ServiceFactory {
 
         let tag_service = Arc::new(TagService::new(storage.tags.clone(), event_bus.clone()));
 
+        let port_service = Arc::new(PortService::new(storage.ports.clone(), event_bus.clone()));
+        let binding_service = Arc::new(BindingService::new(
+            storage.bindings.clone(),
+            event_bus.clone(),
+        ));
+
         // Already implements Arc internally due to scheduler + sessions
         let discovery_service = DiscoveryService::new(
             storage.discovery.clone(),
@@ -82,14 +103,25 @@ impl ServiceFactory {
         )
         .await?;
 
+        let binding_storage = Arc::new(GenericChildStorage::<Binding>::new(storage.pool.clone()));
+
         let service_service = Arc::new(ServiceService::new(
             storage.services.clone(),
+            binding_storage,
             group_service.clone(),
+            event_bus.clone(),
+        ));
+
+        // InterfaceService must be created before HostService
+        let interface_service = Arc::new(InterfaceService::new(
+            storage.interfaces.clone(),
             event_bus.clone(),
         ));
 
         let host_service = Arc::new(HostService::new(
             storage.hosts.clone(),
+            interface_service.clone(),
+            port_service.clone(),
             service_service.clone(),
             daemon_service.clone(),
             event_bus.clone(),
@@ -100,10 +132,12 @@ impl ServiceFactory {
             event_bus.clone(),
         ));
 
+        // ServiceService needs HostService for circular reference
         let _ = service_service.set_host_service(host_service.clone());
 
         let topology_service = Arc::new(TopologyService::new(
             host_service.clone(),
+            interface_service.clone(),
             subnet_service.clone(),
             group_service.clone(),
             service_service.clone(),
@@ -118,7 +152,11 @@ impl ServiceFactory {
             event_bus.clone(),
         ));
 
-        let user_service = Arc::new(UserService::new(storage.users.clone(), event_bus.clone()));
+        let user_service = Arc::new(UserService::new(
+            storage.users.clone(),
+            event_bus.clone(),
+            storage.pool.clone(),
+        ));
 
         let email_service = config.clone().and_then(|c| {
             // Prefer Plunk if API key is provided
@@ -189,7 +227,6 @@ impl ServiceFactory {
             .await;
 
         event_bus.register_subscriber(logging_service.clone()).await;
-        event_bus.register_subscriber(host_service.clone()).await;
         event_bus
             .register_subscriber(organization_service.clone())
             .await;
@@ -207,6 +244,7 @@ impl ServiceFactory {
             auth_service,
             network_service,
             host_service,
+            interface_service,
             group_service,
             subnet_service,
             daemon_service,
@@ -223,6 +261,8 @@ impl ServiceFactory {
             event_bus,
             logging_service,
             tag_service,
+            port_service,
+            binding_service,
         })
     }
 }

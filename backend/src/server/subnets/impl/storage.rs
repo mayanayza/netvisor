@@ -2,12 +2,14 @@ use chrono::{DateTime, Utc};
 use cidr::IpCidr;
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use crate::server::{
     shared::{
         storage::traits::{SqlValue, StorableEntity},
         types::entities::EntitySource,
+        types::metadata::HasId,
     },
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
@@ -97,7 +99,7 @@ impl StorableEntity for Subnet {
                 SqlValue::OptionalString(description),
                 SqlValue::IpCidr(cidr),
                 SqlValue::EntitySource(source),
-                SqlValue::SubnetType(subnet_type),
+                SqlValue::String(subnet_type.id().to_string()),
                 SqlValue::Uuid(network_id),
                 SqlValue::Timestamp(created_at),
                 SqlValue::Timestamp(updated_at),
@@ -107,11 +109,11 @@ impl StorableEntity for Subnet {
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        // Parse JSON fields safely
+        // Parse fields safely
         let cidr: IpCidr = serde_json::from_str(&row.get::<String, _>("cidr"))
             .map_err(|e| anyhow::anyhow!("Failed to deserialize cidr: {}", e))?;
-        let subnet_type: SubnetType = serde_json::from_str(&row.get::<String, _>("subnet_type"))
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize subnet_type: {}", e))?;
+        let subnet_type = SubnetType::from_str(&row.get::<String, _>("subnet_type"))
+            .map_err(|e| anyhow::anyhow!("Failed to parse subnet_type: {}", e))?;
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
                 .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;

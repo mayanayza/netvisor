@@ -3,19 +3,14 @@ use std::net::{IpAddr, Ipv4Addr};
 use uuid::Uuid;
 
 use crate::server::{
-    hosts::r#impl::{
-        base::{Host, HostBase},
-        interfaces::{Interface, InterfaceBase},
-        ports::{Port, PortBase},
-        targets::HostTarget,
-    },
+    bindings::r#impl::base::Binding,
+    hosts::r#impl::base::{Host, HostBase},
+    interfaces::r#impl::base::{Interface, InterfaceBase},
     networks::r#impl::{Network, NetworkBase},
+    ports::r#impl::base::{Port, PortType},
     services::{
         definitions::{client::Client, dns_server::DnsServer, web_service::WebService},
-        r#impl::{
-            base::{Service, ServiceBase},
-            bindings::Binding,
-        },
+        r#impl::base::{Service, ServiceBase},
     },
     shared::{storage::traits::StorableEntity, types::entities::EntitySource},
     subnets::r#impl::{
@@ -76,12 +71,16 @@ pub fn create_remote_subnet(network_id: Uuid) -> Subnet {
     Subnet::new(base)
 }
 
-pub fn create_remote_host(remote_subnet: &Subnet, network_id: Uuid) -> (Host, Service) {
-    let interface = Interface::new(InterfaceBase::new_conceptual(remote_subnet));
+/// Returns (Host, Vec<Interface>, Vec<Port>, Service) - children are passed separately to discover_host
+pub fn create_remote_host(
+    remote_subnet: &Subnet,
+    network_id: Uuid,
+) -> (Host, Vec<Interface>, Vec<Port>, Service) {
+    // Create interface with placeholder host_id - server will set the correct one
+    let interface = Interface::new(InterfaceBase::new_conceptual(Uuid::nil(), remote_subnet));
 
-    let dynamic_port = Port::new(PortBase::new_tcp(0)); // Ephemeral port
-    let binding = Binding::new_port(dynamic_port.id, Some(interface.id));
-    let binding_id = binding.id();
+    let dynamic_port = Port::new_hostless(PortType::new_tcp(0)); // Ephemeral port
+    let binding = Binding::new_port_serviceless(dynamic_port.id, Some(interface.id));
 
     let base = HostBase {
         name: "Mobile Device".to_string(), // Device type in name, not service
@@ -89,16 +88,12 @@ pub fn create_remote_host(remote_subnet: &Subnet, network_id: Uuid) -> (Host, Se
         network_id,
         tags: Vec::new(),
         description: Some("A mobile device connecting from a remote network".to_string()),
-        interfaces: vec![interface],
-        ports: vec![dynamic_port],
-        services: Vec::new(),
-        target: HostTarget::None,
         source: EntitySource::System,
         virtualization: None,
         hidden: false,
     };
 
-    let mut host = Host::new(base);
+    let host = Host::new(base);
 
     let client_service = Service::new(ServiceBase {
         host_id: host.id,
@@ -111,21 +106,19 @@ pub fn create_remote_host(remote_subnet: &Subnet, network_id: Uuid) -> (Host, Se
         source: EntitySource::System,
     });
 
-    host.base.target = HostTarget::ServiceBinding(binding_id);
-
-    host.add_service(client_service.id);
-    (host, client_service)
+    (host, vec![interface], vec![dynamic_port], client_service)
 }
 
+/// Returns (Host, Vec<Interface>, Vec<Port>, Service) - children are passed separately to discover_host
 pub fn create_internet_connectivity_host(
     internet_subnet: &Subnet,
     network_id: Uuid,
-) -> (Host, Service) {
-    let interface = Interface::new(InterfaceBase::new_conceptual(internet_subnet));
+) -> (Host, Vec<Interface>, Vec<Port>, Service) {
+    // Create interface with placeholder host_id - server will set the correct one
+    let interface = Interface::new(InterfaceBase::new_conceptual(Uuid::nil(), internet_subnet));
 
-    let https_port = Port::new(PortBase::Https);
-    let binding = Binding::new_port(https_port.id, Some(interface.id));
-    let binding_id = binding.id();
+    let https_port = Port::new_hostless(PortType::Https);
+    let binding = Binding::new_port_serviceless(https_port.id, Some(interface.id));
 
     let base = HostBase {
         name: "Google.com".to_string(),
@@ -133,16 +126,12 @@ pub fn create_internet_connectivity_host(
         tags: Vec::new(),
         hostname: None,
         description: None,
-        interfaces: vec![interface],
-        ports: vec![https_port],
-        services: Vec::new(),
-        target: HostTarget::Hostname,
         source: EntitySource::System,
         virtualization: None,
         hidden: false,
     };
 
-    let mut host = Host::new(base);
+    let host = Host::new(base);
 
     let web_service = Service::new(ServiceBase {
         host_id: host.id,
@@ -155,19 +144,19 @@ pub fn create_internet_connectivity_host(
         source: EntitySource::System,
     });
 
-    host.base.target = HostTarget::ServiceBinding(binding_id);
-
-    host.add_service(web_service.id);
-
-    (host, web_service)
+    (host, vec![interface], vec![https_port], web_service)
 }
 
-pub fn create_public_dns_host(internet_subnet: &Subnet, network_id: Uuid) -> (Host, Service) {
-    let mut interface = Interface::new(InterfaceBase::new_conceptual(internet_subnet));
+/// Returns (Host, Vec<Interface>, Vec<Port>, Service) - children are passed separately to discover_host
+pub fn create_public_dns_host(
+    internet_subnet: &Subnet,
+    network_id: Uuid,
+) -> (Host, Vec<Interface>, Vec<Port>, Service) {
+    // Create interface with placeholder host_id - server will set the correct one
+    let mut interface = Interface::new(InterfaceBase::new_conceptual(Uuid::nil(), internet_subnet));
     interface.base.ip_address = IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1));
-    let dns_udp_port = Port::new(PortBase::DnsUdp);
-    let binding = Binding::new_port(dns_udp_port.id, Some(interface.id));
-    let binding_id = binding.id();
+    let dns_udp_port = Port::new_hostless(PortType::DnsUdp);
+    let binding = Binding::new_port_serviceless(dns_udp_port.id, Some(interface.id));
 
     let base = HostBase {
         name: "Cloudflare DNS".to_string(),
@@ -175,16 +164,12 @@ pub fn create_public_dns_host(internet_subnet: &Subnet, network_id: Uuid) -> (Ho
         network_id,
         description: None,
         tags: Vec::new(),
-        target: HostTarget::None,
-        interfaces: vec![interface],
-        ports: vec![dns_udp_port],
-        services: Vec::new(),
         source: EntitySource::System,
         virtualization: None,
         hidden: false,
     };
 
-    let mut host = Host::new(base);
+    let host = Host::new(base);
 
     let dns_service = Service::new(ServiceBase {
         host_id: host.id,
@@ -197,9 +182,5 @@ pub fn create_public_dns_host(internet_subnet: &Subnet, network_id: Uuid) -> (Ho
         source: EntitySource::System,
     });
 
-    host.base.target = HostTarget::ServiceBinding(binding_id);
-
-    host.add_service(dns_service.id);
-
-    (host, dns_service)
+    (host, vec![interface], vec![dns_udp_port], dns_service)
 }

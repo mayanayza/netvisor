@@ -32,12 +32,16 @@
 	}
 
 	function handleCreateNewPort() {
-		const newPort = {
+		const newPort: Port = {
 			id: uuidv4(),
+			host_id: formData.id,
+			network_id: formData.network_id,
 			protocol: 'Tcp',
 			number: Math.floor(Math.random() * 65535) + 1,
-			type: 'Custom'
-		} as Port;
+			type: 'Custom',
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString()
+		};
 
 		formData.ports = [...formData.ports, newPort];
 	}
@@ -47,10 +51,14 @@
 
 		if (portType) {
 			const newPort: Port = {
+				id: uuidv4(),
+				host_id: formData.id,
+				network_id: formData.network_id,
 				number: portType.metadata.number as number,
 				protocol: portType.metadata.protocol,
 				type: portType.id,
-				id: uuidv4()
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString()
 			};
 			formData.ports = [...formData.ports, newPort];
 		}

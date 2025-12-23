@@ -20,12 +20,12 @@ use crate::daemon::discovery::service::base::RunsDiscovery;
 use crate::daemon::discovery::types::base::DiscoverySessionUpdate;
 use crate::daemon::utils::base::DaemonUtils;
 use crate::daemon::utils::scanner::scan_endpoints;
+use crate::server::bindings::r#impl::base::{Binding, BindingDiscriminants};
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
 use crate::server::hosts::r#impl::base::HostBase;
-use crate::server::hosts::r#impl::interfaces::ALL_INTERFACES_IP;
-use crate::server::hosts::r#impl::ports::Port;
+use crate::server::interfaces::r#impl::base::ALL_INTERFACES_IP;
+use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::{Service, ServiceBase, ServiceMatchBaselineParams};
-use crate::server::services::r#impl::bindings::{Binding, BindingDiscriminants};
 use crate::server::services::r#impl::definitions::ServiceDefinition;
 use crate::server::services::r#impl::endpoints::{Endpoint, EndpointResponse};
 use crate::server::services::r#impl::patterns::MatchDetails;
@@ -42,17 +42,15 @@ use crate::{
     },
     server::{
         daemons::r#impl::api::DaemonDiscoveryRequest,
-        hosts::r#impl::{
-            base::Host,
-            interfaces::{Interface, InterfaceBase},
-            ports::PortBase,
-        },
+        hosts::r#impl::base::Host,
+        interfaces::r#impl::base::{Interface, InterfaceBase},
+        ports::r#impl::base::PortType,
     },
 };
 use mac_address::MacAddress;
 use uuid::Uuid;
 
-type IpPortHashMap = HashMap<IpAddr, Vec<PortBase>>;
+type IpPortHashMap = HashMap<IpAddr, Vec<PortType>>;
 
 pub struct DockerScanDiscovery {
     docker_client: OnceLock<Docker>,
@@ -299,20 +297,31 @@ impl DiscoveryRunner<DockerScanDiscovery> {
             },
         });
 
-        let mut temp_docker_daemon_host = Host::new(HostBase::default());
+        let mut temp_docker_daemon_host = Host::new(HostBase {
+            name: "Docker Daemon Host".to_string(),
+            network_id,
+            hostname: None,
+            description: None,
+            source: EntitySource::Discovery {
+                metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
+            },
+            virtualization: None,
+            hidden: false,
+            tags: Vec::new(),
+        });
         temp_docker_daemon_host.id = self.domain.host_id;
-        temp_docker_daemon_host.base.network_id = network_id;
-        // Include host interfaces to enable proper host matching via MAC/IP addresses
-        // This prevents creating a separate host when the discovery's host_id doesn't match
-        // an existing host but the MAC addresses do (e.g., stale host_id from old config)
-        temp_docker_daemon_host.base.interfaces = host_interfaces.to_vec();
-        temp_docker_daemon_host.base.source = EntitySource::Discovery {
-            metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
-        };
-        temp_docker_daemon_host.base.services = vec![docker_service.id];
 
-        self.create_host(temp_docker_daemon_host, vec![docker_service])
-            .await
+        // Pass host_interfaces separately - server will create them with the correct host_id
+        let host_response = self
+            .create_host(
+                temp_docker_daemon_host,
+                host_interfaces.to_vec(),
+                vec![], // No ports for docker daemon host
+                vec![docker_service],
+            )
+            .await?;
+
+        Ok((host_response.to_host(), host_response.services))
     }
 
     async fn scan_and_process_containers(
@@ -453,9 +462,9 @@ impl DiscoveryRunner<DockerScanDiscovery> {
         let host_ip = self.as_ref().utils.get_own_ip_address()?;
 
         if let Some(Some(p)) = container.config.as_ref().map(|c| c.exposed_ports.as_ref()) {
-            let open_ports: Vec<PortBase> = p
+            let open_ports: Vec<PortType> = p
                 .keys()
-                .filter_map(|v| PortBase::from_str(v).ok())
+                .filter_map(|v| PortType::from_str(v).ok())
                 .collect();
 
             let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
@@ -494,18 +503,18 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     })),
                 };
 
-                if let Ok(Some((mut host, services))) = self
+                if let Ok(Some((mut host, interfaces, ports, services))) = self
                     .process_host(params, None, self.domain.host_naming_fallback)
                     .await
                 {
                     host.id = self.domain.host_id;
 
-                    if let Ok((created_host, created_services)) =
-                        self.create_host(host, services).await
+                    if let Ok(host_response) =
+                        self.create_host(host, interfaces, ports, services).await
                     {
                         return Ok::<Option<(Host, Vec<Service>)>, Error>(Some((
-                            created_host,
-                            created_services,
+                            host_response.to_host(),
+                            host_response.services,
                         )));
                     }
                     return Ok(None);
@@ -576,7 +585,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 .get(&interface.base.ip_address)
                 .unwrap_or(empty_vec_ref);
 
-            if let Ok(Some((mut host, mut services))) = self
+            if let Ok(Some((mut host, mut interfaces, mut ports, mut services))) = self
                 .process_host(
                     ServiceMatchBaselineParams {
                         subnet,
@@ -603,10 +612,10 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
                 host.id = self.domain.host_id;
 
-                // Add all interfaces relevant to container to the host
+                // Add all interfaces relevant to container to the interfaces vec
                 container_interfaces_and_subnets.iter().for_each(|(i, _)| {
-                    if !host.base.interfaces.contains(i) {
-                        host.base.interfaces.push(i.clone())
+                    if !interfaces.contains(i) {
+                        interfaces.push(i.clone())
                     }
                 });
 
@@ -626,7 +635,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         .iter()
                         .for_each(|container_port| {
                             // Add bindings for container ports which weren't matched
-                            match host.base.ports.iter().find(|p| p.base == *container_port) {
+                            match ports.iter().find(|p| p.base.port_type == *container_port) {
                                 Some(unmatched_container_port)
                                     if !s
                                         .base
@@ -635,7 +644,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                                         .filter_map(|b| b.port_id())
                                         .any(|port_id| port_id == unmatched_container_port.id) =>
                                 {
-                                    s.base.bindings.push(Binding::new_port(
+                                    s.base.bindings.push(Binding::new_port_serviceless(
                                         unmatched_container_port.id,
                                         Some(interface.id),
                                     ))
@@ -649,7 +658,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         pbs.iter().for_each(|pb| {
                             // If there's an existing port and existing non-docker bindings, they'll need to be replaced if listener is on all interfaces otherwise there'll be duplicate bindings
                             let (port, existing_non_docker_bindings) =
-                                match host.base.ports.iter().find(|p| p.base == *pb) {
+                                match ports.iter().find(|p| p.base.port_type == *pb) {
                                     // Port exists on host, so get IDs of existing non-Docker bridge service bindings
                                     Some(existing_port) => (
                                         *existing_port,
@@ -661,8 +670,11 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                                                     && port_id == existing_port.id
                                                 {
                                                     // Only include if it's NOT on a Docker bridge
-                                                    if let Some(interface) =
-                                                        host.get_interface(&b.interface_id())
+                                                    // Look up interface in the interfaces vec
+                                                    if let Some(interface_id) = b.interface_id()
+                                                        && let Some(interface) = interfaces
+                                                            .iter()
+                                                            .find(|i| i.id == interface_id)
                                                         && !docker_bridge_subnet_ids
                                                             .contains(&interface.base.subnet_id)
                                                     {
@@ -674,23 +686,21 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                                             .collect(),
                                     ),
                                     // Port doesn't exist on host yet, so it can't have been bound by service
-                                    None => (Port::new(*pb), vec![]),
+                                    None => (Port::new_hostless(*pb), vec![]),
                                 };
 
-                            // Get host interface
-                            let host_interface = host
-                                .base
-                                .interfaces
-                                .iter()
-                                .find(|i| i.base.ip_address == *ip);
+                            // Get host interface from the interfaces vec
+                            let host_interface =
+                                interfaces.iter().find(|i| i.base.ip_address == *ip);
 
                             // Add binding to specific interface, or all interfaces if it's on ALL_INTERFACES_IP
                             match host_interface {
                                 Some(host_interface) => {
-                                    s.base
-                                        .bindings
-                                        .push(Binding::new_port(port.id, Some(host_interface.id)));
-                                    host.base.ports.push(port);
+                                    s.base.bindings.push(Binding::new_port_serviceless(
+                                        port.id,
+                                        Some(host_interface.id),
+                                    ));
+                                    ports.push(port);
                                 }
                                 None if *ip == ALL_INTERFACES_IP => {
                                     // Remove existing non-Docker bridge bindings for this port
@@ -707,14 +717,14 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                                         if subnet.base.subnet_type.discriminant()
                                             != SubnetTypeDiscriminants::DockerBridge
                                         {
-                                            s.base.bindings.push(Binding::new_port(
+                                            s.base.bindings.push(Binding::new_port_serviceless(
                                                 port.id,
                                                 Some(interface.id),
                                             ));
                                         }
                                     }
 
-                                    host.base.ports.push(port);
+                                    ports.push(port);
                                 }
                                 _ => {}
                             }
@@ -729,7 +739,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         .clone()
                         .into_iter()
                         .filter_map(|b| {
-                            if b.discriminant() == BindingDiscriminants::Port
+                            if b.base.binding_type.discriminant() == BindingDiscriminants::Port
                                 && let Some(interface_id) = b.interface_id()
                             {
                                 return Some(interface_id);
@@ -739,18 +749,19 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         .collect();
 
                     s.base.bindings.retain(|b| {
-                        b.discriminant() == BindingDiscriminants::Port
+                        b.base.binding_type.discriminant() == BindingDiscriminants::Port
                             || !interface_ids_with_port_binding
                                 .contains(&b.interface_id().unwrap_or_default())
                     });
                 });
 
-                if let Ok((created_host, created_services)) =
-                    self.create_host(host, services.clone()).await
+                if let Ok(host_response) = self
+                    .create_host(host, interfaces, ports, services.clone())
+                    .await
                 {
                     return Ok::<Option<(Host, Vec<Service>)>, Error>(Some((
-                        created_host,
-                        created_services,
+                        host_response.to_host(),
+                        host_response.services,
                     )));
                 }
                 return Ok(None);
@@ -846,25 +857,25 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 // curl - HTTP
                 format!(
                     "curl -i -s -m 1 -L --max-redirs 2 http://127.0.0.1:{}{}",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
                 // curl - HTTPS (with -k for self-signed certs)
                 format!(
                     "curl -k -i -s -m 1 -L --max-redirs 2 https://127.0.0.1:{}{}",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
                 // wget - HTTP
                 format!(
                     "wget -S -q -O- -T 1 http://127.0.0.1:{}{}",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
                 // wget - HTTPS (with --no-check-certificate)
                 format!(
                     "wget --no-check-certificate -S -q -O- -T 1 https://127.0.0.1:{}{}",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
                 // Python - HTTP
@@ -875,7 +886,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     print(resp.read().decode('utf-8'))\\\\nexcept urllib.error.HTTPError as e:\\\\n \
                     print('HTTP/1.1', e.code, e.msg)\\\\n for h in e.headers: print(h + ':', e.headers[h])\\\\n \
                     print()\\\\n print(e.read().decode('utf-8'))\\\")\"",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
                 // Python - HTTPS (with unverified SSL context)
@@ -888,13 +899,13 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     print(resp.read().decode('utf-8'))\\\\nexcept urllib.error.HTTPError as e:\\\\n \
                     print('HTTP/1.1', e.code, e.msg)\\\\n for h in e.headers: print(h + ':', e.headers[h])\\\\n \
                     print()\\\\n print(e.read().decode('utf-8'))\\\")\"",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
                 // bash /dev/tcp - only supports HTTP (no TLS)
                 format!(
                     "bash -c \"exec 3<>/dev/tcp/127.0.0.1/{} && echo -e 'GET {} HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && cat <&3\"",
-                    endpoint.port_base.number(),
+                    endpoint.port_type.number(),
                     endpoint.path
                 ),
             ];
@@ -957,12 +968,12 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 if let Some((status, body, headers)) = Self::parse_http_response(full_response) {
                     // Map back to the host-visible endpoint
                     if let Some(host_mappings) =
-                        container_to_host_port_map.get(&endpoint.port_base.number())
+                        container_to_host_port_map.get(&endpoint.port_type.number())
                     {
                         for (host_ip, host_port) in host_mappings {
                             let host_endpoint = Endpoint {
                                 ip: Some(*host_ip),
-                                port_base: PortBase::new_tcp(*host_port),
+                                port_type: PortType::new_tcp(*host_port),
                                 protocol: endpoint.protocol,
                                 path: endpoint.path.clone(),
                             };
@@ -979,7 +990,7 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                     // Also add the container-internal endpoint
                     let container_endpoint = Endpoint {
                         ip: Some(interface.base.ip_address), // Container's IP on the bridge network
-                        port_base: PortBase::new_tcp(endpoint.port_base.number()), // Container port, not host port
+                        port_type: PortType::new_tcp(endpoint.port_type.number()), // Container port, not host port
                         protocol: endpoint.protocol,
                         path: endpoint.path.clone(),
                     };
@@ -1058,8 +1069,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 // Handle ports regardless of whether ip is set
                 if let Some(port_type @ (PortTypeEnum::TCP | PortTypeEnum::UDP)) = p.typ {
                     let private_port = match port_type {
-                        PortTypeEnum::TCP => PortBase::new_tcp(p.private_port),
-                        PortTypeEnum::UDP => PortBase::new_udp(p.private_port),
+                        PortTypeEnum::TCP => PortType::new_tcp(p.private_port),
+                        PortTypeEnum::UDP => PortType::new_udp(p.private_port),
                         _ => unreachable!("Already matched TCP/UDP in outer pattern"),
                     };
 
@@ -1076,8 +1087,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                         && let Ok(ip) = ip_str.parse::<IpAddr>()
                     {
                         let public_port = match port_type {
-                            PortTypeEnum::TCP => PortBase::new_tcp(public),
-                            PortTypeEnum::UDP => PortBase::new_udp(public),
+                            PortTypeEnum::TCP => PortType::new_tcp(public),
+                            PortTypeEnum::UDP => PortType::new_udp(public),
                             _ => unreachable!("Already matched TCP/UDP in outer pattern"),
                         };
 
@@ -1161,6 +1172,8 @@ impl DiscoveryRunner<DockerScanDiscovery> {
 
                                         return Some((
                                             Interface::new(InterfaceBase {
+                                                network_id: subnet.base.network_id,
+                                                host_id: Uuid::nil(), // Placeholder - server will set correct host_id
                                                 subnet_id: subnet.id,
                                                 ip_address,
                                                 mac_address,

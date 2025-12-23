@@ -6,10 +6,8 @@ use crate::daemon::utils::scanner::{
     arp_scan_host, can_arp_scan, scan_endpoints, scan_tcp_ports, scan_udp_ports,
 };
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
-use crate::server::hosts::r#impl::{
-    interfaces::{Interface, InterfaceBase},
-    ports::PortBase,
-};
+use crate::server::interfaces::r#impl::base::{Interface, InterfaceBase};
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::r#impl::base::{Service, ServiceMatchBaselineParams};
 use crate::server::subnets::r#impl::types::SubnetTypeDiscriminants;
 use crate::{
@@ -56,7 +54,7 @@ pub struct DeepScanParams<'a> {
     ip: IpAddr,
     subnet: &'a Subnet,
     mac: Option<MacAddress>,
-    phase1_ports: Vec<PortBase>,
+    phase1_ports: Vec<PortType>,
     cancel: CancellationToken,
     port_scan_batch_size: usize,
     gateway_ips: &'a [IpAddr],
@@ -225,7 +223,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .await?;
 
         let phase1_scanned = Arc::new(AtomicUsize::new(0));
-        let mut responsive_hosts: Vec<(IpAddr, Subnet, Option<MacAddress>, Vec<PortBase>)> =
+        let mut responsive_hosts: Vec<(IpAddr, Subnet, Option<MacAddress>, Vec<PortType>)> =
             Vec::new();
 
         // Process interfaced subnets with ARP
@@ -462,7 +460,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         discovery_ports: &[u16],
         port_scan_batch_size: usize,
         cancel: CancellationToken,
-    ) -> Result<Option<Vec<PortBase>>, Error> {
+    ) -> Result<Option<Vec<PortType>>, Error> {
         if cancel.is_cancelled() {
             return Err(Error::msg("Discovery was cancelled"));
         }
@@ -471,7 +469,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             scan_tcp_ports(ip, cancel, port_scan_batch_size, discovery_ports.to_vec()).await?;
 
         if !open_ports.is_empty() {
-            let discovered_ports: Vec<PortBase> = open_ports.iter().map(|(p, _)| *p).collect();
+            let discovered_ports: Vec<PortType> = open_ports.iter().map(|(p, _)| *p).collect();
             tracing::debug!(ip = %ip, open_ports = discovered_ports.len(), "Host responsive (TCP)");
             Ok(Some(discovered_ports))
         } else {
@@ -529,7 +527,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .iter()
             .map(|(p, h)| (p.number(), *h))
             .collect();
-        let mut open_ports: Vec<PortBase> = all_tcp_ports.iter().map(|(p, _)| *p).collect();
+        let mut open_ports: Vec<PortType> = all_tcp_ports.iter().map(|(p, _)| *p).collect();
 
         // Merge phase 1 discovered ports
         open_ports.extend(phase1_ports);
@@ -569,7 +567,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .await?;
 
         for endpoint_response in &endpoint_responses {
-            let port = endpoint_response.endpoint.port_base;
+            let port = endpoint_response.endpoint.port_type;
             if !open_ports.contains(&port) {
                 open_ports.push(port);
             }
@@ -592,13 +590,15 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         let hostname = self.get_hostname_for_ip(ip).await?;
 
         let interface = Interface::new(InterfaceBase {
+            network_id: subnet.base.network_id,
+            host_id: Uuid::nil(), // Placeholder - server will set correct host_id
             name: None,
             subnet_id: subnet.id,
             ip_address: ip,
             mac_address: mac,
         });
 
-        if let Ok(Some((host, services))) = self
+        if let Ok(Some((host, interfaces, ports, services))) = self
             .process_host(
                 ServiceMatchBaselineParams {
                     subnet,
@@ -614,13 +614,13 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         {
             let services_count = services.len();
 
-            if let Ok((created_host, _)) = self.create_host(host, services).await {
+            if let Ok(host_response) = self.create_host(host, interfaces, ports, services).await {
                 tracing::info!(
                     ip = %ip,
                     services = services_count,
                     "Host created"
                 );
-                return Ok(Some(created_host));
+                return Ok(Some(host_response.to_host()));
             } else {
                 tracing::warn!(ip = %ip, "Host creation failed");
             }

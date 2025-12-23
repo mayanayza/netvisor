@@ -71,9 +71,12 @@ impl NetworkService {
 
         let wan_subnet = create_wan_subnet(network_id);
         let remote_subnet = create_remote_subnet(network_id);
-        let (dns_host, dns_service) = create_public_dns_host(&wan_subnet, network_id);
-        let (web_host, web_service) = create_internet_connectivity_host(&wan_subnet, network_id);
-        let (remote_host, client_service) = create_remote_host(&remote_subnet, network_id);
+        let (dns_host, dns_interfaces, dns_ports, dns_service) =
+            create_public_dns_host(&wan_subnet, network_id);
+        let (web_host, web_interfaces, web_ports, web_service) =
+            create_internet_connectivity_host(&wan_subnet, network_id);
+        let (remote_host, remote_interfaces, remote_ports, client_service) =
+            create_remote_host(&remote_subnet, network_id);
 
         self.subnet_service
             .create(wan_subnet, authenticated.clone())
@@ -82,13 +85,31 @@ impl NetworkService {
             .create(remote_subnet, authenticated.clone())
             .await?;
         self.host_service
-            .create_host_with_services(dns_host, vec![dns_service], authenticated.clone())
+            .discover_host(
+                dns_host,
+                dns_interfaces,
+                dns_ports,
+                vec![dns_service],
+                authenticated.clone(),
+            )
             .await?;
         self.host_service
-            .create_host_with_services(web_host, vec![web_service], authenticated.clone())
+            .discover_host(
+                web_host,
+                web_interfaces,
+                web_ports,
+                vec![web_service],
+                authenticated.clone(),
+            )
             .await?;
         self.host_service
-            .create_host_with_services(remote_host, vec![client_service], authenticated.clone())
+            .discover_host(
+                remote_host,
+                remote_interfaces,
+                remote_ports,
+                vec![client_service],
+                authenticated.clone(),
+            )
             .await?;
 
         Ok(())

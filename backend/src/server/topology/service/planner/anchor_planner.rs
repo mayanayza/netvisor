@@ -93,9 +93,8 @@ impl ChildAnchorPlanner {
         // Get subnet info
         let subnet = ctx.get_subnet_from_interface_id(interface_id);
         let subnet_node_count = if let Some(subnet) = subnet {
-            ctx.hosts
+            ctx.interfaces
                 .iter()
-                .flat_map(|h| &h.base.interfaces)
                 .filter(|i| i.base.subnet_id == subnet.id)
                 .count()
         } else {

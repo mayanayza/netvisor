@@ -10,6 +10,7 @@ use crate::server::{
 };
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -37,7 +38,7 @@ pub enum EdgeHandle {
 }
 
 #[derive(
-    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr, Display,
+    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr, Display, ToSchema,
 )]
 pub enum EdgeStyle {
     Straight,

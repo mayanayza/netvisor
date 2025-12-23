@@ -31,7 +31,7 @@ use tokio::net::UdpSocket;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_util::sync::CancellationToken;
 
-use crate::server::hosts::r#impl::ports::{PortBase, TransportProtocol};
+use crate::server::ports::r#impl::base::{PortType, TransportProtocol};
 
 pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
 
@@ -326,7 +326,7 @@ pub async fn scan_ports_and_endpoints(
     cidr: IpCidr,
     gateway_ips: Vec<IpAddr>,
     tcp_ports_to_check: Vec<u16>,
-) -> Result<(Vec<PortBase>, Vec<EndpointResponse>), Error> {
+) -> Result<(Vec<PortType>, Vec<EndpointResponse>), Error> {
     if cancel.is_cancelled() {
         return Err(anyhow!("Operation cancelled"));
     }
@@ -340,7 +340,7 @@ pub async fn scan_ports_and_endpoints(
 
     let use_https_ports: HashMap<u16, bool> =
         tcp_ports.iter().map(|(p, h)| (p.number(), *h)).collect();
-    let tcp_ports: Vec<PortBase> = tcp_ports.iter().map(|(p, _)| *p).collect();
+    let tcp_ports: Vec<PortType> = tcp_ports.iter().map(|(p, _)| *p).collect();
 
     open_ports.extend(tcp_ports.clone());
 
@@ -379,7 +379,7 @@ pub async fn scan_ports_and_endpoints(
     // Add any ports that had endpoint responses but weren't in open_ports
     // This handles cases where we got HTTP response but port scan didn't detect it
     for endpoint_response in &endpoint_responses {
-        let port = endpoint_response.endpoint.port_base;
+        let port = endpoint_response.endpoint.port_type;
         if !open_ports.contains(&port) {
             tracing::debug!(
                 "Adding port {} to open ports based on successful endpoint response",
@@ -408,10 +408,10 @@ pub async fn scan_tcp_ports(
     cancel: CancellationToken,
     batch_size: usize,
     tcp_ports_to_check: Vec<u16>,
-) -> Result<Vec<(PortBase, bool)>, Error> {
-    let ports: Vec<PortBase> = tcp_ports_to_check
+) -> Result<Vec<(PortType, bool)>, Error> {
+    let ports: Vec<PortType> = tcp_ports_to_check
         .iter()
-        .map(|p| PortBase::new_tcp(*p))
+        .map(|p| PortType::new_tcp(*p))
         .collect();
 
     let open_ports = batch_scan(ports.clone(), batch_size, cancel, move |port| async move {
@@ -462,7 +462,7 @@ pub async fn scan_tcp_ports(
 
                     drop(stream);
                     return Some((
-                        PortBase::new_tcp(port.number()),
+                        PortType::new_tcp(port.number()),
                         use_https || port.is_https(),
                     ));
                 }
@@ -513,7 +513,7 @@ pub async fn scan_udp_ports(
     batch_size: usize,
     cidr: IpCidr,
     gateway_ips: Vec<IpAddr>,
-) -> Result<Vec<PortBase>, Error> {
+) -> Result<Vec<PortType>, Error> {
     let discovery_ports = Service::all_discovery_ports();
     let ports: Vec<u16> = discovery_ports
         .iter()
@@ -544,7 +544,7 @@ pub async fn scan_udp_ports(
         match result {
             Ok(Some(detected_port)) => {
                 tracing::trace!("Found open UDP port {}:{}", ip, detected_port);
-                Some(PortBase::new_udp(detected_port))
+                Some(PortType::new_udp(detected_port))
             }
             Ok(None) => None,
             Err(e) => {
@@ -570,7 +570,7 @@ pub async fn scan_udp_ports(
 pub async fn scan_endpoints(
     ip: IpAddr,
     cancel: CancellationToken,
-    filter_ports: Option<Vec<PortBase>>,
+    filter_ports: Option<Vec<PortType>>,
     use_https_ports: Option<HashMap<u16, bool>>,
     batch_size: usize,
 ) -> Result<Vec<EndpointResponse>, Error> {
@@ -586,7 +586,7 @@ pub async fn scan_endpoints(
         .into_iter()
         .filter_map(|e| {
             if let Some(filter_ports) = &filter_ports {
-                if filter_ports.contains(&e.port_base) {
+                if filter_ports.contains(&e.port_type) {
                     return Some(e);
                 }
                 None
@@ -599,7 +599,7 @@ pub async fn scan_endpoints(
     // Group endpoints by (port, path) to avoid duplicate requests
     let mut unique_endpoints: HashMap<(u16, String), Endpoint> = HashMap::new();
     for endpoint in all_endpoints {
-        let key = (endpoint.port_base.number(), endpoint.path.clone());
+        let key = (endpoint.port_type.number(), endpoint.path.clone());
         unique_endpoints.entry(key).or_insert(endpoint);
     }
 
@@ -619,12 +619,12 @@ pub async fn scan_endpoints(
 
             // Common HTTPS ports
             let use_https = https_ports
-                .get(&endpoint.port_base.number())
+                .get(&endpoint.port_type.number())
                 .unwrap_or(&false);
             let url = format!(
                 "{}:{}{}",
                 ip,
-                endpoint_with_ip.port_base.number(),
+                endpoint_with_ip.port_type.number(),
                 endpoint_with_ip.path
             );
             let http_url = format!("http://{}", url);

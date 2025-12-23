@@ -6,9 +6,6 @@ use uuid::Uuid;
 use crate::server::{
     hosts::r#impl::{
         base::{Host, HostBase},
-        interfaces::Interface,
-        ports::Port,
-        targets::HostTarget,
         virtualization::HostVirtualization,
     },
     shared::{
@@ -64,6 +61,7 @@ impl StorableEntity for Host {
     }
 
     fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error> {
+        // Exhaustive destructuring ensures compile error if HostBase changes
         let Self {
             id,
             created_at,
@@ -73,13 +71,9 @@ impl StorableEntity for Host {
                     name,
                     description,
                     hostname,
-                    interfaces,
                     network_id,
-                    target,
                     hidden,
                     source,
-                    services,
-                    ports,
                     virtualization,
                     tags,
                 },
@@ -95,12 +89,8 @@ impl StorableEntity for Host {
                 "network_id",
                 "source",
                 "hostname",
-                "target",
                 "hidden",
-                "services",
-                "ports",
                 "virtualization",
-                "interfaces",
                 "tags",
             ],
             vec![
@@ -112,12 +102,8 @@ impl StorableEntity for Host {
                 SqlValue::Uuid(network_id),
                 SqlValue::EntitySource(source),
                 SqlValue::OptionalString(hostname),
-                SqlValue::HostTarget(target),
                 SqlValue::Bool(hidden),
-                SqlValue::UuidArray(services),
-                SqlValue::Ports(ports),
                 SqlValue::OptionalHostVirtualization(virtualization),
-                SqlValue::Interfaces(interfaces),
                 SqlValue::UuidArray(tags),
             ],
         ))
@@ -125,13 +111,6 @@ impl StorableEntity for Host {
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
         // Parse JSON fields safely
-        let interfaces: Vec<Interface> =
-            serde_json::from_value(row.get::<serde_json::Value, _>("interfaces"))
-                .map_err(|e| anyhow::anyhow!("Failed to deserialize interfaces: {}", e))?;
-        let target: HostTarget = serde_json::from_value(row.get::<serde_json::Value, _>("target"))
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize target: {}", e))?;
-        let ports: Vec<Port> = serde_json::from_value(row.get::<serde_json::Value, _>("ports"))
-            .map_err(|e| anyhow::anyhow!("Failed to deserialize ports: {}", e))?;
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
                 .map_err(|e| anyhow::anyhow!("Failed to deserialize source: {}", e))?;
@@ -149,12 +128,8 @@ impl StorableEntity for Host {
                 network_id: row.get("network_id"),
                 source,
                 hostname: row.get("hostname"),
-                target,
                 hidden: row.get("hidden"),
-                services: row.get("services"),
-                ports,
                 virtualization,
-                interfaces,
                 tags: row.get("tags"),
             },
         })

@@ -125,7 +125,7 @@
 			sortable: true,
 			getValue(item) {
 				return item.source.type == 'DiscoveryWithMatch'
-					? matchConfidenceLabel(item.source.details)
+					? matchConfidenceLabel(item.source.details.confidence)
 					: 'N/A (Not a discovered service)';
 			}
 		},

@@ -12,8 +12,9 @@
 	export let service: Service | undefined = undefined;
 	export let host: Host | undefined = undefined;
 
-	$: ifaceStore = getInterfaceFromId(binding.interface_id);
-	$: iface = $ifaceStore;
+	// Interface binding must have an interface_id
+	$: ifaceStore = binding.interface_id ? getInterfaceFromId(binding.interface_id) : null;
+	$: iface = ifaceStore ? $ifaceStore : null;
 
 	// Create interface options with disabled state
 	$: interfaceOptions =
@@ -37,9 +38,9 @@
 			};
 		}) || [];
 
-	// Create svelte-forms field
+	// Create svelte-forms field - interface_id is required for Interface bindings
 	const getInterfaceField = () => {
-		return field(`interface_binding_${binding.id}`, binding.interface_id, [], {
+		return field(`interface_binding_${binding.id}`, binding.interface_id ?? '', [], {
 			checkOnInit: false
 		});
 	};

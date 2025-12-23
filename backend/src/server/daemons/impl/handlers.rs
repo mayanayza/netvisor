@@ -1,11 +1,14 @@
-use crate::server::daemons::r#impl::base::Daemon;
-use crate::server::daemons::service::DaemonService;
-use crate::server::shared::handlers::traits::CrudHandlers;
+use crate::server::{
+    config::AppState,
+    daemons::{r#impl::base::Daemon, service::DaemonService},
+    shared::handlers::{query::NetworkFilterQuery, traits::CrudHandlers},
+};
 
 impl CrudHandlers for Daemon {
     type Service = DaemonService;
+    type FilterQuery = NetworkFilterQuery;
 
-    fn get_service(state: &crate::server::config::AppState) -> &Self::Service {
+    fn get_service(state: &AppState) -> &Self::Service {
         &state.services.daemon_service
     }
 }

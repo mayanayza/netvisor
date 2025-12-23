@@ -1,12 +1,14 @@
 use crate::server::{
-    shared::handlers::traits::CrudHandlers,
+    config::AppState,
+    shared::handlers::{query::OrganizationFilterQuery, traits::CrudHandlers},
     users::{r#impl::base::User, service::UserService},
 };
 
 impl CrudHandlers for User {
     type Service = UserService;
+    type FilterQuery = OrganizationFilterQuery;
 
-    fn get_service(state: &crate::server::config::AppState) -> &Self::Service {
+    fn get_service(state: &AppState) -> &Self::Service {
         &state.services.user_service
     }
 }

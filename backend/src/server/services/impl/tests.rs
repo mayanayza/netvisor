@@ -1,7 +1,7 @@
 use strum::{IntoDiscriminant, IntoEnumIterator};
 
 use crate::server::{
-    hosts::r#impl::ports::PortBase,
+    ports::r#impl::base::PortType,
     services::{
         definitions::ServiceDefinitionRegistry,
         r#impl::{definitions::ServiceDefinition, patterns::Pattern},
@@ -251,22 +251,19 @@ fn test_all_protocol_ports_have_generic_service() {
     use std::collections::HashSet;
     use strum::IntoEnumIterator;
 
-    use crate::server::{
-        hosts::r#impl::ports::PortBase,
-        services::{
-            definitions::ServiceDefinitionRegistry,
-            r#impl::{definitions::ServiceDefinition, patterns::Pattern},
-        },
+    use crate::server::services::{
+        definitions::ServiceDefinitionRegistry,
+        r#impl::{definitions::ServiceDefinition, patterns::Pattern},
     };
 
     // Ports to skip - discovered via other mechanisms or require multi-signal matching
-    let skip_ports: HashSet<PortBase> =
-        HashSet::from([PortBase::Docker, PortBase::DockerTls, PortBase::Kubernetes]);
+    let skip_ports: HashSet<PortType> =
+        HashSet::from([PortType::Docker, PortType::DockerTls, PortType::Kubernetes]);
 
     // Get all well-known ports (non-Custom, non-Http*)
-    let well_known_ports: Vec<PortBase> = PortBase::iter()
+    let well_known_ports: Vec<PortType> = PortType::iter()
         .filter(|port| {
-            if matches!(port, PortBase::Custom(_)) {
+            if matches!(port, PortType::Custom(_)) {
                 return false;
             }
             if skip_ports.contains(port) {
@@ -285,7 +282,7 @@ fn test_all_protocol_ports_have_generic_service() {
         .filter(|s| s.is_generic())
         .collect();
 
-    fn pattern_matches_port_alone(pattern: &Pattern, target_port: &PortBase) -> bool {
+    fn pattern_matches_port_alone(pattern: &Pattern, target_port: &PortType) -> bool {
         match pattern {
             Pattern::Port(port) => port == target_port,
             Pattern::Endpoint(port, _, _, _) => port == target_port,
@@ -298,7 +295,7 @@ fn test_all_protocol_ports_have_generic_service() {
         }
     }
 
-    let mut uncovered_ports: Vec<PortBase> = Vec::new();
+    let mut uncovered_ports: Vec<PortType> = Vec::new();
 
     for port in &well_known_ports {
         let has_coverage = generic_services
@@ -319,8 +316,8 @@ fn test_all_protocol_ports_have_generic_service() {
         panic!(
             "The following protocol ports have no generic service definition:\n{}\n\n\
             Each protocol port needs a generic service (is_generic=true) with either:\n\
-            - Pattern::Port(PortBase::X)\n\
-            - Pattern::Endpoint(PortBase::X, ...)\n\
+            - Pattern::Port(PortType::X)\n\
+            - Pattern::Endpoint(PortType::X, ...)\n\
             - Pattern::AnyOf containing one of the above",
             port_list.join("\n")
         );
@@ -331,13 +328,13 @@ fn test_service_patterns_use_appropriate_port_types() {
     let registry = ServiceDefinitionRegistry::all_service_definitions();
 
     // Build map of port numbers to their PortBase names by iterating
-    let well_known_ports: std::collections::HashMap<PortBase, String> = PortBase::iter()
+    let well_known_ports: std::collections::HashMap<PortType, String> = PortType::iter()
         .filter_map(|port_base| {
             // Skip Custom variants
-            if matches!(port_base, PortBase::Custom(_)) {
+            if matches!(port_base, PortType::Custom(_)) {
                 None
             } else {
-                Some((port_base, format!("PortBase::{}", port_base.discriminant())))
+                Some((port_base, format!("PortType::{}", port_base.discriminant())))
             }
         })
         .collect();
@@ -352,12 +349,12 @@ fn test_service_patterns_use_appropriate_port_types() {
 
 fn check_port_usage(
     pattern: &Pattern,
-    well_known_ports: &std::collections::HashMap<PortBase, String>,
+    well_known_ports: &std::collections::HashMap<PortType, String>,
     service_name: &str,
 ) {
     match pattern {
         Pattern::Port(port_base) | Pattern::Endpoint(port_base, .., None) => {
-            if let PortBase::Custom(_) = port_base {
+            if let PortType::Custom(_) = port_base {
                 if let Some(named_constant) = well_known_ports.get(&port_base) {
                     panic!(
                         "Service '{}' uses custom port {} but should use {} instead",
@@ -412,10 +409,10 @@ async fn test_service_patterns_are_specific_enough() {
     let words: HashSet<String> = words_map.into_keys().collect();
 
     // Get all non-custom PortBase variants by iterating
-    let common_ports: Vec<PortBase> = PortBase::iter()
+    let common_ports: Vec<PortType> = PortType::iter()
         .filter_map(|port_base| {
             // Skip Custom variants
-            if matches!(port_base, PortBase::Custom(_)) {
+            if matches!(port_base, PortType::Custom(_)) {
                 None
             } else {
                 Some(port_base)
@@ -438,7 +435,7 @@ async fn test_service_patterns_are_specific_enough() {
 
 fn check_pattern_specificity(
     pattern: &Pattern,
-    common_ports: &[PortBase],
+    common_ports: &[PortType],
     service_name: &str,
     words: HashSet<String>,
 ) {

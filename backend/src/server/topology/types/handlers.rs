@@ -1,13 +1,17 @@
-use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::{
-    shared::handlers::traits::CrudHandlers,
+    config::AppState,
+    shared::{
+        handlers::{query::NetworkFilterQuery, traits::CrudHandlers},
+        storage::traits::StorableEntity,
+    },
     topology::{service::main::TopologyService, types::base::Topology},
 };
 
 impl CrudHandlers for Topology {
     type Service = TopologyService;
+    type FilterQuery = NetworkFilterQuery;
 
-    fn get_service(state: &crate::server::config::AppState) -> &Self::Service {
+    fn get_service(state: &AppState) -> &Self::Service {
         &state.services.topology_service
     }
 

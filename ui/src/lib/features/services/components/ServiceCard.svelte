@@ -84,7 +84,7 @@
 						id: service.id,
 						label:
 							service.source.type == 'DiscoveryWithMatch'
-								? matchConfidenceLabel(service.source.details)
+								? matchConfidenceLabel(service.source.details.confidence)
 								: 'N/A (Not a discovered service)',
 						color:
 							service.source.type == 'DiscoveryWithMatch'

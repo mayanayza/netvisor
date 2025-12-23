@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Edit, Eye, Replace, Trash2 } from 'lucide-svelte';
-	import { formatInterface, getHostTargetString, hosts } from '../store';
+	import { formatInterface, hosts } from '../store';
 	import type { Host } from '../types/base';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
@@ -35,7 +35,6 @@
 
 	// Get stores at top level
 	let hostServicesStore = $derived(getServicesForHost(host.id));
-	let hostTargetStringStore = $derived(getHostTargetString(host));
 	let virtualizationServiceStore = $derived(
 		host.virtualization !== null ? getServiceById(host.virtualization.details.service_id) : null
 	);
@@ -43,7 +42,6 @@
 	// Consolidate all reactive computations into a single derived to prevent cascading updates
 	let cardData = $derived.by(() => {
 		const hostServices = $hostServicesStore;
-		const hostTargetString = $hostTargetStringStore;
 		const virtualizationService = virtualizationServiceStore ? $virtualizationServiceStore : null;
 
 		const servicesThatManageVmsIds = hostServices
@@ -85,7 +83,7 @@
 						subtitle: 'VM Managed By ' + virtualizationService.name || 'Unknown Service'
 					}
 				: {}),
-			link: host.target.type != 'None' ? `http://${hostTargetString}` : undefined,
+			link: host.hostname ? `http://${host.hostname}` : undefined,
 			iconColor: entities.getColorHelper('Host').icon,
 			Icon:
 				serviceDefinitions.getIconComponent(hostServices[0]?.service_definition) ||

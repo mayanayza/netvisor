@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -20,9 +20,9 @@ impl ServiceDefinition for Plex {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
-            Pattern::Endpoint(PortBase::new_tcp(32400), "/web/index.html", "Plex", None),
+            Pattern::Endpoint(PortType::new_tcp(32400), "/web/index.html", "Plex", None),
             Pattern::Header(
-                Some(PortBase::new_tcp(32400)),
+                Some(PortType::new_tcp(32400)),
                 "X-Plex-Protocol",
                 "1.0",
                 Some(401..401),

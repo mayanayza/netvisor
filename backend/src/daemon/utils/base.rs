@@ -1,5 +1,5 @@
 use crate::server::discovery::r#impl::types::DiscoveryType;
-use crate::server::hosts::r#impl::interfaces::{Interface, InterfaceBase};
+use crate::server::interfaces::r#impl::base::{Interface, InterfaceBase};
 use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::shared::types::entities::{DiscoveryMetadata, EntitySource};
 use crate::server::subnets::r#impl::base::{Subnet, SubnetBase};
@@ -106,6 +106,8 @@ pub trait DaemonUtils {
                 cidr_to_mac.insert(subnet.base.cidr, mac_address);
 
                 interfaces.push(Interface::new(InterfaceBase {
+                    network_id: subnet.base.network_id,
+                    host_id: Uuid::nil(), // Placeholder - server will set correct host_id
                     name: Some(interface_name),
                     subnet_id: subnet.id,
                     ip_address: ip_addr,

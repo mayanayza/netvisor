@@ -32,20 +32,28 @@
 		if (subnet.cidr == '0.0.0.0/0') {
 			const newInterface: Interface = {
 				id: uuidv4(),
+				host_id: formData.id,
+				network_id: formData.network_id,
 				name: subnet.name,
 				subnet_id: subnetId,
 				ip_address: '203.0.113.' + (Math.floor(Math.random() * 255) + 1).toString(),
-				mac_address: undefined
+				mac_address: null,
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString()
 			};
 
 			formData.interfaces = [...interfaces, newInterface];
 		} else {
 			const newInterface: Interface = {
 				id: uuidv4(),
-				name: '',
+				host_id: formData.id,
+				network_id: formData.network_id,
+				name: null,
 				subnet_id: subnetId,
-				ip_address: undefined,
-				mac_address: undefined
+				ip_address: '',
+				mac_address: null,
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString()
 			};
 
 			formData.interfaces = [...interfaces, newInterface];

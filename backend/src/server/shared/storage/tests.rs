@@ -1,354 +1,383 @@
-// use crate::server::{
-//     api_keys::r#impl::base::ApiKey, daemons::r#impl::base::Daemon,
-//     discovery::r#impl::base::Discovery, groups::r#impl::base::Group, hosts::r#impl::base::Host,
-//     invites::r#impl::base::Invite, networks::r#impl::Network,
-//     organizations::r#impl::base::Organization, services::r#impl::base::Service,
-//     shared::storage::traits::StorableEntity, shares::r#impl::base::Share,
-//     subnets::r#impl::base::Subnet, tags::r#impl::base::Tag, topology::types::base::Topology,
-//     users::r#impl::base::User,
-// };
-// use sqlx::postgres::PgRow;
-// use std::collections::HashMap;
+use crate::server::{
+    api_keys::r#impl::base::ApiKey, bindings::r#impl::base::Binding, daemons::r#impl::base::Daemon, discovery::r#impl::base::Discovery, group_bindings::GroupBinding, groups::r#impl::base::Group, hosts::r#impl::base::Host, interfaces::r#impl::base::Interface, invites::r#impl::base::Invite, networks::r#impl::Network, organizations::r#impl::base::Organization, ports::r#impl::base::Port, services::r#impl::base::Service, shared::storage::traits::StorableEntity, shares::r#impl::base::Share, subnets::r#impl::base::Subnet, tags::r#impl::base::Tag, topology::types::base::Topology, users::r#impl::base::User
+};
+use sqlx::postgres::PgRow;
+use std::collections::HashMap;
 
-// // Type alias for the deserialization function
-// #[allow(dead_code)]
-// type DeserializeFn = Box<dyn Fn(&PgRow) -> Result<(), anyhow::Error> + Send + Sync>;
+// Type alias for the deserialization function
+#[allow(dead_code)]
+type DeserializeFn = Box<dyn Fn(&PgRow) -> Result<(), anyhow::Error> + Send + Sync>;
 
-// // Mapping from table name to deserialization function
-// #[allow(dead_code)]
-// fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
-//     let mut map: HashMap<&'static str, DeserializeFn> = HashMap::new();
+#[allow(dead_code)]
+const TABLES_WITHOUT_ENTITIES: [&str; 1] = ["user_network_access"];
 
-//     map.insert(
-//         ApiKey::table_name(),
-//         Box::new(|row| {
-//             ApiKey::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+// Mapping from table name to deserialization function
+#[allow(dead_code)]
+fn get_entity_deserializers() -> HashMap<&'static str, DeserializeFn> {
+    let mut map: HashMap<&'static str, DeserializeFn> = HashMap::new();
 
-//     map.insert(
-//         Daemon::table_name(),
-//         Box::new(|row| {
-//             Daemon::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        ApiKey::table_name(),
+        Box::new(|row| {
+            ApiKey::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Discovery::table_name(),
-//         Box::new(|row| {
-//             Discovery::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Daemon::table_name(),
+        Box::new(|row| {
+            Daemon::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Group::table_name(),
-//         Box::new(|row| {
-//             Group::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Discovery::table_name(),
+        Box::new(|row| {
+            Discovery::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Host::table_name(),
-//         Box::new(|row| {
-//             Host::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Group::table_name(),
+        Box::new(|row| {
+            Group::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Network::table_name(),
-//         Box::new(|row| {
-//             Network::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Host::table_name(),
+        Box::new(|row| {
+            Host::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Organization::table_name(),
-//         Box::new(|row| {
-//             Organization::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Network::table_name(),
+        Box::new(|row| {
+            Network::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Service::table_name(),
-//         Box::new(|row| {
-//             Service::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Organization::table_name(),
+        Box::new(|row| {
+            Organization::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Subnet::table_name(),
-//         Box::new(|row| {
-//             Subnet::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Service::table_name(),
+        Box::new(|row| {
+            Service::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         User::table_name(),
-//         Box::new(|row| {
-//             User::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Subnet::table_name(),
+        Box::new(|row| {
+            Subnet::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Topology::table_name(),
-//         Box::new(|row| {
-//             Topology::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        User::table_name(),
+        Box::new(|row| {
+            User::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Tag::table_name(),
-//         Box::new(|row| {
-//             Tag::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Topology::table_name(),
+        Box::new(|row| {
+            Topology::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Invite::table_name(),
-//         Box::new(|row| {
-//             Invite::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Tag::table_name(),
+        Box::new(|row| {
+            Tag::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map.insert(
-//         Share::table_name(),
-//         Box::new(|row| {
-//             Share::from_row(row)?;
-//             Ok(())
-//         }),
-//     );
+    map.insert(
+        Invite::table_name(),
+        Box::new(|row| {
+            Invite::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     map
-// }
+    map.insert(
+        Share::table_name(),
+        Box::new(|row| {
+            Share::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-// #[tokio::test]
-// pub async fn test_all_tables_have_entity_mapping() {
-//     use crate::tests::setup_test_db;
+    map.insert(
+        Interface::table_name(),
+        Box::new(|row| {
+            Interface::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     let (pool, _database_url, _container) = setup_test_db().await;
+    map.insert(
+        Port::table_name(),
+        Box::new(|row| {
+            Port::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     // Apply migrations to create the schema
-//     sqlx::migrate!("./migrations")
-//         .run(&pool)
-//         .await
-//         .expect("Failed to run migrations");
+    map.insert(
+        Binding::table_name(),
+        Box::new(|row| {
+            Binding::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     // Get all tables from information_schema
-//     let tables: Vec<String> = sqlx::query_scalar(
-//         "SELECT table_name FROM information_schema.tables
-//          WHERE table_schema = 'public'
-//          AND table_type = 'BASE TABLE'
-//          AND table_name != '_sqlx_migrations'",
-//     )
-//     .fetch_all(&pool)
-//     .await
-//     .expect("Failed to fetch table names");
+    map.insert(
+        GroupBinding::table_name(),
+        Box::new(|row| {
+            GroupBinding::from_row(row)?;
+            Ok(())
+        }),
+    );
 
-//     let deserializers = get_entity_deserializers();
+    map
+}
 
-//     println!("Verifying entity mappings for all tables...");
+#[tokio::test]
+pub async fn test_all_tables_have_entity_mapping() {
+    use crate::tests::setup_test_db;
 
-//     let mut missing_mappings = Vec::new();
-//     for table in &tables {
-//         if !deserializers.contains_key(table.as_str()) {
-//             missing_mappings.push(table.clone());
-//         }
-//     }
+    let (pool, _database_url, _container) = setup_test_db().await;
 
-//     if !missing_mappings.is_empty() {
-//         panic!(
-//             "The following tables are missing entity mappings in get_entity_deserializers():\n  - {}\n\
-//              Please add them to the registry.",
-//             missing_mappings.join("\n  - ")
-//         );
-//     }
+    // Apply migrations to create the schema
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
 
-//     println!("✓ All {} tables have entity mappings", tables.len());
-// }
+    // Get all tables from information_schema
+    let tables: Vec<String> = sqlx::query_scalar(
+        "SELECT table_name FROM information_schema.tables
+         WHERE table_schema = 'public'
+         AND table_type = 'BASE TABLE'
+         AND table_name != '_sqlx_migrations'",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("Failed to fetch table names");
 
-// #[tokio::test]
-// pub async fn test_database_schema_backward_compatibility() {
-//     use crate::tests::SERVER_DB_FIXTURE;
-//     use crate::tests::setup_test_db;
-//     use std::path::Path;
+    let deserializers = get_entity_deserializers();
 
-//     let db_path = Path::new(SERVER_DB_FIXTURE);
+    println!("Verifying entity mappings for all tables...");
 
-//     if db_path.exists() {
-//         use std::process::Command;
+    let mut missing_mappings = Vec::new();
+    for table in &tables {
+        if !deserializers.contains_key(table.as_str()) && !TABLES_WITHOUT_ENTITIES.contains(&table.as_str()) {
+            missing_mappings.push(table.clone());
+        }
+    }
 
-//         println!("Testing backward compatibility with database from latest release");
+    if !missing_mappings.is_empty() {
+        panic!(
+            "The following tables are missing entity mappings in get_entity_deserializers():\n  - {}\n\
+             Please add them to the registry.",
+            missing_mappings.join("\n  - ")
+        );
+    }
 
-//         let (pool, database_url, _container) = setup_test_db().await;
+    println!("✓ All {} tables have entity mappings", tables.len());
+}
 
-//         let url = url::Url::parse(&database_url).unwrap();
-//         let host = url.host_str().unwrap();
-//         let port = url.port().unwrap();
-//         let database = url.path().trim_start_matches('/');
+#[tokio::test]
+pub async fn test_database_schema_backward_compatibility() {
+    use crate::tests::SERVER_DB_FIXTURE;
+    use crate::tests::setup_test_db;
+    use std::path::Path;
 
-//         pool.close().await;
+    let db_path = Path::new(SERVER_DB_FIXTURE);
 
-//         let output = Command::new("psql")
-//             .arg("-h")
-//             .arg(host)
-//             .arg("-p")
-//             .arg(port.to_string())
-//             .arg("-U")
-//             .arg("postgres")
-//             .arg("-d")
-//             .arg(database)
-//             .arg("-f")
-//             .arg(db_path)
-//             .env("PGPASSWORD", "password")
-//             .output()
-//             .expect("Failed to execute psql - ensure it's installed");
+    if db_path.exists() {
+        use std::process::Command;
 
-//         assert!(
-//             output.status.success(),
-//             "Failed to restore database:\n{}",
-//             String::from_utf8_lossy(&output.stderr)
-//         );
+        println!("Testing backward compatibility with database from latest release");
 
-//         println!("Successfully restored database from fixture");
+        let (pool, database_url, _container) = setup_test_db().await;
 
-//         let pool = sqlx::PgPool::connect(&database_url).await.unwrap();
+        let url = url::Url::parse(&database_url).unwrap();
+        let host = url.host_str().unwrap();
+        let port = url.port().unwrap();
+        let database = url.path().trim_start_matches('/');
 
-//         // Verify tables exist using the deserializers map
-//         let deserializers = get_entity_deserializers();
-//         for table_name in deserializers.keys() {
-//             // Check if table exists in the old schema
-//             let table_exists: bool = sqlx::query_scalar(
-//                 "SELECT EXISTS (
-//                     SELECT FROM information_schema.tables
-//                     WHERE table_schema = 'public'
-//                     AND table_name = $1
-//                 )",
-//             )
-//             .bind(table_name)
-//             .fetch_one(&pool)
-//             .await
-//             .unwrap();
+        pool.close().await;
 
-//             if !table_exists {
-//                 println!(
-//                     "Table '{}' doesn't exist in old schema (new entity), skipping",
-//                     table_name
-//                 );
-//                 continue;
-//             }
+        let output = Command::new("psql")
+            .arg("-h")
+            .arg(host)
+            .arg("-p")
+            .arg(port.to_string())
+            .arg("-U")
+            .arg("postgres")
+            .arg("-d")
+            .arg(database)
+            .arg("-f")
+            .arg(db_path)
+            .env("PGPASSWORD", "password")
+            .output()
+            .expect("Failed to execute psql - ensure it's installed");
 
-//             assert!(
-//                 sqlx::query(&format!("SELECT * FROM {}", table_name))
-//                     .fetch_all(&pool)
-//                     .await
-//                     .is_ok(),
-//                 "Failed to read table: {}",
-//                 table_name
-//             );
-//         }
+        assert!(
+            output.status.success(),
+            "Failed to restore database:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
 
-//         println!("Successfully read all tables from latest release database");
+        println!("Successfully restored database from fixture");
 
-//         sqlx::migrate!("./migrations")
-//             .run(&pool)
-//             .await
-//             .expect("Failed to apply current schema to old database");
+        let pool = sqlx::PgPool::connect(&database_url).await.unwrap();
 
-//         println!("Successfully applied current schema to old database");
-//     } else {
-//         panic!("No database fixture found at {}", SERVER_DB_FIXTURE);
-//     }
-// }
+        // Verify tables exist using the deserializers map
+        let deserializers = get_entity_deserializers();
+        for table_name in deserializers.keys() {
+            // Check if table exists in the old schema
+            let table_exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_schema = 'public'
+                    AND table_name = $1
+                )",
+            )
+            .bind(table_name)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
-// #[tokio::test]
-// pub async fn test_struct_deserialization_backward_compatibility() {
-//     use crate::tests::SERVER_DB_FIXTURE;
-//     use crate::tests::setup_test_db;
-//     use std::path::Path;
+            if !table_exists {
+                println!(
+                    "Table '{}' doesn't exist in old schema (new entity), skipping",
+                    table_name
+                );
+                continue;
+            }
 
-//     let db_path = Path::new(SERVER_DB_FIXTURE);
+            assert!(
+                sqlx::query(&format!("SELECT * FROM {}", table_name))
+                    .fetch_all(&pool)
+                    .await
+                    .is_ok(),
+                "Failed to read table: {}",
+                table_name
+            );
+        }
 
-//     if db_path.exists() {
-//         use std::process::Command;
+        println!("Successfully read all tables from latest release database");
 
-//         println!("Testing struct deserialization from migrated old schema");
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .expect("Failed to apply current schema to old database");
 
-//         let (pool, database_url, _container) = setup_test_db().await;
+        println!("Successfully applied current schema to old database");
+    } else {
+        panic!("No database fixture found at {}", SERVER_DB_FIXTURE);
+    }
+}
 
-//         let url = url::Url::parse(&database_url).unwrap();
-//         let host = url.host_str().unwrap();
-//         let port = url.port().unwrap();
-//         let database = url.path().trim_start_matches('/');
+#[tokio::test]
+pub async fn test_struct_deserialization_backward_compatibility() {
+    use crate::tests::SERVER_DB_FIXTURE;
+    use crate::tests::setup_test_db;
+    use std::path::Path;
 
-//         pool.close().await;
+    let db_path = Path::new(SERVER_DB_FIXTURE);
 
-//         // Restore old database
-//         let output = Command::new("psql")
-//             .arg("-h")
-//             .arg(host)
-//             .arg("-p")
-//             .arg(port.to_string())
-//             .arg("-U")
-//             .arg("postgres")
-//             .arg("-d")
-//             .arg(database)
-//             .arg("-f")
-//             .arg(db_path)
-//             .env("PGPASSWORD", "password")
-//             .output()
-//             .expect("Failed to execute psql");
+    if db_path.exists() {
+        use std::process::Command;
 
-//         assert!(
-//             output.status.success(),
-//             "Failed to restore database:\n{}",
-//             String::from_utf8_lossy(&output.stderr)
-//         );
+        println!("Testing struct deserialization from migrated old schema");
 
-//         let pool = sqlx::PgPool::connect(&database_url).await.unwrap();
+        let (pool, database_url, _container) = setup_test_db().await;
 
-//         // Apply current migrations
-//         sqlx::migrate!("./migrations")
-//             .run(&pool)
-//             .await
-//             .expect("Failed to apply current schema");
+        let url = url::Url::parse(&database_url).unwrap();
+        let host = url.host_str().unwrap();
+        let port = url.port().unwrap();
+        let database = url.path().trim_start_matches('/');
 
-//         println!("Testing deserialization of all entity types...");
+        pool.close().await;
 
-//         let deserializers = get_entity_deserializers();
+        // Restore old database
+        let output = Command::new("psql")
+            .arg("-h")
+            .arg(host)
+            .arg("-p")
+            .arg(port.to_string())
+            .arg("-U")
+            .arg("postgres")
+            .arg("-d")
+            .arg(database)
+            .arg("-f")
+            .arg(db_path)
+            .env("PGPASSWORD", "password")
+            .output()
+            .expect("Failed to execute psql");
 
-//         for (table_name, deserialize_fn) in deserializers.iter() {
-//             let rows = sqlx::query(&format!("SELECT * FROM {}", table_name))
-//                 .fetch_all(&pool)
-//                 .await
-//                 .expect(&format!("Failed to fetch {}", table_name));
+        assert!(
+            output.status.success(),
+            "Failed to restore database:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
 
-//             for row in rows.iter() {
-//                 deserialize_fn(row)
-//                     .expect(&format!("Failed to deserialize row from {}", table_name));
-//             }
+        let pool = sqlx::PgPool::connect(&database_url).await.unwrap();
 
-//             println!(
-//                 "✓ Successfully deserialized {} rows from {}",
-//                 rows.len(),
-//                 table_name
-//             );
-//         }
+        // Apply current migrations
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .expect("Failed to apply current schema");
 
-//         println!("All entity types deserialized successfully from migrated schema");
-//     } else {
-//         panic!("No database fixture found at {}", SERVER_DB_FIXTURE);
-//     }
-// }
+        println!("Testing deserialization of all entity types...");
+
+        let deserializers = get_entity_deserializers();
+
+        for (table_name, deserialize_fn) in deserializers.iter() {
+            let rows = sqlx::query(&format!("SELECT * FROM {}", table_name))
+                .fetch_all(&pool)
+                .await
+                .expect(&format!("Failed to fetch {}", table_name));
+
+            for row in rows.iter() {
+                deserialize_fn(row)
+                    .expect(&format!("Failed to deserialize row from {}", table_name));
+            }
+
+            println!(
+                "✓ Successfully deserialized {} rows from {}",
+                rows.len(),
+                table_name
+            );
+        }
+
+        println!("All entity types deserialized successfully from migrated schema");
+    } else {
+        panic!("No database fixture found at {}", SERVER_DB_FIXTURE);
+    }
+}

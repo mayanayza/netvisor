@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use utoipa::ToSchema;
 
 use crate::server::shared::{
     concepts::Concept,
@@ -20,6 +22,7 @@ use crate::server::shared::{
     EnumIter,
     IntoStaticStr,
     Default,
+    ToSchema,
 )]
 #[strum_discriminants(derive(Display, Hash, Serialize, Deserialize, EnumIter))]
 pub enum SubnetType {
@@ -42,6 +45,30 @@ pub enum SubnetType {
     Unknown,
     #[default]
     None,
+}
+
+impl FromStr for SubnetType {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Internet" => Ok(SubnetType::Internet),
+            "Remote" => Ok(SubnetType::Remote),
+            "Gateway" => Ok(SubnetType::Gateway),
+            "VpnTunnel" => Ok(SubnetType::VpnTunnel),
+            "Dmz" => Ok(SubnetType::Dmz),
+            "Lan" => Ok(SubnetType::Lan),
+            "WiFi" => Ok(SubnetType::WiFi),
+            "IoT" => Ok(SubnetType::IoT),
+            "Guest" => Ok(SubnetType::Guest),
+            "DockerBridge" => Ok(SubnetType::DockerBridge),
+            "Management" => Ok(SubnetType::Management),
+            "Storage" => Ok(SubnetType::Storage),
+            "Unknown" => Ok(SubnetType::Unknown),
+            "None" => Ok(SubnetType::None),
+            _ => Err(anyhow::anyhow!("Unknown SubnetType: {}", s)),
+        }
+    }
 }
 
 impl SubnetType {
@@ -119,6 +146,10 @@ impl SubnetType {
                         .unwrap_or(false)
             }
         })
+    }
+
+    pub fn is_docker_bridge(&self) -> bool {
+        matches!(self, SubnetType::DockerBridge)
     }
 }
 

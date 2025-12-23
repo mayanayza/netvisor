@@ -102,7 +102,8 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let base_router = create_router(state.clone()).with_state(state.clone());
+    let (base_router, _openapi) = create_router(state.clone());
+    let base_router = base_router.with_state(state.clone());
 
     let api_router = if let Some(static_path) = &web_external_path {
         base_router.fallback_service(

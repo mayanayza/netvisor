@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -20,8 +20,8 @@ impl ServiceDefinition for Unbound {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
-            Pattern::Port(PortBase::DnsUdp),
-            Pattern::Port(PortBase::new_tcp(8953)),
+            Pattern::Port(PortType::DnsUdp),
+            Pattern::Port(PortType::new_tcp(8953)),
         ])
     }
 

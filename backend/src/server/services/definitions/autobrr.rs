@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -19,7 +19,7 @@ impl ServiceDefinition for Autobrr {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Port(PortBase::new_tcp(7474))
+        Pattern::Port(PortType::new_tcp(7474))
     }
 
     fn logo_url(&self) -> &'static str {

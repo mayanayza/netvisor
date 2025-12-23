@@ -8,10 +8,11 @@ use crate::server::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct GroupBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -19,8 +20,10 @@ pub struct GroupBase {
     #[serde(deserialize_with = "deserialize_empty_string_as_none")]
     #[validate(length(min = 0, max = 500))]
     pub description: Option<String>,
-    #[serde(flatten)]
     pub group_type: GroupType,
+    /// Ordered list of binding IDs for this group
+    #[serde(default)]
+    pub binding_ids: Vec<Uuid>,
     pub source: EntitySource,
     pub color: String,
     #[serde(default)]
@@ -29,7 +32,8 @@ pub struct GroupBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[schema(example = crate::server::shared::types::examples::group)]
 pub struct Group {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -46,10 +50,7 @@ impl Display for Group {
 
 impl Group {
     pub fn bindings(&self) -> Vec<Uuid> {
-        match &self.base.group_type {
-            GroupType::HubAndSpoke { service_bindings } => service_bindings.to_vec(),
-            GroupType::RequestPath { service_bindings } => service_bindings.to_vec(),
-        }
+        self.base.binding_ids.clone()
     }
 }
 

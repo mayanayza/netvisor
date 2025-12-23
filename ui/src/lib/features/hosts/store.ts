@@ -4,7 +4,6 @@ import { api } from '../../shared/utils/api';
 import { pushSuccess } from '$lib/shared/stores/feedback';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { isContainerSubnet } from '../subnets/store';
-import { getBindingFromId, getBindingDisplayName } from '../services/store';
 import { networks } from '../networks/store';
 
 export const hosts = writable<Host[]>([]);
@@ -77,12 +76,9 @@ export function createEmptyHostFormData(): Host {
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		name: '',
-		description: '',
+		description: null,
 		tags: [],
-		hostname: '',
-		target: {
-			type: 'None'
-		},
+		hostname: null,
 		services: [],
 		interfaces: [],
 		ports: [],
@@ -95,33 +91,10 @@ export function createEmptyHostFormData(): Host {
 	};
 }
 
-export function getHostTargetString(host: Host): Readable<string> {
-	return derived(
-		[getBindingFromId(host.target.type === 'ServiceBinding' ? host.target.config : '')],
-		([$binding]) => {
-			switch (host.target.type) {
-				case 'ServiceBinding': {
-					if ($binding) {
-						return get(getBindingDisplayName($binding));
-					}
-					return 'Unknown Binding';
-				}
-				case 'None': {
-					return 'None';
-				}
-				case 'Hostname': {
-					if (host && host.hostname && host.hostname.length > 0) return host.hostname;
-					return 'Unknown Binding';
-				}
-			}
-		}
-	);
-}
-
 export function formatInterface(i: Interface | AllInterfaces): string {
 	if (i.id == null) return i.name;
 	return get(isContainerSubnet(i.subnet_id))
-		? i.name
+		? i.name ?? i.ip_address
 		: (i.name ? i.name + ': ' : '') + i.ip_address;
 }
 

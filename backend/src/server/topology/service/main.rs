@@ -11,6 +11,7 @@ use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
     groups::{r#impl::base::Group, service::GroupService},
     hosts::{r#impl::base::Host, service::HostService},
+    interfaces::{r#impl::base::Interface, service::InterfaceService},
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
         events::{
@@ -42,6 +43,7 @@ use crate::server::{
 pub struct TopologyService {
     storage: Arc<GenericPostgresStorage<Topology>>,
     host_service: Arc<HostService>,
+    interface_service: Arc<InterfaceService>,
     subnet_service: Arc<SubnetService>,
     group_service: Arc<GroupService>,
     service_service: Arc<ServiceService>,
@@ -80,7 +82,8 @@ impl CrudService<Topology> for TopologyService {
             entity
         };
 
-        let (hosts, subnets, groups) = self.get_entity_data(topology.base.network_id).await?;
+        let (hosts, interfaces, subnets, groups) =
+            self.get_entity_data(topology.base.network_id).await?;
 
         let services = self
             .get_service_data(topology.base.network_id, &topology.base.options)
@@ -88,6 +91,7 @@ impl CrudService<Topology> for TopologyService {
 
         let params = BuildGraphParams {
             hosts: &hosts,
+            interfaces: &interfaces,
             services: &services,
             subnets: &subnets,
             groups: &groups,
@@ -101,6 +105,7 @@ impl CrudService<Topology> for TopologyService {
         topology.base.edges = edges;
         topology.base.nodes = nodes;
         topology.base.hosts = hosts;
+        topology.base.interfaces = interfaces;
         topology.base.services = services;
         topology.base.subnets = subnets;
         topology.base.groups = groups;
@@ -131,6 +136,7 @@ impl CrudService<Topology> for TopologyService {
 pub struct BuildGraphParams<'a> {
     pub options: &'a TopologyOptions,
     pub hosts: &'a [Host],
+    pub interfaces: &'a [Interface],
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
     pub groups: &'a [Group],
@@ -141,6 +147,7 @@ pub struct BuildGraphParams<'a> {
 impl TopologyService {
     pub fn new(
         host_service: Arc<HostService>,
+        interface_service: Arc<InterfaceService>,
         subnet_service: Arc<SubnetService>,
         group_service: Arc<GroupService>,
         service_service: Arc<ServiceService>,
@@ -150,6 +157,7 @@ impl TopologyService {
         let (staleness_tx, _) = broadcast::channel(100);
         Self {
             host_service,
+            interface_service,
             subnet_service,
             group_service,
             service_service,
@@ -166,17 +174,23 @@ impl TopologyService {
     pub async fn get_entity_data(
         &self,
         network_id: Uuid,
-    ) -> Result<(Vec<Host>, Vec<Subnet>, Vec<Group>), Error> {
+    ) -> Result<(Vec<Host>, Vec<Interface>, Vec<Subnet>, Vec<Group>), Error> {
         let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
         // Fetch all data
         let hosts = self
             .host_service
             .get_all(network_filter.clone().hidden_is(false))
             .await?;
+
+        // Fetch interfaces for all hosts
+        let host_ids: Vec<Uuid> = hosts.iter().map(|h| h.id).collect();
+        let interface_filter = EntityFilter::unfiltered().host_ids(&host_ids);
+        let interfaces = self.interface_service.get_all(interface_filter).await?;
+
         let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
         let groups = self.group_service.get_all(network_filter.clone()).await?;
 
-        Ok((hosts, subnets, groups))
+        Ok((hosts, interfaces, subnets, groups))
     }
 
     pub async fn get_service_data(
@@ -204,6 +218,7 @@ impl TopologyService {
     pub fn build_graph(&self, params: BuildGraphParams) -> (Vec<Node>, Vec<Edge>) {
         let BuildGraphParams {
             hosts,
+            interfaces,
             subnets,
             services,
             groups,
@@ -213,7 +228,7 @@ impl TopologyService {
         } = params;
 
         // Create context to avoid parameter passing
-        let ctx = TopologyContext::new(hosts, subnets, services, groups, options);
+        let ctx = TopologyContext::new(hosts, interfaces, subnets, services, groups, options);
 
         // Create all edges (needed for anchor analysis)
         let mut all_edges = Vec::new();

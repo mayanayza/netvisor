@@ -67,7 +67,8 @@ pub async fn create_handler(
 
     let service = Topology::get_service(&state);
 
-    let (hosts, subnets, groups) = service.get_entity_data(topology.base.network_id).await?;
+    let (hosts, interfaces, subnets, groups) =
+        service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
         .get_service_data(topology.base.network_id, &topology.base.options)
@@ -76,6 +77,7 @@ pub async fn create_handler(
     let (nodes, edges) = service.build_graph(BuildGraphParams {
         options: &topology.base.options,
         hosts: &hosts,
+        interfaces: &interfaces,
         subnets: &subnets,
         services: &services,
         groups: &groups,
@@ -84,6 +86,7 @@ pub async fn create_handler(
     });
 
     topology.base.hosts = hosts;
+    topology.base.interfaces = interfaces;
     topology.base.services = services;
     topology.base.subnets = subnets;
     topology.base.groups = groups;
@@ -122,13 +125,15 @@ async fn refresh(
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, subnets, groups) = service.get_entity_data(topology.base.network_id).await?;
+    let (hosts, interfaces, subnets, groups) =
+        service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
         .get_service_data(topology.base.network_id, &topology.base.options)
         .await?;
 
     topology.base.hosts = hosts;
+    topology.base.interfaces = interfaces;
     topology.base.services = services;
     topology.base.subnets = subnets;
     topology.base.groups = groups;
@@ -148,7 +153,8 @@ async fn rebuild(
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, subnets, groups) = service.get_entity_data(topology.base.network_id).await?;
+    let (hosts, interfaces, subnets, groups) =
+        service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
         .get_service_data(topology.base.network_id, &topology.base.options)
@@ -157,6 +163,7 @@ async fn rebuild(
     let (nodes, edges) = service.build_graph(BuildGraphParams {
         options: &topology.base.options,
         hosts: &hosts,
+        interfaces: &interfaces,
         subnets: &subnets,
         services: &services,
         groups: &groups,
@@ -165,6 +172,7 @@ async fn rebuild(
     });
 
     topology.base.hosts = hosts;
+    topology.base.interfaces = interfaces;
     topology.base.services = services;
     topology.base.subnets = subnets;
     topology.base.groups = groups;

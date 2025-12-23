@@ -126,7 +126,7 @@
 				return g.service_bindings.some((b) => {
 					// Use $services instead of getServiceForBinding to maintain reactivity
 					let service = $services.find((s) => s.bindings.map((sb) => sb.id).includes(b));
-					if (service) return host.services.includes(service.id);
+					if (service) return host.services.some((s) => s.id === service.id);
 					return false;
 				});
 			});

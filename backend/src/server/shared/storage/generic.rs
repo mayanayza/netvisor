@@ -4,6 +4,7 @@ use crate::server::shared::storage::{
 };
 use async_trait::async_trait;
 use chrono::Utc;
+use ipnetwork::IpNetwork;
 use sqlx::{PgPool, Postgres, postgres::PgArguments};
 use std::{fmt::Display, marker::PhantomData};
 use uuid::Uuid;
@@ -70,17 +71,17 @@ where
             SqlValue::OptionalString(v) => query.bind(v),
             SqlValue::EntitySource(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::IpCidr(v) => query.bind(serde_json::to_string(v)?),
-            SqlValue::SubnetType(v) => query.bind(serde_json::to_value(v)?),
-            SqlValue::GroupType(v) => query.bind(serde_json::to_value(v)?),
-            SqlValue::Bindings(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::ServiceDefinition(v) => query.bind(serde_json::to_string(v)?),
             SqlValue::OptionalServiceVirtualization(v) => query.bind(serde_json::to_value(v)?),
-            SqlValue::HostTarget(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Interfaces(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Ports(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::OptionalHostVirtualization(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::DaemonCapabilities(v) => query.bind(serde_json::to_value(v)?),
-            SqlValue::IpAddr(v) => query.bind(serde_json::to_string(v)?),
+            SqlValue::IpAddr(v) => {
+                // Convert IpAddr to IpNetwork for proper INET binding
+                let network = IpNetwork::from(*v);
+                query.bind(network)
+            }
             SqlValue::RunType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::DiscoveryType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Email(v) => query.bind(v.as_str()),
@@ -100,6 +101,10 @@ where
             SqlValue::StringArray(v) => query.bind(v.clone()),
             SqlValue::OptionalStringArray(v) => query.bind(v.clone()),
             SqlValue::JsonValue(v) => query.bind(v.clone()),
+            SqlValue::OptionalMacAddress(v) => {
+                // sqlx mac_address feature supports MacAddress directly
+                query.bind(*v)
+            }
         };
 
         Ok(value)
@@ -151,10 +156,19 @@ where
     }
 
     async fn get_all(&self, filter: EntityFilter) -> Result<Vec<T>, anyhow::Error> {
+        self.get_all_ordered(filter, "created_at ASC").await
+    }
+
+    async fn get_all_ordered(
+        &self,
+        filter: EntityFilter,
+        order_by: &str,
+    ) -> Result<Vec<T>, anyhow::Error> {
         let query_str = format!(
-            "SELECT * FROM {} {} ORDER BY created_at ASC",
+            "SELECT * FROM {} {} ORDER BY {}",
             T::table_name(),
-            filter.to_where_clause()
+            filter.to_where_clause(),
+            order_by
         );
 
         let mut query = sqlx::query(&query_str);

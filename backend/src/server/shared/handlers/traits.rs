@@ -3,20 +3,27 @@ use crate::server::{
     config::AppState,
     shared::{
         entities::{ChangeTriggersTopologyStaleness, Entity},
+        handlers::query::{FilterQueryExtractor, ParentQueryExtractor},
         services::traits::{CrudService, EventBusService},
-        storage::{filter::EntityFilter, traits::StorableEntity},
+        storage::{child::ChildStorableEntity, filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
+        validation::{
+            validate_bulk_delete_access, validate_create_access, validate_delete_access,
+            validate_entity, validate_read_access, validate_update_access,
+        },
     },
 };
 use async_trait::async_trait;
 use axum::{
     Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::Json,
     routing::{delete, get, post, put},
 };
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, sync::Arc};
+use utoipa::ToSchema;
+use std::fmt::Display;
+use std::sync::Arc;
 use uuid::Uuid;
 
 /// Trait for creating standard CRUD handlers for an entity
@@ -29,6 +36,11 @@ where
     /// Get the service from AppState (must implement CrudService)
     type Service: CrudService<Self> + Send + Sync;
     fn get_service(state: &AppState) -> &Self::Service;
+
+    /// Query type for filtering in get_all requests.
+    /// Use `NetworkFilterQuery` for network-keyed entities,
+    /// `OrganizationFilterQuery` for organization-keyed entities.
+    type FilterQuery: FilterQueryExtractor;
 
     /// Get entity name for error messages (e.g., "Group", "Network")
     fn entity_name() -> &'static str {
@@ -65,37 +77,16 @@ where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
-    if let Err(err) = entity.validate() {
-        tracing::warn!(
-            entity_type = T::table_name(),
-            user_id = %user.user_id,
-            error = %err,
-            "Entity validation failed"
-        );
-        return Err(ApiError::bad_request(&format!(
-            "{} validation failed: {}",
-            T::entity_name(),
-            err
-        )));
-    }
+    validate_entity(|| entity.validate(), T::entity_name())?;
 
     let service = T::get_service(&state);
 
-    if let Some(network_id) = service.get_network_id(&entity)
-        && !user.network_ids.contains(&network_id)
-    {
-        return Err(ApiError::unauthorized(
-            "You aren't allowed to create entities on this network".to_string(),
-        ));
-    }
-
-    if let Some(organization_id) = service.get_organization_id(&entity)
-        && user.organization_id != organization_id
-    {
-        return Err(ApiError::unauthorized(
-            "You aren't allowed to create entities for this organization".to_string(),
-        ));
-    }
+    validate_create_access(
+        service.get_network_id(&entity),
+        service.get_organization_id(&entity),
+        &user.network_ids,
+        user.organization_id,
+    )?;
 
     let created = service
         .create(entity, user.clone().into())
@@ -116,16 +107,21 @@ where
 pub async fn get_all_handler<T>(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
+    Query(query): Query<T::FilterQuery>,
 ) -> ApiResult<Json<ApiResponse<Vec<T>>>>
 where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
-    let network_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
+    let filter = query.apply_to_filter(
+        EntityFilter::unfiltered(),
+        &user.network_ids,
+        user.organization_id,
+    );
 
     let service = T::get_service(&state);
 
-    let entities = service.get_all(network_filter).await.map_err(|e| {
+    let entities = service.get_all(filter).await.map_err(|e| {
         tracing::error!(
             entity_type = T::table_name(),
             user_id = %user.user_id,
@@ -171,21 +167,12 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
-    if let Some(network_id) = service.get_network_id(&entity)
-        && !user.network_ids.contains(&network_id)
-    {
-        return Err(ApiError::unauthorized(
-            "You aren't allowed to access entities on this network".to_string(),
-        ));
-    }
-
-    if let Some(organization_id) = service.get_organization_id(&entity)
-        && user.organization_id != organization_id
-    {
-        return Err(ApiError::unauthorized(
-            "You aren't allowed to access entities from this organization".to_string(),
-        ));
-    }
+    validate_read_access(
+        service.get_network_id(&entity),
+        service.get_organization_id(&entity),
+        &user.network_ids,
+        user.organization_id,
+    )?;
 
     Ok(Json(ApiResponse::success(entity)))
 }
@@ -240,55 +227,14 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
-    // Verify user has access to the EXISTING entity's network
-    if let Some(network_id) = service.get_network_id(&existing)
-        && !user.network_ids.contains(&network_id)
-    {
-        tracing::warn!(
-            entity_type = T::table_name(),
-            entity_id = %id,
-            user_id = %user.user_id,
-            entity_network_id = %network_id,
-            "Unauthorized update attempt - user lacks access to entity's current network"
-        );
-        return Err(ApiError::unauthorized(
-            "You don't have access to this entity".to_string(),
-        ));
-    }
-
-    // Verify user has access to the EXISTING entity's organization
-    if let Some(organization_id) = service.get_organization_id(&existing)
-        && user.organization_id != organization_id
-    {
-        tracing::warn!(
-            entity_type = T::table_name(),
-            entity_id = %id,
-            user_id = %user.user_id,
-            entity_org_id = %organization_id,
-            user_org_id = %user.organization_id,
-            "Unauthorized update attempt - entity belongs to different organization"
-        );
-        return Err(ApiError::unauthorized(
-            "You don't have access to this entity".to_string(),
-        ));
-    }
-
-    // Now check the NEW values being set (prevent reassigning to unauthorized network/org)
-    if let Some(network_id) = service.get_network_id(&entity)
-        && !user.network_ids.contains(&network_id)
-    {
-        return Err(ApiError::unauthorized(
-            "You can't move this entity to a network you don't have access to".to_string(),
-        ));
-    }
-
-    if let Some(organization_id) = service.get_organization_id(&entity)
-        && user.organization_id != organization_id
-    {
-        return Err(ApiError::unauthorized(
-            "You can't move this entity to a different organization".to_string(),
-        ));
-    }
+    validate_update_access(
+        service.get_network_id(&existing),
+        service.get_organization_id(&existing),
+        service.get_network_id(&entity),
+        service.get_organization_id(&entity),
+        &user.network_ids,
+        user.organization_id,
+    )?;
 
     let updated = service
         .update(&mut entity, user.clone().into())
@@ -340,35 +286,12 @@ where
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
 
-    // Verify ownership BEFORE delete - check existing entity's network
-    if let Some(network_id) = service.get_network_id(&entity)
-        && !user.network_ids.contains(&network_id)
-    {
-        tracing::warn!(
-            entity_type = T::table_name(),
-            entity_id = %id,
-            user_id = %user.user_id,
-            "Unauthorized delete attempt - user lacks network access"
-        );
-        return Err(ApiError::unauthorized(
-            "You don't have access to delete this entity".to_string(),
-        ));
-    }
-
-    // Verify ownership - check existing entity's organization
-    if let Some(organization_id) = service.get_organization_id(&entity)
-        && user.organization_id != organization_id
-    {
-        tracing::warn!(
-            entity_type = T::table_name(),
-            entity_id = %id,
-            user_id = %user.user_id,
-            "Unauthorized delete attempt - entity belongs to different organization"
-        );
-        return Err(ApiError::unauthorized(
-            "You don't have access to delete this entity".to_string(),
-        ));
-    }
+    validate_delete_access(
+        service.get_network_id(&entity),
+        service.get_organization_id(&entity),
+        &user.network_ids,
+        user.organization_id,
+    )?;
 
     service.delete(&id, user.into()).await.map_err(|e| {
         tracing::error!(
@@ -416,33 +339,12 @@ where
 
     // Verify ownership of ALL entities before deleting any
     for entity in &entities {
-        if let Some(network_id) = service.get_network_id(entity)
-            && !user.network_ids.contains(&network_id)
-        {
-            tracing::warn!(
-                entity_type = T::table_name(),
-                user_id = %user.user_id,
-                entity_network_id = %network_id,
-                "Bulk delete rejected - user lacks access to entity's network"
-            );
-            return Err(ApiError::unauthorized(
-                "You don't have access to delete one or more of these entities".to_string(),
-            ));
-        }
-
-        if let Some(organization_id) = service.get_organization_id(entity)
-            && user.organization_id != organization_id
-        {
-            tracing::warn!(
-                entity_type = T::table_name(),
-                user_id = %user.user_id,
-                entity_org_id = %organization_id,
-                "Bulk delete rejected - entity belongs to different organization"
-            );
-            return Err(ApiError::unauthorized(
-                "You don't have access to delete one or more of these entities".to_string(),
-            ));
-        }
+        validate_bulk_delete_access(
+            service.get_network_id(entity),
+            service.get_organization_id(entity),
+            &user.network_ids,
+            user.organization_id,
+        )?;
     }
 
     // Only delete entities that actually exist and user has access to
@@ -467,8 +369,70 @@ where
     })))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct BulkDeleteResponse {
     pub deleted_count: usize,
     pub requested_count: usize,
+}
+
+/// Trait for creating CRUD handlers for child entities that support parent filtering.
+/// Extends CrudHandlers by requiring ChildStorableEntity which provides parent_column().
+pub trait ChildCrudHandlers: CrudHandlers + ChildStorableEntity
+where
+    Self: Display + ChangeTriggersTopologyStaleness<Self> + Default,
+    Entity: From<Self>,
+{
+    /// Query type for parent filtering in get_all requests.
+    /// Use `HostIdQuery` for entities with host_id parent,
+    /// `ServiceIdQuery` for entities with service_id parent, etc.
+    type ParentQuery: ParentQueryExtractor;
+}
+
+/// Create a CRUD router for child entities with parent-based query filtering.
+/// Supports `GET /entity?{parent_column}=uuid` for filtering by parent.
+pub fn create_child_crud_router<T>() -> Router<Arc<AppState>>
+where
+    T: ChildCrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
+    Entity: From<T>,
+{
+    Router::new()
+        .route("/", post(create_handler::<T>))
+        .route("/", get(get_all_children_handler::<T>))
+        .route("/{id}", put(update_handler::<T>))
+        .route("/{id}", delete(delete_handler::<T>))
+        .route("/{id}", get(get_by_id_handler::<T>))
+        .route("/bulk-delete", post(bulk_delete_handler::<T>))
+}
+
+/// Get all child entities with optional parent filtering.
+/// Uses the entity's ParentQuery type to extract parent ID from query params.
+pub async fn get_all_children_handler<T>(
+    State(state): State<Arc<AppState>>,
+    user: AuthenticatedUser,
+    Query(parent_query): Query<T::ParentQuery>,
+) -> ApiResult<Json<ApiResponse<Vec<T>>>>
+where
+    T: ChildCrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
+    Entity: From<T>,
+{
+    let mut filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
+
+    // Apply parent filter if provided
+    if let Some(parent_id) = parent_query.parent_id() {
+        filter = filter.uuid_column(T::parent_column(), &parent_id);
+    }
+
+    let service = T::get_service(&state);
+
+    let entities = service.get_all(filter).await.map_err(|e| {
+        tracing::error!(
+            entity_type = T::table_name(),
+            user_id = %user.user_id,
+            error = %e,
+            "Failed to fetch child entities"
+        );
+        ApiError::internal_error(&e.to_string())
+    })?;
+
+    Ok(Json(ApiResponse::success(entities)))
 }

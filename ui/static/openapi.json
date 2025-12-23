@@ -1,0 +1,3254 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Scanopy API",
+    "description": "Network topology discovery and visualization API",
+    "license": {
+      "name": "MIT"
+    },
+    "version": "0.12.5"
+  },
+  "paths": {
+    "/api/groups": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "List all groups",
+        "operationId": "get_all_groups",
+        "responses": {
+          "200": {
+            "description": "List of groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Group"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Create a new group",
+        "operationId": "create_group",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Group"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Group created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/groups/bulk-delete": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Bulk delete groups",
+        "operationId": "bulk_delete",
+        "requestBody": {
+          "description": "Array of groups IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Groups deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/groups/{id}": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Get a group by ID",
+        "operationId": "get_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Update a group",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Group"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Group updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Delete a group",
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Group ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group deleted"
+          },
+          "404": {
+            "description": "Group not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/hosts": {
+      "get": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "List all hosts",
+        "description": "Returns all hosts the authenticated user has access to, with their\ninterfaces, ports, and services included.",
+        "operationId": "get_all_hosts",
+        "responses": {
+          "200": {
+            "description": "List of hosts with their children",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HostResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Create a new host",
+        "description": "Creates a host with optional interfaces, ports, and services.\nThe `source` field is automatically set to `Manual`.\nIDs for the host and all children are generated server-side.",
+        "operationId": "create_host",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Host created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request - network not found or subnet mismatch"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/hosts/bulk-delete": {
+      "post": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Bulk delete hosts",
+        "description": "Deletes multiple hosts in a single request. The request body should be\nan array of host IDs to delete. Fails if any host has an associated daemon.",
+        "operationId": "bulk_delete_hosts",
+        "requestBody": {
+          "description": "Array of host IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Hosts deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "One or more hosts has an associated daemon - delete daemons first"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/hosts/discovery": {
+      "post": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Internal endpoint for daemon discovery",
+        "description": "Used by daemons to report discovered hosts. Accepts full entities with\npre-generated IDs. Uses upsert behavior to merge with existing hosts.",
+        "operationId": "create_host_discovery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoveryHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Host discovered/updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/hosts/{destination_host}/consolidate/{other_host}": {
+      "put": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Consolidate two hosts into one",
+        "description": "Merges all interfaces, ports, and services from `other_host` into\n`destination_host`, then deletes `other_host`. Both hosts must be\non the same network.",
+        "operationId": "consolidate_hosts",
+        "parameters": [
+          {
+            "name": "destination_host",
+            "in": "path",
+            "description": "Destination host ID - will receive all children",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "other_host",
+            "in": "path",
+            "description": "Host to merge into destination - will be deleted",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hosts consolidated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Hosts are on different networks"
+          },
+          "404": {
+            "description": "One or both hosts not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/hosts/{id}": {
+      "get": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Get a host by ID",
+        "description": "Returns a single host with its interfaces, ports, and services.",
+        "operationId": "get_host_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Host ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Host found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Host not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Update a host",
+        "description": "Updates host properties. Children (interfaces, ports, services)\nare managed via their own endpoints.",
+        "operationId": "update_host",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Host ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Host updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HostResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Host not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "hosts"
+        ],
+        "summary": "Delete a host, checking for associated daemons first",
+        "operationId": "delete_host",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Host ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Host deleted"
+          },
+          "404": {
+            "description": "Host not found"
+          },
+          "409": {
+            "description": "Host has associated daemon"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/interfaces": {
+      "get": {
+        "tags": [
+          "interfaces"
+        ],
+        "summary": "List all interfaces",
+        "description": "Returns interfaces filtered by optional host_id or subnet_id query parameters.",
+        "operationId": "get_all_interfaces",
+        "parameters": [
+          {
+            "name": "host_id",
+            "in": "query",
+            "description": "Filter by host ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "subnet_id",
+            "in": "query",
+            "description": "Filter by subnet ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of interfaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Interface"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "interfaces"
+        ],
+        "summary": "Create a new interface",
+        "operationId": "create_interface",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interface"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Interface created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interface"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/interfaces/bulk-delete": {
+      "post": {
+        "tags": [
+          "interfaces"
+        ],
+        "summary": "Bulk delete interfaces",
+        "operationId": "bulk_delete_interfaces",
+        "requestBody": {
+          "description": "Array of interface IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Interfaces deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/interfaces/{id}": {
+      "get": {
+        "tags": [
+          "interfaces"
+        ],
+        "summary": "Get an interface by ID",
+        "operationId": "get_interface_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Interface ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Interface found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interface"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interface not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "interfaces"
+        ],
+        "summary": "Update an interface",
+        "operationId": "update_interface",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Interface ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interface"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Interface updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interface"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Interface not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "interfaces"
+        ],
+        "summary": "Delete an interface",
+        "operationId": "delete_interface",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Interface ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Interface deleted"
+          },
+          "404": {
+            "description": "Interface not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/networks": {
+      "get": {
+        "tags": [
+          "networks"
+        ],
+        "summary": "List all networks",
+        "operationId": "get_all_networks",
+        "responses": {
+          "200": {
+            "description": "List of networks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Network"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "networks"
+        ],
+        "summary": "Create a new network",
+        "operationId": "create_network",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNetworkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Network created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Network"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Feature not available or not admin"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/networks/bulk-delete": {
+      "post": {
+        "tags": [
+          "networks"
+        ],
+        "summary": "Bulk delete networks",
+        "operationId": "bulk_delete_networks",
+        "requestBody": {
+          "description": "Array of network IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Networks deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/networks/{id}": {
+      "get": {
+        "tags": [
+          "networks"
+        ],
+        "summary": "Get a network by ID",
+        "operationId": "get_network_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Network ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Network found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Network"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Network not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "networks"
+        ],
+        "summary": "Update a network",
+        "operationId": "update_network",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Network ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Network"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Network updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Network"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Network not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "networks"
+        ],
+        "summary": "Delete a network",
+        "operationId": "delete_network",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Network ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Network deleted"
+          },
+          "404": {
+            "description": "Network not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/subnets": {
+      "get": {
+        "tags": [
+          "subnets"
+        ],
+        "summary": "List all subnets",
+        "operationId": "get_all_subnets",
+        "responses": {
+          "200": {
+            "description": "List of subnets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subnet"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "subnets"
+        ],
+        "summary": "Create a new subnet",
+        "operationId": "create_subnet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Subnet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Subnet created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subnet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/subnets/bulk-delete": {
+      "post": {
+        "tags": [
+          "subnets"
+        ],
+        "summary": "Bulk delete subnets",
+        "operationId": "bulk_delete_subnets",
+        "requestBody": {
+          "description": "Array of subnet IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Subnets deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/subnets/{id}": {
+      "get": {
+        "tags": [
+          "subnets"
+        ],
+        "summary": "Get a subnet by ID",
+        "operationId": "get_subnet_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Subnet ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subnet found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subnet"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Subnet not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "subnets"
+        ],
+        "summary": "Update a subnet",
+        "operationId": "update_subnet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Subnet ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Subnet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Subnet updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subnet"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Subnet not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "subnets"
+        ],
+        "summary": "Delete a subnet",
+        "operationId": "delete_subnet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Subnet ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subnet deleted"
+          },
+          "404": {
+            "description": "Subnet not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiKey": {
+        "type": "object",
+        "required": [
+          "id",
+          "network_id",
+          "name",
+          "key",
+          "is_enabled",
+          "tags",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "last_used": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiResponse_String": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Binding": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BindingBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "The Binding entity"
+      },
+      "BindingBase": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BindingType"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "network_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "service_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "description": "The base data for a Binding entity (everything except id, created_at, updated_at)"
+      },
+      "BindingType": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Interface",
+            "required": [
+              "interface_id",
+              "type"
+            ],
+            "properties": {
+              "interface_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Interface"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Port",
+            "required": [
+              "port_id",
+              "type"
+            ],
+            "properties": {
+              "interface_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "port_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Port"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "The type of binding - either to an interface or to a port"
+      },
+      "BulkDeleteResponse": {
+        "type": "object",
+        "required": [
+          "deleted_count",
+          "requested_count"
+        ],
+        "properties": {
+          "deleted_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requested_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "CreateHostRequest": {
+        "type": "object",
+        "description": "Request type for creating a host with its associated child entities.\nServer assigns `host_id`, `network_id`, and `source` to all children.\nSource is automatically set based on how the entity was created (API vs UI).",
+        "required": [
+          "name",
+          "network_id"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "hostname": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "interfaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateInterfaceInput"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePortInput"
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateServiceInput"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "virtualization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HostVirtualization"
+              }
+            ]
+          }
+        },
+        "example": {
+          "description": "Primary web server",
+          "hidden": false,
+          "hostname": "web-server-01.local",
+          "interfaces": [
+            {
+              "ip_address": "192.168.1.100",
+              "mac_address": "DE:AD:BE:EF:12:34",
+              "name": "eth0",
+              "subnet_id": "550e8400-e29b-41d4-a716-446655440004"
+            }
+          ],
+          "name": "web-server-01",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "ports": [
+            {
+              "number": 80,
+              "protocol": "Tcp"
+            }
+          ],
+          "services": [],
+          "tags": [],
+          "virtualization": null
+        }
+      },
+      "CreateInterfaceInput": {
+        "type": "object",
+        "description": "Input for creating an interface with a host.\n`host_id` and `network_id` are assigned by the server.",
+        "required": [
+          "subnet_id",
+          "ip_address"
+        ],
+        "properties": {
+          "ip_address": {
+            "type": "string"
+          },
+          "mac_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subnet_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateNetworkRequest": {
+        "type": "object",
+        "required": [
+          "network",
+          "seed_baseline_data"
+        ],
+        "properties": {
+          "network": {
+            "$ref": "#/components/schemas/Network"
+          },
+          "seed_baseline_data": {
+            "type": "boolean",
+            "description": "Whether to seed baseline data (default subnets, etc.) for the network"
+          }
+        }
+      },
+      "CreatePortInput": {
+        "type": "object",
+        "description": "Input for creating a port with a host.\n`host_id` and `network_id` are assigned by the server.\nThe port is specified by number and protocol (e.g., 80/tcp, 443/tcp).",
+        "required": [
+          "number",
+          "protocol"
+        ],
+        "properties": {
+          "number": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Port number (1-65535)",
+            "minimum": 0
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/TransportProtocol",
+            "description": "Transport protocol (Tcp or Udp)"
+          }
+        }
+      },
+      "CreateServiceInput": {
+        "type": "object",
+        "description": "Input for creating a service with a host.\n`host_id`, `network_id`, and `source` are assigned by the server.\nBindings reference existing interfaces/ports by their IDs.",
+        "required": [
+          "name",
+          "service_definition"
+        ],
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BindingType"
+            },
+            "description": "Bindings to existing interfaces or ports (optional, can be added later)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Service display name"
+          },
+          "service_definition": {
+            "type": "string",
+            "description": "Service definition ID (e.g., \"Home Assistant\", \"Pi-Hole\")"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "virtualization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ServiceVirtualization",
+                "description": "Virtualization details (e.g., Docker container info)"
+              }
+            ]
+          }
+        }
+      },
+      "Daemon": {
+        "type": "object",
+        "required": [
+          "id",
+          "network_id",
+          "mode",
+          "capabilities",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/DaemonCapabilities"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "host_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_seen": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DaemonMode"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DaemonCapabilities": {
+        "type": "object",
+        "required": [
+          "network_scan",
+          "docker",
+          "proxmox",
+          "self_report"
+        ],
+        "properties": {
+          "docker": {
+            "type": "boolean"
+          },
+          "network_scan": {
+            "type": "boolean"
+          },
+          "proxmox": {
+            "type": "boolean"
+          },
+          "self_report": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DaemonMode": {
+        "type": "string",
+        "enum": [
+          "Pull",
+          "Push"
+        ]
+      },
+      "Discovery": {
+        "type": "object",
+        "required": [
+          "id",
+          "network_id",
+          "daemon_id",
+          "status",
+          "run_type",
+          "progress",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "daemon_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "progress": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "run_type": {
+            "$ref": "#/components/schemas/DiscoveryRunType"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DiscoveryStatus"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DiscoveryHostRequest": {
+        "type": "object",
+        "description": "Request type for daemon discovery - accepts full entities with IDs.\nUsed internally by daemons for host creation/upsert, NOT the external API.\nThis supports the discovery workflow where daemons manage entity IDs.",
+        "required": [
+          "host",
+          "interfaces",
+          "ports",
+          "services"
+        ],
+        "properties": {
+          "host": {
+            "$ref": "#/components/schemas/Host"
+          },
+          "interfaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interface"
+            }
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Port"
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Service"
+            }
+          }
+        }
+      },
+      "DiscoveryMetadata": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DiscoveryType"
+          },
+          {
+            "type": "object",
+            "required": [
+              "daemon_id",
+              "date"
+            ],
+            "properties": {
+              "daemon_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "date": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ]
+      },
+      "DiscoveryRunType": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Manual",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Manual"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Scheduled",
+            "required": [
+              "enabled",
+              "cron",
+              "type"
+            ],
+            "properties": {
+              "cron": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Scheduled"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "DiscoveryStatus": {
+        "type": "string",
+        "enum": [
+          "Pending",
+          "Running",
+          "Completed",
+          "Failed",
+          "Cancelled"
+        ]
+      },
+      "DiscoveryType": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "SelfReport",
+            "required": [
+              "host_id",
+              "type"
+            ],
+            "properties": {
+              "host_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "SelfReport"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Network",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "host_naming_fallback": {
+                "$ref": "#/components/schemas/HostNamingFallback"
+              },
+              "subnet_ids": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Network"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Docker",
+            "required": [
+              "host_id",
+              "type"
+            ],
+            "properties": {
+              "host_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "host_naming_fallback": {
+                "$ref": "#/components/schemas/HostNamingFallback"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Docker"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "DockerVirtualization": {
+        "type": "object",
+        "required": [
+          "service_id"
+        ],
+        "properties": {
+          "container_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "container_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "service_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "EdgeStyle": {
+        "type": "string",
+        "enum": [
+          "Straight",
+          "SmoothStep",
+          "Step",
+          "Bezier",
+          "SimpleBezier"
+        ]
+      },
+      "EntitySource": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Manual",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Manual"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "System",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "System"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Discovery",
+            "required": [
+              "metadata",
+              "type"
+            ],
+            "properties": {
+              "metadata": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DiscoveryMetadata"
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Discovery"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "DiscoveryWithMatch",
+            "required": [
+              "metadata",
+              "details",
+              "type"
+            ],
+            "properties": {
+              "details": {
+                "$ref": "#/components/schemas/MatchDetails"
+              },
+              "metadata": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DiscoveryMetadata"
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "DiscoveryWithMatch"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Unknown",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Unknown"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "Group": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GroupBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "example": {
+          "binding_ids": [],
+          "color": "#3B82F6",
+          "created_at": "2024-01-15T10:30:00Z",
+          "description": "HTTP/HTTPS services group",
+          "edge_style": "Bezier",
+          "group_type": "RequestPath",
+          "id": "550e8400-e29b-41d4-a716-446655440008",
+          "name": "Web Services",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "source": {
+            "type": "Manual"
+          },
+          "tags": [],
+          "updated_at": "2024-01-15T10:30:00Z"
+        }
+      },
+      "GroupBase": {
+        "type": "object",
+        "required": [
+          "name",
+          "network_id",
+          "group_type",
+          "source",
+          "color"
+        ],
+        "properties": {
+          "binding_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Ordered list of binding IDs for this group"
+          },
+          "color": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "edge_style": {
+            "$ref": "#/components/schemas/EdgeStyle"
+          },
+          "group_type": {
+            "$ref": "#/components/schemas/GroupType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntitySource"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "GroupType": {
+        "type": "string",
+        "description": "Group type determines the visual representation and behavior of the group.\nBinding IDs are stored separately in GroupBase.binding_ids.",
+        "enum": [
+          "RequestPath",
+          "HubAndSpoke"
+        ]
+      },
+      "Host": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/HostBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "example": {
+          "created_at": "2024-01-15T10:30:00Z",
+          "description": "Primary web server",
+          "hidden": false,
+          "hostname": "web-server-01.local",
+          "id": "550e8400-e29b-41d4-a716-446655440003",
+          "name": "web-server-01",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "source": {
+            "type": "Manual"
+          },
+          "tags": [],
+          "updated_at": "2024-01-15T10:30:00Z",
+          "virtualization": null
+        }
+      },
+      "HostBase": {
+        "type": "object",
+        "description": "Base data for a Host entity (stored in database).\nChild entities (interfaces, ports, services) are stored in their own tables\nand queried by `host_id`. They are NOT stored on the host.",
+        "required": [
+          "name",
+          "network_id",
+          "source",
+          "hidden"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "hostname": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntitySource"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "virtualization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HostVirtualization"
+              }
+            ]
+          }
+        }
+      },
+      "HostNamingFallback": {
+        "type": "string",
+        "enum": [
+          "Ip",
+          "BestService"
+        ]
+      },
+      "HostResponse": {
+        "type": "object",
+        "description": "Response type for host endpoints.\nIncludes hydrated children (interfaces, ports, services).",
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "name",
+          "network_id",
+          "source",
+          "hidden",
+          "tags",
+          "interfaces",
+          "ports",
+          "services"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "hostname": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "interfaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interface"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Port"
+            }
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Service"
+            }
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntitySource"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "virtualization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HostVirtualization"
+              }
+            ]
+          }
+        },
+        "example": {
+          "created_at": "2024-01-15T10:30:00Z",
+          "description": "Primary web server",
+          "hidden": false,
+          "hostname": "web-server-01.local",
+          "id": "550e8400-e29b-41d4-a716-446655440003",
+          "interfaces": [
+            {
+              "created_at": "2024-01-15T10:30:00Z",
+              "host_id": "550e8400-e29b-41d4-a716-446655440003",
+              "id": "550e8400-e29b-41d4-a716-446655440005",
+              "ip_address": "192.168.1.100",
+              "mac_address": "DE:AD:BE:EF:12:34",
+              "name": "eth0",
+              "network_id": "550e8400-e29b-41d4-a716-446655440002",
+              "subnet_id": "550e8400-e29b-41d4-a716-446655440004",
+              "updated_at": "2024-01-15T10:30:00Z"
+            }
+          ],
+          "name": "web-server-01",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "ports": [
+            {
+              "created_at": "2024-01-15T10:30:00Z",
+              "host_id": "550e8400-e29b-41d4-a716-446655440003",
+              "id": "550e8400-e29b-41d4-a716-446655440006",
+              "network_id": "550e8400-e29b-41d4-a716-446655440002",
+              "number": 80,
+              "protocol": "Tcp",
+              "type": "Http",
+              "updated_at": "2024-01-15T10:30:00Z"
+            }
+          ],
+          "services": [],
+          "source": {
+            "type": "Manual"
+          },
+          "tags": [],
+          "updated_at": "2024-01-15T10:30:00Z",
+          "virtualization": null
+        }
+      },
+      "HostVirtualization": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Proxmox",
+            "required": [
+              "details",
+              "type"
+            ],
+            "properties": {
+              "details": {
+                "$ref": "#/components/schemas/ProxmoxVirtualization"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Proxmox"
+                ]
+              }
+            }
+          }
+        ],
+        "title": "HostVirtualization"
+      },
+      "Interface": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InterfaceBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "example": {
+          "created_at": "2024-01-15T10:30:00Z",
+          "host_id": "550e8400-e29b-41d4-a716-446655440003",
+          "id": "550e8400-e29b-41d4-a716-446655440005",
+          "ip_address": "192.168.1.100",
+          "mac_address": "DE:AD:BE:EF:12:34",
+          "name": "eth0",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "subnet_id": "550e8400-e29b-41d4-a716-446655440004",
+          "updated_at": "2024-01-15T10:30:00Z"
+        }
+      },
+      "InterfaceBase": {
+        "type": "object",
+        "required": [
+          "network_id",
+          "host_id",
+          "subnet_id",
+          "ip_address"
+        ],
+        "properties": {
+          "host_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "mac_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subnet_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MatchConfidence": {
+        "type": "string",
+        "enum": [
+          "NotApplicable",
+          "Low",
+          "Medium",
+          "High",
+          "Certain"
+        ]
+      },
+      "MatchDetails": {
+        "type": "object",
+        "required": [
+          "reason",
+          "confidence"
+        ],
+        "properties": {
+          "confidence": {
+            "$ref": "#/components/schemas/MatchConfidence"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/MatchReason"
+          }
+        }
+      },
+      "MatchReason": {
+        "type": "object",
+        "description": "Match reason with type discriminator",
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "type": {
+            "type": "object"
+          }
+        }
+      },
+      "Network": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NetworkBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "example": {
+          "created_at": "2024-01-15T10:30:00Z",
+          "id": "550e8400-e29b-41d4-a716-446655440002",
+          "is_default": false,
+          "name": "Home Network",
+          "organization_id": "550e8400-e29b-41d4-a716-446655440001",
+          "tags": [],
+          "updated_at": "2024-01-15T10:30:00Z"
+        }
+      },
+      "NetworkBase": {
+        "type": "object",
+        "required": [
+          "name",
+          "is_default",
+          "organization_id"
+        ],
+        "properties": {
+          "is_default": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "Organization": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Port": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PortBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "description": "The Port entity"
+      },
+      "PortBase": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PortType"
+          },
+          {
+            "type": "object",
+            "required": [
+              "host_id",
+              "network_id"
+            ],
+            "properties": {
+              "host_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "network_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "description": "The base data for a Port entity (everything except id, created_at, updated_at)"
+      },
+      "PortType": {
+        "type": "object",
+        "description": "Port type with number, protocol, and type identifier",
+        "required": [
+          "number",
+          "protocol",
+          "type"
+        ],
+        "properties": {
+          "number": {
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "Udp",
+              "Tcp"
+            ]
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "ProxmoxVirtualization": {
+        "type": "object",
+        "required": [
+          "service_id"
+        ],
+        "properties": {
+          "service_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vm_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vm_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Service": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ServiceBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ]
+      },
+      "ServiceBase": {
+        "type": "object",
+        "required": [
+          "host_id",
+          "network_id",
+          "service_definition",
+          "name",
+          "bindings",
+          "source"
+        ],
+        "properties": {
+          "bindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Binding"
+            }
+          },
+          "host_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service_definition": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntitySource"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "virtualization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ServiceVirtualization"
+              }
+            ]
+          }
+        }
+      },
+      "ServiceVirtualization": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Docker",
+            "required": [
+              "details",
+              "type"
+            ],
+            "properties": {
+              "details": {
+                "$ref": "#/components/schemas/DockerVirtualization"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Docker"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "Subnet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SubnetBase"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        ],
+        "example": {
+          "cidr": "192.168.1.0/24",
+          "created_at": "2024-01-15T10:30:00Z",
+          "description": "Local area network",
+          "id": "550e8400-e29b-41d4-a716-446655440004",
+          "name": "LAN",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "source": {
+            "type": "Manual"
+          },
+          "subnet_type": "Lan",
+          "tags": [],
+          "updated_at": "2024-01-15T10:30:00Z"
+        }
+      },
+      "SubnetBase": {
+        "type": "object",
+        "required": [
+          "cidr",
+          "network_id",
+          "name",
+          "subnet_type",
+          "source"
+        ],
+        "properties": {
+          "cidr": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntitySource"
+          },
+          "subnet_type": {
+            "$ref": "#/components/schemas/SubnetType"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "SubnetType": {
+        "type": "string",
+        "enum": [
+          "Internet",
+          "Remote",
+          "Gateway",
+          "VpnTunnel",
+          "Dmz",
+          "Lan",
+          "WiFi",
+          "IoT",
+          "Guest",
+          "DockerBridge",
+          "Management",
+          "Storage",
+          "Unknown",
+          "None"
+        ]
+      },
+      "Tag": {
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "name",
+          "color",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "color": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransportProtocol": {
+        "type": "string",
+        "enum": [
+          "Udp",
+          "Tcp"
+        ]
+      },
+      "UpdateHostRequest": {
+        "type": "object",
+        "description": "Request type for updating a host.\nChildren (interfaces, ports, services) are managed via their own endpoints.",
+        "required": [
+          "id",
+          "name",
+          "hidden"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "hostname": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "virtualization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HostVirtualization"
+              }
+            ]
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "organization_id",
+          "email",
+          "permissions",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/UserPermissions"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserPermissions": {
+        "type": "string",
+        "enum": [
+          "Owner",
+          "Admin",
+          "Member",
+          "Viewer"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "hosts",
+      "description": "Host management"
+    },
+    {
+      "name": "services",
+      "description": "Service management"
+    },
+    {
+      "name": "interfaces",
+      "description": "Network interface management"
+    },
+    {
+      "name": "ports",
+      "description": "Port management"
+    },
+    {
+      "name": "bindings",
+      "description": "Service binding management"
+    },
+    {
+      "name": "subnets",
+      "description": "Subnet management"
+    },
+    {
+      "name": "networks",
+      "description": "Network management"
+    },
+    {
+      "name": "groups",
+      "description": "Group management"
+    },
+    {
+      "name": "tags",
+      "description": "Tag management"
+    },
+    {
+      "name": "daemons",
+      "description": "Daemon management"
+    },
+    {
+      "name": "discovery",
+      "description": "Network discovery"
+    },
+    {
+      "name": "topology",
+      "description": "Topology visualization"
+    },
+    {
+      "name": "auth",
+      "description": "Authentication"
+    },
+    {
+      "name": "users",
+      "description": "User management"
+    },
+    {
+      "name": "organizations",
+      "description": "Organization management"
+    }
+  ]
+}

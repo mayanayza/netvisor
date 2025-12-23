@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::server::{
     api_keys::r#impl::base::{ApiKey, ApiKeyBase},
+    bindings::r#impl::base::Binding,
     daemons::r#impl::{
         api::DaemonCapabilities,
         base::{Daemon, DaemonBase, DaemonMode},
@@ -19,19 +20,13 @@ use crate::server::{
         base::{Group, GroupBase},
         types::GroupType,
     },
-    hosts::r#impl::{
-        base::{Host, HostBase},
-        interfaces::{Interface, InterfaceBase},
-        ports::{Port, PortBase},
-        targets::HostTarget,
-    },
+    hosts::r#impl::base::{Host, HostBase},
+    interfaces::r#impl::base::{Interface, InterfaceBase},
     networks::r#impl::{Network, NetworkBase},
+    ports::r#impl::base::{Port, PortType},
     services::{
         definitions::ServiceDefinitionRegistry,
-        r#impl::{
-            base::{Service, ServiceBase},
-            bindings::Binding,
-        },
+        r#impl::base::{Service, ServiceBase},
     },
     shared::types::entities::EntitySource,
     subnets::r#impl::{
@@ -49,9 +44,11 @@ use crate::server::{
 // Demo Data Container
 // ============================================================================
 
-/// A host bundled with its services for creation via create_host_with_services
+/// A host bundled with its interfaces, ports, and services for creation via discover_host
 pub struct HostWithServices {
     pub host: Host,
+    pub interfaces: Vec<Interface>,
+    pub ports: Vec<Port>,
     pub services: Vec<Service>,
 }
 
@@ -423,7 +420,9 @@ fn generate_subnets(networks: &[Network], tags: &[Tag], now: DateTime<Utc>) -> V
 // Hosts and Services
 // ============================================================================
 
-/// Helper to create a host with a single interface
+/// Helper to create a host with a single interface.
+/// Returns (Host, Interface) - host has interface_ids: vec![] initially,
+/// the server will populate it after creating the interface.
 #[allow(clippy::too_many_arguments)]
 fn create_host(
     name: &str,
@@ -434,9 +433,23 @@ fn create_host(
     ip: Ipv4Addr,
     tags: Vec<Uuid>,
     now: DateTime<Utc>,
-) -> Host {
-    Host {
+) -> (Host, Interface) {
+    let host_id = Uuid::new_v4();
+    let interface = Interface {
         id: Uuid::new_v4(),
+        created_at: now,
+        updated_at: now,
+        base: InterfaceBase {
+            network_id: network.id,
+            host_id,
+            subnet_id: subnet.id,
+            ip_address: IpAddr::V4(ip),
+            mac_address: None,
+            name: Some("eth0".to_string()),
+        },
+    };
+    let host = Host {
+        id: host_id,
         created_at: now,
         updated_at: now,
         base: HostBase {
@@ -444,24 +457,13 @@ fn create_host(
             network_id: network.id,
             hostname: hostname.map(String::from),
             description: description.map(String::from),
-            target: HostTarget::Hostname,
-            interfaces: vec![Interface {
-                id: Uuid::new_v4(),
-                base: InterfaceBase {
-                    subnet_id: subnet.id,
-                    ip_address: IpAddr::V4(ip),
-                    mac_address: None,
-                    name: Some("eth0".to_string()),
-                },
-            }],
-            services: vec![],
-            ports: vec![],
             source: EntitySource::Manual,
             virtualization: None,
             hidden: false,
             tags,
         },
-    }
+    };
+    (host, interface)
 }
 
 /// Helper to create a service for a host.
@@ -470,29 +472,19 @@ fn create_service(
     service_def_id: &str,
     name: &str,
     host: &Host,
-    port_base: Option<PortBase>,
+    interface: &Interface,
+    port_type: Option<PortType>,
     tags: Vec<Uuid>,
     now: DateTime<Utc>,
 ) -> Option<(Service, Option<Port>)> {
     let service_definition = ServiceDefinitionRegistry::find_by_id(service_def_id)?;
-    let interface = host.base.interfaces.first()?;
 
-    let (bindings, port) = if let Some(pb) = port_base {
-        let port = Port {
-            id: Uuid::new_v4(),
-            base: pb,
-        };
-        let binding = Binding::Port {
-            id: Uuid::new_v4(),
-            port_id: port.id,
-            interface_id: Some(interface.id),
-        };
+    let (bindings, port) = if let Some(pt) = port_type {
+        let port = Port::new_hostless(pt);
+        let binding = Binding::new_port_serviceless(port.id, Some(interface.id));
         (vec![binding], Some(port))
     } else {
-        let binding = Binding::Interface {
-            id: Uuid::new_v4(),
-            interface_id: interface.id,
-        };
+        let binding = Binding::new_interface_serviceless(interface.id);
         (vec![binding], None)
     };
 
@@ -517,21 +509,24 @@ fn create_service(
 }
 
 /// Helper macro to create a host with its services bundled together.
-/// Ports are automatically added to the host from service bindings.
+/// Ports are collected separately and bundled with the host.
+/// Takes a tuple of (Host, Interface) from create_host().
 macro_rules! host_with_services {
-    ($host:expr, $now:expr, $( ($svc_def:expr, $svc_name:expr, $port:expr, $tags:expr) ),* $(,)?) => {{
-        let mut host = $host;
+    ($host_tuple:expr, $now:expr, $( ($svc_def:expr, $svc_name:expr, $port:expr, $tags:expr) ),* $(,)?) => {{
+        let (host, interface) = $host_tuple;
+        let interfaces = vec![interface];
+        let mut ports = Vec::new();
         let mut services = Vec::new();
         $(
-            if let Some((svc, port)) = create_service($svc_def, $svc_name, &host, $port, $tags, $now) {
-                // Add port to host if present
+            if let Some((svc, port)) = create_service($svc_def, $svc_name, &host, &interfaces[0], $port, $tags, $now) {
+                // Collect port separately if present
                 if let Some(p) = port {
-                    host.base.ports.push(p);
+                    ports.push(p);
                 }
                 services.push(svc);
             }
         )*
-        HostWithServices { host, services }
+        HostWithServices { host, interfaces, ports, services }
     }};
 }
 
@@ -585,7 +580,7 @@ fn generate_hosts_and_services(
         (
             "pfSense",
             "pfSense",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             critical_tag.into_iter().collect()
         ),
     ));
@@ -606,7 +601,7 @@ fn generate_hosts_and_services(
         (
             "UniFi Controller",
             "UniFi Controller",
-            Some(PortBase::Https8443),
+            Some(PortType::Https8443),
             vec![]
         ),
     ));
@@ -648,7 +643,7 @@ fn generate_hosts_and_services(
         (
             "Proxmox VE",
             "Proxmox VE",
-            Some(PortBase::Https8443),
+            Some(PortType::Https8443),
             production_tag.into_iter().collect()
         ),
     ));
@@ -668,7 +663,7 @@ fn generate_hosts_and_services(
         (
             "Proxmox VE",
             "Proxmox VE",
-            Some(PortBase::Https8443),
+            Some(PortType::Https8443),
             production_tag.into_iter().collect()
         ),
     ));
@@ -689,7 +684,7 @@ fn generate_hosts_and_services(
         (
             "TrueNAS",
             "TrueNAS",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             backup_tag.into_iter().collect()
         ),
     ));
@@ -710,10 +705,10 @@ fn generate_hosts_and_services(
         (
             "Portainer",
             "Portainer",
-            Some(PortBase::Http9000),
+            Some(PortType::Http9000),
             production_tag.into_iter().collect()
         ),
-        ("Docker", "Docker Daemon", Some(PortBase::Docker), vec![]),
+        ("Docker", "Docker Daemon", Some(PortType::Docker), vec![]),
     ));
 
     // -- GitLab --
@@ -732,7 +727,7 @@ fn generate_hosts_and_services(
         (
             "GitLab",
             "GitLab",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             production_tag.into_iter().collect()
         ),
     ));
@@ -753,7 +748,7 @@ fn generate_hosts_and_services(
         (
             "Jenkins",
             "Jenkins",
-            Some(PortBase::Http8080),
+            Some(PortType::Http8080),
             production_tag.into_iter().collect()
         ),
     ));
@@ -774,7 +769,7 @@ fn generate_hosts_and_services(
         (
             "Grafana",
             "Grafana",
-            Some(PortBase::Http3000),
+            Some(PortType::Http3000),
             monitoring_tag.into_iter().collect()
         ),
     ));
@@ -795,7 +790,7 @@ fn generate_hosts_and_services(
         (
             "Prometheus",
             "Prometheus",
-            Some(PortBase::Http9000),
+            Some(PortType::Http9000),
             monitoring_tag.into_iter().collect()
         ),
     ));
@@ -816,7 +811,7 @@ fn generate_hosts_and_services(
         (
             "UptimeKuma",
             "Uptime Kuma",
-            Some(PortBase::Http3000),
+            Some(PortType::Http3000),
             monitoring_tag.into_iter().collect()
         ),
     ));
@@ -834,7 +829,7 @@ fn generate_hosts_and_services(
             now
         ),
         now,
-        ("Pi-Hole", "Pi-hole", Some(PortBase::Http), vec![]),
+        ("Pi-Hole", "Pi-hole", Some(PortType::Http), vec![]),
     ));
 
     // -- Vaultwarden --
@@ -853,7 +848,7 @@ fn generate_hosts_and_services(
         (
             "Vaultwarden",
             "Vaultwarden",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             critical_tag.into_iter().collect()
         ),
     ));
@@ -874,7 +869,7 @@ fn generate_hosts_and_services(
         (
             "NextCloud",
             "Nextcloud",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             production_tag.into_iter().collect()
         ),
     ));
@@ -895,7 +890,7 @@ fn generate_hosts_and_services(
         (
             "Philips Hue Bridge",
             "Philips Hue",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             iot_tag.into_iter().collect()
         ),
     ));
@@ -916,7 +911,7 @@ fn generate_hosts_and_services(
         (
             "Hp Printer",
             "HP Printer",
-            Some(PortBase::Ipp),
+            Some(PortType::Ipp),
             iot_tag.into_iter().collect()
         ),
     ));
@@ -937,7 +932,7 @@ fn generate_hosts_and_services(
         (
             "RTSP Camera",
             "Security Camera",
-            Some(PortBase::Rtsp),
+            Some(PortType::Rtsp),
             iot_tag.into_iter().collect()
         ),
     ));
@@ -955,7 +950,7 @@ fn generate_hosts_and_services(
             now
         ),
         now,
-        ("Workstation", "Workstation", Some(PortBase::Rdp), vec![]),
+        ("Workstation", "Workstation", Some(PortType::Rdp), vec![]),
     ));
 
     result.push(host_with_services!(
@@ -970,7 +965,7 @@ fn generate_hosts_and_services(
             now
         ),
         now,
-        ("Workstation", "Workstation", Some(PortBase::Rdp), vec![]),
+        ("Workstation", "Workstation", Some(PortType::Rdp), vec![]),
     ));
 
     // ========== CLOUD INFRASTRUCTURE ==========
@@ -998,7 +993,7 @@ fn generate_hosts_and_services(
         (
             "Traefik",
             "Traefik",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             web_tier_tag.into_iter().collect()
         ),
     ));
@@ -1016,11 +1011,11 @@ fn generate_hosts_and_services(
             now
         ),
         now,
-        ("SSH", "SSH", Some(PortBase::Ssh), vec![]),
+        ("SSH", "SSH", Some(PortType::Ssh), vec![]),
         (
             "Web Service",
             "Web Application",
-            Some(PortBase::Http8080),
+            Some(PortType::Http8080),
             web_tier_tag.into_iter().collect()
         ),
     ));
@@ -1037,11 +1032,11 @@ fn generate_hosts_and_services(
             now
         ),
         now,
-        ("SSH", "SSH", Some(PortBase::Ssh), vec![]),
+        ("SSH", "SSH", Some(PortType::Ssh), vec![]),
         (
             "Web Service",
             "Web Application",
-            Some(PortBase::Http8080),
+            Some(PortType::Http8080),
             web_tier_tag.into_iter().collect()
         ),
     ));
@@ -1062,7 +1057,7 @@ fn generate_hosts_and_services(
         (
             "PostgreSQL",
             "PostgreSQL Primary",
-            Some(PortBase::PostgreSQL),
+            Some(PortType::PostgreSQL),
             database_tag.into_iter().collect()
         ),
     ));
@@ -1083,7 +1078,7 @@ fn generate_hosts_and_services(
         (
             "PostgreSQL",
             "PostgreSQL Replica",
-            Some(PortBase::PostgreSQL),
+            Some(PortType::PostgreSQL),
             database_tag.into_iter().collect()
         ),
     ));
@@ -1104,7 +1099,7 @@ fn generate_hosts_and_services(
         (
             "Redis",
             "Redis",
-            Some(PortBase::Redis),
+            Some(PortType::Redis),
             database_tag.into_iter().collect()
         ),
     ));
@@ -1125,7 +1120,7 @@ fn generate_hosts_and_services(
         (
             "Elasticsearch",
             "Elasticsearch",
-            Some(PortBase::Elasticsearch),
+            Some(PortType::Elasticsearch),
             database_tag.into_iter().collect()
         ),
     ));
@@ -1146,7 +1141,7 @@ fn generate_hosts_and_services(
         (
             "RabbitMQ",
             "RabbitMQ",
-            Some(PortBase::AMQP),
+            Some(PortType::AMQP),
             production_tag.into_iter().collect()
         ),
     ));
@@ -1167,7 +1162,7 @@ fn generate_hosts_and_services(
             now
         ),
         now,
-        ("OPNsense", "OPNsense", Some(PortBase::Https), vec![]),
+        ("OPNsense", "OPNsense", Some(PortType::Https), vec![]),
     ));
 
     result.push(host_with_services!(
@@ -1185,7 +1180,7 @@ fn generate_hosts_and_services(
         (
             "Synology DSM",
             "Synology NAS",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             backup_tag.into_iter().collect()
         ),
     ));
@@ -1205,7 +1200,7 @@ fn generate_hosts_and_services(
         (
             "Hp Printer",
             "HP Printer",
-            Some(PortBase::Ipp),
+            Some(PortType::Ipp),
             iot_tag.into_iter().collect()
         ),
     ));
@@ -1250,7 +1245,7 @@ fn generate_hosts_and_services(
         (
             "Fortinet",
             "FortiGate",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             managed_tag.into_iter().collect()
         ),
     ));
@@ -1270,7 +1265,7 @@ fn generate_hosts_and_services(
         (
             "Active Directory",
             "Active Directory",
-            Some(PortBase::Ldap),
+            Some(PortType::Ldap),
             managed_tag.into_iter().collect()
         ),
     ));
@@ -1290,7 +1285,7 @@ fn generate_hosts_and_services(
         (
             "Samba",
             "Samba File Share",
-            Some(PortBase::Samba),
+            Some(PortType::Samba),
             managed_tag.into_iter().collect()
         ),
     ));
@@ -1310,7 +1305,7 @@ fn generate_hosts_and_services(
         (
             "Veeam",
             "Veeam Backup",
-            Some(PortBase::Https),
+            Some(PortType::Https),
             managed_tag.into_iter().chain(backup_tag).collect()
         ),
     ));
@@ -1330,7 +1325,7 @@ fn generate_hosts_and_services(
         (
             "Workstation",
             "Workstation",
-            Some(PortBase::Rdp),
+            Some(PortType::Rdp),
             managed_tag.into_iter().collect()
         ),
     ));
@@ -1350,7 +1345,7 @@ fn generate_hosts_and_services(
         (
             "Workstation",
             "Workstation",
-            Some(PortBase::Rdp),
+            Some(PortType::Rdp),
             managed_tag.into_iter().collect()
         ),
     ));
@@ -1596,9 +1591,8 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
                 name: "Web Traffic Flow".to_string(),
                 network_id: cloud.id,
                 description: Some("Production web request path from load balancer through app servers to database".to_string()),
-                group_type: GroupType::RequestPath {
-                    service_bindings: vec![traefik, app, pg],
-                },
+                group_type: GroupType::RequestPath,
+                binding_ids: vec![traefik, app, pg],
                 source: EntitySource::Manual,
                 color: "blue".to_string(),
                 edge_style: EdgeStyle::Bezier,
@@ -1627,9 +1621,8 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
                 description: Some(
                     "Prometheus metrics collection with Grafana visualization".to_string(),
                 ),
-                group_type: GroupType::HubAndSpoke {
-                    service_bindings: bindings,
-                },
+                group_type: GroupType::HubAndSpoke,
+                binding_ids: bindings,
                 source: EntitySource::Manual,
                 color: "purple".to_string(),
                 edge_style: EdgeStyle::Straight,
@@ -1651,9 +1644,8 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
                 name: "Backup Flow".to_string(),
                 network_id: hq.id,
                 description: Some("Server backup targets to TrueNAS storage".to_string()),
-                group_type: GroupType::RequestPath {
-                    service_bindings: vec![proxmox, truenas],
-                },
+                group_type: GroupType::RequestPath,
+                binding_ids: vec![proxmox, truenas],
                 source: EntitySource::Manual,
                 color: "green".to_string(),
                 edge_style: EdgeStyle::SmoothStep,

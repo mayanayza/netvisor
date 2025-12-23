@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -26,14 +26,14 @@ impl ServiceDefinition for SonosSpeaker {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::SONOS),
             Pattern::AnyOf(vec![
-                Pattern::Port(PortBase::Samba),
-                Pattern::Port(PortBase::new_tcp(3445)),
-                Pattern::Port(PortBase::new_tcp(1400)),
-                Pattern::Port(PortBase::new_tcp(1410)),
-                Pattern::Port(PortBase::new_tcp(1843)),
-                Pattern::Port(PortBase::new_tcp(3400)),
-                Pattern::Port(PortBase::new_tcp(3401)),
-                Pattern::Port(PortBase::new_tcp(3500)),
+                Pattern::Port(PortType::Samba),
+                Pattern::Port(PortType::new_tcp(3445)),
+                Pattern::Port(PortType::new_tcp(1400)),
+                Pattern::Port(PortType::new_tcp(1410)),
+                Pattern::Port(PortType::new_tcp(1843)),
+                Pattern::Port(PortType::new_tcp(3400)),
+                Pattern::Port(PortType::new_tcp(3401)),
+                Pattern::Port(PortType::new_tcp(3500)),
             ]),
         ])
     }

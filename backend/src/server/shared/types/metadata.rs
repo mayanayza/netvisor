@@ -8,7 +8,7 @@ use crate::server::{
     billing::types::{base::BillingPlan, features::Feature},
     discovery::r#impl::types::DiscoveryType,
     groups::r#impl::types::GroupType,
-    hosts::r#impl::ports::PortBase,
+    ports::r#impl::base::PortType,
     services::definitions::ServiceDefinitionRegistry,
     shared::{concepts::Concept, entities::EntityDiscriminants, types::api::ApiResponse},
     subnets::r#impl::types::SubnetType,
@@ -128,7 +128,7 @@ pub async fn get_metadata_registry() -> impl IntoResponse {
             .map(|e| e.to_metadata())
             .collect(),
         concepts: Concept::iter().map(|e| e.to_metadata()).collect(),
-        ports: PortBase::iter().map(|p| p.to_metadata()).collect(),
+        ports: PortType::iter().map(|p| p.to_metadata()).collect(),
         discovery_types: DiscoveryType::iter().map(|d| d.to_metadata()).collect(),
         billing_plans: BillingPlan::iter().map(|p| p.to_metadata()).collect(),
         features: Feature::iter().map(|f| f.to_metadata()).collect(),

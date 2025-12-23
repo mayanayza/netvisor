@@ -8,14 +8,11 @@ use crate::server::{
         base::{Group, GroupBase},
         types::GroupType,
     },
-    hosts::r#impl::{
-        base::{Host, HostBase},
-        interfaces::{Interface, InterfaceBase},
-        ports::{Port, PortBase},
-        targets::HostTarget,
-    },
+    hosts::r#impl::base::{Host, HostBase},
+    interfaces::r#impl::base::{Interface, InterfaceBase},
     networks::r#impl::{Network, NetworkBase},
     organizations::r#impl::base::{Organization, OrganizationBase},
+    ports::r#impl::base::{Port, PortBase, PortType},
     services::{
         definitions::ServiceDefinitionRegistry,
         r#impl::base::{Service, ServiceBase},
@@ -97,10 +94,6 @@ pub fn host(network_id: &Uuid) -> Host {
         hostname: Some("test.local".to_string()),
         network_id: *network_id,
         description: None,
-        target: HostTarget::Hostname,
-        interfaces: vec![interface(&Uuid::new_v4())],
-        services: vec![],
-        ports: vec![Port::new(PortBase::new_tcp(22))],
         source: EntitySource::System,
         virtualization: None,
         hidden: false,
@@ -108,13 +101,23 @@ pub fn host(network_id: &Uuid) -> Host {
     })
 }
 
-pub fn interface(subnet_id: &Uuid) -> Interface {
+pub fn interface(network_id: &Uuid, subnet_id: &Uuid) -> Interface {
     let random_mac: [u8; 6] = std::array::from_fn(|_| fastrand::u8(1..=255));
     Interface::new(InterfaceBase {
+        network_id: *network_id,
         subnet_id: *subnet_id,
         ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
         mac_address: Some(MacAddress::new(random_mac)),
         name: Some("eth0".to_string()),
+        host_id: Uuid::nil(), // Placeholder - tests will set correct host_id
+    })
+}
+
+pub fn port(network_id: &Uuid, host_id: &Uuid) -> Port {
+    Port::new(PortBase {
+        port_type: PortType::default(),
+        host_id: *host_id,
+        network_id: *network_id,
     })
 }
 
@@ -152,9 +155,8 @@ pub fn group(network_id: &Uuid) -> Group {
         description: None,
         network_id: *network_id,
         color: "".to_string(),
-        group_type: GroupType::RequestPath {
-            service_bindings: vec![],
-        },
+        group_type: GroupType::RequestPath,
+        binding_ids: vec![],
         source: EntitySource::System,
         edge_style: EdgeStyle::Bezier,
         tags: Vec::new(),
@@ -187,5 +189,6 @@ pub async fn setup_test_app() -> Router<Arc<AppState>> {
 
     let state = AppState::new(config).await.unwrap();
 
-    crate::server::shared::handlers::factory::create_router(state.clone()).with_state(state)
+    let (router, _openapi) = crate::server::shared::handlers::factory::create_router(state.clone());
+    router.with_state(state)
 }

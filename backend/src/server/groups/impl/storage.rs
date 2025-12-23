@@ -72,12 +72,16 @@ impl StorableEntity for Group {
                     network_id,
                     description,
                     group_type,
+                    binding_ids: _, // Binding IDs stored in group_bindings junction table
                     source,
                     color,
                     edge_style,
                     tags,
                 },
         } = self.clone();
+
+        // GroupType is now stored as TEXT (just the variant name)
+        let group_type_str: &'static str = group_type.into();
 
         Ok((
             vec![
@@ -101,7 +105,7 @@ impl StorableEntity for Group {
                 SqlValue::OptionalString(description),
                 SqlValue::Uuid(network_id),
                 SqlValue::EntitySource(source),
-                SqlValue::GroupType(group_type),
+                SqlValue::String(group_type_str.to_string()),
                 SqlValue::String(color),
                 SqlValue::String(serde_json::to_string(&edge_style)?),
                 SqlValue::UuidArray(tags),
@@ -110,9 +114,13 @@ impl StorableEntity for Group {
     }
 
     fn from_row(row: &PgRow) -> Result<Self, anyhow::Error> {
-        let group_type: GroupType =
-            serde_json::from_value(row.get::<serde_json::Value, _>("group_type"))
-                .map_err(|e| anyhow::anyhow!("Failed to deserialize group_type: {}", e))?;
+        // GroupType is now stored as TEXT (variant name like "RequestPath" or "HubAndSpoke")
+        let group_type_str: String = row.get("group_type");
+        let group_type = match group_type_str.as_str() {
+            "RequestPath" => GroupType::RequestPath,
+            "HubAndSpoke" => GroupType::HubAndSpoke,
+            _ => return Err(anyhow::anyhow!("Unknown group_type: {}", group_type_str)),
+        };
 
         let source: EntitySource =
             serde_json::from_value(row.get::<serde_json::Value, _>("source"))
@@ -132,6 +140,7 @@ impl StorableEntity for Group {
                 source,
                 edge_style,
                 group_type,
+                binding_ids: Vec::new(), // Loaded separately by GroupService via GroupBindingStorage
                 color: row.get("color"),
                 tags: row.get("tags"),
             },

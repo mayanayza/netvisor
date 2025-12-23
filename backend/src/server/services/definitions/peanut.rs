@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -19,7 +19,7 @@ impl ServiceDefinition for PeaNut {
     }
 
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Endpoint(PortBase::Http3000, "/api/v1/info", "peanut", None)
+        Pattern::Endpoint(PortType::Http3000, "/api/v1/info", "peanut", None)
     }
 
     fn logo_url(&self) -> &'static str {

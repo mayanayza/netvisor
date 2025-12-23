@@ -7,7 +7,7 @@
 		getLabel: (host: Host) => host.name,
 		getDescription: (host: Host) => host.hostname || 'No Hostname',
 		getIcon: (host: Host) => {
-			let firstService = host.services.length > 0 ? get(getServiceById(host.services[0])) : null;
+			const firstService = host.services.length > 0 ? host.services[0] : null;
 			if (firstService) {
 				return serviceDefinitions.getIconComponent(firstService.service_definition);
 			} else {
@@ -16,9 +16,7 @@
 		},
 		getIconColor: () => entities.getColorHelper('Host').icon,
 		getTags: (host: Host) => {
-			let services = get(getServicesForHost(host.id));
-
-			return services.map((service) => ({
+			return host.services.map((service) => ({
 				label: serviceDefinitions.getName(service.service_definition),
 				color: entities.getColorHelper('Service').string
 			}));

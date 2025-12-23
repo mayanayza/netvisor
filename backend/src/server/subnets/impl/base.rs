@@ -12,13 +12,15 @@ use cidr::{IpCidr, Ipv4Cidr};
 use pnet::ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::server::{hosts::r#impl::base::Host, services::r#impl::base::Service};
+use crate::server::{interfaces::r#impl::base::Interface, services::r#impl::base::Service};
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema)]
 pub struct SubnetBase {
+    #[schema(value_type = String)]
     pub cidr: IpCidr,
     pub network_id: Uuid,
     #[validate(length(min = 0, max = 100))]
@@ -46,7 +48,8 @@ impl Default for SubnetBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
+#[schema(example = crate::server::shared::types::examples::subnet)]
 pub struct Subnet {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -107,9 +110,13 @@ impl Subnet {
         }
     }
 
-    pub fn has_interface_with_service(&self, host: &Host, service: &Service) -> bool {
+    pub fn has_interface_with_service(
+        &self,
+        host_interfaces: &[&Interface],
+        service: &Service,
+    ) -> bool {
         service.base.bindings.iter().any(|binding| {
-            host.base.interfaces.iter().any(|interface| {
+            host_interfaces.iter().any(|interface| {
                 let interface_match = match binding.interface_id() {
                     Some(id) => interface.id == id,
                     None => true, // Listens on all interfaces

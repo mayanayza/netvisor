@@ -6,9 +6,7 @@ use reqwest::StatusCode;
 use scanopy::server::api_keys::r#impl::base::{ApiKey, ApiKeyBase};
 use scanopy::server::groups::r#impl::base::{Group, GroupBase};
 use scanopy::server::groups::r#impl::types::GroupType;
-use scanopy::server::hosts::r#impl::api::HostWithServicesRequest;
-use scanopy::server::hosts::r#impl::base::{Host, HostBase};
-use scanopy::server::hosts::r#impl::targets::HostTarget;
+use scanopy::server::hosts::r#impl::api::{CreateHostRequest, HostResponse, UpdateHostRequest};
 use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::services::r#impl::base::{Service, ServiceBase};
 use scanopy::server::shared::storage::traits::StorableEntity;
@@ -94,57 +92,53 @@ async fn test_subnet_crud(ctx: &TestContext) -> Result<(), String> {
 async fn test_host_crud(ctx: &TestContext) -> Result<(), String> {
     println!("Testing Host CRUD...");
 
-    let host = Host::new(HostBase {
+    let request = CreateHostRequest {
         name: "Test Host".to_string(),
         hostname: Some("test.local".to_string()),
         network_id: ctx.network_id,
         description: None,
-        target: HostTarget::Hostname,
-        interfaces: vec![],
-        services: vec![],
-        ports: vec![],
-        source: EntitySource::System,
         virtualization: None,
         hidden: false,
         tags: Vec::new(),
-    });
-
-    let request = HostWithServicesRequest {
-        host,
-        services: None,
+        interfaces: vec![],
+        ports: vec![],
+        services: vec![],
     };
 
-    let created: HostWithServicesRequest = ctx.client.post("/api/hosts", &request).await?;
-    assert!(!created.host.id.is_nil(), "Created host should have an ID");
-    assert_eq!(created.host.base.name, "Test Host");
+    let created: HostResponse = ctx.client.post("/api/hosts", &request).await?;
+    assert!(!created.id.is_nil(), "Created host should have an ID");
+    assert_eq!(created.name, "Test Host");
     println!("  ✓ Create host");
 
-    let fetched: Host = ctx
+    let fetched: HostResponse = ctx
         .client
-        .get(&format!("/api/hosts/{}", created.host.id))
+        .get(&format!("/api/hosts/{}", created.id))
         .await?;
-    assert_eq!(fetched.id, created.host.id);
+    assert_eq!(fetched.id, created.id);
     println!("  ✓ Read host");
 
-    let mut updated_host = fetched.clone();
-    updated_host.base.name = "Updated Host".to_string();
-    let update_request = HostWithServicesRequest {
-        host: updated_host,
-        services: None,
+    let update_request = UpdateHostRequest {
+        id: created.id,
+        name: "Updated Host".to_string(),
+        hostname: fetched.hostname.clone(),
+        description: fetched.description.clone(),
+        virtualization: fetched.virtualization.clone(),
+        hidden: fetched.hidden,
+        tags: fetched.tags.clone(),
     };
-    let updated: Host = ctx
+    let updated: HostResponse = ctx
         .client
-        .put(&format!("/api/hosts/{}", created.host.id), &update_request)
+        .put(&format!("/api/hosts/{}", created.id), &update_request)
         .await?;
-    assert_eq!(updated.base.name, "Updated Host");
+    assert_eq!(updated.name, "Updated Host");
     println!("  ✓ Update host");
 
-    let hosts: Vec<Host> = ctx.client.get("/api/hosts").await?;
-    assert!(hosts.iter().any(|h| h.id == created.host.id));
+    let hosts: Vec<HostResponse> = ctx.client.get("/api/hosts").await?;
+    assert!(hosts.iter().any(|h| h.id == created.id));
     println!("  ✓ List hosts");
 
     ctx.client
-        .delete_no_content(&format!("/api/hosts/{}", created.host.id))
+        .delete_no_content(&format!("/api/hosts/{}", created.id))
         .await?;
     println!("  ✓ Delete host");
 
@@ -155,33 +149,26 @@ async fn test_host_crud(ctx: &TestContext) -> Result<(), String> {
 async fn test_service_crud(ctx: &TestContext) -> Result<(), String> {
     println!("Testing Service CRUD...");
 
-    let host = Host::new(HostBase {
+    let host_request = CreateHostRequest {
         name: "Service Test Host".to_string(),
         hostname: Some("service-test.local".to_string()),
         network_id: ctx.network_id,
         description: None,
-        target: HostTarget::Hostname,
-        interfaces: vec![],
-        services: vec![],
-        ports: vec![],
-        source: EntitySource::System,
         virtualization: None,
         hidden: false,
         tags: Vec::new(),
-    });
-    let host_request = HostWithServicesRequest {
-        host,
-        services: None,
+        interfaces: vec![],
+        ports: vec![],
+        services: vec![],
     };
-    let created_host: HostWithServicesRequest =
-        ctx.client.post("/api/hosts", &host_request).await?;
+    let created_host: HostResponse = ctx.client.post("/api/hosts", &host_request).await?;
 
     let service_def = ServiceDefinitionRegistry::find_by_id("Dns Server")
         .unwrap_or_else(|| ServiceDefinitionRegistry::all_service_definitions()[0].clone());
 
     let service = Service::new(ServiceBase {
         name: "Test Service".to_string(),
-        host_id: created_host.host.id,
+        host_id: created_host.id,
         bindings: vec![],
         network_id: ctx.network_id,
         service_definition: service_def,
@@ -221,7 +208,7 @@ async fn test_service_crud(ctx: &TestContext) -> Result<(), String> {
     println!("  ✓ Delete service");
 
     ctx.client
-        .delete_no_content(&format!("/api/hosts/{}", created_host.host.id))
+        .delete_no_content(&format!("/api/hosts/{}", created_host.id))
         .await?;
 
     println!("✅ Service CRUD passed");
@@ -236,9 +223,8 @@ async fn test_group_crud(ctx: &TestContext) -> Result<(), String> {
         description: Some("Test description".to_string()),
         network_id: ctx.network_id,
         color: "#FF0000".to_string(),
-        group_type: GroupType::RequestPath {
-            service_bindings: vec![],
-        },
+        group_type: GroupType::RequestPath,
+        binding_ids: vec![],
         source: EntitySource::System,
         edge_style: EdgeStyle::Bezier,
         tags: Vec::new(),

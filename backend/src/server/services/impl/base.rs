@@ -1,8 +1,8 @@
+use crate::server::bindings::r#impl::base::Binding;
 use crate::server::discovery::r#impl::types::DiscoveryType;
-use crate::server::hosts::r#impl::interfaces::Interface;
-use crate::server::hosts::r#impl::ports::{Port, PortBase};
+use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::ports::r#impl::base::{Port, PortType};
 use crate::server::services::definitions::ServiceDefinitionRegistry;
-use crate::server::services::r#impl::bindings::Binding;
 use crate::server::services::r#impl::definitions::ServiceDefinitionExt;
 use crate::server::services::r#impl::definitions::{DefaultServiceDefinition, ServiceDefinition};
 use crate::server::services::r#impl::endpoints::{Endpoint, EndpointResponse};
@@ -19,13 +19,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
 use std::net::IpAddr;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema)]
 pub struct ServiceBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
+    #[schema(value_type = String)]
     pub service_definition: Box<dyn ServiceDefinition>,
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -63,7 +65,7 @@ impl ChangeTriggersTopologyStaleness<Service> for Service {
     }
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, Default)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, Default, ToSchema)]
 pub struct Service {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -88,7 +90,7 @@ pub struct DiscoverySessionServiceMatchParams<'a> {
 pub struct ServiceMatchBaselineParams<'a> {
     pub subnet: &'a Subnet,
     pub interface: &'a Interface,
-    pub all_ports: &'a Vec<PortBase>,
+    pub all_ports: &'a Vec<PortType>,
     pub endpoint_responses: &'a Vec<EndpointResponse>,
     pub virtualization: &'a Option<ServiceVirtualization>,
 }
@@ -97,7 +99,7 @@ pub struct ServiceMatchBaselineParams<'a> {
 pub struct ServiceMatchServiceParams<'a> {
     pub service_definition: Box<dyn ServiceDefinition>,
     pub matched_services: &'a Vec<Service>,
-    pub unbound_ports: &'a Vec<PortBase>,
+    pub unbound_ports: &'a Vec<PortType>,
 }
 
 impl PartialEq for Service {
@@ -279,8 +281,8 @@ impl Service {
             .collect()
     }
 
-    pub fn all_discovery_ports() -> Vec<PortBase> {
-        let mut ports: Vec<PortBase> = ServiceDefinitionRegistry::all_service_definitions()
+    pub fn all_discovery_ports() -> Vec<PortType> {
+        let mut ports: Vec<PortType> = ServiceDefinitionRegistry::all_service_definitions()
             .iter()
             .flat_map(|s| s.discovery_pattern().ports())
             .collect();
@@ -296,21 +298,21 @@ impl Service {
             .flat_map(|s| s.discovery_pattern().endpoints())
             .collect();
 
-        endpoints.sort_by_key(|e| (e.protocol.to_string(), e.port_base.number(), e.path.clone()));
+        endpoints.sort_by_key(|e| (e.protocol.to_string(), e.port_type.number(), e.path.clone()));
         endpoints.dedup();
         endpoints
     }
 
     /// Get ports that appear ONLY in endpoint patterns, not in port scan patterns
-    pub fn endpoint_only_ports() -> Vec<PortBase> {
+    pub fn endpoint_only_ports() -> Vec<PortType> {
         let port_scan_ports = Self::all_discovery_ports();
-        let endpoint_ports: Vec<PortBase> = Self::all_discovery_endpoints()
+        let endpoint_ports: Vec<PortType> = Self::all_discovery_endpoints()
             .iter()
-            .map(|e| e.port_base)
+            .map(|e| e.port_type)
             .collect();
 
         // Get ports that are in endpoints but NOT in port scans
-        let mut endpoint_only: Vec<PortBase> = endpoint_ports
+        let mut endpoint_only: Vec<PortType> = endpoint_ports
             .into_iter()
             .filter(|ep| !port_scan_ports.contains(ep))
             .collect();
@@ -387,15 +389,19 @@ impl Service {
 
             let discovery_metadata = DiscoveryMetadata::new(discovery_type.clone(), *daemon_id);
 
-            let ports: Vec<Port> = result.ports.iter().map(|p| Port::new(*p)).collect();
+            let ports: Vec<Port> = result
+                .ports
+                .iter()
+                .map(|p| Port::new_hostless(*p))
+                .collect();
 
             let bindings: Vec<Binding> = if !result.ports.is_empty() {
                 ports
                     .iter()
-                    .map(|p| Binding::new_port(p.id, Some(interface.id)))
+                    .map(|p| Binding::new_port_serviceless(p.id, Some(interface.id)))
                     .collect()
             } else {
-                vec![Binding::new_interface(interface.id)]
+                vec![Binding::new_interface_serviceless(interface.id)]
             };
 
             let service = Service::new(ServiceBase {

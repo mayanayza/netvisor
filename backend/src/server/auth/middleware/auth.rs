@@ -224,7 +224,13 @@ where
                 .map(|n| n.id)
                 .collect()
         } else {
-            user.base.network_ids
+            // Load network_ids from junction table for non-admin users
+            app_state
+                .services
+                .user_service
+                .get_network_ids(&user.id)
+                .await
+                .map_err(|_| AuthError(ApiError::internal_error("Failed to load user networks")))?
         };
 
         Ok(AuthenticatedEntity::User {

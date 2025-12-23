@@ -1,5 +1,6 @@
 use crate::server::groups::r#impl::base::Group;
 use crate::server::hosts::r#impl::base::Host;
+use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::services::r#impl::base::Service;
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
@@ -31,6 +32,7 @@ pub struct TopologyBase {
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
     pub hosts: Vec<Host>,
+    pub interfaces: Vec<Interface>,
     pub subnets: Vec<Subnet>,
     pub services: Vec<Service>,
     pub groups: Vec<Group>,
@@ -40,6 +42,7 @@ pub struct TopologyBase {
     pub locked_at: Option<DateTime<Utc>>,
     pub locked_by: Option<Uuid>,
     pub removed_hosts: Vec<Uuid>,
+    pub removed_interfaces: Vec<Uuid>,
     pub removed_subnets: Vec<Uuid>,
     pub removed_services: Vec<Uuid>,
     pub removed_groups: Vec<Uuid>,
@@ -57,6 +60,7 @@ impl TopologyBase {
             nodes: vec![],
             edges: vec![],
             hosts: vec![],
+            interfaces: vec![],
             subnets: vec![],
             services: vec![],
             groups: vec![],
@@ -66,6 +70,7 @@ impl TopologyBase {
             locked_at: None,
             locked_by: None,
             removed_hosts: vec![],
+            removed_interfaces: vec![],
             removed_subnets: vec![],
             removed_services: vec![],
             removed_groups: vec![],
@@ -101,6 +106,7 @@ impl Topology {
     pub fn clear_stale(&mut self) {
         self.base.removed_groups = vec![];
         self.base.removed_hosts = vec![];
+        self.base.removed_interfaces = vec![];
         self.base.removed_services = vec![];
         self.base.removed_subnets = vec![];
         self.base.is_stale = false;

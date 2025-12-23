@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -21,7 +21,7 @@ impl ServiceDefinition for PhilipsHueBridge {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::PHILIPS),
-            Pattern::Endpoint(PortBase::Http, "/", "hue", None),
+            Pattern::Endpoint(PortType::Http, "/", "hue", None),
         ])
     }
 

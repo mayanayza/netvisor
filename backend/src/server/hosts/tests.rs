@@ -3,7 +3,7 @@ use serial_test::serial;
 use crate::{
     server::{
         auth::middleware::auth::AuthenticatedEntity,
-        services::r#impl::bindings::Binding,
+        bindings::r#impl::base::Binding,
         shared::{
             services::traits::CrudService,
             storage::{filter::EntityFilter, traits::Storage},
@@ -29,32 +29,58 @@ async fn test_host_deduplication_on_create() {
         .await
         .unwrap();
 
+    // Create a subnet first for interfaces
+    let subnet1 = subnet(&network.id);
+    services
+        .subnet_service
+        .create(subnet1.clone(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
     let filter = EntityFilter::unfiltered().network_ids(&[network.id]);
 
     let start_host_count = storage.hosts.get_all(filter.clone()).await.unwrap().len();
 
-    // Create first host
+    // Create first host with an interface
     let mut host1 = host(&network.id);
     host1.base.source = EntitySource::Discovery {
         metadata: vec![DiscoveryMetadata::default()],
     };
-    let (created1, _) = services
+    let iface1 = interface(&network.id, &subnet1.id);
+    let created1 = services
         .host_service
-        .create_host_with_services(host1.clone(), vec![], AuthenticatedEntity::System)
+        .discover_host(
+            host1.clone(),
+            vec![iface1.clone()],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
-    let host1_interface = created1.base.interfaces.first().unwrap();
+    // Verify interface was created - use the returned HostResponse directly
+    assert!(
+        !created1.interfaces.is_empty(),
+        "Interface should have been created with host"
+    );
+    let host1_interface = &created1.interfaces[0];
 
-    // Try to create duplicate (same interfaces)
+    // Try to create duplicate (same interfaces - matching by IP+subnet or MAC)
     let mut host2 = host(&network.id);
     host2.base.source = EntitySource::Discovery {
         metadata: vec![DiscoveryMetadata::default()],
     };
-    host2.base.interfaces = vec![host1_interface.clone()];
-    let (created2, _) = services
+    // Use the same interface data to trigger deduplication
+    let created2 = services
         .host_service
-        .create_host_with_services(host2.clone(), vec![], AuthenticatedEntity::System)
+        .discover_host(
+            host2.clone(),
+            vec![host1_interface.clone()],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
@@ -82,48 +108,73 @@ async fn test_host_upsert_merges_new_data() {
         .await
         .unwrap();
 
-    // Create host with one interface
-    let mut host1 = host(&network.id);
-    host1.base.source = EntitySource::Discovery {
-        metadata: vec![DiscoveryMetadata::default()],
-    };
+    // Create subnets
     let subnet1 = subnet(&network.id);
     services
         .subnet_service
         .create(subnet1.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
-    host1.base.interfaces = vec![interface(&subnet1.id)];
-
-    let (created, _) = services
-        .host_service
-        .create_host_with_services(host1.clone(), vec![], AuthenticatedEntity::System)
-        .await
-        .unwrap();
-
-    // Create "duplicate" with additional interface
-    let mut host2 = host(&network.id);
-    host2.base.source = EntitySource::Discovery {
-        metadata: vec![DiscoveryMetadata::default()],
-    };
     let subnet2 = subnet(&network.id);
     services
         .subnet_service
         .create(subnet2.clone(), AuthenticatedEntity::System)
         .await
         .unwrap();
-    host2.base.interfaces = vec![interface(&subnet1.id), interface(&subnet2.id)];
 
-    let (upserted, _) = services
+    // Create host with one interface
+    let mut host1 = host(&network.id);
+    host1.base.source = EntitySource::Discovery {
+        metadata: vec![DiscoveryMetadata::default()],
+    };
+    let iface1 = interface(&network.id, &subnet1.id);
+
+    let created = services
         .host_service
-        .create_host_with_services(host2.clone(), vec![], AuthenticatedEntity::System)
+        .discover_host(
+            host1.clone(),
+            vec![iface1.clone()],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
-    // Should have merged interfaces + discovery data
+    // Verify interface was created
+    assert!(
+        !created.interfaces.is_empty(),
+        "Interface should have been created with host"
+    );
+    let created_iface1 = &created.interfaces[0];
+
+    // Create "duplicate" with additional interface (matching first interface triggers upsert)
+    let mut host2 = host(&network.id);
+    host2.base.source = EntitySource::Discovery {
+        metadata: vec![DiscoveryMetadata::default()],
+    };
+    let iface2 = interface(&network.id, &subnet2.id);
+
+    // Use the CREATED interface to ensure deduplication matching works
+    let upserted = services
+        .host_service
+        .discover_host(
+            host2.clone(),
+            vec![created_iface1.clone(), iface2],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    // Should have merged - same host ID
     assert_eq!(upserted.id, created.id);
-    assert_eq!(upserted.base.interfaces.len(), 2);
-    if let EntitySource::Discovery { metadata } = upserted.base.source {
+
+    // Check interface count - use returned HostResponse
+    assert_eq!(upserted.interfaces.len(), 2, "Upserted host should have 2 interfaces");
+
+    if let EntitySource::Discovery { metadata } = upserted.source {
         assert_eq!(metadata.len(), 2)
     } else {
         panic!("Got a different type of source after upserting")
@@ -153,45 +204,55 @@ async fn test_host_consolidation() {
         .await
         .unwrap();
 
-    let mut host1 = host(&network.id);
-    host1.base.interfaces = Vec::new();
-
-    let (created1, _) = services
+    // Create host1 without interfaces
+    let host1 = host(&network.id);
+    let created1 = services
         .host_service
-        .create_host_with_services(host1.clone(), vec![], AuthenticatedEntity::System)
+        .discover_host(
+            host1.clone(),
+            vec![],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
-    let mut host2 = host(&network.id);
-    host2.base.interfaces = vec![interface(&subnet_obj.id)];
+    // Create host2 with an interface
+    let host2 = host(&network.id);
+    let port = port(&network.id, &host2.id);
+    let iface = interface(&network.id, &subnet_obj.id);
 
     let mut svc = service(&network.id, &host2.id);
-    svc.base.bindings = vec![Binding::new_port(
-        host2.base.ports[0].id,
-        Some(host2.base.interfaces[0].id),
-    )];
+    svc.base.bindings = vec![Binding::new_port_serviceless(port.id, Some(iface.id))];
 
-    let (created2, created_svcs) = services
+    let created2 = services
         .host_service
-        .create_host_with_services(host2.clone(), vec![svc], AuthenticatedEntity::System)
+        .discover_host(
+            host2.clone(),
+            vec![iface],
+            vec![port],
+            vec![svc],
+            AuthenticatedEntity::System,
+        )
         .await
         .unwrap();
 
-    let created_svc = &created_svcs[0];
+    let created_svc = &created2.services[0];
 
     // Consolidate host2 into host1
     let consolidated = services
         .host_service
         .consolidate_hosts(
-            created1.clone(),
-            created2.clone(),
+            created1.to_host(),
+            created2.to_host(),
             AuthenticatedEntity::System,
         )
         .await
         .unwrap();
 
     // Host1 should have host2's service
-    assert!(consolidated.base.services.contains(&created_svc.id));
+    assert!(consolidated.services.contains(&created_svc));
 
     // Host2 should be deleted
     let host2_after = services.host_service.get_by_id(&created2.id).await.unwrap();

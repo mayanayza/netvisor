@@ -181,7 +181,8 @@
 										.map((b) => {
 											if (
 												(b.interface_id == nodeRenderData.interface_id || b.interface_id == null) &&
-												b.type == 'Port'
+												b.type == 'Port' &&
+												b.port_id
 											) {
 												const port = getPortById(b.port_id);
 												if (port) {

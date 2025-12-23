@@ -60,7 +60,6 @@ export function createDefaultService(
 		updated_at: utcTimeZoneSentinel,
 		network_id: host_network_id,
 		host_id,
-		is_gateway: false,
 		tags: [],
 		service_definition: serviceType,
 		name: serviceType,
@@ -146,8 +145,8 @@ export function getServicesForHost(host_id: string): Readable<Service[]> {
 			.filter((s) => s.host_id == host_id)
 			.sort((a, b) => {
 				if (host) {
-					const aIndex = host.services.indexOf(a.id);
-					const bIndex = host.services.indexOf(b.id);
+					const aIndex = host.services.findIndex((s) => s.id === a.id);
+					const bIndex = host.services.findIndex((s) => s.id === b.id);
 					return aIndex - bIndex;
 				}
 				return 0;

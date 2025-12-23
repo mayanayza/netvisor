@@ -1,19 +1,24 @@
 use std::fmt::Display;
 
 use crate::server::{
+    config::AppState,
     networks::service::NetworkService,
-    shared::{entities::ChangeTriggersTopologyStaleness, handlers::traits::CrudHandlers},
+    shared::{
+        entities::ChangeTriggersTopologyStaleness,
+        handlers::{query::OrganizationFilterQuery, traits::CrudHandlers},
+    },
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct NetworkBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -34,7 +39,8 @@ impl NetworkBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[schema(example = crate::server::shared::types::examples::network)]
 pub struct Network {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,
@@ -51,8 +57,9 @@ impl Display for Network {
 
 impl CrudHandlers for Network {
     type Service = NetworkService;
+    type FilterQuery = OrganizationFilterQuery;
 
-    fn get_service(state: &crate::server::config::AppState) -> &Self::Service {
+    fn get_service(state: &AppState) -> &Self::Service {
         &state.services.network_service
     }
 }

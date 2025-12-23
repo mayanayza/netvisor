@@ -1,4 +1,5 @@
 use crate::server::groups::r#impl::base::Group;
+use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::services::r#impl::base::Service;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::{
@@ -74,6 +75,7 @@ impl StorableEntity for Topology {
                     edges,
                     options,
                     hosts,
+                    interfaces,
                     services,
                     subnets,
                     groups,
@@ -83,6 +85,7 @@ impl StorableEntity for Topology {
                     locked_at,
                     locked_by,
                     removed_hosts,
+                    removed_interfaces,
                     removed_services,
                     removed_subnets,
                     removed_groups,
@@ -102,6 +105,7 @@ impl StorableEntity for Topology {
                 "edges",
                 "options",
                 "hosts",
+                "interfaces",
                 "subnets",
                 "groups",
                 "services",
@@ -111,6 +115,7 @@ impl StorableEntity for Topology {
                 "locked_at",
                 "locked_by",
                 "removed_hosts",
+                "removed_interfaces",
                 "removed_services",
                 "removed_subnets",
                 "removed_groups",
@@ -127,6 +132,7 @@ impl StorableEntity for Topology {
                 SqlValue::Edges(edges),
                 SqlValue::TopologyOptions(options),
                 SqlValue::Hosts(hosts),
+                SqlValue::Interfaces(interfaces),
                 SqlValue::Subnets(subnets),
                 SqlValue::Groups(groups),
                 SqlValue::Services(services),
@@ -136,6 +142,7 @@ impl StorableEntity for Topology {
                 SqlValue::OptionTimestamp(locked_at),
                 SqlValue::OptionalUuid(locked_by),
                 SqlValue::UuidArray(removed_hosts),
+                SqlValue::UuidArray(removed_interfaces),
                 SqlValue::UuidArray(removed_services),
                 SqlValue::UuidArray(removed_subnets),
                 SqlValue::UuidArray(removed_groups),
@@ -157,6 +164,9 @@ impl StorableEntity for Topology {
 
         let hosts: Vec<Host> = serde_json::from_value(row.get::<serde_json::Value, _>("hosts"))
             .map_err(|e| anyhow::anyhow!("Failed to deserialize hosts: {}", e))?;
+        let interfaces: Vec<Interface> =
+            serde_json::from_value(row.get::<serde_json::Value, _>("interfaces"))
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize interfaces: {}", e))?;
         let subnets: Vec<Subnet> =
             serde_json::from_value(row.get::<serde_json::Value, _>("subnets"))
                 .map_err(|e| anyhow::anyhow!("Failed to deserialize subnets: {}", e))?;
@@ -180,12 +190,14 @@ impl StorableEntity for Topology {
                 locked_by: row.get("locked_by"),
                 removed_groups: row.get("removed_groups"),
                 removed_hosts: row.get("removed_hosts"),
+                removed_interfaces: row.get("removed_interfaces"),
                 removed_services: row.get("removed_services"),
                 removed_subnets: row.get("removed_subnets"),
                 parent_id: row.get("parent_id"),
                 nodes,
                 edges,
                 hosts,
+                interfaces,
                 subnets,
                 services,
                 groups,

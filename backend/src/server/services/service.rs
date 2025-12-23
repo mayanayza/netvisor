@@ -1,22 +1,20 @@
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
-    groups::{
-        r#impl::{base::Group, types::GroupType},
-        service::GroupService,
-    },
-    hosts::{
-        r#impl::{base::Host, interfaces::Interface},
-        service::HostService,
-    },
-    services::r#impl::{base::Service, bindings::Binding, patterns::MatchDetails},
+    bindings::r#impl::base::{Binding, BindingType},
+    groups::{r#impl::base::Group, service::GroupService},
+    hosts::{r#impl::base::Host, service::HostService},
+    interfaces::r#impl::base::Interface,
+    ports::r#impl::base::Port,
+    services::r#impl::{base::Service, patterns::MatchDetails},
     shared::{
         entities::ChangeTriggersTopologyStaleness,
         events::{
             bus::EventBus,
             types::{EntityEvent, EntityOperation},
         },
-        services::traits::{CrudService, EventBusService},
+        services::traits::{ChildCrudService, CrudService, EventBusService},
         storage::{
+            child::GenericChildStorage,
             filter::EntityFilter,
             generic::GenericPostgresStorage,
             traits::{StorableEntity, Storage},
@@ -38,6 +36,7 @@ use uuid::Uuid;
 
 pub struct ServiceService {
     storage: Arc<GenericPostgresStorage<Service>>,
+    binding_storage: Arc<GenericChildStorage<Binding>>,
     host_service: OnceLock<Arc<HostService>>,
     group_service: Arc<GroupService>,
     group_update_lock: Arc<Mutex<()>>,
@@ -62,6 +61,46 @@ impl EventBusService<Service> for ServiceService {
 impl CrudService<Service> for ServiceService {
     fn storage(&self) -> &Arc<GenericPostgresStorage<Service>> {
         &self.storage
+    }
+
+    async fn get_by_id(&self, id: &Uuid) -> Result<Option<Service>, anyhow::Error> {
+        let service = self.storage().get_by_id(id).await?;
+        match service {
+            Some(mut s) => {
+                s.base.bindings = self.binding_storage.get_for_parent(&s.id).await?;
+                Ok(Some(s))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn get_all(&self, filter: EntityFilter) -> Result<Vec<Service>, anyhow::Error> {
+        let mut services = self.storage().get_all(filter).await?;
+        if services.is_empty() {
+            return Ok(services);
+        }
+
+        let service_ids: Vec<Uuid> = services.iter().map(|s| s.id).collect();
+        let bindings_map = self.binding_storage.get_for_parents(&service_ids).await?;
+
+        for service in &mut services {
+            if let Some(bindings) = bindings_map.get(&service.id) {
+                service.base.bindings = bindings.clone();
+            }
+        }
+
+        Ok(services)
+    }
+
+    async fn get_one(&self, filter: EntityFilter) -> Result<Option<Service>, anyhow::Error> {
+        let service = self.storage().get_one(filter).await?;
+        match service {
+            Some(mut s) => {
+                s.base.bindings = self.binding_storage.get_for_parent(&s.id).await?;
+                Ok(Some(s))
+            }
+            None => Ok(None),
+        }
     }
 
     async fn create(
@@ -103,6 +142,18 @@ impl CrudService<Service> for ServiceService {
             }
             _ => {
                 let created = self.storage.create(&service).await?;
+
+                // Save bindings to separate table with correct service_id and network_id
+                let bindings_with_ids: Vec<Binding> = service
+                    .base
+                    .bindings
+                    .iter()
+                    .cloned()
+                    .map(|b| b.with_service(created.id, created.base.network_id))
+                    .collect();
+                self.binding_storage
+                    .save_for_parent(&created.id, &bindings_with_ids)
+                    .await?;
 
                 let trigger_stale = created.triggers_staleness(None);
 
@@ -148,6 +199,19 @@ impl CrudService<Service> for ServiceService {
             .await?;
 
         let updated = self.storage.update(service).await?;
+
+        // Save bindings to separate table with correct service_id and network_id
+        let bindings_with_ids: Vec<Binding> = service
+            .base
+            .bindings
+            .iter()
+            .cloned()
+            .map(|b| b.with_service(updated.id, updated.base.network_id))
+            .collect();
+        self.binding_storage
+            .save_for_parent(&updated.id, &bindings_with_ids)
+            .await?;
+
         let trigger_stale = updated.triggers_staleness(Some(current_service));
 
         self.event_bus()
@@ -204,14 +268,18 @@ impl CrudService<Service> for ServiceService {
     }
 }
 
+impl ChildCrudService<Service> for ServiceService {}
+
 impl ServiceService {
     pub fn new(
         storage: Arc<GenericPostgresStorage<Service>>,
+        binding_storage: Arc<GenericChildStorage<Binding>>,
         group_service: Arc<GroupService>,
         event_bus: Arc<EventBus>,
     ) -> Self {
         Self {
             storage,
+            binding_storage,
             group_service,
             host_service: OnceLock::new(),
             group_update_lock: Arc::new(Mutex::new(())),
@@ -319,6 +387,18 @@ impl ServiceService {
 
         self.storage.update(&mut existing_service).await?;
 
+        // Save bindings to separate table with correct service_id and network_id
+        let bindings_with_ids: Vec<Binding> = existing_service
+            .base
+            .bindings
+            .iter()
+            .cloned()
+            .map(|b| b.with_service(existing_service.id, existing_service.base.network_id))
+            .collect();
+        self.binding_storage
+            .save_for_parent(&existing_service.id, &bindings_with_ids)
+            .await?;
+
         let mut data = Vec::new();
 
         if binding_updates > 0 {
@@ -388,23 +468,20 @@ impl ServiceService {
 
         let groups_to_update: Vec<Group> = groups
             .into_iter()
-            .filter_map(|mut group| match &mut group.base.group_type {
-                GroupType::RequestPath { service_bindings }
-                | GroupType::HubAndSpoke { service_bindings } => {
-                    let initial_bindings_length = service_bindings.len();
+            .filter_map(|mut group| {
+                let initial_bindings_length = group.base.binding_ids.len();
 
-                    service_bindings.retain(|sb| {
-                        if current_service_binding_ids.contains(sb) {
-                            return updated_service_binding_ids.contains(sb);
-                        }
-                        true
-                    });
-
-                    if service_bindings.len() != initial_bindings_length {
-                        Some(group)
-                    } else {
-                        None
+                group.base.binding_ids.retain(|sb| {
+                    if current_service_binding_ids.contains(sb) {
+                        return updated_service_binding_ids.contains(sb);
                     }
+                    true
+                });
+
+                if group.base.binding_ids.len() != initial_bindings_length {
+                    Some(group)
+                } else {
+                    None
                 }
             })
             .collect();
@@ -426,11 +503,18 @@ impl ServiceService {
     }
 
     /// Update bindings to match ports and interfaces available on new host
+    /// `original_interfaces` and `updated_interfaces` are the interfaces for the respective hosts
+    /// `original_ports` and `updated_ports` are the ports for the respective hosts
+    #[allow(clippy::too_many_arguments)]
     pub async fn reassign_service_interface_bindings(
         &self,
         service: Service,
         original_host: &Host,
+        original_interfaces: &[Interface],
+        original_ports: &[Port],
         updated_host: &Host,
+        updated_interfaces: &[Interface],
+        updated_ports: &[Port],
     ) -> Service {
         let lock = self.get_service_lock(&service.id).await;
         let _guard = lock.lock().await;
@@ -448,17 +532,17 @@ impl ServiceService {
             .base
             .bindings
             .iter_mut()
-            .filter_map(|mut b| {
-                let original_interface = original_host.get_interface(&b.interface_id());
+            .filter_map(|b| {
+                // Look up original interface from the provided slice
+                let original_interface = b
+                    .interface_id()
+                    .and_then(|id| original_interfaces.iter().find(|i| i.id == id));
 
-                match &mut b {
-                    Binding::Interface { interface_id, .. } => {
+                match &mut b.base.binding_type {
+                    BindingType::Interface { interface_id } => {
                         if let Some(original_interface) = original_interface {
-                            let new_interface: Option<&Interface> = updated_host
-                                .base
-                                .interfaces
-                                .iter()
-                                .find(|i| *i == original_interface);
+                            let new_interface: Option<&Interface> =
+                                updated_interfaces.iter().find(|i| *i == original_interface);
 
                             if let Some(new_interface) = new_interface {
                                 *interface_id = new_interface.id;
@@ -468,22 +552,20 @@ impl ServiceService {
                         // this shouldn't happen because we just transferred bindings from old host to new
                         None::<Binding>
                     }
-                    Binding::Port {
+                    BindingType::Port {
                         port_id,
                         interface_id,
-                        ..
                     } => {
-                        if let Some(original_port) = original_host.get_port(port_id)
+                        if let Some(original_port) =
+                            original_ports.iter().find(|p| p.id == *port_id)
                             && let Some(new_port) =
-                                updated_host.base.ports.iter().find(|p| *p == original_port)
+                                updated_ports.iter().find(|p| *p == original_port)
                         {
                             let new_interface: Option<Option<Interface>> = match original_interface
                             {
                                 // None interface = listen on all interfaces, assume same for new host
                                 None => Some(None),
-                                Some(original_interface) => updated_host
-                                    .base
-                                    .interfaces
+                                Some(original_interface) => updated_interfaces
                                     .iter()
                                     .find(|i| *i == original_interface)
                                     .map(|found_interface| Some(found_interface.clone())),

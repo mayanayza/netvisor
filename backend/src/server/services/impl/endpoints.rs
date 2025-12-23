@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -41,7 +41,7 @@ impl Display for ApplicationProtocol {
 pub struct Endpoint {
     pub protocol: ApplicationProtocol,
     pub ip: Option<IpAddr>,
-    pub port_base: PortBase,
+    pub port_type: PortType,
     pub path: String,
 }
 
@@ -62,7 +62,7 @@ impl Endpoint {
         Self {
             protocol: self.protocol,
             ip: Some(ip),
-            port_base: self.port_base,
+            port_type: self.port_type,
             path: self.path.clone(),
         }
     }
@@ -70,17 +70,17 @@ impl Endpoint {
     pub fn http(ip: Option<IpAddr>, path: &str) -> Self {
         Endpoint {
             protocol: ApplicationProtocol::Http,
-            port_base: PortBase::Http,
+            port_type: PortType::Http,
             ip,
             path: path.to_string(),
         }
     }
 
-    pub fn for_pattern(port_base: PortBase, path: &str) -> Self {
+    pub fn for_pattern(port_type: PortType, path: &str) -> Self {
         Endpoint {
             protocol: ApplicationProtocol::Http,
             ip: None,
-            port_base,
+            port_type,
             path: path.to_owned(),
         }
     }
@@ -95,7 +95,7 @@ impl Display for Endpoint {
                     "{}://{}:{}{}",
                     self.protocol.discriminant().to_string().to_lowercase(),
                     ip,
-                    self.port_base.number(),
+                    self.port_type.number(),
                     self.path
                 )
             }
@@ -104,7 +104,7 @@ impl Display for Endpoint {
                     f,
                     "{}://<unresolved>:{}{}",
                     self.protocol.discriminant().to_string().to_lowercase(),
-                    self.port_base.number(),
+                    self.port_type.number(),
                     self.path
                 )
             }
@@ -115,7 +115,7 @@ impl Display for Endpoint {
 impl PartialEq for Endpoint {
     fn eq(&self, other: &Self) -> bool {
         self.protocol == other.protocol
-            && self.port_base.number() == other.port_base.number()
+            && self.port_type.number() == other.port_type.number()
             && self.path == other.path
     }
 }
@@ -123,7 +123,7 @@ impl PartialEq for Endpoint {
 impl Hash for Endpoint {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.protocol.hash(state);
-        self.port_base.hash(state);
+        self.port_type.hash(state);
         self.path.hash(state);
     }
 }

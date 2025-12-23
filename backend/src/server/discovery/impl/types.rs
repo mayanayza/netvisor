@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::shared::entities::EntityDiscriminants;
@@ -22,18 +23,19 @@ use crate::server::{
     IntoStaticStr,
     EnumDiscriminants,
     EnumIter,
+    ToSchema,
 )]
 #[serde(tag = "type")]
 pub enum DiscoveryType {
-    SelfReport {
-        host_id: Uuid,
-    },
-    // None = all interfaced subnets
+    #[schema(title = "SelfReport")]
+    SelfReport { host_id: Uuid },
+    #[schema(title = "Network")]
     Network {
         subnet_ids: Option<Vec<Uuid>>,
         #[serde(default)]
         host_naming_fallback: HostNamingFallback,
     },
+    #[schema(title = "Docker")]
     Docker {
         host_id: Uuid,
         #[serde(default)]
@@ -59,7 +61,7 @@ impl Display for DiscoveryType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default)]
+#[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default, ToSchema)]
 pub enum HostNamingFallback {
     Ip,
     #[default]

@@ -4,6 +4,8 @@ use chrono::Utc;
 use std::{fmt::Display, sync::Arc};
 use uuid::Uuid;
 
+use std::collections::HashMap;
+
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
     shared::{
@@ -13,6 +15,7 @@ use crate::server::{
             types::{EntityEvent, EntityOperation},
         },
         storage::{
+            child::ChildStorableEntity,
             filter::EntityFilter,
             generic::GenericPostgresStorage,
             traits::{StorableEntity, Storage},
@@ -242,6 +245,51 @@ where
         }
 
         // Delete all matching entities
+        self.storage().delete_by_filter(filter).await
+    }
+}
+
+/// Extension trait for services that manage child entities.
+/// Provides parent-based query methods using the entity's ChildStorableEntity implementation.
+#[async_trait]
+pub trait ChildCrudService<T>: CrudService<T>
+where
+    T: ChildStorableEntity
+        + StorableEntity
+        + Into<Entity>
+        + Default
+        + Display
+        + ChangeTriggersTopologyStaleness<T>,
+{
+    /// Get all entities for a single parent
+    async fn get_for_parent(&self, parent_id: &Uuid) -> Result<Vec<T>, anyhow::Error> {
+        let filter = EntityFilter::unfiltered().uuid_column(T::parent_column(), parent_id);
+        self.get_all(filter).await
+    }
+
+    /// Get entities for multiple parents, grouped by parent_id
+    async fn get_for_parents(
+        &self,
+        parent_ids: &[Uuid],
+    ) -> Result<HashMap<Uuid, Vec<T>>, anyhow::Error> {
+        if parent_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let filter = EntityFilter::unfiltered().uuid_columns(T::parent_column(), parent_ids);
+        let entities = self.get_all(filter).await?;
+
+        let mut result: HashMap<Uuid, Vec<T>> = HashMap::new();
+        for entity in entities {
+            result.entry(entity.parent_id()).or_default().push(entity);
+        }
+
+        Ok(result)
+    }
+
+    /// Delete all entities for a parent
+    async fn delete_for_parent(&self, parent_id: &Uuid) -> Result<usize, anyhow::Error> {
+        let filter = EntityFilter::unfiltered().uuid_column(T::parent_column(), parent_id);
         self.storage().delete_by_filter(filter).await
     }
 }

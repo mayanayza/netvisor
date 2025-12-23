@@ -176,8 +176,12 @@
 		const binding: PortBinding = {
 			type: 'Port',
 			id: uuidv4(),
+			service_id: service.id,
+			network_id: service.network_id,
 			port_id: firstAvailable.port.id,
-			interface_id: firstAvailable.iface.id
+			interface_id: firstAvailable.iface.id,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString()
 		};
 
 		onChange({
@@ -241,7 +245,12 @@
 		const binding: InterfaceBinding = {
 			type: 'Interface',
 			id: uuidv4(),
-			interface_id: firstAvailable.id
+			service_id: service.id,
+			network_id: service.network_id,
+			interface_id: firstAvailable.id,
+			port_id: null,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString()
 		};
 
 		onChange({

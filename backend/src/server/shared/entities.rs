@@ -1,6 +1,7 @@
-use crate::server::hosts::r#impl::interfaces::Interface;
-use crate::server::hosts::r#impl::ports::Port;
+use crate::server::bindings::r#impl::base::Binding;
+use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::invites::r#impl::base::Invite;
+use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
 use crate::server::shares::r#impl::base::Share;
 use crate::server::subnets::r#impl::base::Subnet;
@@ -53,11 +54,12 @@ pub enum Entity {
     Host(Host),
     Service(Service),
     Port(Port),
+    Binding(Binding),
     Interface(Interface),
 
     Subnet(Subnet),
     Group(Group),
-    Topology(Topology),
+    Topology(Box<Topology>),
 }
 
 impl HasId for EntityDiscriminants {
@@ -83,6 +85,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Service => "purple",
             EntityDiscriminants::Interface => "cyan",
             EntityDiscriminants::Port => "cyan",
+            EntityDiscriminants::Binding => "purple",
 
             EntityDiscriminants::Subnet => "orange",
             EntityDiscriminants::Group => "rose",
@@ -105,6 +108,7 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Service => "Layers",
             EntityDiscriminants::Interface => "Binary",
             EntityDiscriminants::Port => "EthernetPort",
+            EntityDiscriminants::Binding => "Link",
             EntityDiscriminants::Subnet => "Network",
             EntityDiscriminants::Group => "Group",
             EntityDiscriminants::Topology => "ChartNetwork",
@@ -178,6 +182,12 @@ impl From<Port> for Entity {
     }
 }
 
+impl From<Binding> for Entity {
+    fn from(value: Binding) -> Self {
+        Self::Binding(value)
+    }
+}
+
 impl From<Interface> for Entity {
     fn from(value: Interface) -> Self {
         Self::Interface(value)
@@ -198,7 +208,7 @@ impl From<Group> for Entity {
 
 impl From<Topology> for Entity {
     fn from(value: Topology) -> Self {
-        Self::Topology(value)
+        Self::Topology(Box::new(value))
     }
 }
 

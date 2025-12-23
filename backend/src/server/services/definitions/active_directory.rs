@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -19,9 +19,9 @@ impl ServiceDefinition for ActiveDirectory {
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
-            Pattern::Port(PortBase::Ldap),
-            Pattern::Port(PortBase::Samba),
-            Pattern::Port(PortBase::Kerberos),
+            Pattern::Port(PortType::Ldap),
+            Pattern::Port(PortType::Samba),
+            Pattern::Port(PortType::Kerberos),
         ])
     }
     fn logo_url(&self) -> &'static str {

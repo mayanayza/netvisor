@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -21,10 +21,10 @@ impl ServiceDefinition for PfBlockerNg {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::AllOf(vec![
-                Pattern::Port(PortBase::DnsTcp),
-                Pattern::Port(PortBase::DnsUdp),
+                Pattern::Port(PortType::DnsTcp),
+                Pattern::Port(PortType::DnsUdp),
             ]),
-            Pattern::Endpoint(PortBase::Http, "/pfblockerng", "pfblockerng", None),
+            Pattern::Endpoint(PortType::Http, "/pfblockerng", "pfblockerng", None),
         ])
     }
 

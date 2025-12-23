@@ -2,7 +2,8 @@ use uuid::Uuid;
 
 use crate::server::{
     groups::r#impl::base::Group,
-    hosts::r#impl::{base::Host, interfaces::Interface, virtualization::HostVirtualization},
+    hosts::r#impl::{base::Host, virtualization::HostVirtualization},
+    interfaces::r#impl::base::Interface,
     services::r#impl::{
         base::Service, definitions::ServiceDefinitionExt, virtualization::ServiceVirtualization,
     },
@@ -18,6 +19,7 @@ use crate::server::{
 /// Provides topology-specific business logic and data access
 pub struct TopologyContext<'a> {
     pub hosts: &'a [Host],
+    pub interfaces: &'a [Interface],
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
     pub groups: &'a [Group],
@@ -27,6 +29,7 @@ pub struct TopologyContext<'a> {
 impl<'a> TopologyContext<'a> {
     pub fn new(
         hosts: &'a [Host],
+        interfaces: &'a [Interface],
         subnets: &'a [Subnet],
         services: &'a [Service],
         groups: &'a [Group],
@@ -34,6 +37,7 @@ impl<'a> TopologyContext<'a> {
     ) -> Self {
         Self {
             hosts,
+            interfaces,
             subnets,
             services,
             groups,
@@ -58,9 +62,38 @@ impl<'a> TopologyContext<'a> {
     }
 
     pub fn get_interface_by_id(&self, interface_id: Option<Uuid>) -> Option<&'a Interface> {
-        self.hosts
+        let id = interface_id?;
+        self.interfaces.iter().find(|i| i.id == id)
+    }
+
+    pub fn get_interfaces_for_host(&self, host_id: Uuid) -> Vec<&'a Interface> {
+        self.interfaces
             .iter()
-            .find_map(|h| h.get_interface(&interface_id))
+            .filter(|i| i.base.host_id == host_id)
+            .collect()
+    }
+
+    pub fn get_services_for_host(&self, host_id: Uuid) -> Vec<&'a Service> {
+        self.services
+            .iter()
+            .filter(|s| s.base.host_id == host_id)
+            .collect()
+    }
+
+    /// Get the first non-docker-bridge interface for a host
+    pub fn get_first_non_docker_bridge_interface_for_host(
+        &self,
+        host_id: Uuid,
+    ) -> Option<&'a Interface> {
+        self.interfaces.iter().find(|interface| {
+            if interface.base.host_id != host_id {
+                return false;
+            }
+            if let Some(subnet) = self.get_subnet_by_id(interface.base.subnet_id) {
+                return !subnet.base.subnet_type.is_docker_bridge();
+            }
+            false
+        })
     }
 
     pub fn get_services_bound_to_interface(&self, interface_id: Uuid) -> Vec<&'a Service> {
@@ -75,18 +108,13 @@ impl<'a> TopologyContext<'a> {
     }
 
     pub fn get_subnet_from_interface_id(&self, interface_id: Uuid) -> Option<&'a Subnet> {
-        let interface = self
-            .hosts
-            .iter()
-            .find_map(|h| h.base.interfaces.iter().find(|i| i.id == interface_id))?;
-
+        let interface = self.interfaces.iter().find(|i| i.id == interface_id)?;
         self.get_subnet_by_id(interface.base.subnet_id)
     }
 
     pub fn get_host_from_interface_id(&self, interface_id: Uuid) -> Option<&'a Host> {
-        self.hosts
-            .iter()
-            .find(|h| h.base.interfaces.iter().any(|i| i.id == interface_id))
+        let interface = self.interfaces.iter().find(|i| i.id == interface_id)?;
+        self.hosts.iter().find(|h| h.id == interface.base.host_id)
     }
 
     // ============================================================================
@@ -138,6 +166,7 @@ impl<'a> TopologyContext<'a> {
             .iter()
             .filter(|s| {
                 if let Some(host) = self.hosts.iter().find(|h| h.id == s.base.host_id) {
+                    let host_interfaces = self.get_interfaces_for_host(host.id);
                     return (self
                         .options
                         .request
@@ -145,7 +174,7 @@ impl<'a> TopologyContext<'a> {
                         .contains(&s.base.service_definition.category())
                         || (self.options.request.show_gateway_in_left_zone
                             && s.base.service_definition.is_gateway()))
-                        && subnet.has_interface_with_service(host, s);
+                        && subnet.has_interface_with_service(&host_interfaces, s);
                 }
                 false
             })
@@ -168,9 +197,8 @@ impl<'a> TopologyContext<'a> {
 
         // Get all interfaces in this subnet
         let all_interfaces_in_subnet: Vec<Uuid> = self
-            .hosts
+            .interfaces
             .iter()
-            .flat_map(|h| &h.base.interfaces)
             .filter(|i| i.base.subnet_id == subnet.id)
             .map(|i| i.id)
             .collect();

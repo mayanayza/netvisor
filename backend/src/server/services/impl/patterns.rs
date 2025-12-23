@@ -19,18 +19,19 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::{net::IpAddr, ops::Range};
 use strum_macros::{Display, EnumDiscriminants, IntoStaticStr};
+use utoipa::ToSchema;
 
-use crate::server::{hosts::r#impl::ports::PortBase, services::r#impl::endpoints::Endpoint};
+use crate::server::{ports::r#impl::base::PortType, services::r#impl::endpoints::Endpoint};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct MatchResult {
-    pub ports: Vec<PortBase>,
+    pub ports: Vec<PortType>,
     pub endpoint: Option<Endpoint>,
     pub mac_vendor: Option<String>,
     pub details: MatchDetails,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct MatchDetails {
     pub reason: MatchReason,
     pub confidence: MatchConfidence,
@@ -61,7 +62,30 @@ pub enum MatchReason {
     Container(String, Vec<MatchReason>),
 }
 
-#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+/// Manual ToSchema for MatchReason since internally-tagged enums with tuple variants aren't supported
+impl utoipa::PartialSchema for MatchReason {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::Schema> {
+        use utoipa::openapi::schema::ObjectBuilder;
+        use utoipa::openapi::{RefOr, Schema};
+
+        // Just represent as a generic object with type discriminator
+        RefOr::T(Schema::Object(
+            ObjectBuilder::new()
+                .property("type", ObjectBuilder::new().build())
+                .property("data", ObjectBuilder::new().build())
+                .description(Some("Match reason with type discriminator"))
+                .build(),
+        ))
+    }
+}
+
+impl utoipa::ToSchema for MatchReason {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("MatchReason")
+    }
+}
+
+#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, ToSchema)]
 pub enum MatchConfidence {
     NotApplicable = 0,
     Low = 1,
@@ -95,21 +119,21 @@ pub enum Pattern<'a> {
     Not(Box<Pattern<'a>>),
 
     /// Whether or not a specific port is open on the host
-    Port(PortBase),
+    Port(PortType),
 
     /// Whether or not an endpoint provided a specific response
-    /// PortBase
+    /// PortType
     /// path: &str - ie "/", "/admin", etc
     /// body response: &str - String to match on in response
     /// status_code: optional, defaults to 199..400 (any ok or redirect)
-    Endpoint(PortBase, &'a str, &'a str, Option<Range<u16>>),
+    Endpoint(PortType, &'a str, &'a str, Option<Range<u16>>),
 
     /// Whether or not reseponse headers from the host
-    /// PortBase: If provided, check headers on a response from the specific port. Otherwise, use any port.
+    /// PortType: If provided, check headers on a response from the specific port. Otherwise, use any port.
     /// header: &str - Header name
     /// value: &str - string to match on in value
     /// status_code: optional, defaults to 200..300 (any ok or redirect)
-    Header(Option<PortBase>, &'a str, &'a str, Option<Range<u16>>),
+    Header(Option<PortType>, &'a str, &'a str, Option<Range<u16>>),
 
     /// Whether the subnet that the host was found on matches a subnet type
     SubnetIsType(SubnetType),
@@ -127,7 +151,7 @@ pub enum Pattern<'a> {
     /// MatchConfdence - confidence level that match uniquely identifies service
     Custom(
         fn(&DiscoverySessionServiceMatchParams) -> bool,
-        fn(&DiscoverySessionServiceMatchParams) -> Vec<PortBase>,
+        fn(&DiscoverySessionServiceMatchParams) -> Vec<PortType>,
         &'a str,
         &'a str,
         MatchConfidence,
@@ -297,7 +321,7 @@ impl Pattern<'_> {
         match self {
             Pattern::Port(port_base) => {
                 if let Some(matched_port) = unbound_ports.iter().find(|p| **p == *port_base) {
-                    let mut all_other_services_ports: Vec<PortBase> =
+                    let mut all_other_services_ports: Vec<PortType> =
                         ServiceDefinitionRegistry::all_service_definitions()
                             .iter()
                             .filter(|s| s.id() != service_definition.id())
@@ -346,7 +370,7 @@ impl Pattern<'_> {
                     .iter()
                     .filter(|actual| {
                         let is_same_endpoint = port_base
-                            .map(|p| actual.endpoint.port_base == p)
+                            .map(|p| actual.endpoint.port_type == p)
                             .unwrap_or(true);
 
                         let expected_range =
@@ -395,7 +419,7 @@ impl Pattern<'_> {
 
                 match match_result {
                     Some((response, reason)) => Ok(MatchResult {
-                        ports: vec![response.endpoint.port_base],
+                        ports: vec![response.endpoint.port_type],
                         endpoint: Some(response.endpoint.clone()),
                         mac_vendor: None,
                         details: MatchDetails {
@@ -425,8 +449,8 @@ impl Pattern<'_> {
                         // Compare number + protocol instead of port_base and port_base 
                         // because ports are dynamically recreated during discovery 
                         // and named enums like Http9000 won't match new_tcp(9000)
-                            && actual.endpoint.port_base.number() == endpoint.port_base.number()
-                            && actual.endpoint.port_base.protocol() == endpoint.port_base.protocol()
+                            && actual.endpoint.port_type.number() == endpoint.port_type.number()
+                            && actual.endpoint.port_type.protocol() == endpoint.port_type.protocol()
                             && actual.endpoint.path == endpoint.path;
 
                         let expected_range =
@@ -471,7 +495,7 @@ impl Pattern<'_> {
 
                 match match_result {
                     Some((response, reason)) => Ok(MatchResult {
-                        ports: vec![response.endpoint.port_base],
+                        ports: vec![response.endpoint.port_type],
                         endpoint: Some(response.endpoint.clone()),
                         mac_vendor: None,
                         details: MatchDetails {
@@ -787,7 +811,7 @@ impl Pattern<'_> {
     /// Get all ports which need to be scanned for a given service's match pattern
     /// This skips ports from endpoints/headers because we don't want to scan a port if it's just being used in an endpoint (unnecessary network request)
     /// There's logic to add any endpoint-specific ports into scanning in scan_ports_and_endpoints and the docker discovery equivalent
-    pub fn ports(&self) -> Vec<PortBase> {
+    pub fn ports(&self) -> Vec<PortType> {
         match self {
             Pattern::Port(port) => vec![*port],
             Pattern::AnyOf(patterns) | Pattern::AllOf(patterns) => {
@@ -813,7 +837,7 @@ impl Pattern<'_> {
                 } else {
                     // Port-agnostic header check - needs at least one endpoint
                     // Return a default HTTP endpoint to ensure something gets scanned
-                    vec![Endpoint::for_pattern(PortBase::Http, "/")]
+                    vec![Endpoint::for_pattern(PortType::Http, "/")]
                 }
             }
             Pattern::AnyOf(patterns) | Pattern::AllOf(patterns) => patterns
@@ -849,7 +873,8 @@ mod tests {
 
     use crate::{
         server::{
-            hosts::r#impl::{interfaces::Interface, ports::PortBase},
+            interfaces::r#impl::base::Interface,
+            ports::r#impl::base::PortType,
             services::{
                 definitions::ServiceDefinitionRegistry,
                 r#impl::{
@@ -886,7 +911,7 @@ mod tests {
             let organization = organization();
             let network = network(&organization.id);
             let subnet = subnet(&network.id);
-            let interface = interface(&subnet.id);
+            let interface = interface(&network.id, &subnet.id);
             let pi = ServiceDefinitionRegistry::find_by_id("Pi-Hole")
                 .expect("Pi-hole service not found");
 
@@ -918,7 +943,7 @@ mod tests {
         fn create_params_with_ports<'a>(
             &'a self,
             baseline_params: &'a ServiceMatchBaselineParams<'a>,
-            unbound_ports: &'a Vec<PortBase>,
+            unbound_ports: &'a Vec<PortType>,
         ) -> DiscoverySessionServiceMatchParams<'a> {
             DiscoverySessionServiceMatchParams {
                 host_id: &self.host_id,
@@ -937,7 +962,7 @@ mod tests {
 
         fn create_baseline_params<'a>(
             &'a self,
-            all_ports: &'a Vec<PortBase>,
+            all_ports: &'a Vec<PortType>,
         ) -> ServiceMatchBaselineParams<'a> {
             ServiceMatchBaselineParams {
                 subnet: &self.subnet,
@@ -953,7 +978,7 @@ mod tests {
     fn test_pattern_port_matching() {
         let ctx = TestContext::new();
 
-        let ports = vec![PortBase::DnsUdp, PortBase::DnsTcp];
+        let ports = vec![PortType::DnsUdp, PortType::DnsTcp];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let pattern = ctx.pi.discovery_pattern();
@@ -965,7 +990,7 @@ mod tests {
         );
 
         // Test with wrong port - should not match
-        let ports = vec![PortBase::new_tcp(80)];
+        let ports = vec![PortType::new_tcp(80)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let pattern = ctx.pi.discovery_pattern();
@@ -979,11 +1004,11 @@ mod tests {
         let ctx = TestContext::new();
 
         let pattern = Pattern::AllOf(vec![
-            Pattern::Port(PortBase::new_tcp(80)),
-            Pattern::Port(PortBase::new_tcp(443)),
+            Pattern::Port(PortType::new_tcp(80)),
+            Pattern::Port(PortType::new_tcp(443)),
         ]);
 
-        let ports = vec![PortBase::new_tcp(80), PortBase::new_tcp(443)];
+        let ports = vec![PortType::new_tcp(80), PortType::new_tcp(443)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);
@@ -994,7 +1019,7 @@ mod tests {
         );
 
         // Test with only one port - should not match
-        let ports = vec![PortBase::new_tcp(80)];
+        let ports = vec![PortType::new_tcp(80)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);
@@ -1005,7 +1030,7 @@ mod tests {
         );
 
         // Test with neither port - should not match
-        let ports = vec![PortBase::new_tcp(22)];
+        let ports = vec![PortType::new_tcp(22)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);
@@ -1022,32 +1047,32 @@ mod tests {
 
         // Create OR pattern for database ports (MySQL or PostgreSQL)
         let pattern = Pattern::AnyOf(vec![
-            Pattern::Port(PortBase::new_tcp(3306)), // MySQL
-            Pattern::Port(PortBase::new_tcp(5432)), // PostgreSQL
+            Pattern::Port(PortType::new_tcp(3306)), // MySQL
+            Pattern::Port(PortType::new_tcp(5432)), // PostgreSQL
         ]);
 
-        let ports = vec![PortBase::new_tcp(3306)];
+        let ports = vec![PortType::new_tcp(3306)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);
         assert!(result.is_ok(), "OR pattern should match MySQL port");
 
         // Test with PostgreSQL port - should match
-        let ports = vec![PortBase::new_tcp(5432)];
+        let ports = vec![PortType::new_tcp(5432)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);
         assert!(result.is_ok(), "OR pattern should match PostgreSQL port");
 
         // Test with both ports - should match
-        let ports = vec![PortBase::new_tcp(3306), PortBase::new_tcp(5432)];
+        let ports = vec![PortType::new_tcp(3306), PortType::new_tcp(5432)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);
         assert!(result.is_ok(), "OR pattern should match with both ports");
 
         // Test with neither port - should not match
-        let ports = vec![PortBase::new_tcp(22)];
+        let ports = vec![PortType::new_tcp(22)];
         let baseline = ctx.create_baseline_params(&ports);
         let params = ctx.create_params_with_ports(&baseline, &ports);
         let result = pattern.matches(&params);

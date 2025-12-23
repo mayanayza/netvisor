@@ -5,28 +5,32 @@ use chrono::DateTime;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumDiscriminants;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash, EnumDiscriminants)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Eq, PartialEq, Hash, EnumDiscriminants, ToSchema)]
 #[strum_discriminants(derive(Hash))]
 #[serde(tag = "type")]
 pub enum EntitySource {
+    #[schema(title = "Manual")]
     Manual,
     #[default]
+    #[schema(title = "System")]
     System,
-    // Used with hosts and subnets
+    #[schema(title = "Discovery")]
     Discovery {
         metadata: Vec<DiscoveryMetadata>,
     },
-    // Only used with services
+    #[schema(title = "DiscoveryWithMatch")]
     DiscoveryWithMatch {
         metadata: Vec<DiscoveryMetadata>,
         details: MatchDetails,
     },
+    #[schema(title = "Unknown")]
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema)]
 pub struct DiscoveryMetadata {
     #[serde(flatten)]
     pub discovery_type: DiscoveryType,

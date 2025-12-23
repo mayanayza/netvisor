@@ -2,11 +2,14 @@ use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumDiscriminants, EnumIter, IntoStaticStr};
-use uuid::Uuid;
+use utoipa::ToSchema;
 
+/// Group type determines the visual representation and behavior of the group.
+/// Binding IDs are stored separately in GroupBase.binding_ids.
 #[derive(
     Debug,
     Clone,
+    Copy,
     Serialize,
     Deserialize,
     Hash,
@@ -15,25 +18,15 @@ use uuid::Uuid;
     EnumIter,
     IntoStaticStr,
     EnumDiscriminants,
+    Default,
+    ToSchema,
 )]
-#[strum_discriminants(derive(IntoStaticStr, EnumIter, Hash, Deserialize, Serialize, Default))]
-#[serde(tag = "group_type")]
+#[strum_discriminants(derive(IntoStaticStr, EnumIter, Hash, Deserialize, Serialize))]
+#[serde(rename_all = "PascalCase")]
 pub enum GroupType {
-    #[strum_discriminants(default)]
-    RequestPath {
-        service_bindings: Vec<Uuid>,
-    },
-    HubAndSpoke {
-        service_bindings: Vec<Uuid>,
-    },
-}
-
-impl Default for GroupType {
-    fn default() -> Self {
-        Self::RequestPath {
-            service_bindings: Vec::new(),
-        }
-    }
+    #[default]
+    RequestPath,
+    HubAndSpoke,
 }
 
 impl HasId for GroupTypeDiscriminants {

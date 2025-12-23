@@ -19,12 +19,14 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
+use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct UserService {
     user_storage: Arc<GenericPostgresStorage<User>>,
     event_bus: Arc<EventBus>,
+    pool: PgPool,
 }
 
 impl EventBusService<User> for UserService {
@@ -85,10 +87,15 @@ impl CrudService<User> for UserService {
 }
 
 impl UserService {
-    pub fn new(user_storage: Arc<GenericPostgresStorage<User>>, event_bus: Arc<EventBus>) -> Self {
+    pub fn new(
+        user_storage: Arc<GenericPostgresStorage<User>>,
+        event_bus: Arc<EventBus>,
+        pool: PgPool,
+    ) -> Self {
         Self {
             user_storage,
             event_bus,
+            pool,
         }
     }
 
@@ -103,5 +110,60 @@ impl UserService {
             .user_permissions(&UserOrgPermissions::Owner);
 
         self.user_storage.get_all(filter).await
+    }
+
+    /// Get network_ids for a user from the user_network_access junction table
+    pub async fn get_network_ids(&self, user_id: &Uuid) -> Result<Vec<Uuid>> {
+        let network_ids: Vec<Uuid> =
+            sqlx::query_scalar("SELECT network_id FROM user_network_access WHERE user_id = $1")
+                .bind(user_id)
+                .fetch_all(&self.pool)
+                .await?;
+
+        Ok(network_ids)
+    }
+
+    /// Set network_ids for a user - replaces all existing entries in user_network_access
+    pub async fn set_network_ids(&self, user_id: &Uuid, network_ids: &[Uuid]) -> Result<()> {
+        // Delete existing entries
+        sqlx::query("DELETE FROM user_network_access WHERE user_id = $1")
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        // Insert new entries
+        for network_id in network_ids {
+            sqlx::query("INSERT INTO user_network_access (user_id, network_id) VALUES ($1, $2)")
+                .bind(user_id)
+                .bind(network_id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Add a network_id to a user's access
+    pub async fn add_network_access(&self, user_id: &Uuid, network_id: &Uuid) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO user_network_access (user_id, network_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        )
+        .bind(user_id)
+        .bind(network_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Remove a network_id from a user's access
+    pub async fn remove_network_access(&self, user_id: &Uuid, network_id: &Uuid) -> Result<()> {
+        sqlx::query("DELETE FROM user_network_access WHERE user_id = $1 AND network_id = $2")
+            .bind(user_id)
+            .bind(network_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
     }
 }

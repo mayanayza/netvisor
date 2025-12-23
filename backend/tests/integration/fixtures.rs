@@ -2,6 +2,7 @@ use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::services::r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt};
 use scanopy::server::shared::types::metadata::EntityMetadataProvider;
 
+/// Generate all fixtures (requires Docker containers to be running)
 pub async fn generate_fixtures() {
     generate_db_fixture()
         .await
@@ -18,6 +19,9 @@ pub async fn generate_fixtures() {
     generate_billing_plans_json()
         .await
         .expect("Failed to generate billing and features json");
+
+    // Note: OpenAPI spec is generated separately via:
+    // cargo test generate_openapi_spec -- --ignored --nocapture
 
     println!("✅ Generated test fixtures");
 }

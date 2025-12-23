@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -20,12 +20,12 @@ impl ServiceDefinition for Kubernetes {
 
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
-            Pattern::Port(PortBase::Kubernetes),
+            Pattern::Port(PortType::Kubernetes),
             Pattern::AnyOf(vec![
-                Pattern::Port(PortBase::new_tcp(10250)),
-                Pattern::Port(PortBase::new_tcp(10259)),
-                Pattern::Port(PortBase::new_tcp(10257)),
-                Pattern::Port(PortBase::new_tcp(10256)),
+                Pattern::Port(PortType::new_tcp(10250)),
+                Pattern::Port(PortType::new_tcp(10259)),
+                Pattern::Port(PortType::new_tcp(10257)),
+                Pattern::Port(PortType::new_tcp(10256)),
             ]),
         ])
     }

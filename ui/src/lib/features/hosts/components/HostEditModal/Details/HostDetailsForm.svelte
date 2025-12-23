@@ -6,8 +6,7 @@
 		hostname as hostnameValidator,
 		maxLength
 	} from '$lib/shared/components/forms/validators';
-	import TargetConfigForm from './TargetConfigForm.svelte';
-	import type { FormApi, FormType } from '$lib/shared/components/forms/types';
+	import type { FormApi } from '$lib/shared/components/forms/types';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
@@ -16,7 +15,6 @@
 
 	export let host: Host | null = null;
 	export let formApi: FormApi;
-	export let form: FormType;
 	export let formData: Host;
 	export let isEditing: boolean;
 
@@ -66,8 +64,6 @@
 	/>
 
 	<TagPicker bind:selectedTagIds={formData.tags} />
-
-	<TargetConfigForm {form} {formData} />
 
 	{#if isEditing}
 		<EntityMetadataSection entities={[host]} />

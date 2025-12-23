@@ -45,16 +45,15 @@ use crate::{
     server::{
         daemons::r#impl::api::{DaemonDiscoveryRequest, DiscoveryUpdatePayload},
         hosts::r#impl::{
-            api::HostWithServicesRequest,
+            api::{DiscoveryHostRequest, HostResponse},
             base::{Host, HostBase},
-            ports::{Port, PortBase},
-            targets::HostTarget,
         },
+        interfaces::r#impl::base::Interface,
+        ports::r#impl::base::{Port, PortType},
         services::{
             definitions::{ServiceDefinitionRegistry, gateway::Gateway},
             r#impl::{
                 base::Service,
-                bindings::Binding,
                 definitions::{ServiceDefinition, ServiceDefinitionExt},
             },
         },
@@ -376,7 +375,7 @@ pub trait DiscoversNetworkedEntities:
         params: ServiceMatchBaselineParams<'a>,
         hostname: Option<String>,
         host_naming_fallback: HostNamingFallback,
-    ) -> Result<Option<(Host, Vec<Service>)>, Error> {
+    ) -> Result<Option<(Host, Vec<Interface>, Vec<Port>, Vec<Service>)>, Error> {
         let ServiceMatchBaselineParams::<'a> { interface, .. } = params;
 
         let daemon_id = self.as_ref().config_store.get_id().await?;
@@ -391,17 +390,13 @@ pub trait DiscoversNetworkedEntities:
         let gateway_ips = session.gateway_ips.clone();
         let discovery_type = self.discovery_type();
 
-        // Create host
+        // Create host - children (interfaces, ports, services) are passed separately
         let mut host = Host::new(HostBase {
             name: "Unknown Device".to_string(),
             hostname: hostname.clone(),
-            target: HostTarget::None,
             tags: Vec::new(),
             network_id,
             description: None,
-            interfaces: vec![interface.clone()],
-            services: Vec::new(),
-            ports: Vec::new(),
             source: EntitySource::Discovery {
                 metadata: vec![DiscoveryMetadata::new(discovery_type.clone(), daemon_id)],
             },
@@ -409,8 +404,11 @@ pub trait DiscoversNetworkedEntities:
             hidden: false,
         });
 
-        let services = self.discover_services(
-            &mut host,
+        // Store interfaces separately to pass to server
+        let interfaces = vec![interface.clone()];
+
+        let (services, ports) = self.discover_services(
+            &host,
             &params,
             &gateway_ips,
             &daemon_id,
@@ -426,9 +424,6 @@ pub trait DiscoversNetworkedEntities:
 
         if let Some(hostname) = hostname {
             host.base.name = hostname;
-            if host.base.target == HostTarget::None {
-                host.base.target = HostTarget::Hostname
-            }
         } else if host_naming_fallback == HostNamingFallback::BestService
             && let Some(best_service_name) = best_service_name
         {
@@ -445,23 +440,25 @@ pub trait DiscoversNetworkedEntities:
             ip = %interface.base.ip_address,
             host_name = %host.base.name,
             service_count = %services.len(),
+            port_count = %ports.len(),
             "Processed host",
         );
-        Ok(Some((host, services)))
+        Ok(Some((host, interfaces, ports, services)))
     }
 
     fn discover_services(
         &self,
-        host: &mut Host,
+        host: &Host,
         baseline_params: &ServiceMatchBaselineParams,
         gateway_ips: &[IpAddr],
         daemon_id: &Uuid,
         network_id: &Uuid,
         discovery_type: &DiscoveryType,
-    ) -> Result<Vec<Service>, Error> {
+    ) -> Result<(Vec<Service>, Vec<Port>), Error> {
         let ServiceMatchBaselineParams { all_ports, .. } = baseline_params;
 
         let mut services = Vec::new();
+        let mut host_ports = Vec::new();
 
         // Track which ports are bound vs open for services to bind to
         let mut unbound_ports = all_ports.to_vec();
@@ -508,28 +505,9 @@ pub trait DiscoversNetworkedEntities:
                     host_id: &host.id,
                 };
 
-            if let Some((service, mut ports, endpoint)) = Service::from_discovery(params)
+            if let Some((service, mut ports, _endpoint)) = Service::from_discovery(params)
                 && !container_matched
             {
-                // If there's a endpoint match + host target is hostname or none, use a binding as the host target
-                if let (Some(binding), true) = (
-                    service.base.bindings.iter().find(|b| {
-                        match b {
-                            Binding::Interface { .. } => false,
-                            Binding::Port { port_id, .. } => {
-                                if let Some(port) = host.get_port(port_id) {
-                                    return endpoint.iter().any(|e| e.port_base == port.base);
-                                }
-                                false
-                            }
-                        };
-                        false
-                    }),
-                    matches!(host.base.target, HostTarget::Hostname | HostTarget::None),
-                ) {
-                    host.base.target = HostTarget::ServiceBinding(binding.id())
-                }
-
                 // If a container was matched w the provided virtualization, no others can be matched
                 if let Some(ServiceVirtualization::Docker(DockerVirtualization {
                     container_id: Some(_),
@@ -540,12 +518,13 @@ pub trait DiscoversNetworkedEntities:
                 }
 
                 // Add any bound ports to host ports array, remove from open ports
-                let bound_port_bases: Vec<PortBase> = ports.iter().map(|p| p.base).collect();
+                let bound_port_types: Vec<PortType> =
+                    ports.iter().map(|p| p.base.port_type).collect();
 
-                host.base.ports.append(&mut ports);
+                host_ports.append(&mut ports);
 
                 // Add new service
-                unbound_ports.retain(|p| !bound_port_bases.contains(p));
+                unbound_ports.retain(|p| !bound_port_types.contains(p));
                 services.push(service);
             }
         }
@@ -564,13 +543,10 @@ pub trait DiscoversNetworkedEntities:
             })
         });
 
-        services.iter().for_each(|s| host.add_service(s.id));
+        // Add unbound ports as hostless ports
+        host_ports.extend(unbound_ports.into_iter().map(Port::new_hostless));
 
-        host.base
-            .ports
-            .extend(unbound_ports.into_iter().map(Port::new));
-
-        Ok(services)
+        Ok((services, host_ports))
     }
 }
 
@@ -585,23 +561,25 @@ pub trait CreatesDiscoveredEntities:
     async fn create_host(
         &self,
         host: Host,
+        interfaces: Vec<Interface>,
+        ports: Vec<Port>,
         services: Vec<Service>,
-    ) -> Result<(Host, Vec<Service>), Error> {
-        let request = HostWithServicesRequest {
+    ) -> Result<HostResponse, Error> {
+        let request = DiscoveryHostRequest {
             host,
-            services: Some(services),
+            interfaces,
+            ports,
+            services,
         };
-        let HostWithServicesRequest { host, services } = self
-            .as_ref()
+        self.as_ref()
             .api_client
             .post_with_retry(
-                "/api/hosts",
+                "/api/hosts/discovery",
                 &request,
                 "Failed to create host",
                 ENTITY_CREATION_MAX_RETRIES,
             )
-            .await?;
-        Ok((host, services.unwrap_or_default()))
+            .await
     }
 
     async fn create_subnet(&self, subnet: &Subnet) -> Result<Subnet, Error> {

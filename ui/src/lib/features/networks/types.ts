@@ -1,14 +1,10 @@
-export interface Network {
-	id: string;
-	created_at: string;
-	updated_at: string;
-	name: string;
-	is_default: boolean;
-	organization_id: string;
-	tags: string[];
-}
+// Re-export generated types from backend
+export type { Network } from '$lib/generated';
 
+import type { Network } from '$lib/generated';
+
+// Frontend-specific types
 export interface CreateNetworkRequest {
-	network: Network;
+	network: Omit<Network, 'id' | 'created_at' | 'updated_at'>;
 	seed_baseline_data: boolean;
 }

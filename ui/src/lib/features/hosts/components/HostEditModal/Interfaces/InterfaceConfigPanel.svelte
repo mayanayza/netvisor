@@ -59,8 +59,8 @@
 		const updatedIface: Interface = {
 			...iface,
 			ip_address: $ipAddressField.value,
-			name: $nameField.value,
-			mac_address: $macAddressField.value || undefined
+			name: $nameField.value || null,
+			mac_address: $macAddressField.value || null
 		};
 
 		// Only trigger onChange if values actually changed

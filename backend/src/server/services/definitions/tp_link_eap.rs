@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -21,7 +21,7 @@ impl ServiceDefinition for TpLinkEap {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::TPLINK),
-            Pattern::Endpoint(PortBase::Http, "/", "tp-link", None),
+            Pattern::Endpoint(PortType::Http, "/", "tp-link", None),
         ])
     }
 

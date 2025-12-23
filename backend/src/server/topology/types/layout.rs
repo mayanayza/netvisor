@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::server::{
-    services::r#impl::{base::Service, bindings::Binding},
+    bindings::r#impl::base::Binding, services::r#impl::base::Service,
     topology::service::planner::utils::NODE_PADDING,
 };
 

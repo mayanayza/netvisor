@@ -23,7 +23,10 @@ use crate::server::{
         },
         services::traits::{CrudService, EventBusService},
         storage::traits::StorableEntity,
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::{
+            api::{ApiError, ApiResponse, ApiResult},
+            entities::EntitySource,
+        },
     },
 };
 use axum::{
@@ -83,18 +86,25 @@ async fn register_daemon(
     tracing::info!("{:?}", request);
 
     // Create a dummy host to return a host_id to the daemon
-    let mut dummy_host = Host::new(HostBase::default());
-    dummy_host.base.network_id = request.network_id;
-    dummy_host.base.name = request.name.clone();
+    let dummy_host = Host::new(HostBase {
+        network_id: request.network_id,
+        name: request.name.clone(),
+        hostname: None,
+        description: None,
+        source: EntitySource::Discovery { metadata: vec![] },
+        virtualization: None,
+        hidden: false,
+        tags: Vec::new(),
+    });
 
-    let (host, _) = state
+    let host_response = state
         .services
         .host_service
-        .create_host_with_services(dummy_host, Vec::new(), auth_daemon.into())
+        .discover_host(dummy_host, vec![], vec![], vec![], auth_daemon.into())
         .await?;
 
     let mut daemon = Daemon::new(DaemonBase {
-        host_id: host.id,
+        host_id: host_response.id,
         network_id: request.network_id,
         url: request.url.clone(),
         capabilities: request.capabilities.clone(),
@@ -146,7 +156,9 @@ async fn register_daemon(
 
     let discovery_service = state.services.discovery_service.clone();
 
-    let self_report_discovery_type = DiscoveryType::SelfReport { host_id: host.id };
+    let self_report_discovery_type = DiscoveryType::SelfReport {
+        host_id: host_response.id,
+    };
 
     let self_report_discovery = discovery_service
         .create_discovery(
@@ -172,7 +184,7 @@ async fn register_daemon(
 
     if request.capabilities.has_docker_socket {
         let docker_discovery_type = DiscoveryType::Docker {
-            host_id: host.id,
+            host_id: host_response.id,
             host_naming_fallback: HostNamingFallback::BestService,
         };
 
@@ -228,7 +240,7 @@ async fn register_daemon(
 
     Ok(Json(ApiResponse::success(DaemonRegistrationResponse {
         daemon: registered_daemon,
-        host_id: host.id,
+        host_id: host_response.id,
     })))
 }
 

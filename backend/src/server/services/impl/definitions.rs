@@ -9,7 +9,11 @@ use dyn_clone::DynClone;
 use dyn_eq::DynEq;
 use dyn_hash::DynHash;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::hash::Hash;
+use utoipa::openapi::schema::{ObjectBuilder, SchemaType};
+use utoipa::openapi::{RefOr, Schema};
+use utoipa::{PartialSchema, ToSchema};
 
 // Main trait used in service definition implementation
 pub trait ServiceDefinition: HasId + DynClone + DynHash + DynEq + Send + Sync {
@@ -214,6 +218,27 @@ impl<'de> Deserialize<'de> for Box<dyn ServiceDefinition> {
                 Ok(Box::new(DefaultServiceDefinition))
             }
         }
+    }
+}
+
+/// OpenAPI schema for Box<dyn ServiceDefinition>
+/// Serializes as a string containing the service definition ID
+impl PartialSchema for Box<dyn ServiceDefinition> {
+    fn schema() -> RefOr<Schema> {
+        use utoipa::openapi::schema::Type;
+
+        RefOr::T(Schema::Object(
+            ObjectBuilder::new()
+                .schema_type(SchemaType::new(Type::String))
+                .description(Some("Service definition ID - references metadata from /api/metadata"))
+                .build(),
+        ))
+    }
+}
+
+impl ToSchema for Box<dyn ServiceDefinition> {
+    fn name() -> Cow<'static, str> {
+        Cow::Borrowed("ServiceDefinitionId")
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -21,17 +21,17 @@ impl ServiceDefinition for HpPrinter {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AllOf(vec![
             Pattern::AnyOf(vec![
-                Pattern::Endpoint(PortBase::Http, "", "LaserJet", None),
-                Pattern::Endpoint(PortBase::Http, "", "DeskJet", None),
-                Pattern::Endpoint(PortBase::Http, "", "OfficeJet", None),
-                Pattern::Endpoint(PortBase::Http8080, "", "LaserJet", None),
-                Pattern::Endpoint(PortBase::Http8080, "", "DeskJet", None),
-                Pattern::Endpoint(PortBase::Http8080, "", "OfficeJet", None),
+                Pattern::Endpoint(PortType::Http, "", "LaserJet", None),
+                Pattern::Endpoint(PortType::Http, "", "DeskJet", None),
+                Pattern::Endpoint(PortType::Http, "", "OfficeJet", None),
+                Pattern::Endpoint(PortType::Http8080, "", "LaserJet", None),
+                Pattern::Endpoint(PortType::Http8080, "", "DeskJet", None),
+                Pattern::Endpoint(PortType::Http8080, "", "OfficeJet", None),
             ]),
             Pattern::AnyOf(vec![
-                Pattern::Port(PortBase::Ipp),
-                Pattern::Port(PortBase::LdpTcp),
-                Pattern::Port(PortBase::LdpUdp),
+                Pattern::Port(PortType::Ipp),
+                Pattern::Port(PortType::LdpTcp),
+                Pattern::Port(PortType::LdpUdp),
             ]),
         ])
     }

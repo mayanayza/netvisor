@@ -40,7 +40,7 @@ tower-http = { version = "0.5", features = ["fs", "cors", "trace", "set-header"]
 tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "net", "time", "fs", "signal", "process"] }
 
 # === Database ===
-sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "ipnetwork", "mac_address"] }
 
 # === Serialization ===
 serde = { version = "1.0", features = ["derive"] }
@@ -56,6 +56,7 @@ thiserror = "1.0"
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream", "rustls-tls", "cookies"] }
 snmp2 = { version = "0.4.8", features = ["tokio"] }
 pnet = "0.35.0"
+ipnetwork = "0.20"
 cidr = { version = "0.3.1", features = ["serde"] }
 if-addrs = "0.14.0"
 dns-lookup = "3.0.0"
@@ -102,7 +103,16 @@ itertools = "0.14.0"
 # === Code Generation and Macros ===
 strum = "0.27.2"
 strum_macros = "0.27.2"
+paste = "1.0"
 inventory = "0.3.21"
+
+# === TypeScript Type Generation ===
+ts-rs = { version = "10", features = ["chrono-impl", "uuid-impl", "serde-json-impl", "no-serde-warnings"] }
+
+# === OpenAPI Documentation ===
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-axum = "0.2"
+utoipa-scalar = { version = "0.3", features = ["axum"] }
 
 # === Utilities ===
 fastrand = "2.3.0"

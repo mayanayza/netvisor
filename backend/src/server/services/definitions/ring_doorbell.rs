@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -24,10 +24,10 @@ impl ServiceDefinition for RingDoorbell {
         Pattern::AllOf(vec![
             Pattern::MacVendor(Vendor::AMAZON),
             Pattern::AnyOf(vec![
-                Pattern::Port(PortBase::new_tcp(8557)),
-                Pattern::Port(PortBase::new_tcp(9998)),
-                Pattern::Port(PortBase::new_tcp(19302)),
-                Pattern::Port(PortBase::new_tcp(9999)),
+                Pattern::Port(PortType::new_tcp(8557)),
+                Pattern::Port(PortType::new_tcp(9998)),
+                Pattern::Port(PortType::new_tcp(19302)),
+                Pattern::Port(PortType::new_tcp(9999)),
             ]),
         ])
     }

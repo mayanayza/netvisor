@@ -7,10 +7,11 @@ use chrono::DateTime;
 use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema)]
 pub struct TagBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -31,7 +32,7 @@ impl Default for TagBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, Default, ToSchema)]
 pub struct Tag {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

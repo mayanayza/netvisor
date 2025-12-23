@@ -25,30 +25,35 @@ impl EdgeBuilder {
     pub fn create_group_edges(ctx: &TopologyContext) -> Vec<Edge> {
         ctx.groups
             .iter()
-            .flat_map(|group| match &group.base.group_type {
-                GroupType::RequestPath { service_bindings } => service_bindings
-                    .windows(2)
-                    .filter_map(|window| {
-                        EdgeBuilder::edge_from_service_bindings(ctx, window[0], window[1], group)
-                    })
-                    .collect::<Vec<Edge>>(),
-                GroupType::HubAndSpoke { service_bindings } => {
-                    let mut service_bindings = service_bindings.clone();
-                    service_bindings.reverse();
-                    if let Some(hub_binding_id) = service_bindings.pop() {
-                        return service_bindings
-                            .iter()
-                            .filter_map(|spoke_binding| {
-                                EdgeBuilder::edge_from_service_bindings(
-                                    ctx,
-                                    hub_binding_id,
-                                    *spoke_binding,
-                                    group,
-                                )
-                            })
-                            .collect::<Vec<Edge>>();
+            .flat_map(|group| {
+                let binding_ids = &group.base.binding_ids;
+                match &group.base.group_type {
+                    GroupType::RequestPath => binding_ids
+                        .windows(2)
+                        .filter_map(|window| {
+                            EdgeBuilder::edge_from_service_bindings(
+                                ctx, window[0], window[1], group,
+                            )
+                        })
+                        .collect::<Vec<Edge>>(),
+                    GroupType::HubAndSpoke => {
+                        let mut binding_ids = binding_ids.clone();
+                        binding_ids.reverse();
+                        if let Some(hub_binding_id) = binding_ids.pop() {
+                            return binding_ids
+                                .iter()
+                                .filter_map(|spoke_binding| {
+                                    EdgeBuilder::edge_from_service_bindings(
+                                        ctx,
+                                        hub_binding_id,
+                                        *spoke_binding,
+                                        group,
+                                    )
+                                })
+                                .collect::<Vec<Edge>>();
+                        }
+                        Vec::new()
                     }
-                    Vec::new()
                 }
             })
             .collect()
@@ -88,13 +93,13 @@ impl EdgeBuilder {
             })
             .filter_map(|s| {
                 let host = ctx.get_host_by_id(s.base.host_id)?;
-                let origin_interface = host.get_first_non_docker_bridge_interface(ctx.subnets)?;
+                let origin_interface =
+                    ctx.get_first_non_docker_bridge_interface_for_host(host.id)?;
                 Some((s, host, origin_interface))
             })
             .flat_map(|(s, host, origin_interface)| {
-                let container_subnets: Vec<Uuid> = host
-                    .base
-                    .interfaces
+                let host_interfaces = ctx.get_interfaces_for_host(host.id);
+                let container_subnets: Vec<Uuid> = host_interfaces
                     .iter()
                     .filter_map(|i| ctx.get_subnet_by_id(i.base.subnet_id))
                     .filter_map(|s| {
@@ -105,9 +110,7 @@ impl EdgeBuilder {
                     })
                     .collect();
 
-                let container_subnet_interface_ids: Vec<Uuid> = host
-                    .base
-                    .interfaces
+                let container_subnet_interface_ids: Vec<Uuid> = host_interfaces
                     .iter()
                     .filter_map(|i| {
                         if container_subnets.contains(&i.base.subnet_id) {
@@ -257,10 +260,9 @@ impl EdgeBuilder {
             .iter()
             .flat_map(|h| {
                 if let Some(proxmox_service_id) = vm_host_id_to_proxmox_service.get(&h.id) {
-                    return h
-                        .base
-                        .interfaces
-                        .iter()
+                    let host_interfaces = ctx.get_interfaces_for_host(h.id);
+                    return host_interfaces
+                        .into_iter()
                         .filter_map(|i| {
                             if let Some(proxmox_service_interface_id) =
                                 subnet_to_promxox_host_interface_id
@@ -305,9 +307,9 @@ impl EdgeBuilder {
         ctx.hosts
             .iter()
             .flat_map(|host| {
-                if let Some(origin_interface) = host.base.interfaces.first() {
-                    host.base
-                        .interfaces
+                let host_interfaces = ctx.get_interfaces_for_host(host.id);
+                if let Some(origin_interface) = host_interfaces.first() {
+                    host_interfaces
                         .iter()
                         .filter(|interface| {
                             interface.id != origin_interface.id
@@ -469,12 +471,12 @@ impl EdgeBuilder {
                 source: source_interface,
                 target: target_interface,
                 edge_type: match group.base.group_type {
-                    GroupType::HubAndSpoke { .. } => EdgeType::HubAndSpoke {
+                    GroupType::HubAndSpoke => EdgeType::HubAndSpoke {
                         source_binding_id,
                         target_binding_id,
                         group_id: group.id,
                     },
-                    GroupType::RequestPath { .. } => EdgeType::RequestPath {
+                    GroupType::RequestPath => EdgeType::RequestPath {
                         source_binding_id,
                         target_binding_id,
                         group_id: group.id,

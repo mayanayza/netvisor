@@ -3,7 +3,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::server::{
-    hosts::r#impl::{base::Host, interfaces::Interface},
+    hosts::r#impl::base::Host,
+    interfaces::r#impl::base::Interface,
     services::r#impl::base::Service,
     subnets::r#impl::types::SubnetType,
     topology::{
@@ -80,15 +81,12 @@ impl SubnetLayoutPlanner {
         subnet_type: &SubnetType,
     ) -> Option<String> {
         // P1: Show virtualization provider, if any
+        let host_interfaces = ctx.get_interfaces_for_host(host.id);
         if let Some(service) = ctx.get_host_is_virtualized_by(&host.id) {
             let virtualization_service_host = ctx.get_host_by_id(service.base.host_id);
 
-            let host_interface_subnet_ids: Vec<Uuid> = host
-                .base
-                .interfaces
-                .iter()
-                .map(|i| i.base.subnet_id)
-                .collect();
+            let host_interface_subnet_ids: Vec<Uuid> =
+                host_interfaces.iter().map(|i| i.base.subnet_id).collect();
             let virtualization_service_interface_subnet_ids: Vec<Uuid> = service
                 .base
                 .bindings
@@ -116,11 +114,8 @@ impl SubnetLayoutPlanner {
                 // Use the IP address from that interface in the header text
                 match intersection.first() {
                     Some(first) => {
-                        if let Some(interface) = host
-                            .base
-                            .interfaces
-                            .iter()
-                            .find(|i| i.base.subnet_id == **first)
+                        if let Some(interface) =
+                            host_interfaces.iter().find(|i| i.base.subnet_id == **first)
                             && host_interface_subnet_ids
                                 .iter()
                                 .filter(|i| i == first)
@@ -156,7 +151,7 @@ impl SubnetLayoutPlanner {
         // but if host node isn't showing due to filters, we need to provide them with a name
         if *subnet_type == SubnetType::DockerBridge {
             let origin_interface_will_have_node = if let Some(origin_interface) =
-                host.get_first_non_docker_bridge_interface(ctx.subnets)
+                ctx.get_first_non_docker_bridge_interface_for_host(host.id)
             {
                 ctx.interface_will_have_node(&origin_interface.id)
             } else {
@@ -167,8 +162,7 @@ impl SubnetLayoutPlanner {
                 Some("Docker @ ".to_owned() + &host.base.name.clone())
             } else {
                 // Generate a label from non-docker interface, if there is one
-                host.base
-                    .interfaces
+                host_interfaces
                     .iter()
                     .find(|i| {
                         ctx.get_subnet_from_interface_id(i.id)
@@ -185,14 +179,9 @@ impl SubnetLayoutPlanner {
 
         // P3: Show host if it differs from the first service name + isn't shown via interface edges
         // and if it also isn't just the interface IP
-        let first_service_name_matches_host_name = match host.base.services.first() {
-            Some(first_service_id) => {
-                if let Some(first_service) = ctx.get_service_by_id(*first_service_id) {
-                    first_service.base.name == host.base.name
-                } else {
-                    false
-                }
-            }
+        let host_services = ctx.get_services_for_host(host.id);
+        let first_service_name_matches_host_name = match host_services.first() {
+            Some(first_service) => first_service.base.name == host.base.name,
             None => false,
         };
 
@@ -200,9 +189,7 @@ impl SubnetLayoutPlanner {
 
         // Count of other interfaces that will actually have a node (ie services on that interface > 0)
         // so an interface edge will be created
-        let interfaces_with_node: Vec<&Interface> = host
-            .base
-            .interfaces
+        let interfaces_with_node: Vec<&&Interface> = host_interfaces
             .iter()
             .filter(|i| !ctx.get_services_bound_to_interface(i.id).is_empty())
             .collect();
@@ -234,73 +221,72 @@ impl SubnetLayoutPlanner {
         // Map: (host_id, primary_subnet_id) -> Vec<subnet_id>)
         let mut docker_subnets_by_host: HashMap<(Uuid, Uuid), Vec<Uuid>> = HashMap::new();
 
-        for host in ctx.hosts {
-            for interface in &host.base.interfaces {
-                let subnet = ctx.get_subnet_by_id(interface.base.subnet_id);
-                let subnet_type = subnet.map(|s| s.base.subnet_type).unwrap_or_default();
-                let services = ctx.services;
+        for interface in ctx.interfaces {
+            let Some(host) = ctx.get_host_by_id(interface.base.host_id) else {
+                continue;
+            };
+            let subnet = ctx.get_subnet_by_id(interface.base.subnet_id);
+            let subnet_type = subnet.map(|s| s.base.subnet_type).unwrap_or_default();
+            let services = ctx.services;
 
-                let interface_bound_services: Vec<&Service> = services
-                    .iter()
-                    .filter(|s| {
-                        // Services with a binding to the interface
-                        s.base.bindings.iter().any(|b| match b.interface_id() {
-                            // Service is bound to interface if ID matches
-                            Some(binding_interface_id) if binding_interface_id == interface.id => {
-                                true
-                            }
-                            // If there's no interface, it's an L4 binding bound to all interfaces
-                            None => true,
-                            _ => false,
-                        })
+            let interface_bound_services: Vec<&Service> = services
+                .iter()
+                .filter(|s| {
+                    // Services with a binding to the interface
+                    s.base.bindings.iter().any(|b| match b.interface_id() {
+                        // Service is bound to interface if ID matches
+                        Some(binding_interface_id) if binding_interface_id == interface.id => true,
+                        // If there's no interface, it's an L4 binding bound to all interfaces
+                        None => true,
+                        _ => false,
                     })
-                    .collect();
+                })
+                .collect();
 
-                if interface_bound_services.is_empty() {
-                    continue;
-                }
+            if interface_bound_services.is_empty() {
+                continue;
+            }
 
-                // Update source/target handles for edges
-                let edges = ChildAnchorPlanner::plan_anchors(interface.id, all_edges, ctx);
+            // Update source/target handles for edges
+            let edges = ChildAnchorPlanner::plan_anchors(interface.id, all_edges, ctx);
 
-                let header_text =
-                    self.determine_subnet_child_header_text(ctx, interface, host, &subnet_type);
+            let header_text =
+                self.determine_subnet_child_header_text(ctx, interface, host, &subnet_type);
 
-                let child = SubnetChild {
-                    id: interface.id,
-                    host_id: host.id,
-                    size: Uxy::subnet_child_size_from_service_count(
-                        &interface_bound_services,
-                        interface.id,
-                        header_text.is_some(),
-                        ctx.options.request.hide_ports,
-                    ),
-                    header: header_text,
-                    interface_id: Some(interface.id),
-                    edges,
-                };
+            let child = SubnetChild {
+                id: interface.id,
+                host_id: host.id,
+                size: Uxy::subnet_child_size_from_service_count(
+                    &interface_bound_services,
+                    interface.id,
+                    header_text.is_some(),
+                    ctx.options.request.hide_ports,
+                ),
+                header: header_text,
+                interface_id: Some(interface.id),
+                edges,
+            };
 
-                // Special handling for DockerBridge (only if grouping is enabled)
-                if group_docker_bridges_by_host && matches!(subnet_type, SubnetType::DockerBridge) {
-                    if let Some(subnet_grouping_id) =
-                        docker_bridge_host_subnet_id_to_group_on.get(&host.id)
-                    {
-                        docker_subnets_by_host
-                            .entry((host.id, *subnet_grouping_id))
-                            .or_default()
-                            .push(interface.base.subnet_id);
+            // Special handling for DockerBridge (only if grouping is enabled)
+            if group_docker_bridges_by_host && matches!(subnet_type, SubnetType::DockerBridge) {
+                if let Some(subnet_grouping_id) =
+                    docker_bridge_host_subnet_id_to_group_on.get(&host.id)
+                {
+                    docker_subnets_by_host
+                        .entry((host.id, *subnet_grouping_id))
+                        .or_default()
+                        .push(interface.base.subnet_id);
 
-                        children_by_subnet
-                            .entry(*subnet_grouping_id)
-                            .or_default()
-                            .push(child);
-                    }
-                } else {
                     children_by_subnet
-                        .entry(interface.base.subnet_id)
+                        .entry(*subnet_grouping_id)
                         .or_default()
                         .push(child);
                 }
+            } else {
+                children_by_subnet
+                    .entry(interface.base.subnet_id)
+                    .or_default()
+                    .push(child);
             }
         }
 

@@ -44,11 +44,8 @@
 			}
 
 			if (service.source.type == 'DiscoveryWithMatch') {
-				let confidence = service.source.details.confidence;
-
-				if (confidence != 'Certain' && confidence != 'NotApplicable') {
-					descriptionItems.push(matchConfidenceLabel(service.source.details));
-				}
+				const confidence = service.source.details.confidence;
+				descriptionItems.push(matchConfidenceLabel(confidence));
 			}
 
 			return descriptionItems.join(' · ');

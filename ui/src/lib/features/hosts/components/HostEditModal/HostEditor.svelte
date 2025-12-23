@@ -191,7 +191,6 @@
 	onDelete={isEditing ? handleDelete : null}
 	size="full"
 	let:formApi
-	let:form
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
@@ -235,7 +234,7 @@
 			{#if activeTab === 'details'}
 				<div class="h-full">
 					<div class="relative flex-1">
-						<DetailsForm {formApi} {form} {isEditing} {host} bind:formData />
+						<DetailsForm {formApi} {isEditing} {host} bind:formData />
 					</div>
 				</div>
 			{/if}

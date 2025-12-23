@@ -21,10 +21,12 @@ use crate::server::{
 #[derive(Default)]
 struct TopologyChanges {
     updated_hosts: bool,
+    updated_interfaces: bool,
     updated_services: bool,
     updated_subnets: bool,
     updated_groups: bool,
     removed_hosts: std::collections::HashSet<Uuid>,
+    removed_interfaces: std::collections::HashSet<Uuid>,
     removed_services: std::collections::HashSet<Uuid>,
     removed_subnets: std::collections::HashSet<Uuid>,
     removed_groups: std::collections::HashSet<Uuid>,
@@ -37,6 +39,7 @@ impl EventSubscriber for TopologyService {
     fn event_filter(&self) -> EventFilter {
         EventFilter::entity_only(HashMap::from([
             (EntityDiscriminants::Host, None),
+            (EntityDiscriminants::Interface, None),
             (EntityDiscriminants::Service, None),
             (EntityDiscriminants::Subnet, None),
             (EntityDiscriminants::Group, None),
@@ -79,9 +82,10 @@ impl EventSubscriber for TopologyService {
                 // Topology updates from changes to options should be applied immediately and not processed alongside
                 // other changes, otherwise another call to topology_service.update will be made which will trigger
                 // an infinite loop
-                if let Entity::Topology(mut topology) = entity_event.entity_type.clone()
+                if let Entity::Topology(boxed_topology) = entity_event.entity_type.clone()
                     && entity_event.operation == EntityOperation::Updated
                 {
+                    let mut topology = *boxed_topology;
                     if trigger_stale {
                         topology.base.is_stale = true;
                     }
@@ -104,6 +108,9 @@ impl EventSubscriber for TopologyService {
                 if entity_event.operation == EntityOperation::Deleted {
                     match entity_event.entity_type {
                         Entity::Host(_) => changes.removed_hosts.insert(entity_event.entity_id),
+                        Entity::Interface(_) => {
+                            changes.removed_interfaces.insert(entity_event.entity_id)
+                        }
                         Entity::Service(_) => {
                             changes.removed_services.insert(entity_event.entity_id)
                         }
@@ -122,6 +129,7 @@ impl EventSubscriber for TopologyService {
                     // It's safe to automatically update entities
                     match entity_event.entity_type {
                         Entity::Host(_) => changes.updated_hosts = true,
+                        Entity::Interface(_) => changes.updated_interfaces = true,
                         Entity::Service(_) => changes.updated_services = true,
                         Entity::Subnet(_) => changes.updated_subnets = true,
                         Entity::Group(_) => changes.updated_groups = true,
@@ -136,7 +144,7 @@ impl EventSubscriber for TopologyService {
             let network_filter = StorageFilter::unfiltered().network_ids(&[network_id]);
             let topologies = self.get_all(network_filter).await?;
 
-            let (hosts, subnets, groups) = self.get_entity_data(network_id).await?;
+            let (hosts, interfaces, subnets, groups) = self.get_entity_data(network_id).await?;
 
             if let Some(changes) = topology_updates.get(&network_id) {
                 for mut topology in topologies {
@@ -148,6 +156,11 @@ impl EventSubscriber for TopologyService {
                     for host_id in &changes.removed_hosts {
                         if !topology.base.removed_hosts.contains(host_id) {
                             topology.base.removed_hosts.push(*host_id);
+                        }
+                    }
+                    for interface_id in &changes.removed_interfaces {
+                        if !topology.base.removed_interfaces.contains(interface_id) {
+                            topology.base.removed_interfaces.push(*interface_id);
                         }
                     }
                     for service_id in &changes.removed_services {
@@ -178,6 +191,10 @@ impl EventSubscriber for TopologyService {
 
                     if changes.updated_hosts {
                         topology.base.hosts = hosts.clone()
+                    }
+
+                    if changes.updated_interfaces {
+                        topology.base.interfaces = interfaces.clone()
                     }
 
                     if changes.updated_services {

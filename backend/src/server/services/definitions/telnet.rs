@@ -1,4 +1,4 @@
-use crate::server::hosts::r#impl::ports::PortBase;
+use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::definitions::{ServiceDefinitionFactory, create_service};
 use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::definitions::ServiceDefinition;
@@ -18,7 +18,7 @@ impl ServiceDefinition for Telnet {
         ServiceCategory::NetworkCore
     }
     fn discovery_pattern(&self) -> Pattern<'_> {
-        Pattern::Port(PortBase::Telnet)
+        Pattern::Port(PortType::Telnet)
     }
     fn is_generic(&self) -> bool {
         true

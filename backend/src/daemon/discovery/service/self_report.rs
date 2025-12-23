@@ -6,18 +6,14 @@ use crate::{
         types::base::{DiscoveryPhase, DiscoverySessionInfo, DiscoverySessionUpdate},
     },
     server::{
+        bindings::r#impl::base::Binding,
         daemons::r#impl::api::{DaemonCapabilities, DaemonDiscoveryRequest},
         discovery::r#impl::types::DiscoveryType,
-        hosts::r#impl::{
-            interfaces::{ALL_INTERFACES_IP, Interface},
-            ports::{Port, PortBase},
-        },
+        interfaces::r#impl::base::{ALL_INTERFACES_IP, Interface},
+        ports::r#impl::base::{Port, PortType},
         services::{
             definitions::scanopy_daemon::ScanopyDaemon,
-            r#impl::{
-                base::ServiceBase, bindings::Binding, definitions::ServiceDefinition,
-                patterns::MatchDetails,
-            },
+            r#impl::{base::ServiceBase, definitions::ServiceDefinition, patterns::MatchDetails},
         },
         shared::{
             storage::traits::StorableEntity,
@@ -29,10 +25,7 @@ use crate::{
 use crate::{
     daemon::utils::base::DaemonUtils,
     server::{
-        hosts::r#impl::{
-            base::{Host, HostBase},
-            targets::HostTarget,
-        },
+        hosts::r#impl::base::{Host, HostBase},
         services::r#impl::base::Service,
     },
 };
@@ -190,30 +183,29 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
                 .collect()
         };
 
-        let own_port = Port::new(PortBase::new_tcp(
+        let own_port = Port::new_hostless(PortType::new_tcp(
             self.as_ref().config_store.get_port().await?,
         ));
         let own_port_id = own_port.id;
         let local_ip = utils.get_own_ip_address()?;
         let hostname = utils.get_own_hostname();
 
-        // Create host base
+        // Create host base - children (interfaces, ports, services) are passed separately
         let host_base = HostBase {
             name: hostname.clone().unwrap_or(format!("{}", local_ip)),
             hostname,
             network_id,
             description: Some("Scanopy daemon".to_string()),
             tags: Vec::new(),
-            target: HostTarget::Hostname,
-            services: Vec::new(),
-            interfaces: interfaces.clone(),
-            ports: vec![own_port],
             source: EntitySource::Discovery {
                 metadata: vec![DiscoveryMetadata::new(self.discovery_type(), daemon_id)],
             },
             hidden: false,
             virtualization: None,
         };
+
+        // Ports to create with the host
+        let ports = vec![own_port];
 
         let mut host = Host::new(host_base);
 
@@ -234,7 +226,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             network_id,
             bindings: daemon_service_bound_interfaces
                 .iter()
-                .map(|i| Binding::new_port(own_port_id, Some(i.id)))
+                .map(|i| Binding::new_port_serviceless(own_port_id, Some(i.id)))
                 .collect(),
             host_id: host.id,
             virtualization: None,
@@ -252,7 +244,8 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             host.base.hostname
         );
 
-        self.create_host(host, services).await?;
+        // Pass interfaces and ports separately - server will create them with the correct host_id
+        self.create_host(host, interfaces, ports, services).await?;
 
         self.report_discovery_update(DiscoverySessionUpdate {
             phase: DiscoveryPhase::Complete,

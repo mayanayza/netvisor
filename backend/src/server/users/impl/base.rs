@@ -185,11 +185,12 @@ impl StorableEntity for User {
                     organization_id,
                     oidc_provider,
                     oidc_subject,
-                    network_ids,
                     terms_accepted_at,
+                    ..
                 },
         } = self.clone();
 
+        // Note: network_ids is stored in user_network_access junction table, not here
         Ok((
             vec![
                 "id",
@@ -202,7 +203,6 @@ impl StorableEntity for User {
                 "oidc_subject",
                 "permissions",
                 "organization_id",
-                "network_ids",
                 "terms_accepted_at",
             ],
             vec![
@@ -216,7 +216,6 @@ impl StorableEntity for User {
                 SqlValue::OptionalString(oidc_subject),
                 SqlValue::UserOrgPermissions(permissions),
                 SqlValue::Uuid(organization_id),
-                SqlValue::UuidArray(network_ids),
                 SqlValue::OptionTimestamp(terms_accepted_at),
             ],
         ))
@@ -231,6 +230,7 @@ impl StorableEntity for User {
             .parse()
             .or(Err(Error::msg("Failed to parse permissions")))?;
 
+        // Note: network_ids is populated separately from user_network_access junction table
         Ok(User {
             id: row.get("id"),
             created_at: row.get("created_at"),
@@ -243,7 +243,7 @@ impl StorableEntity for User {
                 oidc_linked_at: row.get("oidc_linked_at"),
                 oidc_provider: row.get("oidc_provider"),
                 oidc_subject: row.get("oidc_subject"),
-                network_ids: row.get("network_ids"),
+                network_ids: vec![],
                 terms_accepted_at: row.get("terms_accepted_at"),
             },
         })
