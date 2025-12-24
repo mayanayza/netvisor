@@ -1,9 +1,7 @@
 use crate::server::auth::middleware::auth::AuthenticatedUser;
 use crate::server::auth::middleware::features::{BlockedInDemoMode, RequireFeature};
 use crate::server::auth::middleware::permissions::{RequireAdmin, RequireMember};
-use crate::server::shared::handlers::traits::{
-    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler, get_by_id_handler,
-};
+use crate::server::shared::handlers::traits::{BulkDeleteResponse, CrudHandlers, delete_handler};
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::ApiError;
 use crate::server::users::r#impl::base::User;
@@ -17,21 +15,40 @@ use crate::server::{
 };
 use anyhow::anyhow;
 use axum::extract::Path;
-use axum::routing::{delete, get, post, put};
-use axum::{Router, extract::State, response::Json};
+use axum::response::Json;
+use axum::{extract::State, routing::put};
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_all_users))
-        .route("/{id}", put(update_user))
-        .route("/{id}/admin", put(admin_update_user))
-        .route("/{id}", delete(delete_user))
-        .route("/{id}", get(get_by_id_handler::<User>))
-        .route("/bulk-delete", post(bulk_delete_users))
+// Generated handlers for operations that use generic CRUD logic
+mod generated {
+    use super::*;
+    crate::crud_get_by_id_handler!(User, "users", "user");
 }
 
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(get_all_users))
+        .routes(routes!(generated::get_by_id, delete_user))
+        .routes(routes!(bulk_delete_users))
+        // Self-update and admin endpoints not in OpenAPI spec
+        .route("/{id}", put(update_user))
+        .route("/{id}/admin", put(admin_update_user))
+}
+
+/// List all users
+/// 
+/// Returns a list of users with permissions below the permissions of the user making the request.
+#[utoipa::path(
+    get,
+    path = "",
+    tag = "users",
+    responses(
+        (status = 200, description = "List of users", body = Vec<User>),
+    ),
+    security(("session" = []))
+)]
 pub async fn get_all_users(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -55,6 +72,20 @@ pub async fn get_all_users(
     Ok(Json(ApiResponse::success(users)))
 }
 
+/// Delete a user
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = "users",
+    params(("id" = Uuid, Path, description = "User ID")),
+    responses(
+        (status = 200, description = "User deleted"),
+        (status = 404, description = "User not found"),
+        (status = 403, description = "Cannot delete user with higher permissions"),
+        (status = 409, description = "Cannot delete the only owner"),
+    ),
+    security(("session" = []))
+)]
 pub async fn delete_user(
     state: State<Arc<AppState>>,
     require_admin: RequireAdmin,
@@ -90,6 +121,20 @@ pub async fn delete_user(
     delete_handler::<User>(state, require_admin.into(), id).await
 }
 
+/// Update your own user record
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "users",
+    params(("id" = Uuid, Path, description = "User ID")),
+    request_body = User,
+    responses(
+        (status = 200, description = "User updated", body = User),
+        (status = 403, description = "Cannot update another user's record"),
+        (status = 404, description = "User not found"),
+    ),
+    security(("session" = []))
+)]
 pub async fn update_user(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
@@ -136,7 +181,8 @@ pub async fn update_user(
     Ok(Json(ApiResponse::success(updated)))
 }
 
-pub async fn admin_update_user(
+/// Admin update user (for changing permissions)
+async fn admin_update_user(
     State(state): State<Arc<AppState>>,
     RequireAdmin(admin): RequireAdmin,
     _demo_check: RequireFeature<BlockedInDemoMode>,
@@ -197,12 +243,26 @@ pub async fn admin_update_user(
     Ok(Json(ApiResponse::success(updated)))
 }
 
+/// Bulk delete users
+#[utoipa::path(
+    post,
+    path = "/bulk-delete",
+    tag = "users",
+    request_body(content = Vec<Uuid>, description = "Array of user IDs to delete"),
+    responses(
+        (status = 200, description = "Users deleted successfully", body = BulkDeleteResponse),
+        (status = 403, description = "Cannot delete users with higher permissions"),
+    ),
+    security(("session" = []))
+)]
 pub async fn bulk_delete_users(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     _demo_check: RequireFeature<BlockedInDemoMode>,
     Json(ids): Json<Vec<Uuid>>,
 ) -> ApiResult<Json<ApiResponse<BulkDeleteResponse>>> {
+    use crate::server::shared::handlers::traits::bulk_delete_handler;
+
     let user_filter = EntityFilter::unfiltered().entity_ids(&ids);
     let users = state.services.user_service.get_all(user_filter).await?;
 

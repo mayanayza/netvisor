@@ -1,12 +1,12 @@
 use crate::server::{
     config::AppState,
     organizations::{r#impl::base::Organization, service::OrganizationService},
-    shared::handlers::{query::OrganizationEntityFilterQuery, traits::CrudHandlers},
+    shared::handlers::{query::NoFilterQuery, traits::CrudHandlers},
 };
 
 impl CrudHandlers for Organization {
     type Service = OrganizationService;
-    type FilterQuery = OrganizationEntityFilterQuery;
+    type FilterQuery = NoFilterQuery;
 
     fn get_service(state: &AppState) -> &Self::Service {
         &state.services.organization_service

@@ -1,28 +1,42 @@
 use crate::server::auth::middleware::permissions::RequireMember;
-use crate::server::shared::handlers::traits::{
-    bulk_delete_handler, create_handler, delete_handler, get_all_handler, get_by_id_handler,
-    update_handler,
-};
+use crate::server::shared::handlers::traits::{create_handler, update_handler};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::types::api::{ApiError, ApiResponse, ApiResult};
 use crate::server::{config::AppState, services::r#impl::base::Service};
 use axum::extract::{Path, State};
-use axum::routing::{delete, get, post, put};
-use axum::{Json, Router};
+use axum::Json;
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", post(create_service))
-        .route("/", get(get_all_handler::<Service>))
-        .route("/{id}", put(update_service))
-        .route("/{id}", delete(delete_handler::<Service>))
-        .route("/{id}", get(get_by_id_handler::<Service>))
-        .route("/bulk-delete", post(bulk_delete_handler::<Service>))
+// Generated handlers for operations that use generic CRUD logic
+mod generated {
+    use super::*;
+    crate::crud_get_all_handler!(Service, "services", "service");
+    crate::crud_get_by_id_handler!(Service, "services", "service");
+    crate::crud_delete_handler!(Service, "services", "service");
+    crate::crud_bulk_delete_handler!(Service, "services");
 }
 
-/// Create a new service with host network validation
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(generated::get_all, create_service))
+        .routes(routes!(generated::get_by_id, update_service, generated::delete))
+        .routes(routes!(generated::bulk_delete))
+}
+
+/// Create a new service
+#[utoipa::path(
+    post,
+    path = "",
+    tag = "services",
+    request_body = Service,
+    responses(
+        (status = 200, description = "Service created successfully", body = Service),
+        (status = 400, description = "Host network mismatch"),
+    ),
+    security(("session" = []))
+)]
 pub async fn create_service(
     State(state): State<Arc<AppState>>,
     user: RequireMember,
@@ -46,7 +60,20 @@ pub async fn create_service(
     create_handler::<Service>(State(state), user, Json(service)).await
 }
 
-/// Update a service with host network validation
+/// Update a service
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "services",
+    params(("id" = Uuid, Path, description = "Service ID")),
+    request_body = Service,
+    responses(
+        (status = 200, description = "Service updated", body = Service),
+        (status = 400, description = "Host network mismatch"),
+        (status = 404, description = "Service not found"),
+    ),
+    security(("session" = []))
+)]
 pub async fn update_service(
     State(state): State<Arc<AppState>>,
     user: RequireMember,

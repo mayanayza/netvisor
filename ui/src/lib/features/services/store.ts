@@ -1,4 +1,4 @@
-import { writable, derived, type Readable, readable } from 'svelte/store';
+import { writable, derived, type Readable, readable, get } from 'svelte/store';
 import { api } from '../../shared/utils/api';
 import type { Binding, Service } from './types/base';
 import { formatPort, utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
@@ -14,6 +14,16 @@ export async function getServices() {
 	return await api.request<Service[]>(`/services`, services, (services) => services, {
 		method: 'GET'
 	});
+}
+
+// Create a service
+export async function createService(data: Service) {
+	return await api.request<Service, Service[]>(
+		'/services',
+		services,
+		(createdService, current) => [...current, createdService],
+		{ method: 'POST', body: JSON.stringify(data) }
+	);
 }
 
 // Delete a service
@@ -39,13 +49,53 @@ export async function bulkDeleteServices(ids: string[]) {
 
 // Update a service
 export async function updateService(data: Service) {
-	console.log(1);
 	return await api.request<Service, Service[]>(
 		`/services/${data.id}`,
 		services,
 		(updatedService, current) => current.map((s) => (s.id === data.id ? updatedService : s)),
 		{ method: 'PUT', body: JSON.stringify(data) }
 	);
+}
+
+/**
+ * Bulk update services for a host - handles creates, updates, and deletes.
+ * Compares new services list with existing services and syncs them.
+ */
+export async function bulkUpdateServices(hostId: string, newServices: Service[]) {
+	const currentServices = get(services).filter((s) => s.host_id === hostId);
+
+	const newIds = new Set(newServices.map((s) => s.id));
+	const currentIds = new Set(currentServices.map((s) => s.id));
+
+	// Services to delete (in current but not in new)
+	const toDelete = currentServices.filter((s) => !newIds.has(s.id));
+
+	// Services to create (in new but not in current, or with sentinel ID)
+	const toCreate = newServices.filter(
+		(s) => !currentIds.has(s.id) || s.id === uuidv4Sentinel
+	);
+
+	// Services to update (in both, excluding new ones)
+	const toUpdate = newServices.filter(
+		(s) => currentIds.has(s.id) && s.id !== uuidv4Sentinel
+	);
+
+	// Execute operations
+	const promises: Promise<unknown>[] = [];
+
+	for (const service of toDelete) {
+		promises.push(deleteService(service.id));
+	}
+
+	for (const service of toCreate) {
+		promises.push(createService(service));
+	}
+
+	for (const service of toUpdate) {
+		promises.push(updateService(service));
+	}
+
+	await Promise.all(promises);
 }
 
 // Helper functions for working with services and the MetadataRegistry

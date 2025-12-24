@@ -4,18 +4,1154 @@
     "title": "Scanopy API",
     "description": "Network topology discovery and visualization API",
     "license": {
-      "name": "MIT"
+      "name": "Dual (AGPL3.0, Commercial License Available)"
     },
     "version": "0.12.5"
   },
   "paths": {
+    "/api/auth/keys": {
+      "get": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "List all api_keys",
+        "operationId": "list_api_keys",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of api_keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKey"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "Create API key",
+        "operationId": "create_api_key",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "API key created"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/auth/keys/bulk-delete": {
+      "post": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "Bulk delete api_keys",
+        "operationId": "bulk_delete_api_keys",
+        "requestBody": {
+          "description": "Array of api_keys IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ApiKeys deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/auth/keys/{id}": {
+      "get": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "Get api_key by ID",
+        "operationId": "get_api_key_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ApiKey ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ApiKey found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ApiKey not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "Update an API key",
+        "operationId": "update_api_key",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "API key ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "API key updated"
+          },
+          "404": {
+            "description": "API key not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "Delete api_key",
+        "operationId": "delete_api_key",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ApiKey ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ApiKey deleted"
+          },
+          "404": {
+            "description": "ApiKey not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/auth/keys/{id}/rotate": {
+      "post": {
+        "tags": [
+          "api_keys"
+        ],
+        "summary": "Rotate an API key",
+        "operationId": "rotate_key_handler",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "API key ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key rotated, returns new key"
+          },
+          "404": {
+            "description": "API key not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/bindings": {
+      "get": {
+        "tags": [
+          "bindings"
+        ],
+        "summary": "List all bindings",
+        "operationId": "list_bindings",
+        "parameters": [
+          {
+            "name": "service_id",
+            "in": "query",
+            "description": "Filter by service ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "port_id",
+            "in": "query",
+            "description": "Filter by port ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "interface_id",
+            "in": "query",
+            "description": "Filter by interface ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of bindings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Binding"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "bindings"
+        ],
+        "summary": "Create new binding",
+        "operationId": "create_binding",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Binding"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Binding created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Binding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/bindings/bulk-delete": {
+      "post": {
+        "tags": [
+          "bindings"
+        ],
+        "summary": "Bulk delete bindings",
+        "operationId": "bulk_delete_bindings",
+        "requestBody": {
+          "description": "Array of bindings IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Bindings deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/bindings/{id}": {
+      "get": {
+        "tags": [
+          "bindings"
+        ],
+        "summary": "Get binding by ID",
+        "operationId": "get_binding_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Binding ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binding found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Binding"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Binding not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "bindings"
+        ],
+        "summary": "Update binding",
+        "operationId": "update_binding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Binding ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Binding"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Binding updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Binding"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Binding not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "bindings"
+        ],
+        "summary": "Delete binding",
+        "operationId": "delete_binding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Binding ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binding deleted"
+          },
+          "404": {
+            "description": "Binding not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/daemons": {
+      "get": {
+        "tags": [
+          "daemons"
+        ],
+        "summary": "List all daemons",
+        "operationId": "list_daemons",
+        "parameters": [
+          {
+            "name": "host_id",
+            "in": "query",
+            "description": "Filter by host ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of daemons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Daemon"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/daemons/bulk-delete": {
+      "post": {
+        "tags": [
+          "daemons"
+        ],
+        "summary": "Bulk delete daemons",
+        "operationId": "bulk_delete_daemons",
+        "requestBody": {
+          "description": "Array of daemons IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Daemons deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/daemons/{id}": {
+      "get": {
+        "tags": [
+          "daemons"
+        ],
+        "summary": "Get daemon by ID",
+        "operationId": "get_daemon_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Daemon ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daemon found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Daemon"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Daemon not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "daemons"
+        ],
+        "summary": "Update daemon",
+        "operationId": "update_daemon",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Daemon ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Daemon"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Daemon updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Daemon"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Daemon not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "daemons"
+        ],
+        "summary": "Delete daemon",
+        "operationId": "delete_daemon",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Daemon ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daemon deleted"
+          },
+          "404": {
+            "description": "Daemon not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/discovery": {
+      "get": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "List all discoveries",
+        "operationId": "list_discoveries",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "daemon_id",
+            "in": "query",
+            "description": "Filter by daemon ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of discoveries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Discovery"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Create a new discovery",
+        "operationId": "create_discovery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Discovery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Discovery created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Discovery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid subnet network"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/discovery/active-sessions": {
+      "get": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Get active discovery sessions",
+        "operationId": "get_active_sessions",
+        "responses": {
+          "200": {
+            "description": "List of active discovery sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiscoveryUpdatePayload"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/discovery/bulk-delete": {
+      "post": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Bulk delete discoveries",
+        "operationId": "bulk_delete_discoveries",
+        "requestBody": {
+          "description": "Array of discoveries IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Discoverys deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/discovery/start-session": {
+      "post": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Start a discovery session",
+        "operationId": "start_session",
+        "requestBody": {
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Discovery session started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveryUpdatePayload"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Discovery not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/discovery/{id}": {
+      "get": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Get discovery by ID",
+        "operationId": "get_discovery_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Discovery ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discovery found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Discovery"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Discovery not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Update discovery",
+        "operationId": "update_discovery",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Discovery ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Discovery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Discovery updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Discovery"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Discovery not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Delete discovery",
+        "operationId": "delete_discovery",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Discovery ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discovery deleted"
+          },
+          "404": {
+            "description": "Discovery not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/discovery/{session_id}/cancel": {
+      "post": {
+        "tags": [
+          "discoveries"
+        ],
+        "summary": "Cancel a discovery session",
+        "operationId": "cancel_discovery",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "description": "Session ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discovery session cancelled"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/groups": {
       "get": {
         "tags": [
           "groups"
         ],
         "summary": "List all groups",
-        "operationId": "get_all_groups",
+        "operationId": "list_groups",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of groups",
@@ -81,7 +1217,7 @@
           "groups"
         ],
         "summary": "Bulk delete groups",
-        "operationId": "bulk_delete",
+        "operationId": "bulk_delete_groups",
         "requestBody": {
           "description": "Array of groups IDs to delete",
           "content": {
@@ -121,8 +1257,8 @@
         "tags": [
           "groups"
         ],
-        "summary": "Get a group by ID",
-        "operationId": "get_by_id",
+        "summary": "Get group by ID",
+        "operationId": "get_group_by_id",
         "parameters": [
           {
             "name": "id",
@@ -160,8 +1296,8 @@
         "tags": [
           "groups"
         ],
-        "summary": "Update a group",
-        "operationId": "update",
+        "summary": "Update group",
+        "operationId": "update_group",
         "parameters": [
           {
             "name": "id",
@@ -209,8 +1345,8 @@
         "tags": [
           "groups"
         ],
-        "summary": "Delete a group",
-        "operationId": "delete",
+        "summary": "Delete group",
+        "operationId": "delete_group",
         "parameters": [
           {
             "name": "id",
@@ -351,49 +1487,12 @@
         ]
       }
     },
-    "/api/hosts/discovery": {
-      "post": {
-        "tags": [
-          "hosts"
-        ],
-        "summary": "Internal endpoint for daemon discovery",
-        "description": "Used by daemons to report discovered hosts. Accepts full entities with\npre-generated IDs. Uses upsert behavior to merge with existing hosts.",
-        "operationId": "create_host_discovery",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DiscoveryHostRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Host discovered/updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HostResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "api_key": []
-          }
-        ]
-      }
-    },
     "/api/hosts/{destination_host}/consolidate/{other_host}": {
       "put": {
         "tags": [
           "hosts"
         ],
-        "summary": "Consolidate two hosts into one",
+        "summary": "Consolidate hosts",
         "description": "Merges all interfaces, ports, and services from `other_host` into\n`destination_host`, then deletes `other_host`. Both hosts must be\non the same network.",
         "operationId": "consolidate_hosts",
         "parameters": [
@@ -538,7 +1637,8 @@
         "tags": [
           "hosts"
         ],
-        "summary": "Delete a host, checking for associated daemons first",
+        "summary": "Delete a host",
+        "description": "Prevents deletion if the host has a daemon associated with it",
         "operationId": "delete_host",
         "parameters": [
           {
@@ -576,8 +1676,7 @@
           "interfaces"
         ],
         "summary": "List all interfaces",
-        "description": "Returns interfaces filtered by optional host_id or subnet_id query parameters.",
-        "operationId": "get_all_interfaces",
+        "operationId": "list_interfaces",
         "parameters": [
           {
             "name": "host_id",
@@ -596,6 +1695,19 @@
             "name": "subnet_id",
             "in": "query",
             "description": "Filter by subnet ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
             "required": false,
             "schema": {
               "type": [
@@ -631,7 +1743,7 @@
         "tags": [
           "interfaces"
         ],
-        "summary": "Create a new interface",
+        "summary": "Create new interface",
         "operationId": "create_interface",
         "requestBody": {
           "content": {
@@ -645,7 +1757,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interface created successfully",
+            "description": "Interface created",
             "content": {
               "application/json": {
                 "schema": {
@@ -673,7 +1785,7 @@
         "summary": "Bulk delete interfaces",
         "operationId": "bulk_delete_interfaces",
         "requestBody": {
-          "description": "Array of interface IDs to delete",
+          "description": "Array of interfaces IDs to delete",
           "content": {
             "application/json": {
               "schema": {
@@ -689,7 +1801,7 @@
         },
         "responses": {
           "200": {
-            "description": "Interfaces deleted successfully",
+            "description": "Interfaces deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -711,7 +1823,7 @@
         "tags": [
           "interfaces"
         ],
-        "summary": "Get an interface by ID",
+        "summary": "Get interface by ID",
         "operationId": "get_interface_by_id",
         "parameters": [
           {
@@ -750,7 +1862,7 @@
         "tags": [
           "interfaces"
         ],
-        "summary": "Update an interface",
+        "summary": "Update interface",
         "operationId": "update_interface",
         "parameters": [
           {
@@ -799,7 +1911,7 @@
         "tags": [
           "interfaces"
         ],
-        "summary": "Delete an interface",
+        "summary": "Delete interface",
         "operationId": "delete_interface",
         "parameters": [
           {
@@ -819,6 +1931,153 @@
           },
           "404": {
             "description": "Interface not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/invites": {
+      "get": {
+        "tags": [
+          "invites"
+        ],
+        "summary": "List all invites for organization",
+        "operationId": "get_invites",
+        "responses": {
+          "200": {
+            "description": "List of active invites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invite"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "invites"
+        ],
+        "summary": "Create an organization invite",
+        "operationId": "create_invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Invite created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User already has an account"
+          },
+          "403": {
+            "description": "Seat limit reached or insufficient permissions"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/invites/{id}": {
+      "get": {
+        "tags": [
+          "invites"
+        ],
+        "summary": "Get an invite by ID",
+        "operationId": "get_invite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Invite ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invite details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired invite"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/invites/{id}/revoke": {
+      "delete": {
+        "tags": [
+          "invites"
+        ],
+        "summary": "Revoke an invite",
+        "operationId": "revoke_invite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Invite ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invite revoked"
+          },
+          "400": {
+            "description": "Invalid invite"
+          },
+          "403": {
+            "description": "Cannot revoke this invite"
           }
         },
         "security": [
@@ -1060,13 +2319,599 @@
         ]
       }
     },
+    "/api/organizations/{id}": {
+      "put": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Update organization name",
+        "operationId": "update_org_name",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Organization ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Organization updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only owners can update organization"
+          },
+          "404": {
+            "description": "Organization not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/ports": {
+      "get": {
+        "tags": [
+          "ports"
+        ],
+        "summary": "List all ports",
+        "operationId": "list_ports",
+        "parameters": [
+          {
+            "name": "host_id",
+            "in": "query",
+            "description": "Filter by host ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of ports",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Port"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "ports"
+        ],
+        "summary": "Create new port",
+        "operationId": "create_port",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Port"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Port created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Port"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/ports/bulk-delete": {
+      "post": {
+        "tags": [
+          "ports"
+        ],
+        "summary": "Bulk delete ports",
+        "operationId": "bulk_delete_ports",
+        "requestBody": {
+          "description": "Array of ports IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ports deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/ports/{id}": {
+      "get": {
+        "tags": [
+          "ports"
+        ],
+        "summary": "Get port by ID",
+        "operationId": "get_port_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Port ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Port found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Port"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Port not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "ports"
+        ],
+        "summary": "Update port",
+        "operationId": "update_port",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Port ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Port"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Port updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Port"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Port not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "ports"
+        ],
+        "summary": "Delete port",
+        "operationId": "delete_port",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Port ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Port deleted"
+          },
+          "404": {
+            "description": "Port not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/services": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "List all services",
+        "operationId": "list_services",
+        "parameters": [
+          {
+            "name": "host_id",
+            "in": "query",
+            "description": "Filter by host ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of services",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Service"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Create a new service",
+        "operationId": "create_service",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Service"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Service created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Service"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Host network mismatch"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/services/bulk-delete": {
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Bulk delete services",
+        "operationId": "bulk_delete_services",
+        "requestBody": {
+          "description": "Array of services IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Services deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/services/{id}": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Get service by ID",
+        "operationId": "get_service_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Service ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Service"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Service not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Update a service",
+        "operationId": "update_service",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Service ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Service"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Service updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Service"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Host network mismatch"
+          },
+          "404": {
+            "description": "Service not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Delete service",
+        "operationId": "delete_service",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Service ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service deleted"
+          },
+          "404": {
+            "description": "Service not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/subnets": {
       "get": {
         "tags": [
           "subnets"
         ],
         "summary": "List all subnets",
-        "operationId": "get_all_subnets",
+        "operationId": "list_subnets",
+        "parameters": [
+          {
+            "name": "network_id",
+            "in": "query",
+            "description": "Filter by network ID",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of subnets",
@@ -1134,7 +2979,7 @@
         "summary": "Bulk delete subnets",
         "operationId": "bulk_delete_subnets",
         "requestBody": {
-          "description": "Array of subnet IDs to delete",
+          "description": "Array of subnets IDs to delete",
           "content": {
             "application/json": {
               "schema": {
@@ -1150,7 +2995,7 @@
         },
         "responses": {
           "200": {
-            "description": "Subnets deleted successfully",
+            "description": "Subnets deleted",
             "content": {
               "application/json": {
                 "schema": {
@@ -1172,7 +3017,7 @@
         "tags": [
           "subnets"
         ],
-        "summary": "Get a subnet by ID",
+        "summary": "Get subnet by ID",
         "operationId": "get_subnet_by_id",
         "parameters": [
           {
@@ -1211,7 +3056,7 @@
         "tags": [
           "subnets"
         ],
-        "summary": "Update a subnet",
+        "summary": "Update subnet",
         "operationId": "update_subnet",
         "parameters": [
           {
@@ -1260,7 +3105,7 @@
         "tags": [
           "subnets"
         ],
-        "summary": "Delete a subnet",
+        "summary": "Delete subnet",
         "operationId": "delete_subnet",
         "parameters": [
           {
@@ -1288,37 +3133,433 @@
           }
         ]
       }
+    },
+    "/api/tags": {
+      "get": {
+        "tags": [
+          "tags"
+        ],
+        "summary": "List all tags",
+        "operationId": "get_all_tags",
+        "responses": {
+          "200": {
+            "description": "List of tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tags"
+        ],
+        "summary": "Create a new tag",
+        "operationId": "create_tag",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tag"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Tag created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tag name already exists"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/tags/bulk-delete": {
+      "post": {
+        "tags": [
+          "tags"
+        ],
+        "summary": "Bulk delete tags",
+        "operationId": "bulk_delete_tags",
+        "requestBody": {
+          "description": "Array of tag IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Tags deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/tags/{id}": {
+      "get": {
+        "tags": [
+          "tags"
+        ],
+        "summary": "Get a tag by ID",
+        "operationId": "get_tag_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Tag ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tag not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "tags"
+        ],
+        "summary": "Update a tag",
+        "operationId": "update_tag",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Tag ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tag"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Tag updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Tag not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "tags"
+        ],
+        "summary": "Delete a tag",
+        "operationId": "delete_tag",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Tag ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tag deleted"
+          },
+          "404": {
+            "description": "Tag not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "List all users",
+        "description": "Returns a list of users with permissions below the permissions of the user making the request.",
+        "operationId": "get_all_users",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/users/bulk-delete": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Bulk delete users",
+        "operationId": "bulk_delete_users",
+        "requestBody": {
+          "description": "Array of user IDs to delete",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Users deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cannot delete users with higher permissions"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get user by ID",
+        "operationId": "get_user_by_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete a user",
+        "operationId": "delete_user",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "User ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          },
+          "403": {
+            "description": "Cannot delete user with higher permissions"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "409": {
+            "description": "Cannot delete the only owner"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
       "ApiKey": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiKeyBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "ApiKeyBase": {
         "type": "object",
         "required": [
-          "id",
-          "network_id",
-          "name",
           "key",
-          "is_enabled",
-          "tags",
-          "created_at",
-          "updated_at"
+          "name",
+          "network_id"
         ],
         "properties": {
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
           "expires_at": {
             "type": [
               "string",
               "null"
             ],
             "format": "date-time"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
           },
           "is_enabled": {
             "type": "boolean"
@@ -1331,7 +3572,8 @@
               "string",
               "null"
             ],
-            "format": "date-time"
+            "format": "date-time",
+            "readOnly": true
           },
           "name": {
             "type": "string"
@@ -1346,32 +3588,187 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
-      "ApiResponse_String": {
-        "type": "object",
-        "required": [
-          "success"
-        ],
-        "properties": {
-          "data": {
-            "type": "string"
-          },
-          "error": {
-            "type": [
-              "string",
-              "null"
+      "BillingPlan": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Community"
+                    ]
+                  }
+                }
+              }
             ]
           },
-          "success": {
-            "type": "boolean"
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Starter"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Pro"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Team"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Business"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Enterprise"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Demo"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "CommercialSelfHosted"
+                    ]
+                  }
+                }
+              }
+            ]
           }
-        }
+        ]
+      },
+      "BillingRate": {
+        "type": "string",
+        "enum": [
+          "Month",
+          "Year"
+        ]
       },
       "Binding": {
         "allOf": [
@@ -1380,26 +3777,36 @@
           },
           {
             "type": "object",
-            "required": [
-              "id"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
         ],
-        "description": "The Binding entity"
+        "description": "Association between a service and a port / interface that the service is listening on",
+        "example": {
+          "created_at": "2025-12-24T04:33:16.078715Z",
+          "id": "0fe99606-811a-491b-88b3-43b2d46ed682",
+          "interface_id": "550e8400-e29b-41d4-a716-446655440005",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "port_id": "550e8400-e29b-41d4-a716-446655440006",
+          "service_id": "550e8400-e29b-41d4-a716-446655440007",
+          "type": "Port",
+          "updated_at": "2025-12-24T04:33:16.078715Z"
+        }
       },
       "BindingBase": {
         "allOf": [
@@ -1408,6 +3815,10 @@
           },
           {
             "type": "object",
+            "required": [
+              "service_id",
+              "network_id"
+            ],
             "properties": {
               "network_id": {
                 "type": "string",
@@ -1457,7 +3868,8 @@
                   "string",
                   "null"
                 ],
-                "format": "uuid"
+                "format": "uuid",
+                "description": "None = service is listening on this port on all interfaces"
               },
               "port_id": {
                 "type": "string",
@@ -1493,7 +3905,7 @@
       },
       "CreateHostRequest": {
         "type": "object",
-        "description": "Request type for creating a host with its associated child entities.\nServer assigns `host_id`, `network_id`, and `source` to all children.\nSource is automatically set based on how the entity was created (API vs UI).",
+        "description": "Request type for creating a host with its associated interfaces and ports.\nServer assigns `host_id`, `network_id`, and `source` to all children.\nSource is automatically set based on how the entity was created (API vs UI).\n\nNote: Services are created separately via `POST /api/services` after the host exists,\nas service bindings require the real IDs of the interfaces/ports to reference.",
         "required": [
           "name",
           "network_id"
@@ -1531,12 +3943,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CreatePortInput"
-            }
-          },
-          "services": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreateServiceInput"
             }
           },
           "tags": {
@@ -1577,7 +3983,6 @@
               "protocol": "Tcp"
             }
           ],
-          "services": [],
           "tags": [],
           "virtualization": null
         }
@@ -1608,6 +4013,38 @@
           "subnet_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "CreateInviteRequest": {
+        "type": "object",
+        "required": [
+          "permissions",
+          "network_ids"
+        ],
+        "properties": {
+          "expiration_hours": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "network_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/UserOrgPermissions"
+          },
+          "send_to": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -1647,28 +4084,64 @@
           }
         }
       },
-      "CreateServiceInput": {
+      "Daemon": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DaemonBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "DaemonBase": {
         "type": "object",
-        "description": "Input for creating a service with a host.\n`host_id`, `network_id`, and `source` are assigned by the server.\nBindings reference existing interfaces/ports by their IDs.",
         "required": [
-          "name",
-          "service_definition"
+          "host_id",
+          "network_id",
+          "url",
+          "mode",
+          "name"
         ],
         "properties": {
-          "bindings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BindingType"
-            },
-            "description": "Bindings to existing interfaces or ports (optional, can be added later)"
+          "capabilities": {
+            "$ref": "#/components/schemas/DaemonCapabilities"
+          },
+          "host_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DaemonMode"
           },
           "name": {
-            "type": "string",
-            "description": "Service display name"
+            "type": "string"
           },
-          "service_definition": {
+          "network_id": {
             "type": "string",
-            "description": "Service definition ID (e.g., \"Home Assistant\", \"Pi-Hole\")"
+            "format": "uuid"
           },
           "tags": {
             "type": "array",
@@ -1677,205 +4150,94 @@
               "format": "uuid"
             }
           },
-          "virtualization": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/ServiceVirtualization",
-                "description": "Virtualization details (e.g., Docker container info)"
-              }
-            ]
-          }
-        }
-      },
-      "Daemon": {
-        "type": "object",
-        "required": [
-          "id",
-          "network_id",
-          "mode",
-          "capabilities",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "capabilities": {
-            "$ref": "#/components/schemas/DaemonCapabilities"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "host_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "last_seen": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "mode": {
-            "$ref": "#/components/schemas/DaemonMode"
-          },
-          "network_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
           "url": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "version": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "readOnly": true
           }
         }
       },
       "DaemonCapabilities": {
         "type": "object",
-        "required": [
-          "network_scan",
-          "docker",
-          "proxmox",
-          "self_report"
-        ],
+        "description": "Daemon capabilities",
         "properties": {
-          "docker": {
+          "has_docker_socket": {
             "type": "boolean"
           },
-          "network_scan": {
-            "type": "boolean"
-          },
-          "proxmox": {
-            "type": "boolean"
-          },
-          "self_report": {
-            "type": "boolean"
+          "interfaced_subnet_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
       "DaemonMode": {
         "type": "string",
         "enum": [
-          "Pull",
-          "Push"
+          "Push",
+          "Pull"
         ]
       },
       "Discovery": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DiscoveryBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "DiscoveryBase": {
         "type": "object",
         "required": [
-          "id",
-          "network_id",
-          "daemon_id",
-          "status",
+          "discovery_type",
           "run_type",
-          "progress",
-          "created_at",
-          "updated_at"
+          "name",
+          "daemon_id",
+          "network_id"
         ],
         "properties": {
-          "completed_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
           "daemon_id": {
             "type": "string",
             "format": "uuid"
           },
-          "id": {
-            "type": "string",
-            "format": "uuid"
+          "discovery_type": {
+            "$ref": "#/components/schemas/DiscoveryType"
           },
-          "message": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "name": {
+            "type": "string"
           },
           "network_id": {
             "type": "string",
             "format": "uuid"
           },
-          "progress": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 0
-          },
           "run_type": {
-            "$ref": "#/components/schemas/DiscoveryRunType"
+            "$ref": "#/components/schemas/RunType"
           },
-          "started_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "status": {
-            "$ref": "#/components/schemas/DiscoveryStatus"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "DiscoveryHostRequest": {
-        "type": "object",
-        "description": "Request type for daemon discovery - accepts full entities with IDs.\nUsed internally by daemons for host creation/upsert, NOT the external API.\nThis supports the discovery workflow where daemons manage entity IDs.",
-        "required": [
-          "host",
-          "interfaces",
-          "ports",
-          "services"
-        ],
-        "properties": {
-          "host": {
-            "$ref": "#/components/schemas/Host"
-          },
-          "interfaces": {
+          "tags": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Interface"
-            }
-          },
-          "ports": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Port"
-            }
-          },
-          "services": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Service"
+              "type": "string",
+              "format": "uuid"
             }
           }
         }
@@ -1904,54 +4266,14 @@
           }
         ]
       },
-      "DiscoveryRunType": {
-        "oneOf": [
-          {
-            "type": "object",
-            "title": "Manual",
-            "required": [
-              "type"
-            ],
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "Manual"
-                ]
-              }
-            }
-          },
-          {
-            "type": "object",
-            "title": "Scheduled",
-            "required": [
-              "enabled",
-              "cron",
-              "type"
-            ],
-            "properties": {
-              "cron": {
-                "type": "string"
-              },
-              "enabled": {
-                "type": "boolean"
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "Scheduled"
-                ]
-              }
-            }
-          }
-        ]
-      },
-      "DiscoveryStatus": {
+      "DiscoveryPhase": {
         "type": "string",
         "enum": [
           "Pending",
-          "Running",
-          "Completed",
+          "Starting",
+          "Started",
+          "Scanning",
+          "Complete",
           "Failed",
           "Cancelled"
         ]
@@ -2030,6 +4352,63 @@
             }
           }
         ]
+      },
+      "DiscoveryUpdatePayload": {
+        "type": "object",
+        "description": "Progress update from daemon to server during discovery",
+        "required": [
+          "session_id",
+          "daemon_id",
+          "network_id",
+          "phase",
+          "discovery_type",
+          "progress"
+        ],
+        "properties": {
+          "daemon_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "discovery_type": {
+            "$ref": "#/components/schemas/DiscoveryType"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/DiscoveryPhase"
+          },
+          "progress": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
       },
       "DockerVirtualization": {
         "type": "object",
@@ -2169,23 +4548,21 @@
           },
           {
             "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
@@ -2193,7 +4570,7 @@
         "example": {
           "binding_ids": [],
           "color": "#3B82F6",
-          "created_at": "2024-01-15T10:30:00Z",
+          "created_at": "2026-01-15T10:30:00Z",
           "description": "HTTP/HTTPS services group",
           "edge_style": "Bezier",
           "group_type": "RequestPath",
@@ -2204,7 +4581,7 @@
             "type": "Manual"
           },
           "tags": [],
-          "updated_at": "2024-01-15T10:30:00Z"
+          "updated_at": "2026-01-15T10:30:00Z"
         }
       },
       "GroupBase": {
@@ -2213,7 +4590,6 @@
           "name",
           "network_id",
           "group_type",
-          "source",
           "color"
         ],
         "properties": {
@@ -2247,9 +4623,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "source": {
-            "$ref": "#/components/schemas/EntitySource"
-          },
           "tags": {
             "type": "array",
             "items": {
@@ -2261,109 +4634,10 @@
       },
       "GroupType": {
         "type": "string",
-        "description": "Group type determines the visual representation and behavior of the group.\nBinding IDs are stored separately in GroupBase.binding_ids.",
         "enum": [
           "RequestPath",
           "HubAndSpoke"
         ]
-      },
-      "Host": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/HostBase"
-          },
-          {
-            "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
-            "properties": {
-              "created_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "updated_at": {
-                "type": "string",
-                "format": "date-time"
-              }
-            }
-          }
-        ],
-        "example": {
-          "created_at": "2024-01-15T10:30:00Z",
-          "description": "Primary web server",
-          "hidden": false,
-          "hostname": "web-server-01.local",
-          "id": "550e8400-e29b-41d4-a716-446655440003",
-          "name": "web-server-01",
-          "network_id": "550e8400-e29b-41d4-a716-446655440002",
-          "source": {
-            "type": "Manual"
-          },
-          "tags": [],
-          "updated_at": "2024-01-15T10:30:00Z",
-          "virtualization": null
-        }
-      },
-      "HostBase": {
-        "type": "object",
-        "description": "Base data for a Host entity (stored in database).\nChild entities (interfaces, ports, services) are stored in their own tables\nand queried by `host_id`. They are NOT stored on the host.",
-        "required": [
-          "name",
-          "network_id",
-          "source",
-          "hidden"
-        ],
-        "properties": {
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "hidden": {
-            "type": "boolean"
-          },
-          "hostname": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "network_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "source": {
-            "$ref": "#/components/schemas/EntitySource"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "virtualization": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/HostVirtualization"
-              }
-            ]
-          }
-        }
       },
       "HostNamingFallback": {
         "type": "string",
@@ -2463,14 +4737,14 @@
           }
         },
         "example": {
-          "created_at": "2024-01-15T10:30:00Z",
+          "created_at": "2026-01-15T10:30:00Z",
           "description": "Primary web server",
           "hidden": false,
           "hostname": "web-server-01.local",
           "id": "550e8400-e29b-41d4-a716-446655440003",
           "interfaces": [
             {
-              "created_at": "2024-01-15T10:30:00Z",
+              "created_at": "2026-01-15T10:30:00Z",
               "host_id": "550e8400-e29b-41d4-a716-446655440003",
               "id": "550e8400-e29b-41d4-a716-446655440005",
               "ip_address": "192.168.1.100",
@@ -2478,21 +4752,21 @@
               "name": "eth0",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "subnet_id": "550e8400-e29b-41d4-a716-446655440004",
-              "updated_at": "2024-01-15T10:30:00Z"
+              "updated_at": "2026-01-15T10:30:00Z"
             }
           ],
           "name": "web-server-01",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "ports": [
             {
-              "created_at": "2024-01-15T10:30:00Z",
+              "created_at": "2026-01-15T10:30:00Z",
               "host_id": "550e8400-e29b-41d4-a716-446655440003",
               "id": "550e8400-e29b-41d4-a716-446655440006",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "number": 80,
               "protocol": "Tcp",
               "type": "Http",
-              "updated_at": "2024-01-15T10:30:00Z"
+              "updated_at": "2026-01-15T10:30:00Z"
             }
           ],
           "services": [],
@@ -2500,7 +4774,7 @@
             "type": "Manual"
           },
           "tags": [],
-          "updated_at": "2024-01-15T10:30:00Z",
+          "updated_at": "2026-01-15T10:30:00Z",
           "virtualization": null
         }
       },
@@ -2535,29 +4809,27 @@
           },
           {
             "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
         ],
         "example": {
-          "created_at": "2024-01-15T10:30:00Z",
+          "created_at": "2026-01-15T10:30:00Z",
           "host_id": "550e8400-e29b-41d4-a716-446655440003",
           "id": "550e8400-e29b-41d4-a716-446655440005",
           "ip_address": "192.168.1.100",
@@ -2565,7 +4837,7 @@
           "name": "eth0",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "subnet_id": "550e8400-e29b-41d4-a716-446655440004",
-          "updated_at": "2024-01-15T10:30:00Z"
+          "updated_at": "2026-01-15T10:30:00Z"
         }
       },
       "InterfaceBase": {
@@ -2603,6 +4875,77 @@
           "subnet_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "Invite": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InviteBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "InviteBase": {
+        "type": "object",
+        "required": [
+          "organization_id",
+          "permissions",
+          "network_ids",
+          "url",
+          "created_by",
+          "expires_at"
+        ],
+        "properties": {
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "network_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/UserOrgPermissions"
+          },
+          "send_to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -2650,48 +4993,41 @@
           },
           {
             "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
         ],
         "example": {
-          "created_at": "2024-01-15T10:30:00Z",
+          "created_at": "2026-01-15T10:30:00Z",
           "id": "550e8400-e29b-41d4-a716-446655440002",
-          "is_default": false,
           "name": "Home Network",
           "organization_id": "550e8400-e29b-41d4-a716-446655440001",
           "tags": [],
-          "updated_at": "2024-01-15T10:30:00Z"
+          "updated_at": "2026-01-15T10:30:00Z"
         }
       },
       "NetworkBase": {
         "type": "object",
         "required": [
           "name",
-          "is_default",
           "organization_id"
         ],
         "properties": {
-          "is_default": {
-            "type": "boolean"
-          },
           "name": {
             "type": "string"
           },
@@ -2709,28 +5045,121 @@
         }
       },
       "Organization": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/OrganizationBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "OrganizationBase": {
         "type": "object",
         "required": [
-          "id",
           "name",
-          "created_at",
-          "updated_at"
+          "onboarding"
         ],
         "properties": {
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "name": {
             "type": "string"
           },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
+          "onboarding": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TelemetryOperation"
+            }
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BillingPlan"
+              }
+            ]
+          },
+          "plan_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stripe_customer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PlanConfig": {
+        "type": "object",
+        "required": [
+          "base_cents",
+          "rate",
+          "trial_days"
+        ],
+        "properties": {
+          "base_cents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "included_networks": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "included_seats": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "network_cents": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "rate": {
+            "$ref": "#/components/schemas/BillingRate"
+          },
+          "seat_cents": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "trial_days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -2741,28 +5170,36 @@
           },
           {
             "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
         ],
-        "description": "The Port entity"
+        "description": "Note: TS types for Port are defined in ts_exports due to PortType's custom serialization",
+        "example": {
+          "created_at": "2026-01-15T10:30:00Z",
+          "host_id": "550e8400-e29b-41d4-a716-446655440003",
+          "id": "550e8400-e29b-41d4-a716-446655440006",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "number": 80,
+          "protocol": "Tcp",
+          "type": "Http",
+          "updated_at": "2026-01-15T10:30:00Z"
+        }
       },
       "PortBase": {
         "allOf": [
@@ -2787,15 +5224,14 @@
             }
           }
         ],
-        "description": "The base data for a Port entity (everything except id, created_at, updated_at)"
+        "description": "The base data for a Port entity (everything except id, created_at, updated_at)\nNote: TS types for Port are defined in ts_exports due to PortType's custom serialization"
       },
       "PortType": {
         "type": "object",
-        "description": "Port type with number, protocol, and type identifier",
+        "description": "Port type with number, protocol, and optional type identifier",
         "required": [
           "number",
-          "protocol",
-          "type"
+          "protocol"
         ],
         "properties": {
           "number": {
@@ -2809,7 +5245,8 @@
             ]
           },
           "type": {
-            "type": "string"
+            "type": "string",
+            "description": "Auto-derived from number+protocol; optional on create"
           }
         }
       },
@@ -2837,6 +5274,82 @@
           }
         }
       },
+      "RunType": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Scheduled",
+            "required": [
+              "cron_schedule",
+              "enabled",
+              "type"
+            ],
+            "properties": {
+              "cron_schedule": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "last_run": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Scheduled"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Historical",
+            "required": [
+              "results",
+              "type"
+            ],
+            "properties": {
+              "results": {
+                "$ref": "#/components/schemas/DiscoveryUpdatePayload"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Historical"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "AdHoc",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "last_run": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "AdHoc"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Note: DiscoveryUpdatePayload field is skipped from TS export as it's only used internally"
+      },
       "Service": {
         "allOf": [
           {
@@ -2844,27 +5357,51 @@
           },
           {
             "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
-        ]
+        ],
+        "example": {
+          "bindings": [
+            {
+              "created_at": "2025-12-24T04:33:16.078615Z",
+              "id": "1b924950-99cf-4774-97b5-6433ae491924",
+              "interface_id": "550e8400-e29b-41d4-a716-446655440005",
+              "network_id": "550e8400-e29b-41d4-a716-446655440002",
+              "port_id": "550e8400-e29b-41d4-a716-446655440006",
+              "service_id": "550e8400-e29b-41d4-a716-446655440007",
+              "type": "Port",
+              "updated_at": "2025-12-24T04:33:16.078615Z"
+            }
+          ],
+          "created_at": "2026-01-15T10:30:00Z",
+          "host_id": "550e8400-e29b-41d4-a716-446655440003",
+          "id": "550e8400-e29b-41d4-a716-446655440007",
+          "name": "nginx",
+          "network_id": "550e8400-e29b-41d4-a716-446655440002",
+          "service_definition": "Huntarr",
+          "source": {
+            "type": "Manual"
+          },
+          "tags": [],
+          "updated_at": "2026-01-15T10:30:00Z",
+          "virtualization": null
+        }
       },
       "ServiceBase": {
         "type": "object",
@@ -2873,8 +5410,7 @@
           "network_id",
           "service_definition",
           "name",
-          "bindings",
-          "source"
+          "bindings"
         ],
         "properties": {
           "bindings": {
@@ -2896,9 +5432,6 @@
           },
           "service_definition": {
             "type": "string"
-          },
-          "source": {
-            "$ref": "#/components/schemas/EntitySource"
           },
           "tags": {
             "type": "array",
@@ -2940,7 +5473,8 @@
               }
             }
           }
-        ]
+        ],
+        "title": "ServiceVirtualization"
       },
       "Subnet": {
         "allOf": [
@@ -2949,30 +5483,28 @@
           },
           {
             "type": "object",
-            "required": [
-              "id",
-              "created_at",
-              "updated_at"
-            ],
             "properties": {
               "created_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               },
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "readOnly": true
               },
               "updated_at": {
                 "type": "string",
-                "format": "date-time"
+                "format": "date-time",
+                "readOnly": true
               }
             }
           }
         ],
         "example": {
           "cidr": "192.168.1.0/24",
-          "created_at": "2024-01-15T10:30:00Z",
+          "created_at": "2026-01-15T10:30:00Z",
           "description": "Local area network",
           "id": "550e8400-e29b-41d4-a716-446655440004",
           "name": "LAN",
@@ -2982,7 +5514,7 @@
           },
           "subnet_type": "Lan",
           "tags": [],
-          "updated_at": "2024-01-15T10:30:00Z"
+          "updated_at": "2026-01-15T10:30:00Z"
         }
       },
       "SubnetBase": {
@@ -2991,8 +5523,7 @@
           "cidr",
           "network_id",
           "name",
-          "subnet_type",
-          "source"
+          "subnet_type"
         ],
         "properties": {
           "cidr": {
@@ -3010,9 +5541,6 @@
           "network_id": {
             "type": "string",
             "format": "uuid"
-          },
-          "source": {
-            "$ref": "#/components/schemas/EntitySource"
           },
           "subnet_type": {
             "$ref": "#/components/schemas/SubnetType"
@@ -3046,26 +5574,57 @@
         ]
       },
       "Tag": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TagBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ],
+        "example": {
+          "color": "#22C55E",
+          "created_at": "2026-01-15T10:30:00Z",
+          "description": "Production environment resources",
+          "id": "550e8400-e29b-41d4-a716-44665544000a",
+          "name": "production",
+          "organization_id": "550e8400-e29b-41d4-a716-446655440001",
+          "updated_at": "2026-01-15T10:30:00Z"
+        }
+      },
+      "TagBase": {
         "type": "object",
         "required": [
-          "id",
-          "organization_id",
           "name",
           "color",
-          "created_at",
-          "updated_at"
+          "organization_id"
         ],
         "properties": {
           "color": {
             "type": "string"
           },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "name": {
             "type": "string"
@@ -3073,12 +5632,20 @@
           "organization_id": {
             "type": "string",
             "format": "uuid"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
           }
         }
+      },
+      "TelemetryOperation": {
+        "type": "string",
+        "enum": [
+          "OrgCreated",
+          "OnboardingModalCompleted",
+          "PersonalPlanSelected",
+          "CommercialPlanSelected",
+          "FirstApiKeyCreated",
+          "FirstDaemonRegistered",
+          "FirstTopologyRebuild"
+        ]
       },
       "TransportProtocol": {
         "type": "string",
@@ -3138,28 +5705,64 @@
         }
       },
       "User": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/UserBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "readOnly": true
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "UserBase": {
         "type": "object",
         "required": [
-          "id",
-          "organization_id",
           "email",
-          "permissions",
-          "created_at",
-          "updated_at"
+          "organization_id",
+          "permissions"
         ],
         "properties": {
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
           "email": {
             "type": "string"
           },
-          "id": {
-            "type": "string",
-            "format": "uuid"
+          "network_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
-          "name": {
+          "oidc_linked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "oidc_provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "oidc_subject": {
             "type": [
               "string",
               "null"
@@ -3170,15 +5773,18 @@
             "format": "uuid"
           },
           "permissions": {
-            "$ref": "#/components/schemas/UserPermissions"
+            "$ref": "#/components/schemas/UserOrgPermissions"
           },
-          "updated_at": {
-            "type": "string",
+          "terms_accepted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           }
         }
       },
-      "UserPermissions": {
+      "UserOrgPermissions": {
         "type": "string",
         "enum": [
           "Owner",
@@ -3187,68 +5793,19 @@
           "Viewer"
         ]
       }
+    },
+    "securitySchemes": {
+      "api_key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for daemon authentication. Generate keys in the web UI under Settings > API Keys."
+      },
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      }
     }
-  },
-  "tags": [
-    {
-      "name": "hosts",
-      "description": "Host management"
-    },
-    {
-      "name": "services",
-      "description": "Service management"
-    },
-    {
-      "name": "interfaces",
-      "description": "Network interface management"
-    },
-    {
-      "name": "ports",
-      "description": "Port management"
-    },
-    {
-      "name": "bindings",
-      "description": "Service binding management"
-    },
-    {
-      "name": "subnets",
-      "description": "Subnet management"
-    },
-    {
-      "name": "networks",
-      "description": "Network management"
-    },
-    {
-      "name": "groups",
-      "description": "Group management"
-    },
-    {
-      "name": "tags",
-      "description": "Tag management"
-    },
-    {
-      "name": "daemons",
-      "description": "Daemon management"
-    },
-    {
-      "name": "discovery",
-      "description": "Network discovery"
-    },
-    {
-      "name": "topology",
-      "description": "Topology visualization"
-    },
-    {
-      "name": "auth",
-      "description": "Authentication"
-    },
-    {
-      "name": "users",
-      "description": "User management"
-    },
-    {
-      "name": "organizations",
-      "description": "Organization management"
-    }
-  ]
+  }
 }

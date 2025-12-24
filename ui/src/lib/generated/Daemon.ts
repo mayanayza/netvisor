@@ -2,4 +2,4 @@
 import type { DaemonCapabilities } from "./DaemonCapabilities";
 import type { DaemonMode } from "./DaemonMode";
 
-export type Daemon = { id: string, network_id: string, host_id: string | null, url: string | null, mode: DaemonMode, capabilities: DaemonCapabilities, version: string | null, last_seen: string | null, created_at: string, updated_at: string, };
+export type Daemon = { id: string, updated_at: string, created_at: string, host_id: string, network_id: string, url: string, last_seen: string, capabilities: DaemonCapabilities, mode: DaemonMode, name: string, tags: Array<string>, };

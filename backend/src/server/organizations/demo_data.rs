@@ -172,7 +172,6 @@ fn generate_networks(organization_id: Uuid, tags: &[Tag], now: DateTime<Utc>) ->
             updated_at: now,
             base: NetworkBase {
                 name: "Headquarters".to_string(),
-                is_default: true,
                 organization_id,
                 tags: production_tag.into_iter().collect(),
             },
@@ -183,7 +182,6 @@ fn generate_networks(organization_id: Uuid, tags: &[Tag], now: DateTime<Utc>) ->
             updated_at: now,
             base: NetworkBase {
                 name: "Cloud Infrastructure".to_string(),
-                is_default: false,
                 organization_id,
                 tags: production_tag.into_iter().collect(),
             },
@@ -194,7 +192,6 @@ fn generate_networks(organization_id: Uuid, tags: &[Tag], now: DateTime<Utc>) ->
             updated_at: now,
             base: NetworkBase {
                 name: "Remote Office - Denver".to_string(),
-                is_default: false,
                 organization_id,
                 tags: vec![],
             },
@@ -205,7 +202,6 @@ fn generate_networks(organization_id: Uuid, tags: &[Tag], now: DateTime<Utc>) ->
             updated_at: now,
             base: NetworkBase {
                 name: "Client: Riverside Medical".to_string(),
-                is_default: false,
                 organization_id,
                 tags: managed_client_tag.into_iter().collect(),
             },

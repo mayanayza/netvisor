@@ -5,24 +5,25 @@ use crate::server::{
     networks::service::NetworkService,
     shared::{
         entities::ChangeTriggersTopologyStaleness,
-        handlers::{query::OrganizationFilterQuery, traits::CrudHandlers},
+        handlers::{query::NoFilterQuery, traits::CrudHandlers},
     },
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct NetworkBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
-    pub is_default: bool,
     pub organization_id: Uuid,
     #[serde(default)]
     pub tags: Vec<Uuid>,
@@ -32,18 +33,24 @@ impl NetworkBase {
     pub fn new(organization_id: Uuid) -> Self {
         Self {
             name: "My Network".to_string(),
-            is_default: false,
             organization_id,
             tags: Vec::new(),
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[schema(example = crate::server::shared::types::examples::network)]
 pub struct Network {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: NetworkBase,
@@ -57,7 +64,7 @@ impl Display for Network {
 
 impl CrudHandlers for Network {
     type Service = NetworkService;
-    type FilterQuery = OrganizationFilterQuery;
+    type FilterQuery = NoFilterQuery;
 
     fn get_service(state: &AppState) -> &Self::Service {
         &state.services.network_service
@@ -124,7 +131,6 @@ impl StorableEntity for Network {
                 Self::BaseData {
                     name,
                     organization_id,
-                    is_default,
                     tags,
                 },
         } = self.clone();
@@ -136,7 +142,6 @@ impl StorableEntity for Network {
                 "updated_at",
                 "name",
                 "organization_id",
-                "is_default",
                 "tags",
             ],
             vec![
@@ -145,7 +150,6 @@ impl StorableEntity for Network {
                 SqlValue::Timestamp(updated_at),
                 SqlValue::String(name),
                 SqlValue::Uuid(organization_id),
-                SqlValue::Bool(is_default),
                 SqlValue::UuidArray(tags),
             ],
         ))
@@ -159,7 +163,6 @@ impl StorableEntity for Network {
             base: NetworkBase {
                 name: row.get("name"),
                 organization_id: row.get("organization_id"),
-                is_default: row.get("is_default"),
                 tags: row.get("tags"),
             },
         })

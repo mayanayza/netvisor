@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -24,11 +25,16 @@ use crate::server::{
     EnumDiscriminants,
     EnumIter,
     ToSchema,
+    TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[serde(tag = "type")]
 pub enum DiscoveryType {
     #[schema(title = "SelfReport")]
-    SelfReport { host_id: Uuid },
+    SelfReport { 
+        // ID of the host that the daemon is running on
+        host_id: Uuid 
+    },
     #[schema(title = "Network")]
     Network {
         subnet_ids: Option<Vec<Uuid>>,
@@ -37,6 +43,7 @@ pub enum DiscoveryType {
     },
     #[schema(title = "Docker")]
     Docker {
+        // ID of the host that the daemon is running on
         host_id: Uuid,
         #[serde(default)]
         host_naming_fallback: HostNamingFallback,
@@ -61,25 +68,35 @@ impl Display for DiscoveryType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum HostNamingFallback {
     Ip,
     #[default]
     BestService,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[serde(tag = "type")]
 pub enum RunType {
+    #[schema(title = "Scheduled")]
     Scheduled {
         cron_schedule: String,
+        #[serde(default)]
+        #[schema(read_only)]
         last_run: Option<DateTime<Utc>>,
         enabled: bool,
     },
+    #[schema(title = "Historical")]
+    /// Historical discovery runs are created by the server and cannot be submitted via API
     Historical {
         results: DiscoveryUpdatePayload,
     },
+    #[schema(title = "AdHoc")]
     AdHoc {
+        #[serde(default)]
+        #[schema(read_only)]
         last_run: Option<DateTime<Utc>>,
     },
 }

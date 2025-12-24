@@ -4,25 +4,38 @@ use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 use crate::server::shared::types::api::serialize_sensitive_info;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct ApiKeyBase {
     #[serde(serialize_with = "serialize_sensitive_info")]
+    #[schema(read_only)]
     pub key: String,
     pub name: String,
+    #[schema(read_only)]
     pub last_used: Option<DateTime<Utc>>,
     pub expires_at: Option<DateTime<Utc>>,
     pub network_id: Uuid,
+    #[serde(default)]
     pub is_enabled: bool,
     #[serde(default)]
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct ApiKey {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: ApiKeyBase,

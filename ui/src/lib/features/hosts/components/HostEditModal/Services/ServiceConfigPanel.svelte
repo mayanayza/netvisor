@@ -248,7 +248,6 @@
 			service_id: service.id,
 			network_id: service.network_id,
 			interface_id: firstAvailable.id,
-			port_id: null,
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString()
 		};

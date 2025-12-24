@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use stripe_product::price::CreatePriceRecurringInterval;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use utoipa::ToSchema;
 
 #[derive(
     Debug,
@@ -18,6 +19,7 @@ use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
     EnumIter,
     EnumDiscriminants,
     Eq,
+    ToSchema,
 )]
 #[strum_discriminants(derive(IntoStaticStr, Serialize))]
 #[serde(tag = "type")]
@@ -97,7 +99,7 @@ impl BillingPlan {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Default, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq, Eq, Default, Hash, ToSchema)]
 pub struct PlanConfig {
     pub base_cents: i64,
     pub rate: BillingRate,
@@ -120,7 +122,7 @@ pub enum Hosting {
     Cloud,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash, ToSchema)]
 pub enum BillingRate {
     #[default]
     Month,

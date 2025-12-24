@@ -1,6 +1,8 @@
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::daemons::r#impl::api::DaemonHeartbeatPayload;
 use crate::server::shared::events::types::TelemetryOperation;
+use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::traits::StorableEntity;
 use crate::server::{
     auth::middleware::auth::{AuthenticatedDaemon, AuthenticatedEntity},
     config::AppState,
@@ -18,11 +20,7 @@ use crate::server::{
     hosts::r#impl::base::{Host, HostBase},
     shared::{
         events::types::TelemetryEvent,
-        handlers::traits::{
-            bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler, update_handler,
-        },
-        services::traits::{CrudService, EventBusService},
-        storage::traits::StorableEntity,
+        services::traits::EventBusService,
         types::{
             api::{ApiError, ApiResponse, ApiResult},
             entities::EntitySource,
@@ -30,22 +28,32 @@ use crate::server::{
     },
 };
 use axum::{
-    Router,
     extract::{Path, State},
     response::Json,
-    routing::{delete, get, post, put},
 };
 use chrono::Utc;
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_all_handler::<Daemon>))
-        .route("/{id}", put(update_handler::<Daemon>))
-        .route("/{id}", delete(delete_handler::<Daemon>))
-        .route("/{id}", get(get_by_id_handler::<Daemon>))
-        .route("/bulk-delete", post(bulk_delete_handler::<Daemon>))
+// Generated handlers for operations that use generic CRUD logic
+mod generated {
+    use super::*;
+    crate::crud_get_all_handler!(Daemon, "daemons", "daemon");
+    crate::crud_get_by_id_handler!(Daemon, "daemons", "daemon");
+    crate::crud_update_handler!(Daemon, "daemons", "daemon");
+    crate::crud_delete_handler!(Daemon, "daemons", "daemon");
+    crate::crud_bulk_delete_handler!(Daemon, "daemons");
+}
+
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    use axum::routing::post;
+
+    OpenApiRouter::new()
+        .routes(routes!(generated::get_all))
+        .routes(routes!(generated::get_by_id, generated::update, generated::delete))
+        .routes(routes!(generated::bulk_delete))
+        // Daemon-only endpoints (no OpenAPI docs - these are internal daemon API)
         .route("/register", post(register_daemon))
         .route("/{id}/heartbeat", post(receive_heartbeat))
         .route("/{id}/update-capabilities", post(update_capabilities))
@@ -54,7 +62,6 @@ pub fn create_router() -> Router<Arc<AppState>> {
 
 const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
 
-/// Register a new daemon
 async fn register_daemon(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,
@@ -270,7 +277,6 @@ async fn update_capabilities(
     Ok(Json(ApiResponse::success(())))
 }
 
-/// Receive heartbeat from daemon
 async fn receive_heartbeat(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,

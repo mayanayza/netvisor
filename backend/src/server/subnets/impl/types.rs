@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 
 use crate::server::shared::{
@@ -23,7 +24,9 @@ use crate::server::shared::{
     IntoStaticStr,
     Default,
     ToSchema,
+    TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[strum_discriminants(derive(Display, Hash, Serialize, Deserialize, EnumIter))]
 pub enum SubnetType {
     Internet,

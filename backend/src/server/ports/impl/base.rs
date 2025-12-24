@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::{fmt::Display, str::FromStr};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -25,7 +26,9 @@ use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, Type
     Serialize,
     Deserialize,
     ToSchema,
+    TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum TransportProtocol {
     #[default]
     Udp,
@@ -78,11 +81,22 @@ impl Hash for PortBase {
     }
 }
 
-/// The Port entity
-#[derive(Copy, Debug, Validate, Clone, Eq, Serialize, Deserialize, ToSchema)]
+/// Port entity with custom serialization that flattens PortType fields.
+/// The TypeScript type is defined inline since serde(flatten) with custom Serialize
+/// doesn't work automatically with ts-rs.
+#[derive(Copy, Debug, Validate, Clone, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[ts(type = "{ id: string, host_id: string, network_id: string, created_at: string, updated_at: string, number: number, protocol: TransportProtocol, type: string }")]
+#[schema(example = crate::server::shared::types::examples::port)]
 pub struct Port {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: PortBase,
@@ -791,6 +805,7 @@ impl<'de> Deserialize<'de> for PortType {
 
 /// Manual ToSchema implementation for PortType since it has custom serialization
 /// PortType serializes to {number: u16, protocol: TransportProtocol, type: String}
+/// On create, only number+protocol are required; type is auto-derived from them.
 impl utoipa::PartialSchema for PortType {
     fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::Schema> {
         use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
@@ -801,11 +816,16 @@ impl utoipa::PartialSchema for PortType {
                 .schema_type(SchemaType::new(Type::Object))
                 .property("number", ObjectBuilder::new().schema_type(SchemaType::new(Type::Integer)).build())
                 .property("protocol", TransportProtocol::schema())
-                .property("type", ObjectBuilder::new().schema_type(SchemaType::new(Type::String)).build())
+                .property(
+                    "type",
+                    ObjectBuilder::new()
+                        .schema_type(SchemaType::new(Type::String))
+                        .description(Some("Auto-derived from number+protocol; optional on create"))
+                        .build(),
+                )
                 .required("number")
                 .required("protocol")
-                .required("type")
-                .description(Some("Port type with number, protocol, and type identifier"))
+                .description(Some("Port type with number, protocol, and optional type identifier"))
                 .build(),
         ))
     }

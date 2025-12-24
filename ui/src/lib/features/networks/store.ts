@@ -66,7 +66,6 @@ export function createEmptyNetworkFormData(): Network {
 		name: '',
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
-		is_default: false,
 		organization_id: uuidv4Sentinel,
 		tags: []
 	};

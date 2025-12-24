@@ -2,13 +2,15 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, hash::Hash};
 use strum_macros::{EnumDiscriminants, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 
 /// The type of binding - either to an interface or to a port
-#[derive(Copy, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, EnumDiscriminants, ToSchema)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, EnumDiscriminants, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[strum_discriminants(derive(IntoStaticStr))]
 #[serde(tag = "type")]
 pub enum BindingType {
@@ -18,7 +20,8 @@ pub enum BindingType {
     Port {
         port_id: Uuid,
         #[serde(skip_serializing_if = "Option::is_none")]
-        interface_id: Option<Uuid>, // None = all interfaces
+        /// None = service is listening on this port on all interfaces
+        interface_id: Option<Uuid>, 
     },
 }
 
@@ -32,11 +35,10 @@ impl Default for BindingType {
 }
 
 /// The base data for a Binding entity (everything except id, created_at, updated_at)
-#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct BindingBase {
-    #[serde(default)]
     pub service_id: Uuid,
-    #[serde(default)]
     pub network_id: Uuid,
     #[serde(flatten)]
     pub binding_type: BindingType,
@@ -98,13 +100,19 @@ impl Hash for BindingType {
     }
 }
 
-/// The Binding entity
-#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema)]
+/// Association between a service and a port / interface that the service is listening on
+#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[schema(example = crate::server::shared::types::examples::binding)]
 pub struct Binding {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
     #[serde(default = "Utc::now")]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
     #[serde(default = "Utc::now")]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: BindingBase,

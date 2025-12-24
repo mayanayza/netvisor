@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::{
@@ -9,7 +11,8 @@ use crate::server::{
     shared::entities::ChangeTriggersTopologyStaleness,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct DiscoveryBase {
     pub discovery_type: DiscoveryType,
     pub run_type: RunType,
@@ -20,10 +23,17 @@ pub struct DiscoveryBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct Discovery {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: DiscoveryBase,

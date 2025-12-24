@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, str::FromStr};
 use strum::{Display, EnumIter, IntoEnumIterator, IntoStaticStr};
+use ts_rs::TS;
+use utoipa::ToSchema;
 
 use crate::server::shared::{
     entities::EntityDiscriminants,
@@ -20,7 +22,10 @@ use crate::server::shared::{
     IntoStaticStr,
     Hash,
     Default,
+    ToSchema,
+    TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum UserOrgPermissions {
     Owner,
     Admin,

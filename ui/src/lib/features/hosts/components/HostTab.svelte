@@ -164,6 +164,14 @@
 		}
 	}
 
+	async function handleHostCreateAndContinue(data: HostWithServicesRequest) {
+		const result = await createHost(data);
+		if (result?.success && result.data) {
+			// Keep modal open and switch to edit mode with the created host
+			editingHost = result.data;
+		}
+	}
+
 	async function handleHostUpdate(data: HostWithServicesRequest) {
 		const result = await updateHost(data);
 		if (result?.success) {
@@ -252,6 +260,7 @@
 	isOpen={showHostEditor}
 	host={editingHost}
 	onCreate={handleHostCreate}
+	onCreateAndContinue={handleHostCreateAndContinue}
 	onUpdate={handleHostUpdate}
 	onClose={handleCloseHostEditor}
 />

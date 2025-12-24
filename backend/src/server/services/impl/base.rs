@@ -19,20 +19,24 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
 use std::net::IpAddr;
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct ServiceBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
+    #[ts(type = "string")]
     #[schema(value_type = String)]
     pub service_definition: Box<dyn ServiceDefinition>,
     #[validate(length(min = 0, max = 100))]
     pub name: String,
     pub bindings: Vec<Binding>,
     pub virtualization: Option<ServiceVirtualization>,
+    #[serde(skip_deserializing, default)]
     pub source: EntitySource,
     #[serde(default)]
     pub tags: Vec<Uuid>,
@@ -65,10 +69,18 @@ impl ChangeTriggersTopologyStaleness<Service> for Service {
     }
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, Default, ToSchema)]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[schema(example = crate::server::shared::types::examples::service)]
 pub struct Service {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     #[validate(nested)]

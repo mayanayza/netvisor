@@ -16,6 +16,7 @@ use crate::server::{
 };
 use axum::extract::{Path, State};
 use axum::response::Json;
+use axum::routing::post;
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -25,8 +26,9 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(get_all_hosts, create_host))
         .routes(routes!(get_host_by_id, update_host, delete_host))
         .routes(routes!(bulk_delete_hosts))
-        .routes(routes!(create_host_discovery))
         .routes(routes!(consolidate_hosts))
+        // Internal endpoint - registered without OpenAPI docs
+        .route("/discovery", post(create_host_discovery))
 }
 
 /// List all hosts
@@ -193,20 +195,10 @@ async fn update_host(
     Ok(Json(ApiResponse::success(host_response)))
 }
 
-/// Internal endpoint for daemon discovery
+/// Internal endpoint for daemon discovery (not included in public API docs)
 ///
 /// Used by daemons to report discovered hosts. Accepts full entities with
 /// pre-generated IDs. Uses upsert behavior to merge with existing hosts.
-#[utoipa::path(
-    post,
-    path = "/discovery",
-    tag = "hosts",
-    request_body = DiscoveryHostRequest,
-    responses(
-        (status = 200, description = "Host discovered/updated", body = HostResponse),
-    ),
-    security(("api_key" = []))
-)]
 async fn create_host_discovery(
     State(state): State<Arc<AppState>>,
     daemon: AuthenticatedDaemon,
@@ -228,7 +220,7 @@ async fn create_host_discovery(
     Ok(Json(ApiResponse::success(host_response)))
 }
 
-/// Consolidate two hosts into one
+/// Consolidate hosts
 ///
 /// Merges all interfaces, ports, and services from `other_host` into
 /// `destination_host`, then deletes `other_host`. Both hosts must be
@@ -303,7 +295,9 @@ async fn consolidate_hosts(
     Ok(Json(ApiResponse::success(host_response)))
 }
 
-/// Delete a host, checking for associated daemons first
+/// Delete a host
+/// 
+/// Prevents deletion if the host has a daemon associated with it
 #[utoipa::path(
     delete,
     path = "/{id}",

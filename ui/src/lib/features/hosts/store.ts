@@ -1,10 +1,22 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import type { AllInterfaces, Host, HostWithServicesRequest, Interface, Port } from './types/base';
+import type {
+	AllInterfaces,
+	CreateHostRequest,
+	CreateInterfaceInput,
+	CreatePortInput,
+	Host,
+	HostWithServicesRequest,
+	Interface,
+	Port,
+	UpdateHostRequest
+} from './types/base';
 import { api } from '../../shared/utils/api';
 import { pushSuccess } from '$lib/shared/stores/feedback';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { isContainerSubnet } from '../subnets/store';
 import { networks } from '../networks/store';
+import { bulkUpdateServices, createService, deleteService } from '../services/store';
+import type { Service } from '$lib/generated';
 
 export const hosts = writable<Host[]>([]);
 export const polling = writable(false);
@@ -13,26 +25,81 @@ export async function getHosts() {
 	return await api.request<Host[]>(`/hosts`, hosts, (hosts) => hosts, { method: 'GET' });
 }
 
+/**
+ * Transform Host form data to CreateHostRequest format for API
+ */
+function toCreateHostRequest(host: Host): CreateHostRequest {
+	return {
+		name: host.name,
+		network_id: host.network_id,
+		hostname: host.hostname,
+		description: host.description,
+		virtualization: host.virtualization,
+		hidden: host.hidden,
+		tags: host.tags,
+		interfaces: host.interfaces.map(
+			(iface): CreateInterfaceInput => ({
+				subnet_id: iface.subnet_id,
+				ip_address: iface.ip_address,
+				mac_address: iface.mac_address,
+				name: iface.name
+			})
+		),
+		ports: host.ports.map(
+			(port): CreatePortInput => ({
+				number: port.number,
+				protocol: port.protocol
+			})
+		)
+	};
+}
+
+/**
+ * Transform Host form data to UpdateHostRequest format for API
+ */
+function toUpdateHostRequest(host: Host): UpdateHostRequest {
+	return {
+		id: host.id,
+		name: host.name,
+		hostname: host.hostname,
+		description: host.description,
+		virtualization: host.virtualization,
+		hidden: host.hidden,
+		tags: host.tags
+	};
+}
+
 export async function createHost(data: HostWithServicesRequest) {
-	const result = await api.request<HostWithServicesRequest, Host[]>(
+	const request = toCreateHostRequest(data.host);
+
+	const result = await api.request<Host, Host[]>(
 		'/hosts',
 		hosts,
-		({ host }, current) => [...current, host],
-		{ method: 'POST', body: JSON.stringify(data) }
+		(createdHost, current) => [...current, createdHost],
+		{ method: 'POST', body: JSON.stringify(request) }
 	);
 
 	return result;
 }
 
 export async function updateHost(data: HostWithServicesRequest) {
-	return await api.request<Host, Host[]>(
+	const request = toUpdateHostRequest(data.host);
+
+	const result = await api.request<Host, Host[]>(
 		`/hosts/${data.host.id}`,
 		hosts,
 		(updatedHost, current) => {
 			return current.map((n) => (n.id === data.host.id ? updatedHost : n));
 		},
-		{ method: 'PUT', body: JSON.stringify(data) }
+		{ method: 'PUT', body: JSON.stringify(request) }
 	);
+
+	// Handle service updates if services are provided
+	if (data.services !== null && result?.success) {
+		await bulkUpdateServices(data.host.id, data.services);
+	}
+
+	return result;
 }
 
 export async function deleteHost(id: string) {

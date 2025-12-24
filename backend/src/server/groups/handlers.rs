@@ -1,11 +1,10 @@
 use axum::extract::State;
 use axum::Json;
 
-use crate::server::auth::middleware::auth::AuthenticatedUser;
 use crate::server::auth::middleware::permissions::RequireMember;
 use crate::server::config::AppState;
 use crate::server::groups::r#impl::base::Group;
-use crate::server::shared::handlers::traits::{create_handler, CrudHandlers};
+use crate::server::shared::handlers::traits::create_handler;
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::{ApiError, ApiResponse, ApiResult};
@@ -15,6 +14,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 // Generated handlers for operations that use generic CRUD logic
 mod generated {
     use super::*;
+    crate::crud_get_all_handler!(Group, "groups", "group");
     crate::crud_get_by_id_handler!(Group, "groups", "group");
     crate::crud_update_handler!(Group, "groups", "group");
     crate::crud_delete_handler!(Group, "groups", "group");
@@ -23,29 +23,9 @@ mod generated {
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
-        .routes(routes!(get_all_groups, create_group))
+        .routes(routes!(generated::get_all, create_group))
         .routes(routes!(generated::get_by_id, generated::update, generated::delete))
         .routes(routes!(generated::bulk_delete))
-}
-
-/// List all groups
-#[utoipa::path(
-    get,
-    path = "",
-    tag = "groups",
-    responses(
-        (status = 200, description = "List of groups", body = Vec<Group>),
-    ),
-    security(("session" = []))
-)]
-async fn get_all_groups(
-    State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
-) -> ApiResult<Json<ApiResponse<Vec<Group>>>> {
-    let service = Group::get_service(&state);
-    let filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
-    let groups = service.get_all(filter).await?;
-    Ok(Json(ApiResponse::success(groups)))
 }
 
 /// Create a new group

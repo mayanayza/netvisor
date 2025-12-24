@@ -2,4 +2,4 @@
 import type { EntitySource } from "./EntitySource";
 import type { SubnetType } from "./SubnetType";
 
-export type Subnet = { id: string, network_id: string, name: string, cidr: string, description: string | null, subnet_type: SubnetType, source: EntitySource, tags: Array<string>, created_at: string, updated_at: string, };
+export type Subnet = { id: string, created_at: string, updated_at: string, cidr: string, network_id: string, name: string, description: string | null, subnet_type: SubnetType, source: EntitySource, tags: Array<string>, };

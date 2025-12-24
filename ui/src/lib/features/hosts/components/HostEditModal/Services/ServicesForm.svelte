@@ -14,6 +14,7 @@
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
 	import ListSelectItem from '$lib/shared/components/forms/selection/ListSelectItem.svelte';
 	import { ArrowRightLeft } from 'lucide-svelte';
+	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 
 	export let formApi: FormApi;
 	export let formData: Host;
@@ -94,12 +95,18 @@
 </script>
 
 <div class="space-y-6">
-	<ListConfigEditor
-		bind:items={currentServices}
-		onChange={handleServiceChange}
-		onReorder={handleServiceReorder}
-		onItemSelect={handleItemSelect}
-	>
+	{#if !isEditing}
+		<InlineInfo
+			title="Services can be added after the host is created"
+			body="Service bindings require the host's interfaces and ports to exist first. Use the buttons below to create the host, then add services."
+		/>
+	{:else}
+		<ListConfigEditor
+			bind:items={currentServices}
+			onChange={handleServiceChange}
+			onReorder={handleServiceReorder}
+			onItemSelect={handleItemSelect}
+		>
 		<svelte:fragment
 			slot="list"
 			let:items
@@ -180,9 +187,8 @@
 				/>
 			{/if}
 		</svelte:fragment>
-	</ListConfigEditor>
+		</ListConfigEditor>
 
-	{#if isEditing}
 		<EntityMetadataSection entities={currentServices} showSummary={false} />
 	{/if}
 </div>

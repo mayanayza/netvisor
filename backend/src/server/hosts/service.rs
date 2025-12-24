@@ -303,9 +303,12 @@ impl HostService {
     // Host creation with children
     // =========================================================================
 
-    /// Create a host from a CreateHostRequest with all children.
+    /// Create a host from a CreateHostRequest with interfaces and ports.
     /// For API users: errors if a host with matching interfaces exists.
     /// Source is automatically set to Manual for API-created entities.
+    ///
+    /// Note: Services are created separately via the services endpoint after the host exists,
+    /// as service bindings require the real IDs of the interfaces/ports to reference.
     pub async fn create_from_request(
         &self,
         request: CreateHostRequest,
@@ -322,7 +325,6 @@ impl HostService {
             tags,
             interfaces: interface_inputs,
             ports: port_inputs,
-            services: service_inputs,
         } = request;
 
         // Auto-set source to Manual for API-created entities
@@ -334,7 +336,7 @@ impl HostService {
             network_id,
             hostname,
             description,
-            source: source.clone(),
+            source,
             virtualization,
             hidden,
             tags,
@@ -353,18 +355,13 @@ impl HostService {
             .map(|input| Port::new(input.into_base(host.id, network_id)))
             .collect();
 
-        // Build services with auto-set source
-        let services: Vec<Service> = service_inputs
-            .into_iter()
-            .map(|input| Service::new(input.into_base(host.id, network_id, source.clone())))
-            .collect();
-
         // Use unified creation with Error behavior for API users
+        // Services are created separately via POST /api/services
         self.create_with_children(
             host,
             interfaces,
             ports,
-            services,
+            vec![], // No services - added separately after host creation
             ConflictBehavior::Error,
             authentication,
         )
@@ -672,12 +669,6 @@ impl HostService {
         if existing_host.base.hostname.is_none() && new_host_data.base.hostname.is_some() {
             has_updates = true;
             existing_host.base.hostname = new_host_data.base.hostname;
-        }
-
-        // Update description if not set
-        if existing_host.base.description.is_none() && new_host_data.base.description.is_some() {
-            has_updates = true;
-            existing_host.base.description = new_host_data.base.description;
         }
 
         // Merge entity source metadata

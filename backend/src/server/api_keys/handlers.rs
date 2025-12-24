@@ -10,37 +10,49 @@ use crate::server::{
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
-        handlers::traits::{
-            CrudHandlers, bulk_delete_handler, delete_handler, get_all_handler, get_by_id_handler,
-            update_handler,
-        },
+        handlers::{traits::{CrudHandlers, update_handler}},
         services::traits::{CrudService, EventBusService},
         types::api::{ApiError, ApiResponse, ApiResult},
     },
 };
 use axum::{
-    Json, Router,
+    Json,
     extract::{Path, State},
-    routing::{delete, get, post, put},
 };
 use axum_client_ip::ClientIp;
 use axum_extra::{TypedHeader, headers::UserAgent};
 use chrono::Utc;
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_all_handler::<ApiKey>))
-        .route("/", post(create_api_key))
-        .route("/{id}/rotate", post(rotate_key_handler))
-        .route("/{id}", put(update_api_key))
-        .route("/{id}", delete(delete_handler::<ApiKey>))
-        .route("/{id}", get(get_by_id_handler::<ApiKey>))
-        .route("/bulk-delete", post(bulk_delete_handler::<ApiKey>))
+mod generated {
+    use super::*;
+    crate::crud_get_all_handler!(ApiKey, "api_keys", "api_key");
+    crate::crud_get_by_id_handler!(ApiKey, "api_keys", "api_key");
+    crate::crud_delete_handler!(ApiKey, "api_keys", "api_key");
+    crate::crud_bulk_delete_handler!(ApiKey, "api_keys");
 }
 
-/// Create a new API key with generated key pair
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(generated::get_all, create_api_key))
+        .routes(routes!(generated::get_by_id, generated::delete))
+        .routes(routes!(update_api_key))
+        .routes(routes!(rotate_key_handler))
+        .routes(routes!(generated::bulk_delete))
+}
+
+/// Create API key
+#[utoipa::path(
+    post,
+    path = "",
+    tag = "api_keys",
+    responses(
+        (status = 200, description = "API key created"),
+    ),
+    security(("session" = []))
+)]
 pub async fn create_api_key(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -100,6 +112,49 @@ pub async fn create_api_key(
     })))
 }
 
+/// Update an API key
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "api_keys",
+    params(("id" = Uuid, Path, description = "API key ID")),
+    responses(
+        (status = 200, description = "API key updated"),
+        (status = 404, description = "API key not found"),
+    ),
+    security(("session" = []))
+)]
+pub async fn update_api_key(
+    State(state): State<Arc<AppState>>,
+    user: RequireMember,
+    Path(id): Path<Uuid>,
+    Json(mut request): Json<ApiKey>,
+) -> ApiResult<Json<ApiResponse<ApiKey>>> {
+    // Fetch existing to preserve immutable fields
+    let existing = ApiKey::get_service(&state)
+        .get_by_id(&id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("API key '{}' not found", id)))?;
+
+    // Preserve the key hash - don't allow it to be changed via update
+    request.base.key = existing.base.key;
+
+    // Delegate to generic handler
+    update_handler::<ApiKey>(State(state), user, Path(id), Json(request)).await
+}
+
+/// Rotate an API key
+#[utoipa::path(
+    post,
+    path = "/{id}/rotate",
+    tag = "api_keys",
+    params(("id" = Uuid, Path, description = "API key ID")),
+    responses(
+        (status = 200, description = "API key rotated, returns new key"),
+        (status = 404, description = "API key not found"),
+    ),
+    security(("session" = []))
+)]
 pub async fn rotate_key_handler(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -125,24 +180,4 @@ pub async fn rotate_key_handler(
         })?;
 
     Ok(Json(ApiResponse::success(key)))
-}
-
-/// Update an API key, preserving the key hash
-pub async fn update_api_key(
-    State(state): State<Arc<AppState>>,
-    user: RequireMember,
-    Path(id): Path<Uuid>,
-    Json(mut request): Json<ApiKey>,
-) -> ApiResult<Json<ApiResponse<ApiKey>>> {
-    // Fetch existing to preserve immutable fields
-    let existing = ApiKey::get_service(&state)
-        .get_by_id(&id)
-        .await?
-        .ok_or_else(|| ApiError::not_found(format!("Api Key '{}' not found", id)))?;
-
-    // Preserve the key hash - don't allow it to be changed via update
-    request.base.key = existing.base.key;
-
-    // Delegate to generic handler (handles validation, auth checks, update)
-    update_handler::<ApiKey>(State(state), user, Path(id), Json(request)).await
 }

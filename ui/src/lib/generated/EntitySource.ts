@@ -2,7 +2,4 @@
 import type { DiscoveryMetadata } from "./DiscoveryMetadata";
 import type { MatchDetails } from "./MatchDetails";
 
-/**
- * How an entity was created/discovered
- */
 export type EntitySource = { "type": "Manual" } | { "type": "System" } | { "type": "Discovery", metadata: Array<DiscoveryMetadata>, } | { "type": "DiscoveryWithMatch", metadata: Array<DiscoveryMetadata>, details: MatchDetails, } | { "type": "Unknown" };

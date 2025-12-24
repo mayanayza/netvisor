@@ -10,6 +10,7 @@ use crate::server::{
 };
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -38,8 +39,9 @@ pub enum EdgeHandle {
 }
 
 #[derive(
-    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr, Display, ToSchema,
+    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr, Display, ToSchema, TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum EdgeStyle {
     Straight,
     #[default]

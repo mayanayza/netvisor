@@ -3,11 +3,4 @@ import type { Binding } from "./Binding";
 import type { EntitySource } from "./EntitySource";
 import type { ServiceVirtualization } from "./ServiceVirtualization";
 
-/**
- * Service running on a host
- */
-export type Service = { id: string, host_id: string, network_id: string, name: string, 
-/**
- * Service definition ID - metadata fetched from /api/metadata endpoint
- */
-service_definition: string, bindings: Array<Binding>, virtualization: ServiceVirtualization | null, source: EntitySource, tags: Array<string>, created_at: string, updated_at: string, };
+export type Service = { id: string, created_at: string, updated_at: string, host_id: string, network_id: string, service_definition: string, name: string, bindings: Array<Binding>, virtualization: ServiceVirtualization | null, source: EntitySource, tags: Array<string>, };

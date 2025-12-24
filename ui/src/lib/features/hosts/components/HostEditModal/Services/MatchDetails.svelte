@@ -1,8 +1,9 @@
 <script lang="ts">
 	import {
 		matchConfidenceColor,
-		type MatchDetails,
-		matchConfidenceLabel
+		matchConfidenceLabel,
+		matchReasonLabel,
+		type MatchDetails
 	} from '$lib/shared/types';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 
@@ -14,7 +15,7 @@
 <div class="flex items-center justify-between">
 	<div class="text-secondary flex items-center gap-2">
 		<h3 class="text-sm font-semibold">Match Details</h3>
-		<span class="text-tertiary text-xs">({details.pattern_name})</span>
+		<span class="text-tertiary text-xs">({matchReasonLabel(details.reason)})</span>
 	</div>
 	<Tag label={matchConfidenceLabel(details.confidence)} color={confidenceColor} />
 </div>

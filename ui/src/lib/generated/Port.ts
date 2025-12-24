@@ -2,6 +2,8 @@
 import type { TransportProtocol } from "./TransportProtocol";
 
 /**
- * Port on a host - matches JSON serialization format
+ * Port entity with custom serialization that flattens PortType fields.
+ * The TypeScript type is defined inline since serde(flatten) with custom Serialize
+ * doesn't work automatically with ts-rs.
  */
-export type Port = { id: string, host_id: string, network_id: string, created_at: string, updated_at: string, number: number, protocol: TransportProtocol, type: string, };
+export type Port = { id: string, host_id: string, network_id: string, created_at: string, updated_at: string, number: number, protocol: TransportProtocol, type: string };

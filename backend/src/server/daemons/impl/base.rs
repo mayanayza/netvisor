@@ -4,19 +4,26 @@ use chrono::{DateTime, Utc};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use strum::Display;
+use ts_rs::TS;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::{
     daemons::r#impl::api::DaemonCapabilities, shared::entities::ChangeTriggersTopologyStaleness,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct DaemonBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
+    #[schema(read_only)]
     pub url: String,
+    #[serde(default)]
+    #[schema(read_only)]
     pub last_seen: DateTime<Utc>,
     #[serde(default)]
+    #[schema(read_only)]
     pub capabilities: DaemonCapabilities,
     pub mode: DaemonMode,
     pub name: String,
@@ -24,10 +31,17 @@ pub struct DaemonBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct Daemon {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: DaemonBase,
@@ -50,8 +64,9 @@ impl Display for Daemon {
 }
 
 #[derive(
-    Debug, Display, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ValueEnum, Hash,
+    Debug, Display, Copy, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ValueEnum, Hash, ToSchema, TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum DaemonMode {
     #[default]
     Push,

@@ -1,13 +1,9 @@
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use utoipa::IntoParams;
 use uuid::Uuid;
 
 use crate::server::shared::storage::filter::EntityFilter;
-
-/// Trait for query structs that can extract a parent ID for child entity filtering.
-pub trait ParentQueryExtractor: DeserializeOwned + Send + Sync + Default {
-    fn parent_id(&self) -> Option<Uuid>;
-}
 
 /// Trait for query structs that filter entities by network or organization.
 pub trait FilterQueryExtractor: DeserializeOwned + Send + Sync + Default {
@@ -26,8 +22,9 @@ pub trait FilterQueryExtractor: DeserializeOwned + Send + Sync + Default {
 
 /// Filter query for entities keyed by network_id.
 /// Allows filtering to a specific network the user has access to.
-#[derive(Deserialize, Default, Debug, Clone)]
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
 pub struct NetworkFilterQuery {
+    /// Filter by network ID
     pub network_id: Option<Uuid>,
 }
 
@@ -46,138 +43,167 @@ impl FilterQueryExtractor for NetworkFilterQuery {
     }
 }
 
-/// Filter query for entities keyed by organization_id.
-/// Allows filtering to the user's organization.
-#[derive(Deserialize, Default, Debug, Clone)]
-pub struct OrganizationFilterQuery {
-    pub organization_id: Option<Uuid>,
-}
-
-impl FilterQueryExtractor for OrganizationFilterQuery {
-    fn apply_to_filter(
-        &self,
-        filter: EntityFilter,
-        _user_network_ids: &[Uuid],
-        user_organization_id: Uuid,
-    ) -> EntityFilter {
-        match self.organization_id {
-            Some(id) if id == user_organization_id => filter.organization_id(&id),
-            Some(_) => filter.organization_id(&Uuid::nil()), // User doesn't have access
-            None => filter.organization_id(&user_organization_id),
-        }
-    }
-}
-
-/// Empty filter query for entities that don't support query filtering.
-/// Defaults to filtering by user's network_ids.
-#[derive(Deserialize, Default, Debug, Clone)]
+/// Empty filter query for entities that are scoped to org (or are the org itself) and don't support further filtering by query param
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
 pub struct NoFilterQuery {}
 
 impl FilterQueryExtractor for NoFilterQuery {
     fn apply_to_filter(
         &self,
         filter: EntityFilter,
-        user_network_ids: &[Uuid],
+        _user_network_ids: &[Uuid],
         _user_organization_id: Uuid,
     ) -> EntityFilter {
-        // Default to network filtering for backwards compatibility
-        filter.network_ids(user_network_ids)
-    }
-}
-
-/// Filter query for the Organization entity itself.
-/// Filters by id = user's organization_id (since Organization doesn't have an organization_id column).
-#[derive(Deserialize, Default, Debug, Clone)]
-pub struct OrganizationEntityFilterQuery {}
-
-impl FilterQueryExtractor for OrganizationEntityFilterQuery {
-    fn apply_to_filter(
-        &self,
-        filter: EntityFilter,
-        _user_network_ids: &[Uuid],
-        user_organization_id: Uuid,
-    ) -> EntityFilter {
-        // Filter to only the user's own organization
-        filter.entity_id(&user_organization_id)
-    }
-}
-
-// ============================================================================
-// Parent query types for ChildCrudHandlers
-// ============================================================================
-
-/// Query for filtering by host_id (used by Port, Interface, Service).
-#[derive(Deserialize, Default, Debug, Clone)]
-pub struct HostIdQuery {
-    pub host_id: Option<Uuid>,
-}
-
-impl ParentQueryExtractor for HostIdQuery {
-    fn parent_id(&self) -> Option<Uuid> {
-        self.host_id
-    }
-}
-
-/// Query for filtering by service_id (used by Binding).
-#[derive(Deserialize, Default, Debug, Clone)]
-pub struct ServiceIdQuery {
-    pub service_id: Option<Uuid>,
-}
-
-impl ParentQueryExtractor for ServiceIdQuery {
-    fn parent_id(&self) -> Option<Uuid> {
-        self.service_id
-    }
-}
-
-/// Query for filtering by subnet_id (used by Interface when filtering by subnet).
-#[derive(Deserialize, Default, Debug, Clone)]
-pub struct SubnetIdQuery {
-    pub subnet_id: Option<Uuid>,
-}
-
-impl ParentQueryExtractor for SubnetIdQuery {
-    fn parent_id(&self) -> Option<Uuid> {
-        self.subnet_id
+        // Don't apply additional filters (network_id / org_id permissioning is taken care of in handler)
+        filter
     }
 }
 
 /// Query for filtering by group_id (used by GroupBinding).
-#[derive(Deserialize, Default, Debug, Clone)]
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
 pub struct GroupIdQuery {
-    pub group_id: Option<Uuid>,
+    /// Filter by group ID
+    pub group_id: Uuid,
+    /// Filter by network ID
+    pub network_id: Uuid
 }
 
-impl ParentQueryExtractor for GroupIdQuery {
-    fn parent_id(&self) -> Option<Uuid> {
-        self.group_id
+// ============================================================================
+// Combined query types for child entities with network filtering
+// ============================================================================
+
+/// Query for filtering ports by host_id and/or network_id.
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
+pub struct HostChildQuery {
+    /// Filter by host ID
+    pub host_id: Option<Uuid>,
+    /// Filter by network ID
+    pub network_id: Option<Uuid>,
+}
+
+impl FilterQueryExtractor for HostChildQuery {
+    fn apply_to_filter(
+        &self,
+        filter: EntityFilter,
+        user_network_ids: &[Uuid],
+        _user_organization_id: Uuid,
+    ) -> EntityFilter {
+        let filter = match self.network_id {
+            Some(id) if user_network_ids.contains(&id) => filter.network_ids(&[id]),
+            Some(_) => filter.network_ids(&[]),
+            None => filter.network_ids(user_network_ids),
+        };
+        match self.host_id {
+            Some(id) => filter.host_id(&id),
+            None => filter,
+        }
     }
 }
 
-// ============================================================================
-// Macro for defining custom parent queries
-// ============================================================================
-
-/// Macro to define a parent query struct for child entities.
-///
-/// # Example
-/// ```ignore
-/// define_parent_query!(MyEntityParentQuery, my_parent_id);
-/// ```
-#[macro_export]
-macro_rules! define_parent_query {
-    ($name:ident, $field:ident) => {
-        #[derive(serde::Deserialize, Default, Debug, Clone)]
-        pub struct $name {
-            pub $field: Option<uuid::Uuid>,
-        }
-
-        impl $crate::server::shared::handlers::query::ParentQueryExtractor for $name {
-            fn parent_id(&self) -> Option<uuid::Uuid> {
-                self.$field
-            }
-        }
-    };
+/// Query for filtering bindings by service_id and/or network_id.
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
+pub struct BindingQuery {
+    /// Filter by service ID
+    pub service_id: Option<Uuid>,
+    /// Filter by network ID
+    pub network_id: Option<Uuid>,
+    /// Filter by port ID
+    pub port_id: Option<Uuid>,
+    /// Filter by interface ID
+    pub interface_id: Option<Uuid>
 }
 
-pub use define_parent_query;
+impl FilterQueryExtractor for BindingQuery {
+    fn apply_to_filter(
+        &self,
+        filter: EntityFilter,
+        user_network_ids: &[Uuid],
+        _user_organization_id: Uuid,
+    ) -> EntityFilter {
+        let mut filter = match self.network_id {
+            Some(id) if user_network_ids.contains(&id) => filter.network_ids(&[id]),
+            Some(_) => filter.network_ids(&[]),
+            None => filter.network_ids(user_network_ids),
+        };
+        filter = match self.service_id {
+            Some(id) => filter.service_id(&id),
+            None => filter,
+        };
+        filter = match self.port_id {
+            Some(id) => filter.uuid_column("port_id", &id),
+            None => filter,
+        };
+        filter = match self.interface_id {
+            Some(id) => filter.uuid_column("interface_id", &id),
+            None => filter
+        };
+
+        filter
+    }
+}
+
+/// Query for filtering interfaces by host_id, subnet_id, and/or network_id.
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
+pub struct InterfaceQuery {
+    /// Filter by host ID
+    pub host_id: Option<Uuid>,
+    /// Filter by subnet ID
+    pub subnet_id: Option<Uuid>,
+    /// Filter by network ID
+    pub network_id: Option<Uuid>,
+}
+
+impl FilterQueryExtractor for InterfaceQuery {
+    fn apply_to_filter(
+        &self,
+        filter: EntityFilter,
+        user_network_ids: &[Uuid],
+        _user_organization_id: Uuid,
+    ) -> EntityFilter {
+        let mut filter = match self.network_id {
+            Some(id) if user_network_ids.contains(&id) => filter.network_ids(&[id]),
+            Some(_) => filter.network_ids(&[]),
+            None => filter.network_ids(user_network_ids),
+        };
+        filter = match self.subnet_id {
+            Some(id) => filter.subnet_id(&id),
+            None => filter,
+        };
+        filter = match self.host_id {
+            Some(id) => filter.host_id(&id),
+            None => filter,
+        };
+        
+        filter
+    }
+}
+
+/// Query for filtering discoveries by network_id or daemon_id
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
+pub struct DiscoveryQuery {
+    /// Filter by network ID
+    pub network_id: Option<Uuid>,
+    /// Filter by daemon ID
+    pub daemon_id: Option<Uuid>,
+}
+
+impl FilterQueryExtractor for DiscoveryQuery {
+    fn apply_to_filter(
+        &self,
+        filter: EntityFilter,
+        user_network_ids: &[Uuid],
+        _user_organization_id: Uuid,
+    ) -> EntityFilter {
+        let mut filter = match self.network_id {
+            Some(id) if user_network_ids.contains(&id) => filter.network_ids(&[id]),
+            Some(_) => filter.network_ids(&[]),
+            None => filter.network_ids(user_network_ids),
+        };
+        filter = match self.daemon_id {
+            Some(id) => filter.uuid_column("daemon_id", &id),
+            None => filter,
+        };
+        
+        filter
+    }
+}

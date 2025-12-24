@@ -14,25 +14,36 @@ use crate::server::shared::types::api::ApiResult;
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use anyhow::Error;
 use axum::Json;
-use axum::Router;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::response::Redirect;
-use axum::routing::{delete, get, post};
+use axum::routing::get;
 use std::sync::Arc;
 use tower_sessions::Session;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", post(create_invite))
-        .route("/", get(get_invites))
-        .route("/{id}", get(get_invite))
-        .route("/{id}/revoke", delete(revoke_invite))
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(get_invites, create_invite))
+        .routes(routes!(get_invite, revoke_invite))
+        // Accept invite link - no OpenAPI docs (redirect endpoint)
         .route("/{id}/accept", get(accept_invite_link))
 }
 
-/// Create a new organization invite link
+/// Create an organization invite
+#[utoipa::path(
+    post,
+    path = "",
+    tag = "invites",
+    request_body = CreateInviteRequest,
+    responses(
+        (status = 200, description = "Invite created", body = Invite),
+        (status = 403, description = "Seat limit reached or insufficient permissions"),
+        (status = 400, description = "User already has an account"),
+    ),
+    security(("session" = []))
+)]
 async fn create_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -129,7 +140,18 @@ async fn create_invite(
     Ok(Json(ApiResponse::success(invite)))
 }
 
-/// Get information about an invite (for display purposes)
+/// Get an invite by ID
+#[utoipa::path(
+    get,
+    path = "/{id}",
+    tag = "invites",
+    params(("id" = Uuid, Path, description = "Invite ID")),
+    responses(
+        (status = 200, description = "Invite details", body = Invite),
+        (status = 400, description = "Invalid or expired invite"),
+    ),
+    security(("session" = []))
+)]
 async fn get_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(_user): RequireMember,
@@ -145,7 +167,16 @@ async fn get_invite(
     Ok(Json(ApiResponse::success(invite)))
 }
 
-/// Get all invites for the user's organization
+/// List all invites for organization
+#[utoipa::path(
+    get,
+    path = "",
+    tag = "invites",
+    responses(
+        (status = 200, description = "List of active invites", body = Vec<Invite>),
+    ),
+    security(("session" = []))
+)]
 async fn get_invites(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -167,7 +198,19 @@ async fn get_invites(
     Ok(Json(ApiResponse::success(invites)))
 }
 
-/// Revoke an invite link
+/// Revoke an invite
+#[utoipa::path(
+    delete,
+    path = "/{id}/revoke",
+    tag = "invites",
+    params(("id" = Uuid, Path, description = "Invite ID")),
+    responses(
+        (status = 200, description = "Invite revoked"),
+        (status = 400, description = "Invalid invite"),
+        (status = 403, description = "Cannot revoke this invite"),
+    ),
+    security(("session" = []))
+)]
 async fn revoke_invite(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,

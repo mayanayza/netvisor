@@ -2,22 +2,18 @@ use chrono::{DateTime, Utc};
 use mac_address::MacAddress;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::{
-    bindings::r#impl::base::BindingType,
     hosts::r#impl::{
         base::{Host, HostBase},
         virtualization::HostVirtualization,
     },
     interfaces::r#impl::base::{Interface, InterfaceBase},
     ports::r#impl::base::{Port, PortBase, PortConfig, PortType, TransportProtocol},
-    services::r#impl::{
-        base::{Service, ServiceBase},
-        definitions::ServiceDefinition,
-        virtualization::ServiceVirtualization,
-    },
+    services::r#impl::base::Service,
     shared::types::entities::EntitySource,
 };
 
@@ -56,10 +52,14 @@ pub struct DiscoveryHostRequest {
 // EXTERNAL API - CREATE REQUEST TYPES
 // =============================================================================
 
-/// Request type for creating a host with its associated child entities.
+/// Request type for creating a host with its associated interfaces and ports.
 /// Server assigns `host_id`, `network_id`, and `source` to all children.
 /// Source is automatically set based on how the entity was created (API vs UI).
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+///
+/// Note: Services are created separately via `POST /api/services` after the host exists,
+/// as service bindings require the real IDs of the interfaces/ports to reference.
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[schema(example = crate::server::shared::types::examples::create_host_request)]
 pub struct CreateHostRequest {
     // Host fields
@@ -79,17 +79,19 @@ pub struct CreateHostRequest {
     pub interfaces: Vec<CreateInterfaceInput>,
     #[serde(default)]
     pub ports: Vec<CreatePortInput>,
-    #[serde(default)]
-    pub services: Vec<CreateServiceInput>,
+    // Note: Services are added separately after host creation via POST /api/services
 }
 
 /// Input for creating an interface with a host.
 /// `host_id` and `network_id` are assigned by the server.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct CreateInterfaceInput {
     pub subnet_id: Uuid,
+    #[ts(type = "string")]
     #[schema(value_type = String)]
     pub ip_address: IpAddr,
+    #[ts(type = "string | null")]
     #[schema(value_type = Option<String>)]
     pub mac_address: Option<MacAddress>,
     pub name: Option<String>,
@@ -121,7 +123,8 @@ impl CreateInterfaceInput {
 /// Input for creating a port with a host.
 /// `host_id` and `network_id` are assigned by the server.
 /// The port is specified by number and protocol (e.g., 80/tcp, 443/tcp).
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct CreatePortInput {
     /// Port number (1-65535)
     pub number: u16,
@@ -142,63 +145,14 @@ impl CreatePortInput {
     }
 }
 
-/// Input for creating a service with a host.
-/// `host_id`, `network_id`, and `source` are assigned by the server.
-/// Bindings reference existing interfaces/ports by their IDs.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct CreateServiceInput {
-    /// Service display name
-    pub name: String,
-    /// Service definition ID (e.g., "Home Assistant", "Pi-Hole")
-    #[schema(value_type = String)]
-    pub service_definition: Box<dyn ServiceDefinition>,
-    /// Bindings to existing interfaces or ports (optional, can be added later)
-    #[serde(default)]
-    pub bindings: Vec<CreateBindingInput>,
-    /// Virtualization details (e.g., Docker container info)
-    pub virtualization: Option<ServiceVirtualization>,
-    // Note: source is auto-set by server
-    #[serde(default)]
-    pub tags: Vec<Uuid>,
-}
-
-/// Input for creating a binding with a service.
-/// References existing interfaces or ports by their IDs.
-/// Uses the same format as BindingType: `{"type": "Interface", "interface_id": "..."}` or
-/// `{"type": "Port", "port_id": "...", "interface_id": "..."}`.
-pub type CreateBindingInput = BindingType;
-
-impl CreateServiceInput {
-    /// Convert to ServiceBase with the given host_id, network_id, and source.
-    pub fn into_base(self, host_id: Uuid, network_id: Uuid, source: EntitySource) -> ServiceBase {
-        let CreateServiceInput {
-            name,
-            service_definition,
-            bindings: _, // Bindings are handled separately
-            virtualization,
-            tags,
-        } = self;
-
-        ServiceBase {
-            host_id,
-            network_id,
-            name,
-            service_definition,
-            bindings: vec![], // Bindings added separately after service creation
-            virtualization,
-            source,
-            tags,
-        }
-    }
-}
-
 // =============================================================================
 // UPDATE REQUEST TYPE
 // =============================================================================
 
 /// Request type for updating a host.
 /// Children (interfaces, ports, services) are managed via their own endpoints.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct UpdateHostRequest {
     pub id: Uuid,
     pub name: String,

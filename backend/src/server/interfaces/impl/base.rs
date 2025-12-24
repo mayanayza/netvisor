@@ -7,18 +7,22 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
 use std::net::{IpAddr, Ipv4Addr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 pub const ALL_INTERFACES_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct InterfaceBase {
     pub network_id: Uuid,
     pub host_id: Uuid,
     pub subnet_id: Uuid,
+    #[ts(type = "string")]
     #[schema(value_type = String)]
     pub ip_address: IpAddr,
+    #[ts(type = "string | null")]
     #[schema(value_type = Option<String>)]
     pub mac_address: Option<MacAddress>,
     pub name: Option<String>,
@@ -54,11 +58,18 @@ impl InterfaceBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[schema(example = crate::server::shared::types::examples::interface)]
 pub struct Interface {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: InterfaceBase,

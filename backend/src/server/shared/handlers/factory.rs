@@ -1,17 +1,16 @@
 use crate::server::auth::middleware::billing::require_billing_for_users;
-use crate::server::bindings::r#impl::base::Binding;
 use crate::server::config::get_public_config;
 use crate::server::github::handlers::get_stars;
 use crate::server::openapi::create_docs_router;
-use crate::server::ports::r#impl::base::Port;
-use crate::server::shared::handlers::traits::create_child_crud_router;
 use crate::server::shared::types::metadata::get_metadata_registry;
 use crate::server::{
-    auth::handlers as auth_handlers, billing::handlers as billing_handlers, config::AppState,
-    daemons::handlers as daemon_handlers, discovery::handlers as discovery_handlers,
-    groups::handlers as group_handlers, hosts::handlers as host_handlers,
-    interfaces::handlers as interface_handlers, invites::handlers as invite_handlers,
-    networks::handlers as network_handlers, organizations::handlers as organization_handlers,
+    api_keys::handlers as api_key_handlers, auth::handlers as auth_handlers,
+    billing::handlers as billing_handlers, bindings::handlers as binding_handlers,
+    config::AppState, daemons::handlers as daemon_handlers,
+    discovery::handlers as discovery_handlers, groups::handlers as group_handlers,
+    hosts::handlers as host_handlers, interfaces::handlers as interface_handlers,
+    invites::handlers as invite_handlers, networks::handlers as network_handlers,
+    organizations::handlers as organization_handlers, ports::handlers as port_handlers,
     services::handlers as service_handlers, shared::types::api::ApiResponse,
     shares::handlers as share_handlers, subnets::handlers as subnet_handlers,
     tags::handlers as tag_handlers, topology::handlers as topology_handlers,
@@ -26,28 +25,38 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use utoipa::openapi::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
-/// Creates the application router and returns both the router and OpenAPI spec.
-/// The OpenAPI spec is built from annotated handlers using utoipa-axum.
-pub fn create_router(state: Arc<AppState>) -> (Router<Arc<AppState>>, OpenApi) {
-    // Routes that require billing for user requests (daemons exempt via middleware check)
-    // Using OpenApiRouter to collect OpenAPI documentation from handlers
-    let billed_routes = OpenApiRouter::new()
+/// Creates the OpenApiRouter with all documented API routes.
+/// This is the single source of truth for route definitions.
+/// Used by both the server and OpenAPI spec generation.
+pub fn create_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
         .nest("/api/hosts", host_handlers::create_router())
         .nest("/api/interfaces", interface_handlers::create_router())
         .nest("/api/subnets", subnet_handlers::create_router())
         .nest("/api/networks", network_handlers::create_router())
         .nest("/api/groups", group_handlers::create_router())
-        // TODO: Migrate remaining handlers to OpenApiRouter
-        .nest("/api/daemons", OpenApiRouter::from(daemon_handlers::create_router()))
-        .nest("/api/discovery", OpenApiRouter::from(discovery_handlers::create_router()))
-        .nest("/api/topology", OpenApiRouter::from(topology_handlers::create_router()))
-        .nest("/api/services", OpenApiRouter::from(service_handlers::create_router()))
-        .nest("/api/users", OpenApiRouter::from(user_handlers::create_router()))
-        .nest("/api/organizations", OpenApiRouter::from(organization_handlers::create_router()))
-        .nest("/api/invites", OpenApiRouter::from(invite_handlers::create_router()))
-        .nest("/api/tags", OpenApiRouter::from(tag_handlers::create_router()))
-        .nest("/api/ports", OpenApiRouter::from(create_child_crud_router::<Port>()))
-        .nest("/api/bindings", OpenApiRouter::from(create_child_crud_router::<Binding>()));
+        .nest("/api/daemons", daemon_handlers::create_router())
+        .nest("/api/discovery", discovery_handlers::create_router())
+        .nest("/api/services", service_handlers::create_router())
+        .nest("/api/users", user_handlers::create_router())
+        .nest("/api/organizations", organization_handlers::create_router())
+        .nest("/api/invites", invite_handlers::create_router())
+        .nest("/api/tags", tag_handlers::create_router())
+        .nest("/api/ports", port_handlers::create_router())
+        .nest("/api/bindings", binding_handlers::create_router())
+        .nest("/api/auth/keys", api_key_handlers::create_router())
+        // Internal endpoints (no OpenAPI docs)
+        .nest(
+            "/api/topology",
+            OpenApiRouter::from(topology_handlers::create_router()),
+        )
+}
+
+/// Creates the application router and returns both the router and OpenAPI spec.
+/// The OpenAPI spec is built from annotated handlers using utoipa-axum.
+pub fn create_router(state: Arc<AppState>) -> (Router<Arc<AppState>>, OpenApi) {
+    // Routes that require billing for user requests (daemons exempt via middleware check)
+    let billed_routes = create_openapi_routes();
 
     // Extract OpenAPI spec and convert to regular Router for middleware application
     let (billed_router, openapi) = billed_routes.split_for_parts();

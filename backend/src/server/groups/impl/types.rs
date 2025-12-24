@@ -2,10 +2,9 @@ use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumDiscriminants, EnumIter, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 
-/// Group type determines the visual representation and behavior of the group.
-/// Binding IDs are stored separately in GroupBase.binding_ids.
 #[derive(
     Debug,
     Clone,
@@ -20,7 +19,9 @@ use utoipa::ToSchema;
     EnumDiscriminants,
     Default,
     ToSchema,
+    TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[strum_discriminants(derive(IntoStaticStr, EnumIter, Hash, Deserialize, Serialize))]
 #[serde(rename_all = "PascalCase")]
 pub enum GroupType {

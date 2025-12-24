@@ -3,16 +3,8 @@
 //! This test generates the OpenAPI spec without requiring Docker containers.
 //! Run with: cargo test generate_openapi_spec -- --ignored --nocapture
 
-use scanopy::server::config::AppState;
-use scanopy::server::groups::handlers as group_handlers;
-use scanopy::server::hosts::handlers as host_handlers;
-use scanopy::server::interfaces::handlers as interface_handlers;
-use scanopy::server::networks::handlers as network_handlers;
-use scanopy::server::openapi::ApiDoc;
-use scanopy::server::subnets::handlers as subnet_handlers;
-use std::sync::Arc;
-use utoipa::OpenApi;
-use utoipa_axum::router::OpenApiRouter;
+use scanopy::server::openapi::build_openapi;
+use scanopy::server::shared::handlers::factory::create_openapi_routes;
 
 /// Generate the OpenAPI spec and save to ui/static/openapi.json
 ///
@@ -21,31 +13,12 @@ use utoipa_axum::router::OpenApiRouter;
 #[tokio::test]
 #[ignore]
 async fn generate_openapi_spec() {
-    // Collect paths from all OpenApiRouter handlers
-    // The type parameter is just for type checking - we don't actually use state
-    let routes: OpenApiRouter<Arc<AppState>> = OpenApiRouter::new()
-        .nest("/api/hosts", host_handlers::create_router())
-        .nest("/api/interfaces", interface_handlers::create_router())
-        .nest("/api/subnets", subnet_handlers::create_router())
-        .nest("/api/networks", network_handlers::create_router())
-        .nest("/api/groups", group_handlers::create_router());
-
+    // Use the same route definitions as the server (single source of truth)
+    let routes = create_openapi_routes();
     let (_, paths_spec) = routes.split_for_parts();
 
-    // Get base schema with all component definitions
-    let mut spec = ApiDoc::openapi();
-
-    // Merge paths from handlers
-    spec.paths.paths.extend(paths_spec.paths.paths);
-
-    // Merge any additional components from handlers
-    if let Some(handler_components) = paths_spec.components {
-        if let Some(ref mut base_components) = spec.components {
-            base_components.schemas.extend(handler_components.schemas);
-        } else {
-            spec.components = Some(handler_components);
-        }
-    }
+    // Build spec with security schemes, path filtering, and sorting
+    let spec = build_openapi(paths_spec);
 
     let json_string = spec
         .to_pretty_json()

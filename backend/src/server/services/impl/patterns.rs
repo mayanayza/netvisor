@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::{net::IpAddr, ops::Range};
 use strum_macros::{Display, EnumDiscriminants, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 
 use crate::server::{ports::r#impl::base::PortType, services::r#impl::endpoints::Endpoint};
@@ -31,7 +32,8 @@ pub struct MatchResult {
     pub details: MatchDetails,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct MatchDetails {
     pub reason: MatchReason,
     pub confidence: MatchConfidence,
@@ -53,7 +55,8 @@ impl MatchDetails {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Display, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Display, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "lowercase")]
 pub enum MatchReason {
@@ -85,7 +88,8 @@ impl utoipa::ToSchema for MatchReason {
     }
 }
 
-#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum MatchConfidence {
     NotApplicable = 0,
     Low = 1,

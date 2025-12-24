@@ -25,9 +25,7 @@ pub fn create_user() -> User {
 }
 
 pub fn create_network(organization_id: Uuid) -> Network {
-    let mut network = Network::new(NetworkBase::new(organization_id));
-    network.base.is_default = true;
-    network
+    Network::new(NetworkBase::new(organization_id))
 }
 
 pub fn create_wan_subnet(network_id: Uuid) -> Subnet {

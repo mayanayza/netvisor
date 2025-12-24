@@ -17,22 +17,53 @@ use crate::server::users::r#impl::base::{User, UserBase};
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use anyhow::anyhow;
 use axum::Json;
-use axum::Router;
 use axum::extract::Path;
 use axum::extract::State;
-use axum::routing::{get, post, put};
+use axum::routing::{get, post};
 use email_address::EmailAddress;
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/{id}", put(update_org_name))
-        .route("/", get(get_by_id_handler))
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(update_org_name))
+        // Internal endpoints - no OpenAPI docs
+        .route("/", get(get_organization))
         .route("/{id}/reset", post(reset))
         .route("/{id}/populate-demo", post(populate_demo_data))
 }
 
+pub async fn get_organization(
+    State(state): State<Arc<AppState>>,
+    user: AuthenticatedUser,
+) -> ApiResult<Json<ApiResponse<Organization>>> {
+    let service = Organization::get_service(&state);
+    let entity = service
+        .get_by_id(&user.organization_id)
+        .await
+        .map_err(|e| ApiError::internal_error(&e.to_string()))?
+        .ok_or_else(|| {
+            ApiError::not_found(format!("Organization '{}' not found", user.organization_id))
+        })?;
+
+    Ok(Json(ApiResponse::success(entity)))
+}
+
+/// Update organization name
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "organizations",
+    params(("id" = Uuid, Path, description = "Organization ID")),
+    request_body = String,
+    responses(
+        (status = 200, description = "Organization updated", body = Organization),
+        (status = 403, description = "Only owners can update organization"),
+        (status = 404, description = "Organization not found"),
+    ),
+    security(("session" = []))
+)]
 pub async fn update_org_name(
     State(state): State<Arc<AppState>>,
     RequireOwner(user): RequireOwner,
@@ -56,22 +87,6 @@ pub async fn update_org_name(
         axum::extract::Json(org),
     )
     .await
-}
-
-pub async fn get_by_id_handler(
-    State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
-) -> ApiResult<Json<ApiResponse<Organization>>> {
-    let service = Organization::get_service(&state);
-    let entity = service
-        .get_by_id(&user.organization_id)
-        .await
-        .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| {
-            ApiError::not_found(format!("Organization '{}' not found", user.organization_id))
-        })?;
-
-    Ok(Json(ApiResponse::success(entity)))
 }
 
 /// Reset all organization data (delete all entities except organization and owner user)

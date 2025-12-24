@@ -1,6 +1,5 @@
 use crate::server::{
     api_keys::{
-        self,
         r#impl::base::{ApiKey, ApiKeyBase},
         service::generate_api_key_for_storage,
     },
@@ -55,7 +54,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/me", post(get_current_user))
-        .nest("/keys", api_keys::handlers::create_router())
+        // Note: /keys routes are handled separately via OpenApiRouter in factory.rs
         .route("/update", post(update_password_auth))
         .route("/setup", post(setup))
         .route("/daemon-setup", post(daemon_setup))

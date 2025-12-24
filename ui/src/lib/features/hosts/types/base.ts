@@ -5,7 +5,12 @@ export type {
 	ProxmoxVirtualization,
 	Interface,
 	Port,
-	Service
+	Service,
+	TransportProtocol,
+	CreateHostRequest,
+	CreateInterfaceInput,
+	CreatePortInput,
+	UpdateHostRequest
 } from '$lib/generated';
 
 import type { HostResponse, Service } from '$lib/generated';
@@ -13,7 +18,7 @@ import type { HostResponse, Service } from '$lib/generated';
 // Type alias for backwards compatibility
 export type Host = HostResponse;
 
-// API response type for host with services
+// Internal type for modal state (host + services editing together)
 export interface HostWithServicesRequest {
 	host: HostResponse;
 	services: Service[] | null;

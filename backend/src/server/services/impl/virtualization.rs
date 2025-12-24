@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use strum_macros::{EnumDiscriminants, IntoStaticStr};
+use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -11,15 +12,18 @@ use crate::server::shared::{
 };
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, IntoStaticStr, EnumDiscriminants, ToSchema,
+    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, IntoStaticStr, EnumDiscriminants, ToSchema, TS,
 )]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[schema(title = "ServiceVirtualization")]
 #[serde(tag = "type", content = "details")]
 pub enum ServiceVirtualization {
     #[schema(title = "Docker")]
     Docker(DockerVirtualization),
 }
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema, TS)]
+#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub struct DockerVirtualization {
     pub container_name: Option<String>,
     pub container_id: Option<String>,

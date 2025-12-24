@@ -5,8 +5,22 @@
 //! with static placeholder IDs.
 
 use chrono::{TimeZone, Utc};
+use cidr::{IpCidr, Ipv4Cidr};
+use email_address::EmailAddress;
+use mac_address::MacAddress;
+use std::net::{IpAddr, Ipv4Addr};
 
 use crate::server::{
+    api_keys::r#impl::base::{ApiKey, ApiKeyBase},
+    bindings::r#impl::base::Binding,
+    daemons::r#impl::{
+        api::DaemonCapabilities,
+        base::{Daemon, DaemonBase, DaemonMode},
+    },
+    discovery::r#impl::{
+        base::{Discovery, DiscoveryBase},
+        types::{DiscoveryType, RunType},
+    },
     groups::r#impl::{
         base::{Group, GroupBase},
         types::GroupType,
@@ -17,17 +31,19 @@ use crate::server::{
     },
     interfaces::r#impl::base::{Interface, InterfaceBase},
     networks::r#impl::{Network, NetworkBase},
+    organizations::r#impl::base::{Organization, OrganizationBase},
     ports::r#impl::base::{Port, PortBase, PortType, TransportProtocol},
+    services::definitions::ServiceDefinitionRegistry,
+    services::r#impl::base::{Service, ServiceBase},
     shared::types::entities::EntitySource,
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
         types::SubnetType,
     },
+    tags::r#impl::base::{Tag, TagBase},
     topology::types::edges::EdgeStyle,
+    users::r#impl::{base::{User, UserBase}, permissions::UserOrgPermissions},
 };
-use cidr::{IpCidr, Ipv4Cidr};
-use mac_address::MacAddress;
-use std::net::{IpAddr, Ipv4Addr};
 
 // =============================================================================
 // PLACEHOLDER IDS
@@ -47,11 +63,16 @@ pub mod ids {
     pub const SERVICE: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440007);
     pub const GROUP: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440008);
     pub const BINDING: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440009);
+    pub const TAG: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000a);
+    pub const API_KEY: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000b);
+    pub const DAEMON: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000c);
+    pub const USER: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000d);
+    pub const DISCOVERY: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_44665544000e);
 }
 
 /// Example timestamp for created_at/updated_at fields.
 fn example_timestamp() -> chrono::DateTime<Utc> {
-    Utc.with_ymd_and_hms(2024, 1, 15, 10, 30, 0).unwrap()
+    Utc.with_ymd_and_hms(2026, 1, 15, 10, 30, 0).unwrap()
 }
 
 // =============================================================================
@@ -66,7 +87,6 @@ pub fn network() -> Network {
         updated_at: example_timestamp(),
         base: NetworkBase {
             name: "Home Network".to_string(),
-            is_default: false,
             organization_id: ids::ORGANIZATION,
             tags: vec![],
         },
@@ -161,6 +181,144 @@ pub fn group() -> Group {
     }
 }
 
+/// Example Service entity.
+pub fn service() -> Service {
+    let service_def = ServiceDefinitionRegistry::find_by_id("Nginx")
+        .unwrap_or_else(|| ServiceDefinitionRegistry::all_service_definitions()[0].clone());
+
+    Service {
+        id: ids::SERVICE,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: ServiceBase {
+            name: "nginx".to_string(),
+            host_id: ids::HOST,
+            network_id: ids::NETWORK,
+            service_definition: service_def,
+            bindings: vec![binding()],
+            virtualization: None,
+            source: EntitySource::Manual,
+            tags: vec![],
+        },
+    }
+}
+
+/// Example Binding entity.
+pub fn binding() -> Binding {
+    Binding::new_port(ids::SERVICE, ids::NETWORK, ids::PORT, Some(ids::INTERFACE))
+}
+
+/// Example Tag entity.
+pub fn tag() -> Tag {
+    Tag {
+        id: ids::TAG,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: TagBase {
+            name: "production".to_string(),
+            description: Some("Production environment resources".to_string()),
+            color: "#22C55E".to_string(),
+            organization_id: ids::ORGANIZATION,
+        },
+    }
+}
+
+/// Example ApiKey entity.
+pub fn api_key() -> ApiKey {
+    ApiKey {
+        id: ids::API_KEY,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: ApiKeyBase {
+            name: "daemon-key-01".to_string(),
+            key: "sk_••••••••".to_string(), // Masked in responses
+            network_id: ids::NETWORK,
+            last_used: Some(example_timestamp()),
+            expires_at: None,
+            is_enabled: true,
+            tags: vec![],
+        },
+    }
+}
+
+/// Example Daemon entity.
+pub fn daemon() -> Daemon {
+    Daemon {
+        id: ids::DAEMON,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: DaemonBase {
+            network_id: ids::NETWORK,
+            host_id: ids::HOST,
+            url: "http://192.168.1.100:8080".to_string(),
+            mode: DaemonMode::Pull,
+            capabilities: DaemonCapabilities {
+                has_docker_socket: true,
+                interfaced_subnet_ids: vec![ids::SUBNET],
+            },
+            last_seen: example_timestamp(),
+            name: "home-daemon".to_string(),
+            tags: vec![],
+        },
+    }
+}
+
+/// Example User entity.
+pub fn user() -> User {
+    User {
+        id: ids::USER,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: UserBase {
+            email: EmailAddress::new_unchecked("alice@example.com"),
+            organization_id: ids::ORGANIZATION,
+            permissions: UserOrgPermissions::Admin,
+            password_hash: None,
+            oidc_provider: None,
+            oidc_subject: None,
+            oidc_linked_at: None,
+            network_ids: vec![ids::NETWORK],
+            terms_accepted_at: Some(example_timestamp()),
+        },
+    }
+}
+
+/// Example Organization entity.
+pub fn organization() -> Organization {
+    Organization {
+        id: ids::ORGANIZATION,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: OrganizationBase {
+            name: "Acme Corp".to_string(),
+            stripe_customer_id: None,
+            plan: None,
+            plan_status: None,
+            onboarding: vec![],
+        },
+    }
+}
+
+/// Example Discovery entity.
+pub fn discovery() -> Discovery {
+    Discovery {
+        id: ids::DISCOVERY,
+        created_at: example_timestamp(),
+        updated_at: example_timestamp(),
+        base: DiscoveryBase {
+            name: "Network Scan".to_string(),
+            network_id: ids::NETWORK,
+            daemon_id: ids::DAEMON,
+            discovery_type: DiscoveryType::Network {
+                subnet_ids: Some(vec![ids::SUBNET]),
+                host_naming_fallback: Default::default(),
+            },
+            run_type: RunType::AdHoc { last_run: Some(example_timestamp()) },
+            tags: vec![],
+        },
+    }
+}
+
 // =============================================================================
 // REQUEST EXAMPLES
 // =============================================================================
@@ -185,7 +343,6 @@ pub fn create_host_request() -> CreateHostRequest {
             number: 80,
             protocol: TransportProtocol::Tcp,
         }],
-        services: vec![],
     }
 }
 

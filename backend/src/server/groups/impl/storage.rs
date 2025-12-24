@@ -72,7 +72,7 @@ impl StorableEntity for Group {
                     network_id,
                     description,
                     group_type,
-                    binding_ids: _, // Binding IDs stored in group_bindings junction table
+                    binding_ids: _, // Stored in group_bindings junction table
                     source,
                     color,
                     edge_style,
@@ -140,7 +140,7 @@ impl StorableEntity for Group {
                 source,
                 edge_style,
                 group_type,
-                binding_ids: Vec::new(), // Loaded separately by GroupService via GroupBindingStorage
+                binding_ids: Vec::new(), // Hydrated by GroupService via GroupBindingStorage
                 color: row.get("color"),
                 tags: row.get("tags"),
             },

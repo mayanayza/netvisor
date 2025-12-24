@@ -3,9 +3,10 @@ use crate::server::{
     config::AppState,
     shared::{
         entities::{ChangeTriggersTopologyStaleness, Entity},
-        handlers::query::{FilterQueryExtractor, ParentQueryExtractor},
+        types::entities::EntitySource,
+        handlers::query::{FilterQueryExtractor},
         services::traits::{CrudService, EventBusService},
-        storage::{child::ChildStorableEntity, filter::EntityFilter, traits::StorableEntity},
+        storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
         validation::{
             validate_bulk_delete_access, validate_create_access, validate_delete_access,
@@ -51,6 +52,13 @@ where
     fn validate(&self) -> Result<(), String> {
         Ok(())
     }
+
+    /// Optional: Set the source field on the entity.
+    /// Override for entities with a source field to set it appropriately.
+    /// Default is a no-op for entities without a source field.
+    fn set_source(&mut self, _source: EntitySource) {
+        // Default: no-op
+    }
 }
 
 /// Create a standard CRUD router
@@ -71,12 +79,15 @@ where
 pub async fn create_handler<T>(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Json(entity): Json<T>,
+    Json(mut entity): Json<T>,
 ) -> ApiResult<Json<ApiResponse<T>>>
 where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
+    // Set source to Manual for API-created entities
+    entity.set_source(EntitySource::Manual);
+
     validate_entity(|| entity.validate(), T::entity_name())?;
 
     let service = T::get_service(&state);
@@ -373,66 +384,4 @@ where
 pub struct BulkDeleteResponse {
     pub deleted_count: usize,
     pub requested_count: usize,
-}
-
-/// Trait for creating CRUD handlers for child entities that support parent filtering.
-/// Extends CrudHandlers by requiring ChildStorableEntity which provides parent_column().
-pub trait ChildCrudHandlers: CrudHandlers + ChildStorableEntity
-where
-    Self: Display + ChangeTriggersTopologyStaleness<Self> + Default,
-    Entity: From<Self>,
-{
-    /// Query type for parent filtering in get_all requests.
-    /// Use `HostIdQuery` for entities with host_id parent,
-    /// `ServiceIdQuery` for entities with service_id parent, etc.
-    type ParentQuery: ParentQueryExtractor;
-}
-
-/// Create a CRUD router for child entities with parent-based query filtering.
-/// Supports `GET /entity?{parent_column}=uuid` for filtering by parent.
-pub fn create_child_crud_router<T>() -> Router<Arc<AppState>>
-where
-    T: ChildCrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
-    Entity: From<T>,
-{
-    Router::new()
-        .route("/", post(create_handler::<T>))
-        .route("/", get(get_all_children_handler::<T>))
-        .route("/{id}", put(update_handler::<T>))
-        .route("/{id}", delete(delete_handler::<T>))
-        .route("/{id}", get(get_by_id_handler::<T>))
-        .route("/bulk-delete", post(bulk_delete_handler::<T>))
-}
-
-/// Get all child entities with optional parent filtering.
-/// Uses the entity's ParentQuery type to extract parent ID from query params.
-pub async fn get_all_children_handler<T>(
-    State(state): State<Arc<AppState>>,
-    user: AuthenticatedUser,
-    Query(parent_query): Query<T::ParentQuery>,
-) -> ApiResult<Json<ApiResponse<Vec<T>>>>
-where
-    T: ChildCrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
-    Entity: From<T>,
-{
-    let mut filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
-
-    // Apply parent filter if provided
-    if let Some(parent_id) = parent_query.parent_id() {
-        filter = filter.uuid_column(T::parent_column(), &parent_id);
-    }
-
-    let service = T::get_service(&state);
-
-    let entities = service.get_all(filter).await.map_err(|e| {
-        tracing::error!(
-            entity_type = T::table_name(),
-            user_id = %user.user_id,
-            error = %e,
-            "Failed to fetch child entities"
-        );
-        ApiError::internal_error(&e.to_string())
-    })?;
-
-    Ok(Json(ApiResponse::success(entities)))
 }

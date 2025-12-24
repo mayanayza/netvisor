@@ -102,7 +102,6 @@ async fn test_host_crud(ctx: &TestContext) -> Result<(), String> {
         tags: Vec::new(),
         interfaces: vec![],
         ports: vec![],
-        services: vec![],
     };
 
     let created: HostResponse = ctx.client.post("/api/hosts", &request).await?;
@@ -159,7 +158,6 @@ async fn test_service_crud(ctx: &TestContext) -> Result<(), String> {
         tags: Vec::new(),
         interfaces: vec![],
         ports: vec![],
-        services: vec![],
     };
     let created_host: HostResponse = ctx.client.post("/api/hosts", &host_request).await?;
 

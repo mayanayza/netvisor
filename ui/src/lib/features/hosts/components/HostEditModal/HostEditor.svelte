@@ -18,6 +18,7 @@
 	export let host: Host | null = null;
 	export let isOpen = false;
 	export let onCreate: (data: HostWithServicesRequest) => Promise<void> | void;
+	export let onCreateAndContinue: (data: HostWithServicesRequest) => Promise<void> | void;
 	export let onUpdate: (data: HostWithServicesRequest) => Promise<void> | void;
 	export let onClose: () => void;
 	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
@@ -168,6 +169,9 @@
 		}
 	}
 
+	// Check if we're on the services tab during create mode
+	$: isServicesTabDuringCreate = !isEditing && activeTab === 'services';
+
 	// Dynamic labels based on create/edit mode and tab position
 	$: saveLabel = isEditing
 		? 'Update Host'
@@ -176,6 +180,20 @@
 			: 'Next';
 	$: cancelLabel = isEditing ? 'Cancel' : 'Previous';
 	$: showCancel = isEditing ? true : currentTabIndex !== 0;
+
+	// Handler for "Create Host & Add Services" - creates host and keeps modal open
+	async function handleCreateAndContinue() {
+		loading = true;
+		await onCreateAndContinue({ host: formData, services: [] });
+		loading = false;
+	}
+
+	// Handler for "Create Host" when on services tab - creates host and closes
+	async function handleCreateAndClose() {
+		loading = true;
+		await onCreate({ host: formData, services: [] });
+		loading = false;
+	}
 </script>
 
 <EditModal
@@ -286,4 +304,71 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Custom footer: handles both normal mode and services-tab-during-create mode -->
+	<svelte:fragment slot="footer" let:handleCancel let:handleDelete let:loading let:deleting let:actualDisableSave>
+		{#if isServicesTabDuringCreate}
+			<!-- Special footer for services tab during create mode -->
+			<div class="flex items-center justify-between">
+				<div></div>
+				<div class="flex items-center gap-3">
+					<button
+						type="button"
+						disabled={loading}
+						on:click={handleCancel}
+						class="btn-secondary"
+					>
+						Previous
+					</button>
+					<button
+						type="button"
+						disabled={actualDisableSave}
+						on:click={handleCreateAndClose}
+						class="btn-secondary"
+					>
+						{loading ? 'Creating...' : 'Create Host'}
+					</button>
+					<button
+						type="button"
+						disabled={actualDisableSave}
+						on:click={handleCreateAndContinue}
+						class="btn-primary"
+					>
+						{loading ? 'Creating...' : 'Create Host & Add Services'}
+					</button>
+				</div>
+			</div>
+		{:else}
+			<!-- Default footer behavior -->
+			<div class="flex items-center justify-between">
+				<div>
+					{#if isEditing && onDelete}
+						<button
+							type="button"
+							disabled={deleting || loading}
+							on:click={handleDelete}
+							class="btn-danger"
+						>
+							{deleting ? 'Deleting...' : 'Delete'}
+						</button>
+					{/if}
+				</div>
+				<div class="flex items-center gap-3">
+					{#if showCancel}
+						<button
+							type="button"
+							disabled={loading || deleting}
+							on:click={handleCancel}
+							class="btn-secondary"
+						>
+							{cancelLabel}
+						</button>
+					{/if}
+					<button type="submit" disabled={actualDisableSave} class="btn-primary">
+						{loading ? 'Saving...' : saveLabel}
+					</button>
+				</div>
+			</div>
+		{/if}
+	</svelte:fragment>
 </EditModal>

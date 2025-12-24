@@ -3,36 +3,38 @@ use crate::server::{
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
-        handlers::traits::{
-            CrudHandlers, delete_handler, get_all_handler, get_by_id_handler, update_handler,
-        },
+        handlers::traits::{delete_handler, get_by_id_handler, update_handler, CrudHandlers},
         services::traits::CrudService,
+        storage::filter::EntityFilter,
         storage::traits::StorableEntity,
         types::api::{ApiError, ApiResponse, ApiResult},
     },
     topology::{service::main::BuildGraphParams, types::base::Topology},
 };
 use axum::{
-    Router,
     extract::State,
     response::{
         Json, Sse,
         sse::{Event, KeepAlive},
     },
-    routing::{delete, get, post, put},
+    routing::{get, post},
+    Router,
 };
 use chrono::Utc;
 use futures::{Stream, stream};
 use std::{convert::Infallible, sync::Arc};
 use uuid::Uuid;
 
+/// Topology endpoints are internal-only (no OpenAPI docs)
 pub fn create_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", post(create_handler))
-        .route("/", get(get_all_handler::<Topology>))
-        .route("/{id}", put(update_handler::<Topology>))
-        .route("/{id}", delete(delete_handler::<Topology>))
-        .route("/{id}", get(get_by_id_handler::<Topology>))
+        .route("/", get(get_all_topologies).post(create_topology))
+        .route(
+            "/{id}",
+            get(get_by_id_handler::<Topology>)
+                .put(update_handler::<Topology>)
+                .delete(delete_handler::<Topology>),
+        )
         .route("/{id}/refresh", post(refresh))
         .route("/{id}/rebuild", post(rebuild))
         .route("/{id}/lock", post(lock))
@@ -40,7 +42,20 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/stream", get(staleness_stream))
 }
 
-pub async fn create_handler(
+async fn get_all_topologies(
+    State(state): State<Arc<AppState>>,
+    RequireMember(user): RequireMember,
+) -> ApiResult<Json<ApiResponse<Vec<Topology>>>> {
+    let service = Topology::get_service(&state);
+    let filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
+    let entities = service.get_all(filter).await.map_err(|e| {
+        tracing::error!(error = %e, "Failed to fetch topologies");
+        ApiError::internal_error(&e.to_string())
+    })?;
+    Ok(Json(ApiResponse::success(entities)))
+}
+
+async fn create_topology(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
     Json(mut topology): Json<Topology>,
@@ -117,7 +132,6 @@ pub async fn create_handler(
     Ok(Json(ApiResponse::success(created)))
 }
 
-/// Refresh entity data. Only used when cosmetic properties (ie group color/line routing, entity names) are changed
 async fn refresh(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -145,7 +159,6 @@ async fn refresh(
     Ok(Json(ApiResponse::success(())))
 }
 
-/// Recalculate node and edges and refresh entity data
 async fn rebuild(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,

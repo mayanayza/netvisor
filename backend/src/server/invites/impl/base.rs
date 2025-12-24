@@ -7,6 +7,7 @@ use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::{
@@ -17,7 +18,7 @@ use crate::server::{
     users::r#impl::permissions::UserOrgPermissions,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct InviteBase {
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
@@ -25,13 +26,20 @@ pub struct InviteBase {
     pub url: String,
     pub created_by: Uuid,
     pub expires_at: DateTime<Utc>,
+    #[schema(value_type = Option<String>)]
     pub send_to: Option<EmailAddress>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct Invite {
+    #[serde(default)]
+    #[schema(read_only)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: InviteBase,

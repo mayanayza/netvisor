@@ -35,7 +35,6 @@ async fn test_service_network_validation(ctx: &TestContext) -> Result<(), String
         tags: Vec::new(),
         interfaces: vec![],
         ports: vec![],
-        services: vec![],
     };
     let created_host: HostResponse = ctx.client.post("/api/hosts", &host_request).await?;
 
