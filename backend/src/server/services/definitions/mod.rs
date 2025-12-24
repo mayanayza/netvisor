@@ -210,6 +210,8 @@ pub mod argocd;
 pub mod bamboo;
 pub mod bitbucket_server;
 pub mod drone_ci;
+pub mod forgejo;
+pub mod gitea;
 pub mod github_enterprise;
 pub mod gitlab;
 pub mod jenkins;
