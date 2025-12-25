@@ -9,6 +9,7 @@
 node_modules/
 */node_modules/
 package-lock.json
+.claude
 
 # OS
 .DS_Store

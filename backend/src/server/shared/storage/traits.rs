@@ -1,5 +1,6 @@
 use std::net::IpAddr;
 
+use crate::server::bindings::r#impl::base::Binding;
 use crate::server::groups::r#impl::base::Group;
 use crate::server::services::r#impl::base::Service;
 use crate::server::shared::events::types::TelemetryOperation;
@@ -62,6 +63,8 @@ pub trait StorableEntity: Sized + Clone + Send + Sync + 'static {
     fn organization_id(&self) -> Option<Uuid>;
     fn created_at(&self) -> DateTime<Utc>;
     fn updated_at(&self) -> DateTime<Utc>;
+    fn set_id(&mut self, id: Uuid);
+    fn set_created_at(&mut self, time: DateTime<Utc>);
     fn set_updated_at(&mut self, time: DateTime<Utc>);
 
     /// Serialization for database storage
@@ -108,6 +111,7 @@ pub enum SqlValue {
     Hosts(Vec<Host>),
     Subnets(Vec<Subnet>),
     Services(Vec<Service>),
+    Bindings(Vec<Binding>),
     Groups(Vec<Group>),
     TelemetryOperation(Vec<TelemetryOperation>),
     StringArray(Vec<String>),

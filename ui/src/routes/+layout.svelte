@@ -3,6 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { Snippet } from 'svelte';
+	import { QueryClientProvider } from '@tanstack/svelte-query';
+	import { queryClient } from '$lib/api/query-client';
 	import {
 		checkAuth,
 		isCheckingAuth,
@@ -177,14 +179,16 @@
 	});
 </script>
 
-{#if $isCheckingAuth}
-	<div class="flex min-h-screen items-center justify-center bg-gray-900">
-		<Loading />
-	</div>
-{:else}
-	{@render children()}
-{/if}
+<QueryClientProvider client={queryClient}>
+	{#if $isCheckingAuth}
+		<div class="flex min-h-screen items-center justify-center bg-gray-900">
+			<Loading />
+		</div>
+	{:else}
+		{@render children()}
+	{/if}
 
-{#if $config && $config.needs_cookie_consent}
-	<CookieConsent />
-{/if}
+	{#if $config && $config.needs_cookie_consent}
+		<CookieConsent />
+	{/if}
+</QueryClientProvider>

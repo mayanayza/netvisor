@@ -38,7 +38,6 @@ pub struct PendingNetworkSetup {
 pub struct PendingSetup {
     pub org_name: String,
     pub networks: Vec<PendingNetworkSetup>,
-    pub seed_data: bool,
 }
 
 /// Daemon setup data collected before registration

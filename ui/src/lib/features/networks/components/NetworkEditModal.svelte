@@ -3,7 +3,7 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
-	import type { CreateNetworkRequest, Network } from '../types';
+	import type { Network } from '../types';
 	import { createEmptyNetworkFormData } from '../store';
 	import NetworkDetailsForm from './NetworkDetailsForm.svelte';
 	import { pushError } from '$lib/shared/stores/feedback';
@@ -13,7 +13,7 @@
 
 	export let network: Network | null = null;
 	export let isOpen = false;
-	export let onCreate: (data: CreateNetworkRequest) => Promise<void> | void;
+	export let onCreate: (data: Network) => Promise<void> | void;
 	export let onUpdate: (id: string, data: Network) => Promise<void> | void;
 	export let onClose: () => void;
 	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
@@ -50,10 +50,7 @@
 				if (isEditing && network) {
 					await onUpdate(network.id, networkData);
 				} else {
-					await onCreate({
-						network: networkData,
-						seed_baseline_data: $seedDataField.value
-					});
+					await onCreate(networkData);
 				}
 			} finally {
 				loading = false;

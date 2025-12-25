@@ -42,7 +42,10 @@ use crate::server::{
     },
     tags::r#impl::base::{Tag, TagBase},
     topology::types::edges::EdgeStyle,
-    users::r#impl::{base::{User, UserBase}, permissions::UserOrgPermissions},
+    users::r#impl::{
+        base::{User, UserBase},
+        permissions::UserOrgPermissions,
+    },
 };
 
 // =============================================================================
@@ -313,7 +316,9 @@ pub fn discovery() -> Discovery {
                 subnet_ids: Some(vec![ids::SUBNET]),
                 host_naming_fallback: Default::default(),
             },
-            run_type: RunType::AdHoc { last_run: Some(example_timestamp()) },
+            run_type: RunType::AdHoc {
+                last_run: Some(example_timestamp()),
+            },
             tags: vec![],
         },
     }

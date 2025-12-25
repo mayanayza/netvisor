@@ -14,12 +14,12 @@
 	import { PortBindingDisplay } from '$lib/shared/components/forms/selection/display/PortBindingDisplay.svelte';
 	import { InterfaceBindingDisplay } from '$lib/shared/components/forms/selection/display/InterfaceBindingDisplay.svelte';
 	import MatchDetails from './MatchDetails.svelte';
-	import type { Host } from '$lib/features/hosts/types/base';
+	import type { HostFormData } from '$lib/features/hosts/types/base';
 	import { get, readable, type Readable } from 'svelte/store';
 	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
 
 	export let formApi: FormApi;
-	export let host: Host;
+	export let host: HostFormData;
 	export let service: Service;
 	export let onChange: (updatedService: Service) => void = () => {};
 	export let selectedPortBindings: PortBinding[] = [];

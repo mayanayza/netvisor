@@ -79,7 +79,7 @@
 	import type { Service } from '$lib/features/services/types/base';
 	import type { TagProps } from '$lib/shared/components/data/types';
 	import { matchConfidenceLabel } from '$lib/shared/types';
-	import { getPortFromId } from '$lib/features/hosts/store';
+	import { getPortFromId } from '$lib/features/ports/store';
 	import { formatPort } from '$lib/shared/utils/formatting';
 	import { get } from 'svelte/store';
 

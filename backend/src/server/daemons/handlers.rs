@@ -3,6 +3,7 @@ use crate::server::daemons::r#impl::api::DaemonHeartbeatPayload;
 use crate::server::shared::events::types::TelemetryOperation;
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::traits::StorableEntity;
+use crate::server::shared::types::api::ApiErrorResponse;
 use crate::server::{
     auth::middleware::auth::{AuthenticatedDaemon, AuthenticatedEntity},
     config::AppState,
@@ -22,7 +23,7 @@ use crate::server::{
         events::types::TelemetryEvent,
         services::traits::EventBusService,
         types::{
-            api::{ApiError, ApiResponse, ApiResult},
+            api::{ApiError, ApiResponse, ApiResult, EmptyApiResponse},
             entities::EntitySource,
         },
     },
@@ -41,27 +42,39 @@ mod generated {
     use super::*;
     crate::crud_get_all_handler!(Daemon, "daemons", "daemon");
     crate::crud_get_by_id_handler!(Daemon, "daemons", "daemon");
-    crate::crud_update_handler!(Daemon, "daemons", "daemon");
     crate::crud_delete_handler!(Daemon, "daemons", "daemon");
     crate::crud_bulk_delete_handler!(Daemon, "daemons");
 }
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
-    use axum::routing::post;
-
     OpenApiRouter::new()
         .routes(routes!(generated::get_all))
-        .routes(routes!(generated::get_by_id, generated::update, generated::delete))
+        .routes(routes!(generated::get_by_id, generated::delete))
         .routes(routes!(generated::bulk_delete))
-        // Daemon-only endpoints (no OpenAPI docs - these are internal daemon API)
-        .route("/register", post(register_daemon))
-        .route("/{id}/heartbeat", post(receive_heartbeat))
-        .route("/{id}/update-capabilities", post(update_capabilities))
-        .route("/{id}/request-work", post(receive_work_request))
+        // Daemon-only endpoints (internal API - hidden from public docs)
+        .routes(routes!(register_daemon))
+        .routes(routes!(receive_heartbeat))
+        .routes(routes!(update_capabilities))
+        .routes(routes!(receive_work_request))
 }
 
 const DAILY_MIDNIGHT_CRON: &str = "0 0 0 * * *";
 
+/// Register a new daemon
+///
+/// Internal endpoint for daemon self-registration. Creates a host entry
+/// and sets up default discovery jobs for the daemon.
+#[utoipa::path(
+    post,
+    path = "/register",
+    tags = ["daemons", "internal"],
+    request_body = DaemonRegistrationRequest,
+    responses(
+        (status = 200, description = "Daemon registered successfully", body = ApiResponse<DaemonRegistrationResponse>),
+        (status = 403, description = "Daemon registration disabled in demo mode", body = ApiErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
 async fn register_daemon(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,
@@ -251,6 +264,21 @@ async fn register_daemon(
     })))
 }
 
+/// Update daemon capabilities
+///
+/// Internal endpoint for daemons to report their current capabilities.
+#[utoipa::path(
+    post,
+    path = "/{id}/update-capabilities",
+    tags = ["daemons", "internal"],
+    params(("id" = Uuid, Path, description = "Daemon ID")),
+    request_body = DaemonCapabilities,
+    responses(
+        (status = 200, description = "Capabilities updated", body = EmptyApiResponse),
+        (status = 404, description = "Daemon not found", body = ApiErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
 async fn update_capabilities(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,
@@ -277,6 +305,22 @@ async fn update_capabilities(
     Ok(Json(ApiResponse::success(())))
 }
 
+/// Receive daemon heartbeat
+///
+/// Internal endpoint for daemons to send periodic heartbeats.
+/// Updates the daemon's last_seen timestamp and current status.
+#[utoipa::path(
+    post,
+    path = "/{id}/heartbeat",
+    tags = ["daemons", "internal"],
+    params(("id" = Uuid, Path, description = "Daemon ID")),
+    request_body = DaemonHeartbeatPayload,
+    responses(
+        (status = 200, description = "Heartbeat received", body = EmptyApiResponse),
+        (status = 404, description = "Daemon not found", body = ApiErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
 async fn receive_heartbeat(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,
@@ -304,6 +348,23 @@ async fn receive_heartbeat(
     Ok(Json(ApiResponse::success(())))
 }
 
+/// Request work from server
+///
+/// Internal endpoint for daemons to poll for pending discovery sessions.
+/// Also updates heartbeat and returns any pending cancellation requests.
+/// Returns tuple of (next_session, should_cancel).
+#[utoipa::path(
+    post,
+    path = "/{id}/request-work",
+    tags = ["daemons", "internal"],
+    params(("id" = Uuid, Path, description = "Daemon ID")),
+    request_body = DaemonHeartbeatPayload,
+    responses(
+        (status = 200, description = "Work request processed - returns (Option<DiscoveryUpdatePayload>, bool)"),
+        (status = 404, description = "Daemon not found", body = ApiErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
 async fn receive_work_request(
     State(state): State<Arc<AppState>>,
     auth_daemon: AuthenticatedDaemon,

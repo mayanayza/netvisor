@@ -11,17 +11,16 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Daemon capabilities
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, Hash, ToSchema)]
 pub struct DaemonCapabilities {
     #[serde(default)]
     pub has_docker_socket: bool,
     #[serde(default)]
+    #[schema(required)]
     pub interfaced_subnet_ids: Vec<Uuid>,
 }
 
@@ -76,7 +75,7 @@ pub struct DaemonDiscoveryResponse {
 }
 
 /// Progress update from daemon to server during discovery
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema, TS)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
 pub struct DiscoveryUpdatePayload {
     pub session_id: Uuid,
     pub daemon_id: Uuid,

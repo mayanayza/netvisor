@@ -8,6 +8,7 @@
 	import { getServiceById, getServicesForHost } from '$lib/features/services/store';
 	import { daemons } from '$lib/features/daemons/store';
 	import { tags } from '$lib/features/tags/store';
+	import { getInterfacesForHost } from '$lib/features/interfaces/store';
 
 	let {
 		host,
@@ -35,13 +36,15 @@
 
 	// Get stores at top level
 	let hostServicesStore = $derived(getServicesForHost(host.id));
+	let hostInterfacesStore = $derived(getInterfacesForHost(host.id));
 	let virtualizationServiceStore = $derived(
-		host.virtualization !== null ? getServiceById(host.virtualization.details.service_id) : null
+		host.virtualization ? getServiceById(host.virtualization.details.service_id) : null
 	);
 
 	// Consolidate all reactive computations into a single derived to prevent cascading updates
 	let cardData = $derived.by(() => {
 		const hostServices = $hostServicesStore;
+		const hostInterfaces = $hostInterfacesStore;
 		const virtualizationService = virtualizationServiceStore ? $virtualizationServiceStore : null;
 
 		const servicesThatManageVmsIds = hostServices
@@ -142,7 +145,7 @@
 				},
 				{
 					label: 'Interfaces',
-					value: host.interfaces.map((i) => {
+					value: hostInterfaces.map((i) => {
 						return {
 							id: i.id,
 							label: formatInterface(i),

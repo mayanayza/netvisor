@@ -3,13 +3,15 @@ use crate::server::{
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
-        handlers::traits::{delete_handler, get_by_id_handler, update_handler, CrudHandlers},
+        handlers::traits::CrudHandlers,
         services::traits::CrudService,
-        storage::filter::EntityFilter,
-        storage::traits::StorableEntity,
-        types::api::{ApiError, ApiResponse, ApiResult},
+        storage::{filter::EntityFilter, traits::StorableEntity},
+        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
     },
-    topology::{service::main::BuildGraphParams, types::base::Topology},
+    topology::{
+        service::main::BuildGraphParams,
+        types::base::{SetEntitiesParams, Topology},
+    },
 };
 use axum::{
     extract::State,
@@ -17,31 +19,49 @@ use axum::{
         Json, Sse,
         sse::{Event, KeepAlive},
     },
-    routing::{get, post},
-    Router,
+    routing::get,
 };
 use chrono::Utc;
 use futures::{Stream, stream};
 use std::{convert::Infallible, sync::Arc};
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-/// Topology endpoints are internal-only (no OpenAPI docs)
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/", get(get_all_topologies).post(create_topology))
-        .route(
-            "/{id}",
-            get(get_by_id_handler::<Topology>)
-                .put(update_handler::<Topology>)
-                .delete(delete_handler::<Topology>),
-        )
-        .route("/{id}/refresh", post(refresh))
-        .route("/{id}/rebuild", post(rebuild))
-        .route("/{id}/lock", post(lock))
-        .route("/{id}/unlock", post(unlock))
+// Generated handlers for generic CRUD operations
+mod generated {
+    use super::*;
+    crate::crud_get_by_id_handler!(Topology, "topology", "topology");
+    crate::crud_update_handler!(Topology, "topology", "topology");
+    crate::crud_delete_handler!(Topology, "topology", "topology");
+}
+
+/// Topology endpoints are internal-only (hidden from public docs)
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(get_all_topologies, create_topology))
+        .routes(routes!(
+            generated::get_by_id,
+            generated::update,
+            generated::delete
+        ))
+        .routes(routes!(refresh))
+        .routes(routes!(rebuild))
+        .routes(routes!(lock))
+        .routes(routes!(unlock))
+        // SSE endpoint (not well-supported by OpenAPI)
         .route("/stream", get(staleness_stream))
 }
 
+/// Get all topologies
+#[utoipa::path(
+    get,
+    path = "",
+    tags = ["topology", "internal"],
+    responses(
+        (status = 200, description = "List of topologies", body = ApiResponse<Vec<Topology>>),
+    ),
+    security(("session" = []))
+)]
 async fn get_all_topologies(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -55,6 +75,18 @@ async fn get_all_topologies(
     Ok(Json(ApiResponse::success(entities)))
 }
 
+/// Create topology
+#[utoipa::path(
+    post,
+    path = "",
+    tags = ["topology", "internal"],
+    request_body = Topology,
+    responses(
+        (status = 200, description = "Topology created", body = ApiResponse<Topology>),
+        (status = 400, description = "Validation failed", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 async fn create_topology(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -82,7 +114,7 @@ async fn create_topology(
 
     let service = Topology::get_service(&state);
 
-    let (hosts, interfaces, subnets, groups) =
+    let (hosts, interfaces, subnets, groups, ports, bindings) =
         service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
@@ -96,17 +128,24 @@ async fn create_topology(
         subnets: &subnets,
         services: &services,
         groups: &groups,
+        ports: &ports,
+        bindings: &bindings,
         old_edges: &[],
         old_nodes: &[],
     });
 
-    topology.base.hosts = hosts;
-    topology.base.interfaces = interfaces;
-    topology.base.services = services;
-    topology.base.subnets = subnets;
-    topology.base.groups = groups;
-    topology.base.edges = edges;
-    topology.base.nodes = nodes;
+    topology.set_entities(SetEntitiesParams {
+        hosts,
+        interfaces,
+        services,
+        subnets,
+        groups,
+        ports,
+        bindings,
+    });
+
+    topology.set_graph(nodes, edges);
+
     topology.clear_stale();
 
     let created = service
@@ -132,6 +171,18 @@ async fn create_topology(
     Ok(Json(ApiResponse::success(created)))
 }
 
+/// Refresh topology data
+#[utoipa::path(
+    post,
+    path = "/{id}/refresh",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = Topology,
+    responses(
+        (status = 200, description = "Topology refreshed", body = EmptyApiResponse),
+    ),
+    security(("session" = []))
+)]
 async fn refresh(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -139,18 +190,22 @@ async fn refresh(
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, interfaces, subnets, groups) =
+    let (hosts, interfaces, subnets, groups, ports, bindings) =
         service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
         .get_service_data(topology.base.network_id, &topology.base.options)
         .await?;
 
-    topology.base.hosts = hosts;
-    topology.base.interfaces = interfaces;
-    topology.base.services = services;
-    topology.base.subnets = subnets;
-    topology.base.groups = groups;
+    topology.set_entities(SetEntitiesParams {
+        hosts,
+        services,
+        interfaces,
+        subnets,
+        groups,
+        ports,
+        bindings,
+    });
 
     service.update(&mut topology, user.into()).await?;
 
@@ -159,6 +214,18 @@ async fn refresh(
     Ok(Json(ApiResponse::success(())))
 }
 
+/// Rebuild topology layout
+#[utoipa::path(
+    post,
+    path = "/{id}/rebuild",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = Topology,
+    responses(
+        (status = 200, description = "Topology rebuilt", body = EmptyApiResponse),
+    ),
+    security(("session" = []))
+)]
 async fn rebuild(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -166,7 +233,7 @@ async fn rebuild(
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let service = Topology::get_service(&state);
 
-    let (hosts, interfaces, subnets, groups) =
+    let (hosts, interfaces, subnets, groups, ports, bindings) =
         service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
@@ -180,17 +247,24 @@ async fn rebuild(
         subnets: &subnets,
         services: &services,
         groups: &groups,
+        ports: &ports,
+        bindings: &bindings,
         old_nodes: &topology.base.nodes,
         old_edges: &topology.base.edges,
     });
 
-    topology.base.hosts = hosts;
-    topology.base.interfaces = interfaces;
-    topology.base.services = services;
-    topology.base.subnets = subnets;
-    topology.base.groups = groups;
-    topology.base.edges = edges;
-    topology.base.nodes = nodes;
+    topology.set_entities(SetEntitiesParams {
+        hosts,
+        services,
+        interfaces,
+        subnets,
+        groups,
+        ports,
+        bindings,
+    });
+
+    topology.set_graph(nodes, edges);
+
     topology.clear_stale();
 
     service.update(&mut topology, user.clone().into()).await?;
@@ -225,6 +299,18 @@ async fn rebuild(
     Ok(Json(ApiResponse::success(())))
 }
 
+/// Lock a topology
+#[utoipa::path(
+    post,
+    path = "/{id}/lock",
+    tags = ["topology"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = Topology,
+    responses(
+        (status = 200, description = "Topology locked", body = ApiResponse<Topology>),
+    ),
+    security(("session" = []))
+)]
 async fn lock(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -239,6 +325,18 @@ async fn lock(
     Ok(Json(ApiResponse::success(updated)))
 }
 
+/// Unlock a topology
+#[utoipa::path(
+    post,
+    path = "/{id}/unlock",
+    tags = ["topology"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    request_body = Topology,
+    responses(
+        (status = 200, description = "Topology unlocked", body = ApiResponse<Topology>),
+    ),
+    security(("session" = []))
+)]
 async fn unlock(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,

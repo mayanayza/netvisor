@@ -1,45 +1,29 @@
 import { writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type { CreateInviteRequest, OrganizationInvite, Organization } from './types';
-import type { SetupRequest } from '../auth/types/base';
 import type { UserOrgPermissions } from '../users/types';
 
 export const organization = writable<Organization | null>();
 export const invites = writable<OrganizationInvite[]>([]);
 
-export async function onboard(request: SetupRequest): Promise<void> {
-	await api.request<Organization, Organization | null>('/onboarding', organization, (org) => org, {
-		method: 'POST',
-		body: JSON.stringify(request)
-	});
-}
-
 export async function getOrganization(): Promise<Organization | null> {
-	const result = await api.request<Organization | null>(
-		`/organizations`,
-		organization,
-		(organization) => organization,
-		{
-			method: 'GET'
-		}
-	);
-
-	if (result && result.success && result.data) {
-		return result.data;
+	const { data } = await apiClient.GET('/api/organizations');
+	if (data?.success && data.data) {
+		organization.set(data.data);
+		return data.data;
 	}
 	return null;
 }
 
 export async function updateOrganizationName(id: string, name: string) {
-	return await api.request<Organization, Organization | null>(
-		`/organizations/${id}`,
-		organization,
-		(updated) => updated,
-		{
-			method: 'PUT',
-			body: JSON.stringify(name)
-		}
-	);
+	const { data: result } = await apiClient.PUT('/api/organizations/{id}', {
+		params: { path: { id } },
+		body: name
+	});
+	if (result?.success && result.data) {
+		organization.set(result.data);
+	}
+	return result as ApiResponse<Organization>;
 }
 
 export async function createInvite(
@@ -54,47 +38,30 @@ export async function createInvite(
 		send_to: email?.length == 0 ? null : email
 	};
 
-	const result = await api.request<OrganizationInvite, OrganizationInvite[]>(
-		`/invites`,
-		invites,
-		(created, current) => [...current, created],
-		{
-			method: 'POST',
-			body: JSON.stringify(request)
-		}
-	);
-
-	if (result && result.success && result.data) {
+	const { data: result } = await apiClient.POST('/api/invites', { body: request });
+	if (result?.success && result.data) {
+		invites.update((current) => [...current, result.data!]);
 		return result.data;
 	}
 	return null;
 }
 
 export async function getInvites(): Promise<OrganizationInvite[]> {
-	const result = await api.request<OrganizationInvite[]>(
-		`/invites`,
-		invites,
-		(invites) => invites,
-		{
-			method: 'GET'
-		}
-	);
-
-	if (result && result.success && result.data) {
-		return result.data;
+	const { data } = await apiClient.GET('/api/invites');
+	if (data?.success && data.data) {
+		invites.set(data.data);
+		return data.data;
 	}
 	return [];
 }
 
 export async function revokeInvite(id: string): Promise<void> {
-	await api.request<void, OrganizationInvite[]>(
-		`/invites/${id}/revoke`,
-		invites,
-		(_, current) => current.filter((i) => i.id != id),
-		{
-			method: 'DELETE'
-		}
-	);
+	const { data: result } = await apiClient.DELETE('/api/invites/{id}/revoke', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		invites.update((current) => current.filter((i) => i.id != id));
+	}
 }
 
 export function formatInviteUrl(invite: OrganizationInvite): string {
@@ -102,13 +69,15 @@ export function formatInviteUrl(invite: OrganizationInvite): string {
 }
 
 export async function resetOrganizationData(orgId: string) {
-	return await api.request<void>(`/organizations/${orgId}/reset`, null, () => null, {
-		method: 'POST'
+	const { data } = await apiClient.POST('/api/organizations/{id}/reset', {
+		params: { path: { id: orgId } }
 	});
+	return data;
 }
 
 export async function populateDemoData(orgId: string) {
-	return await api.request<void>(`/organizations/${orgId}/populate-demo`, null, () => null, {
-		method: 'POST'
+	const { data } = await apiClient.POST('/api/organizations/{id}/populate-demo', {
+		params: { path: { id: orgId } }
 	});
+	return data;
 }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use utoipa::ToSchema;
 
 use crate::server::shared::{
     concepts::Concept,
@@ -20,6 +21,7 @@ use crate::server::shared::{
     EnumDiscriminants,
     EnumIter,
     IntoStaticStr,
+    ToSchema,
 )]
 pub enum ServiceCategory {
     // Infrastructure (always-on, core network services)

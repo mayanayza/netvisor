@@ -1,38 +1,23 @@
-export interface InitiateDiscoveryRequest {
-	daemon_id: string;
-	discovery_type: DiscoveryType;
-}
+import type { components } from '$lib/api/schema';
 
-export interface DiscoverySessionRequest {
-	session_id: string;
-}
+// Re-export generated types
+export type DiscoveryType = components['schemas']['DiscoveryType'];
+export type DiscoveryPhase = components['schemas']['DiscoveryPhase'];
+export type HostNamingFallback = components['schemas']['HostNamingFallback'];
 
+// Variant types from DiscoveryType union for type guards
+export type SelfReportDiscovery = Extract<DiscoveryType, { type: 'SelfReport' }>;
+export type NetworkDiscovery = Extract<DiscoveryType, { type: 'Network' }>;
+export type DockerDiscovery = Extract<DiscoveryType, { type: 'Docker' }>;
+
+// Frontend-specific types for WebSocket updates (not from backend API schema)
 export interface DiscoveryUpdatePayload {
 	session_id: string;
 	daemon_id: string;
 	discovery_type: DiscoveryType;
-	phase: 'Pending' | 'Starting' | 'Started' | 'Scanning' | 'Complete' | 'Failed' | 'Cancelled';
+	phase: DiscoveryPhase;
 	progress: number;
-	error?: string;
-	started_at?: string;
-	finished_at?: string;
-}
-
-export type DiscoveryType = Network | Docker | SelfReport;
-
-export interface Network {
-	type: 'Network';
-	subnet_ids: string[];
-	host_naming_fallback: 'Ip' | 'BestService';
-}
-
-export interface Docker {
-	type: 'Docker';
-	host_id: string;
-	host_naming_fallback: 'Ip' | 'BestService';
-}
-
-export interface SelfReport {
-	type: 'SelfReport';
-	host_id: string;
+	error?: string | null;
+	started_at?: string | null;
+	finished_at?: string | null;
 }

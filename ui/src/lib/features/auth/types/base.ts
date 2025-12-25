@@ -1,3 +1,4 @@
+import type { components } from '$lib/api/schema';
 import type { IconComponent } from '$lib/shared/utils/types';
 import {
 	Building,
@@ -11,56 +12,25 @@ import {
 	Telescope
 } from 'lucide-svelte';
 
-export interface LoginRequest {
-	email: string;
-	password: string;
-}
+// Re-export generated types
+export type LoginRequest = components['schemas']['LoginRequest'];
+export type RegisterRequest = components['schemas']['RegisterRequest'];
+export type SetupRequest = components['schemas']['SetupRequest'];
+export type SetupResponse = components['schemas']['SetupResponse'];
+export type DaemonSetupRequest = components['schemas']['DaemonSetupRequest'];
+export type DaemonSetupResponse = components['schemas']['DaemonSetupResponse'];
+export type ForgotPasswordRequest = components['schemas']['ForgotPasswordRequest'];
+export type ResetPasswordRequest = components['schemas']['ResetPasswordRequest'];
 
-export interface RegisterRequest {
-	email: string;
-	password: string;
-	terms_accepted: boolean;
-}
+// NetworkSetup extended with optional id (assigned after setup API returns network_ids)
+export type NetworkSetup = components['schemas']['NetworkSetup'] & {
+	id?: string;
+};
 
+// Frontend-only types (not in backend)
 export interface SessionUser {
 	user_id: string;
 	name: string;
-}
-
-// Network setup for onboarding
-export interface NetworkSetup {
-	name: string;
-	id?: string; // Set after setup API call
-}
-
-// Setup request for pre-registration org/network configuration (multi-network)
-export interface SetupRequest {
-	organization_name: string;
-	networks: { name: string }[];
-	populate_seed_data: boolean;
-}
-
-export interface SetupResponse {
-	network_ids: string[];
-}
-
-export interface DaemonSetupRequest {
-	daemon_name: string;
-	network_id: string;
-	install_later: boolean;
-}
-
-export interface DaemonSetupResponse {
-	api_key: string | null;
-}
-
-export interface ForgotPasswordRequest {
-	email: string;
-}
-
-export interface ResetPasswordRequest {
-	password: string;
-	token: string;
 }
 
 // Onboarding use case types

@@ -1,4 +1,4 @@
-.PHONY: help build test clean format
+.PHONY: help build test clean format generate-types
 
 help:
 	@echo "Scanopy Development Commands"
@@ -19,6 +19,7 @@ help:
 	@echo "  make test           - Run all tests"
 	@echo "  make lint           - Run all linters"
 	@echo "  make format         - Format all code"
+	@echo "  make generate-types - Generate TypeScript types from Rust"
 	@echo "  make clean          - Clean build artifacts and containers"
 	@echo "  make install-dev-mac    - Install development dependencies on macOS"
 	@echo "  make install-dev-linux  - Install development dependencies on Linux"
@@ -93,6 +94,13 @@ lint:
 	cd backend && cargo clippy --bin daemon -- -D warnings
 	@echo "Linting UI..."
 	cd ui && npm run lint && npm run format -- --check && npm run check
+
+generate-types:
+	@echo "Exporting OpenAPI spec from backend..."
+	cd backend && cargo test generate_openapi_spec -- --nocapture
+	@echo "Generating TypeScript types from OpenAPI spec..."
+	cd ui && npm run generate:api
+	@echo "TypeScript types exported to ui/src/lib/api/schema.d.ts"
 
 stripe-webhook:
 	stripe listen --forward-to http://localhost:60072/api/billing/webhooks

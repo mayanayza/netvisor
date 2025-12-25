@@ -5,7 +5,8 @@
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
 	import type { Service } from '../types/base';
 	import ServiceConfigPanel from '$lib/features/hosts/components/HostEditModal/Services/ServiceConfigPanel.svelte';
-	import type { Host } from '$lib/features/hosts/types/base';
+	import type { Host, HostFormData } from '$lib/features/hosts/types/base';
+	import { hydrateHostToFormData } from '$lib/features/hosts/store';
 
 	export let service: Service;
 	export let host: Host;
@@ -16,6 +17,10 @@
 	let loading = false;
 	let deleting = false;
 	let formData = service;
+
+	// Hydrate host to form data for ServiceConfigPanel
+	let hostFormData: HostFormData;
+	$: hostFormData = hydrateHostToFormData(host);
 
 	$: title = `Edit ${service.name}`;
 
@@ -74,7 +79,7 @@
 			<div class="space-y-8 p-6">
 				<ServiceConfigPanel
 					{formApi}
-					bind:host
+					host={hostFormData}
 					bind:service={formData}
 					onChange={handleServiceUpdate}
 				/>

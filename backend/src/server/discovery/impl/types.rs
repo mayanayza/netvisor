@@ -3,7 +3,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::fmt::Display;
 use strum::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -25,20 +24,20 @@ use crate::server::{
     EnumDiscriminants,
     EnumIter,
     ToSchema,
-    TS,
 )]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
 #[serde(tag = "type")]
 pub enum DiscoveryType {
     #[schema(title = "SelfReport")]
-    SelfReport { 
+    SelfReport {
         // ID of the host that the daemon is running on
-        host_id: Uuid 
+        host_id: Uuid,
     },
     #[schema(title = "Network")]
     Network {
+        #[schema(required)]
         subnet_ids: Option<Vec<Uuid>>,
         #[serde(default)]
+        #[schema(required)]
         host_naming_fallback: HostNamingFallback,
     },
     #[schema(title = "Docker")]
@@ -46,6 +45,7 @@ pub enum DiscoveryType {
         // ID of the host that the daemon is running on
         host_id: Uuid,
         #[serde(default)]
+        #[schema(required)]
         host_naming_fallback: HostNamingFallback,
     },
 }
@@ -68,16 +68,16 @@ impl Display for DiscoveryType {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Debug, Clone, Serialize, Copy, Deserialize, Eq, PartialEq, Hash, Display, Default, ToSchema,
+)]
 pub enum HostNamingFallback {
     Ip,
     #[default]
     BestService,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
 #[serde(tag = "type")]
 pub enum RunType {
     #[schema(title = "Scheduled")]
@@ -90,9 +90,7 @@ pub enum RunType {
     },
     #[schema(title = "Historical")]
     /// Historical discovery runs are created by the server and cannot be submitted via API
-    Historical {
-        results: DiscoveryUpdatePayload,
-    },
+    Historical { results: DiscoveryUpdatePayload },
     #[schema(title = "AdHoc")]
     AdHoc {
         #[serde(default)]

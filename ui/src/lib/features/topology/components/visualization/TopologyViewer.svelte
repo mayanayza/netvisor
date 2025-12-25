@@ -8,7 +8,7 @@
 		topology,
 		updateTopology
 	} from '../../store';
-	import { EdgeHandle, type TopologyEdge } from '../../types/base';
+	import { type EdgeHandle, type TopologyEdge } from '../../types/base';
 	import BaseTopologyViewer from './BaseTopologyViewer.svelte';
 
 	let baseViewer: BaseTopologyViewer;

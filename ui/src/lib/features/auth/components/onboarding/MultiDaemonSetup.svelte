@@ -75,7 +75,7 @@
 			cardStates[networkId] = {
 				...state,
 				choice: 'install_now',
-				apiKey: result.api_key,
+				apiKey: result.api_key ?? null,
 				isExpanded: true,
 				isLoading: false
 			};

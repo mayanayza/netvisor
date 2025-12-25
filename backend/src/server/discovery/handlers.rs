@@ -10,9 +10,9 @@ use crate::server::{
         types::{DiscoveryType, RunType},
     },
     shared::{
-        handlers::{traits::create_handler},
+        handlers::traits::{create_handler, update_handler},
         services::traits::CrudService,
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
     },
 };
 use axum::{
@@ -21,7 +21,7 @@ use axum::{
         Json, Sse,
         sse::{Event, KeepAlive},
     },
-    routing::{get, post},
+    routing::get,
 };
 use chrono::Utc;
 use futures::Stream;
@@ -35,7 +35,6 @@ mod generated {
     use super::*;
     crate::crud_get_all_handler!(Discovery, "discoveries", "discovery");
     crate::crud_get_by_id_handler!(Discovery, "discoveries", "discovery");
-    crate::crud_update_handler!(Discovery, "discoveries", "discovery");
     crate::crud_delete_handler!(Discovery, "discoveries", "discovery");
     crate::crud_bulk_delete_handler!(Discovery, "discoveries");
 }
@@ -43,26 +42,31 @@ mod generated {
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(generated::get_all, create_discovery))
-        .routes(routes!(generated::get_by_id, generated::update, generated::delete))
+        .routes(routes!(
+            generated::get_by_id,
+            update_discovery,
+            generated::delete
+        ))
         .routes(routes!(generated::bulk_delete))
         .routes(routes!(start_session))
         .routes(routes!(get_active_sessions))
         .routes(routes!(cancel_discovery))
-        // Internal daemon endpoints - no OpenAPI docs
-        .route("/{session_id}/update", post(receive_discovery_update))
-        // SSE endpoint - no OpenAPI docs (not well-supported)
+        // Internal daemon endpoints
+        .routes(routes!(receive_discovery_update))
+        // SSE endpoint (internal - not well-supported by OpenAPI)
         .route("/stream", get(discovery_stream))
 }
 
-/// Create a new discovery
+/// Create new discovery
 #[utoipa::path(
     post,
     path = "",
     tag = "discoveries",
     request_body = Discovery,
     responses(
-        (status = 200, description = "Discovery created successfully", body = Discovery),
-        (status = 400, description = "Invalid subnet network"),
+        (status = 200, description = "Discovery created successfully", body = ApiResponse<Discovery>),
+        (status = 400, description = "Invalid subnet network", body = ApiErrorResponse),
+        (status = 400, description = "Can't create historical discovery", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -71,6 +75,12 @@ pub async fn create_discovery(
     user: RequireMember,
     Json(discovery): Json<Discovery>,
 ) -> ApiResult<Json<ApiResponse<Discovery>>> {
+    if let RunType::Historical { .. } = discovery.base.run_type {
+        return Err(ApiError::bad_request(
+            "Historial discovery is created when a discovery session completes, and can't be created using the API.",
+        ));
+    }
+
     // Custom validation: Check if any subnets aren't on the same network as the discovery
     #[allow(clippy::single_match)]
     match &discovery.base.discovery_type {
@@ -93,7 +103,49 @@ pub async fn create_discovery(
     create_handler::<Discovery>(State(state), user, Json(discovery)).await
 }
 
+/// Update discovery
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "discoveries",
+    params(("id" = uuid::Uuid, Path, description = "Discovery ID")),
+    request_body = Discovery,
+    responses(
+        (status = 200, description = "Discovery updated successfully", body = ApiResponse<Discovery>),
+        (status = 400, description = "Invalid subnet network", body = ApiErrorResponse),
+        (status = 400, description = "Can't update historical discovery", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
+pub async fn update_discovery(
+    state: State<Arc<AppState>>,
+    user: RequireMember,
+    id: Path<Uuid>,
+    discovery: Json<Discovery>,
+) -> ApiResult<Json<ApiResponse<Discovery>>> {
+    if let RunType::Historical { .. } = discovery.base.run_type {
+        return Err(ApiError::bad_request(
+            "Historial discovery can't be updated using the API.",
+        ));
+    }
+
+    update_handler::<Discovery>(state, user, id, discovery).await
+}
+
 /// Receive discovery progress update from daemon
+///
+/// Internal endpoint for daemons to report discovery progress.
+#[utoipa::path(
+    post,
+    path = "/{session_id}/update",
+    tags = ["discovery", "internal"],
+    params(("session_id" = Uuid, Path, description = "Discovery session ID")),
+    request_body = DiscoveryUpdatePayload,
+    responses(
+        (status = 200, description = "Update received", body = EmptyApiResponse),
+    ),
+    security(("api_key" = []))
+)]
 async fn receive_discovery_update(
     State(state): State<Arc<AppState>>,
     _daemon: AuthenticatedDaemon,
@@ -117,7 +169,7 @@ async fn receive_discovery_update(
     request_body = Uuid,
     responses(
         (status = 200, description = "Discovery session started", body = DiscoveryUpdatePayload),
-        (status = 404, description = "Discovery not found"),
+        (status = 404, description = "Discovery not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -196,7 +248,7 @@ async fn discovery_stream(
     path = "/active-sessions",
     tag = "discoveries",
     responses(
-        (status = 200, description = "List of active discovery sessions", body = Vec<DiscoveryUpdatePayload>),
+        (status = 200, description = "List of active discovery sessions", body = ApiResponse<Vec<DiscoveryUpdatePayload>>),
     ),
     security(("session" = []))
 )]
@@ -220,7 +272,7 @@ async fn get_active_sessions(
     tag = "discoveries",
     params(("session_id" = Uuid, Path, description = "Session ID")),
     responses(
-        (status = 200, description = "Discovery session cancelled"),
+        (status = 200, description = "Discovery session cancelled", body = EmptyApiResponse),
     ),
     security(("session" = []))
 )]

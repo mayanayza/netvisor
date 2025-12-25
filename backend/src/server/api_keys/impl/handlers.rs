@@ -11,4 +11,11 @@ impl CrudHandlers for ApiKey {
     fn get_service(state: &AppState) -> &Self::Service {
         &state.services.api_key_service
     }
+
+    fn preserve_immutable_fields(&mut self, existing: &Self) {
+        // key hash cannot be changed via update (use rotate endpoint instead)
+        self.base.key = existing.base.key.clone();
+        // last_used is server-set only
+        self.base.last_used = existing.base.last_used;
+    }
 }

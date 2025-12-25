@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { Info } from 'lucide-svelte';
-	import type { Host, HostWithServicesRequest } from '$lib/features/hosts/types/base';
-	import { createEmptyHostFormData } from '$lib/features/hosts/store';
+	import type {
+		Host,
+		HostFormData,
+		CreateHostWithServicesRequest,
+		UpdateHostWithServicesRequest
+	} from '$lib/features/hosts/types/base';
+	import {
+		createEmptyHostFormData,
+		hydrateHostToFormData,
+		formDataToHostPrimitive
+	} from '$lib/features/hosts/store';
 	import DetailsForm from './Details/HostDetailsForm.svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import InterfacesForm from './Interfaces/InterfacesForm.svelte';
@@ -17,9 +26,9 @@
 
 	export let host: Host | null = null;
 	export let isOpen = false;
-	export let onCreate: (data: HostWithServicesRequest) => Promise<void> | void;
-	export let onCreateAndContinue: (data: HostWithServicesRequest) => Promise<void> | void;
-	export let onUpdate: (data: HostWithServicesRequest) => Promise<void> | void;
+	export let onCreate: (data: CreateHostWithServicesRequest) => Promise<void> | void;
+	export let onCreateAndContinue: (data: CreateHostWithServicesRequest) => Promise<void> | void;
+	export let onUpdate: (data: UpdateHostWithServicesRequest) => Promise<void> | void;
 	export let onClose: () => void;
 	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
 
@@ -31,7 +40,7 @@
 	$: isEditing = host !== null;
 	$: title = isEditing ? `Edit ${host?.name}` : 'Create Host';
 
-	let formData: Host = createEmptyHostFormData();
+	let formData: HostFormData = createEmptyHostFormData();
 
 	// Initialize form data when host changes or modal opens
 	$: if (isOpen) {
@@ -113,7 +122,8 @@
 	}
 
 	function resetForm() {
-		formData = host ? { ...host } : createEmptyHostFormData();
+		// Hydrate host to HostFormData for form editing (includes interfaces, ports, services)
+		formData = host ? hydrateHostToFormData(host) : createEmptyHostFormData();
 
 		if (host && host.id) {
 			// Sort as ordered for host to get high confidence services with logo first
@@ -128,11 +138,15 @@
 		loading = true;
 		let promises = [];
 		if (isEditing && host) {
-			promises.push(onUpdate({ host: formData, services: currentHostServices }));
+			// Extract Host primitive from form data for update
+			const hostPrimitive = formDataToHostPrimitive(formData);
+			promises.push(onUpdate({ host: hostPrimitive, services: currentHostServices }));
 		} else {
+			// Create needs full form data (includes interfaces/ports)
 			promises.push(onCreate({ host: formData, services: currentHostServices }));
 		}
 
+		// VM managed hosts are already Host primitives
 		for (const updatedHost of vmManagedHostUpdates.values()) {
 			const hostServicesStore = getServicesForHost(updatedHost.id);
 			const hostServices = get(hostServicesStore);
@@ -306,18 +320,20 @@
 	</div>
 
 	<!-- Custom footer: handles both normal mode and services-tab-during-create mode -->
-	<svelte:fragment slot="footer" let:handleCancel let:handleDelete let:loading let:deleting let:actualDisableSave>
+	<svelte:fragment
+		slot="footer"
+		let:handleCancel
+		let:handleDelete
+		let:loading
+		let:deleting
+		let:actualDisableSave
+	>
 		{#if isServicesTabDuringCreate}
 			<!-- Special footer for services tab during create mode -->
 			<div class="flex items-center justify-between">
 				<div></div>
 				<div class="flex items-center gap-3">
-					<button
-						type="button"
-						disabled={loading}
-						on:click={handleCancel}
-						class="btn-secondary"
-					>
+					<button type="button" disabled={loading} on:click={handleCancel} class="btn-secondary">
 						Previous
 					</button>
 					<button

@@ -1,31 +1,35 @@
 import { derived, writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type { Daemon } from './types/base';
 import type { DiscoveryUpdatePayload } from '../discovery/types/api';
 
 export const daemons = writable<Daemon[]>([]);
 
 export async function getDaemons() {
-	return await api.request<Daemon[]>(`/daemons`, daemons, (daemons) => daemons, { method: 'GET' });
+	const { data } = await apiClient.GET('/api/daemons');
+	if (data?.success && data.data) {
+		daemons.set(data.data);
+	}
+	return data as ApiResponse<Daemon[]>;
 }
 
 export async function deleteDaemon(id: string) {
-	return await api.request<void, Daemon[]>(
-		`/daemons/${id}`,
-		daemons,
-		(_, current) => current.filter((d) => d.id !== id),
-		{ method: 'DELETE' }
-	);
+	const { data: result } = await apiClient.DELETE('/api/daemons/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		daemons.update((current) => current.filter((d) => d.id !== id));
+	}
+	return result;
 }
 
 export async function bulkDeleteDaemons(ids: string[]) {
-	const result = await api.request<void, Daemon[]>(
-		`/daemons/bulk-delete`,
-		daemons,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/daemons/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		daemons.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 

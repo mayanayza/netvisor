@@ -3,7 +3,7 @@
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import InterfaceConfigPanel from './InterfaceConfigPanel.svelte';
 	import { subnets } from '$lib/features/subnets/store';
-	import { type Host, type Interface } from '$lib/features/hosts/types/base';
+	import { type HostFormData, type Interface } from '$lib/features/hosts/types/base';
 	import { v4 as uuidv4 } from 'uuid';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
@@ -12,7 +12,7 @@
 	import InternetInterfaceConfigPanel from './InternetInterfaceConfigPanel.svelte';
 
 	export let formApi: FormApi;
-	export let formData: Host;
+	export let formData: HostFormData;
 
 	// Computed values
 	$: interfaces = formData.interfaces || [];

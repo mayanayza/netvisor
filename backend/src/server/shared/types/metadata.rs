@@ -3,6 +3,7 @@ use axum::http::header::CACHE_CONTROL;
 use axum::response::IntoResponse;
 use serde::Serialize;
 use strum::{IntoDiscriminant, IntoEnumIterator};
+use utoipa::ToSchema;
 
 use crate::server::{
     billing::types::{base::BillingPlan, features::Feature},
@@ -16,7 +17,7 @@ use crate::server::{
     users::r#impl::permissions::UserOrgPermissions,
 };
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, ToSchema)]
 pub struct MetadataRegistry {
     pub service_definitions: Vec<TypeMetadata>,
     pub subnet_types: Vec<TypeMetadata>,
@@ -31,7 +32,7 @@ pub struct MetadataRegistry {
     pub concepts: Vec<EntityMetadata>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, ToSchema)]
 pub struct TypeMetadata {
     pub id: &'static str,
     pub name: Option<&'static str>,
@@ -42,7 +43,7 @@ pub struct TypeMetadata {
     pub metadata: Option<serde_json::Value>,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, ToSchema)]
 pub struct EntityMetadata {
     pub id: &'static str,
     pub color: &'static str,
@@ -113,6 +114,17 @@ where
     }
 }
 
+/// Get metadata registry
+///
+/// Returns metadata about all entity types, service definitions, and other system metadata.
+#[utoipa::path(
+    get,
+    path = "/api/metadata",
+    tags = ["internal", "metadata"],
+    responses(
+        (status = 200, description = "Metadata registry", body = ApiResponse<MetadataRegistry>)
+    )
+)]
 pub async fn get_metadata_registry() -> impl IntoResponse {
     let registry = MetadataRegistry {
         service_definitions: ServiceDefinitionRegistry::all_service_definitions()

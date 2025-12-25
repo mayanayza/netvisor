@@ -11,7 +11,7 @@
 		networks,
 		updateNetwork
 	} from '$lib/features/networks/store';
-	import type { CreateNetworkRequest, Network } from '../types';
+	import type { Network } from '../types';
 	import NetworkCard from './NetworkCard.svelte';
 	import { getHosts } from '$lib/features/hosts/store';
 	import { getDaemons } from '$lib/features/daemons/store';
@@ -64,7 +64,7 @@
 		}
 	}
 
-	async function handleNetworkCreate(data: CreateNetworkRequest) {
+	async function handleNetworkCreate(data: Network) {
 		const result = await createNetwork(data);
 		if (result?.success) {
 			showCreateNetworkModal = false;

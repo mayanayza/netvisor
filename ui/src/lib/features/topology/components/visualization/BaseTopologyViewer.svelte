@@ -200,7 +200,7 @@
 							sourceHandle: edge.source_handle.toString(),
 							targetHandle: edge.target_handle.toString(),
 							type: 'custom',
-							label: edge.label,
+							label: edge.label ?? undefined,
 							data: { ...edge, edgeIndex: index },
 							animated: animatedStates.get(edgeId) ?? false,
 							interactionWidth: 50

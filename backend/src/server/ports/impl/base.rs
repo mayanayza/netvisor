@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use std::{fmt::Display, str::FromStr};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -26,9 +25,7 @@ use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, Type
     Serialize,
     Deserialize,
     ToSchema,
-    TS,
 )]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum TransportProtocol {
     #[default]
     Udp,
@@ -41,6 +38,7 @@ pub struct PortBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
     #[serde(flatten)]
+    #[schema(required)]
     pub port_type: PortType,
 }
 
@@ -82,21 +80,17 @@ impl Hash for PortBase {
 }
 
 /// Port entity with custom serialization that flattens PortType fields.
-/// The TypeScript type is defined inline since serde(flatten) with custom Serialize
-/// doesn't work automatically with ts-rs.
-#[derive(Copy, Debug, Validate, Clone, Eq, Serialize, Deserialize, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
-#[ts(type = "{ id: string, host_id: string, network_id: string, created_at: string, updated_at: string, number: number, protocol: TransportProtocol, type: string }")]
+#[derive(Copy, Debug, Validate, Clone, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::port)]
 pub struct Port {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: PortBase,
@@ -178,16 +172,7 @@ impl Port {
 
 /// The type of port - predefined well-known ports or custom
 /// Custom serialization outputs: {number, protocol, type} for flattening into Port
-#[derive(
-    Copy,
-    Debug,
-    Clone,
-    Eq,
-    EnumDiscriminants,
-    EnumIter,
-    IntoStaticStr,
-    Default,
-)]
+#[derive(Copy, Debug, Clone, Eq, EnumDiscriminants, EnumIter, IntoStaticStr, Default)]
 #[strum_discriminants(derive(Display, Hash, EnumIter))]
 pub enum PortType {
     Ssh,
@@ -814,18 +799,27 @@ impl utoipa::PartialSchema for PortType {
         RefOr::T(Schema::Object(
             ObjectBuilder::new()
                 .schema_type(SchemaType::new(Type::Object))
-                .property("number", ObjectBuilder::new().schema_type(SchemaType::new(Type::Integer)).build())
+                .property(
+                    "number",
+                    ObjectBuilder::new()
+                        .schema_type(SchemaType::new(Type::Integer))
+                        .build(),
+                )
                 .property("protocol", TransportProtocol::schema())
                 .property(
                     "type",
                     ObjectBuilder::new()
                         .schema_type(SchemaType::new(Type::String))
-                        .description(Some("Auto-derived from number+protocol; optional on create"))
+                        .description(Some(
+                            "Auto-derived from number+protocol; optional on create",
+                        ))
                         .build(),
                 )
                 .required("number")
                 .required("protocol")
-                .description(Some("Port type with number, protocol, and optional type identifier"))
+                .description(Some(
+                    "Port type with number, protocol, and optional type identifier",
+                ))
                 .build(),
         ))
     }

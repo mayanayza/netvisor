@@ -1,7 +1,7 @@
 use crate::server::auth::middleware::auth::{AuthenticatedEntity, AuthenticatedUser};
 use crate::server::auth::middleware::permissions::{MemberOrDaemon, RequireMember};
 use crate::server::shared::handlers::traits::{CrudHandlers, create_handler};
-use crate::server::shared::types::api::ApiError;
+use crate::server::shared::types::api::{ApiError, ApiErrorResponse};
 use crate::server::{
     config::AppState,
     shared::{
@@ -10,7 +10,7 @@ use crate::server::{
     },
     subnets::r#impl::base::Subnet,
 };
-use axum::extract::{State};
+use axum::extract::State;
 use axum::response::Json;
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -28,7 +28,11 @@ mod generated {
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(generated::get_all, create_subnet))
-        .routes(routes!(generated::get_by_id, generated::update, generated::delete))
+        .routes(routes!(
+            generated::get_by_id,
+            generated::update,
+            generated::delete
+        ))
         .routes(routes!(generated::bulk_delete))
 }
 
@@ -39,8 +43,8 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     tag = "subnets",
     request_body = Subnet,
     responses(
-        (status = 200, description = "Subnet created successfully", body = Subnet),
-        (status = 400, description = "Invalid request"),
+        (status = 200, description = "Subnet created successfully", body = ApiResponse<Subnet>),
+        (status = 400, description = "Invalid request", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -49,7 +53,6 @@ async fn create_subnet(
     MemberOrDaemon { entity, .. }: MemberOrDaemon,
     Json(request): Json<Subnet>,
 ) -> ApiResult<Json<ApiResponse<Subnet>>> {
-
     tracing::debug!(
         subnet_name = %request.base.name,
         subnet_cidr = %request.base.cidr,
@@ -73,11 +76,24 @@ async fn create_subnet(
     }
 
     let created = match entity {
-        AuthenticatedEntity::User{user_id, organization_id,permissions,network_ids, email} => {
-            let authenticated_user = AuthenticatedUser{user_id, organization_id,permissions,network_ids, email};
-            create_handler::<Subnet>(state, RequireMember(authenticated_user), Json(request)).await?
-        },
-        AuthenticatedEntity::Daemon{network_id, .. } => {
+        AuthenticatedEntity::User {
+            user_id,
+            organization_id,
+            permissions,
+            network_ids,
+            email,
+        } => {
+            let authenticated_user = AuthenticatedUser {
+                user_id,
+                organization_id,
+                permissions,
+                network_ids,
+                email,
+            };
+            create_handler::<Subnet>(state, RequireMember(authenticated_user), Json(request))
+                .await?
+        }
+        AuthenticatedEntity::Daemon { network_id, .. } => {
             if network_id == request.base.network_id {
                 let service = Subnet::get_service(&state);
                 let created = service.create(request, entity.clone()).await.map_err(|e| {
@@ -91,11 +107,17 @@ async fn create_subnet(
 
                 Json(ApiResponse::success(created))
             } else {
-                return Err(ApiError::bad_request(&format!("Daemon tried to create subnet on a network that it doesn't belong to: {}", entity.to_string())));    
+                return Err(ApiError::bad_request(&format!(
+                    "Daemon tried to create subnet on a network that it doesn't belong to: {}",
+                    entity
+                )));
             }
-        },
+        }
         _ => {
-            return Err(ApiError::bad_request(&format!("AuthenticatedEntity besides a user or daemon tried to create a subnet: {}", entity.to_string())));
+            return Err(ApiError::bad_request(&format!(
+                "AuthenticatedEntity besides a user or daemon tried to create a subnet: {}",
+                entity
+            )));
         }
     };
 

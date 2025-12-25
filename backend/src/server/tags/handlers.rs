@@ -1,8 +1,8 @@
 use crate::server::auth::middleware::permissions::RequireAdmin;
-use crate::server::shared::handlers::traits::{
-    create_handler,
-};
-use crate::server::shared::types::api::ApiError;
+use crate::server::shared::handlers::traits::create_handler;
+use crate::server::shared::services::traits::CrudService;
+use crate::server::shared::storage::filter::EntityFilter;
+use crate::server::shared::types::api::{ApiError, ApiErrorResponse};
 use crate::server::tags::r#impl::base::Tag;
 use crate::server::{
     config::AppState,
@@ -25,7 +25,11 @@ mod generated {
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(generated::get_all, create_tag))
-        .routes(routes!(generated::get_by_id, generated::update, generated::delete))
+        .routes(routes!(
+            generated::get_by_id,
+            generated::update,
+            generated::delete
+        ))
         .routes(routes!(generated::bulk_delete))
 }
 
@@ -36,29 +40,26 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     tag = "tags",
     request_body = Tag,
     responses(
-        (status = 200, description = "Tag created successfully", body = Tag),
-        (status = 409, description = "Tag name already exists"),
+        (status = 200, description = "Tag created successfully", body = ApiResponse<Tag>),
+        (status = 409, description = "Tag name already exists", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
 pub async fn create_tag(
     state: State<Arc<AppState>>,
-    admin: RequireAdmin,
-    json: Json<Tag>,
+    RequireAdmin(user): RequireAdmin,
+    Json(tag): Json<Tag>,
 ) -> ApiResult<Json<ApiResponse<Tag>>> {
-    let created = create_handler::<Tag>(state, admin.into(), json.clone()).await;
+    let name_filter = EntityFilter::unfiltered()
+        .network_ids(&user.network_ids)
+        .name(tag.base.name.clone());
 
-    match created {
-        Ok(c) => Ok(c),
-        Err(e)
-            if e.message
-                .contains("violates unique constraint \"idx_tags_org_name\"") =>
-        {
-            Err(ApiError::conflict(&format!(
-                "Tag names must be unique; a tag named \"{}\" already exists",
-                json.base.name
-            )))
-        }
-        Err(e) => Err(e),
+    if let Some(existing_with_name) = state.services.tag_service.get_one(name_filter).await? {
+        return Err(ApiError::conflict(&format!(
+            "Tag names must be unique; a tag named \"{}\" already exists",
+            existing_with_name.base.name
+        )));
     }
+
+    create_handler::<Tag>(state, RequireAdmin(user).into(), Json(tag)).await
 }

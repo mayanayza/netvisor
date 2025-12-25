@@ -1,16 +1,19 @@
 <script lang="ts" context="module">
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { getServiceForBinding } from '$lib/features/services/store';
+	import { getInterfaceFromId } from '$lib/features/interfaces/store';
 
+	// Context for binding display within form editing (inline editor needs host form data)
 	interface ServiceAndHost {
 		service: Service;
-		host: Host;
+		host: HostFormData;
 	}
 
 	export const InterfaceBindingDisplay: EntityDisplayComponent<InterfaceBinding, ServiceAndHost> = {
 		getId: (binding: InterfaceBinding) => binding.id,
-		getLabel: (binding: InterfaceBinding, context) => {
-			const iface = context?.host.interfaces.find((i) => i.id == binding.interface_id);
+		getLabel: (binding: InterfaceBinding) => {
+			// Use store lookup for display - don't rely on embedded children
+			const iface = get(getInterfaceFromId(binding.interface_id));
 			const interfaceFormatted = iface ? formatInterface(iface) : 'Unknown Interface';
 			return interfaceFormatted;
 		},
@@ -52,7 +55,7 @@
 	import { formatInterface } from '$lib/features/hosts/store';
 	import type { InterfaceBinding, Service } from '$lib/features/services/types/base';
 	import { Link2 } from 'lucide-svelte';
-	import type { Host } from '$lib/features/hosts/types/base';
+	import type { HostFormData } from '$lib/features/hosts/types/base';
 	import InterfaceBindingInlineEditor from './InterfaceBindingInlineEditor.svelte';
 	import { get } from 'svelte/store';
 	import type { FormApi } from '../../types';

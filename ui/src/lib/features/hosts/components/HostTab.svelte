@@ -1,6 +1,11 @@
 <script lang="ts">
 	import HostCard from './HostCard.svelte';
-	import type { Host, HostWithServicesRequest } from '../types/base';
+	import type {
+		Host,
+		CreateHostWithServicesRequest,
+		UpdateHostWithServicesRequest
+	} from '../types/base';
+	import { toHostPrimitive } from '../store';
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
@@ -68,7 +73,7 @@
 			filterable: true,
 			sortable: true,
 			getValue: (host) => {
-				if (host.virtualization !== null) {
+				if (host.virtualization) {
 					const virtualizationService = get(getServiceById(host.virtualization.details.service_id));
 					if (virtualizationService) {
 						return virtualizationService?.name || 'Unknown Service';
@@ -123,10 +128,11 @@
 	$: hostGroups = new Map(
 		$hosts.map((host) => {
 			const foundGroups = $groups.filter((g) => {
-				return g.service_bindings.some((b) => {
+				return (g.binding_ids ?? []).some((b) => {
 					// Use $services instead of getServiceForBinding to maintain reactivity
 					let service = $services.find((s) => s.bindings.map((sb) => sb.id).includes(b));
-					if (service) return host.services.some((s) => s.id === service.id);
+					// Check if the service belongs to this host
+					if (service) return service.host_id === host.id;
 					return false;
 				});
 			});
@@ -156,7 +162,7 @@
 		}
 	}
 
-	async function handleHostCreate(data: HostWithServicesRequest) {
+	async function handleHostCreate(data: CreateHostWithServicesRequest) {
 		const result = await createHost(data);
 		if (result?.success) {
 			showHostEditor = false;
@@ -164,15 +170,16 @@
 		}
 	}
 
-	async function handleHostCreateAndContinue(data: HostWithServicesRequest) {
+	async function handleHostCreateAndContinue(data: CreateHostWithServicesRequest) {
 		const result = await createHost(data);
 		if (result?.success && result.data) {
 			// Keep modal open and switch to edit mode with the created host
-			editingHost = result.data;
+			// Extract Host primitive from HostResponse
+			editingHost = toHostPrimitive(result.data);
 		}
 	}
 
-	async function handleHostUpdate(data: HostWithServicesRequest) {
+	async function handleHostUpdate(data: UpdateHostWithServicesRequest) {
 		const result = await updateHost(data);
 		if (result?.success) {
 			showHostEditor = false;
@@ -195,8 +202,8 @@
 	}
 
 	async function handleHostHide(host: Host) {
-		host.hidden = !host.hidden;
-		await updateHost({ host, services: null });
+		const updatedHost = { ...host, hidden: !host.hidden };
+		await updateHost({ host: updatedHost, services: null });
 	}
 
 	function handleCloseHostEditor() {

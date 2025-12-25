@@ -3,11 +3,11 @@ use crate::server::{
     config::AppState,
     shared::{
         entities::{ChangeTriggersTopologyStaleness, Entity},
-        types::entities::EntitySource,
-        handlers::query::{FilterQueryExtractor},
+        handlers::query::FilterQueryExtractor,
         services::traits::{CrudService, EventBusService},
         storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiResponse, ApiResult},
+        types::entities::EntitySource,
         validation::{
             validate_bulk_delete_access, validate_create_access, validate_delete_access,
             validate_entity, validate_read_access, validate_update_access,
@@ -22,9 +22,9 @@ use axum::{
     routing::{delete, get, post, put},
 };
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use std::fmt::Display;
 use std::sync::Arc;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Trait for creating standard CRUD handlers for an entity
@@ -59,6 +59,14 @@ where
     fn set_source(&mut self, _source: EntitySource) {
         // Default: no-op
     }
+
+    /// Optional: Preserve entity-specific immutable fields from the existing entity.
+    /// Override for entities that have additional read-only fields beyond id/created_at.
+    /// For example, ApiKey should preserve `key` and `last_used`.
+    /// Default is a no-op for entities without extra immutable fields.
+    fn preserve_immutable_fields(&mut self, _existing: &Self) {
+        // Default: no-op
+    }
 }
 
 /// Create a standard CRUD router
@@ -85,7 +93,7 @@ where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
-    // Set source to Manual for API-created entities
+    // Set source to Manual for user-created entities
     entity.set_source(EntitySource::Manual);
 
     validate_entity(|| entity.validate(), T::entity_name())?;
@@ -200,21 +208,8 @@ where
 {
     let service = T::get_service(&state);
 
-    // Enforce path ID matches body ID
-    if entity.id() != id {
-        tracing::warn!(
-            entity_type = T::table_name(),
-            path_id = %id,
-            body_id = %entity.id(),
-            user_id = %user.user_id,
-            "Path/body ID mismatch"
-        );
-        return Err(ApiError::bad_request(
-            "Entity ID in request body must match URL path ID",
-        ));
-    }
-
     // Fetch existing entity and verify ownership BEFORE any updates
+    // The path ID is canonical - we use it to find the existing entity
     let existing = service
         .get_by_id(&id)
         .await
@@ -237,6 +232,14 @@ where
             );
             ApiError::not_found(format!("{} '{}' not found", T::entity_name(), id))
         })?;
+
+    // Preserve immutable fields from existing entity.
+    // These fields cannot be changed via the API - the existing values are authoritative.
+    // This includes: id, created_at (common to all entities), plus any entity-specific
+    // immutable fields handled by preserve_immutable_fields (e.g., ApiKey.key, Daemon.url).
+    entity.set_id(existing.id());
+    entity.set_created_at(existing.created_at());
+    entity.preserve_immutable_fields(&existing);
 
     validate_update_access(
         service.get_network_id(&existing),

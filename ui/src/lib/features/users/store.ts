@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api } from '$lib/shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type { User } from './types';
 
 export const users = writable<User[]>([]);
@@ -8,34 +8,39 @@ export const users = writable<User[]>([]);
  * Fetch all users in the organization
  */
 export async function getUsers(): Promise<void> {
-	await api.request<User[], User[]>('/users', users, (users) => users, { method: 'GET' });
+	const { data } = await apiClient.GET('/api/users');
+	if (data?.success && data.data) {
+		users.set(data.data);
+	}
 }
 
 export async function deleteUser(id: string) {
-	return await api.request<void, User[]>(
-		`/users/${id}`,
-		users,
-		(_, current) => current.filter((d) => d.id !== id),
-		{ method: 'DELETE' }
-	);
+	const { data: result } = await apiClient.DELETE('/api/users/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		users.update((current) => current.filter((d) => d.id !== id));
+	}
+	return result;
 }
 
 export async function bulkDeleteUsers(ids: string[]) {
-	const result = await api.request<void, User[]>(
-		`/users/bulk-delete`,
-		users,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/users/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		users.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 
 export async function updateUserAsAdmin(user: User) {
-	return await api.request<User, User[]>(
-		`/users/${user.id}/admin`,
-		users,
-		(updatedUser, current) => current.map((u) => (u.id === user.id ? updatedUser : u)),
-		{ method: 'PUT', body: JSON.stringify(user) }
-	);
+	const { data: result } = await apiClient.PUT('/api/users/{id}/admin', {
+		params: { path: { id: user.id } },
+		body: user
+	});
+	if (result?.success && result.data) {
+		users.update((current) => current.map((u) => (u.id === user.id ? result.data! : u)));
+	}
+	return result as ApiResponse<User>;
 }

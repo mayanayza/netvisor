@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { formatInterface, getInterfaceFromId } from '$lib/features/hosts/store';
-	import type { Host } from '$lib/features/hosts/types/base';
+	import { formatInterface } from '$lib/features/hosts/store';
+	import { getInterfaceFromId } from '$lib/features/interfaces/store';
+	import type { HostFormData } from '$lib/features/hosts/types/base';
 	import type { InterfaceBinding, Service } from '$lib/features/services/types/base';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import { field } from 'svelte-forms';
@@ -10,7 +11,8 @@
 	export let onUpdate: (updates: Partial<InterfaceBinding>) => void = () => {};
 	export let formApi: FormApi;
 	export let service: Service | undefined = undefined;
-	export let host: Host | undefined = undefined;
+	// Form data with interfaces for binding selection
+	export let host: HostFormData | undefined = undefined;
 
 	// Interface binding must have an interface_id
 	$: ifaceStore = binding.interface_id ? getInterfaceFromId(binding.interface_id) : null;

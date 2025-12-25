@@ -1,26 +1,37 @@
 use crate::server::auth::middleware::auth::AuthenticatedUser;
 use crate::server::auth::middleware::permissions::RequireOwner;
 use crate::server::billing::types::api::CreateCheckoutRequest;
+use crate::server::billing::types::base::BillingPlan;
 use crate::server::config::AppState;
-use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::{ApiError, ApiResult};
+use crate::server::shared::types::api::{ApiErrorResponse, ApiResponse, EmptyApiResponse};
 use axum::Json;
-use axum::Router;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::IntoResponse;
-use axum::routing::{get, post};
 use std::sync::Arc;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/plans", get(get_billing_plans))
-        .route("/checkout", post(create_checkout_session))
-        .route("/webhooks", post(handle_webhook))
-        .route("/portal", post(create_portal_session))
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(get_billing_plans))
+        .routes(routes!(create_checkout_session))
+        .routes(routes!(handle_webhook))
+        .routes(routes!(create_portal_session))
 }
 
+/// Get available billing plans
+#[utoipa::path(
+    get,
+    path = "/plans",
+    tags = ["billing", "internal"],
+    responses(
+        (status = 200, description = "List of available billing plans", body = ApiResponse<Vec<BillingPlan>>),
+        (status = 400, description = "Billing not enabled", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 async fn get_billing_plans(
     State(state): State<Arc<AppState>>,
     RequireOwner(_user): RequireOwner,
@@ -38,6 +49,18 @@ async fn get_billing_plans(
     }
 }
 
+/// Create a checkout session
+#[utoipa::path(
+    post,
+    path = "/checkout",
+    tags = ["billing", "internal"],
+    request_body = CreateCheckoutRequest,
+    responses(
+        (status = 200, description = "Checkout session URL", body = ApiResponse<String>),
+        (status = 400, description = "Invalid plan or billing not enabled", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 async fn create_checkout_session(
     State(state): State<Arc<AppState>>,
     RequireOwner(_user): RequireOwner,
@@ -73,6 +96,18 @@ async fn create_checkout_session(
     }
 }
 
+/// Handle Stripe webhook
+///
+/// Internal endpoint for Stripe webhook callbacks.
+#[utoipa::path(
+    post,
+    path = "/webhooks",
+    tags = ["billing", "internal"],
+    responses(
+        (status = 200, description = "Webhook processed", body = EmptyApiResponse),
+        (status = 400, description = "Invalid signature or billing not enabled", body = ApiErrorResponse),
+    )
+)]
 async fn handle_webhook(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -93,6 +128,18 @@ async fn handle_webhook(
     }
 }
 
+/// Create a billing portal session
+#[utoipa::path(
+    post,
+    path = "/portal",
+    tags = ["billing", "internal"],
+    request_body = String,
+    responses(
+        (status = 200, description = "Portal session URL", body = ApiResponse<String>),
+        (status = 400, description = "Billing not enabled", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 async fn create_portal_session(
     State(state): State<Arc<AppState>>,
     RequireOwner(_user): RequireOwner,

@@ -1,59 +1,52 @@
-import { api } from '$lib/shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import { writable } from 'svelte/store';
 import type { Tag } from './types/base';
 
 export const tags = writable<Tag[]>([]);
 
 export async function getTags() {
-	return await api.request<Tag[]>(`/tags`, tags, (tags) => tags, { method: 'GET' });
+	const { data } = await apiClient.GET('/api/tags');
+	if (data?.success && data.data) {
+		tags.set(data.data);
+	}
+	return data as ApiResponse<Tag[]>;
 }
 
 export async function createTag(tag: Tag) {
-	const result = await api.request<Tag, Tag[]>(
-		'/tags',
-		tags,
-		(response, currentTags) => [...currentTags, response],
-		{
-			method: 'POST',
-			body: JSON.stringify(tag)
-		}
-	);
-
-	return result;
+	const { data: result } = await apiClient.POST('/api/tags', { body: tag });
+	if (result?.success && result.data) {
+		tags.update((current) => [...current, result.data!]);
+	}
+	return result as ApiResponse<Tag>;
 }
 
 export async function bulkDeleteTags(ids: string[]) {
-	const result = await api.request<void, Tag[]>(
-		`/tags/bulk-delete`,
-		tags,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/tags/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		tags.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 
 export async function updateTag(tag: Tag) {
-	const result = await api.request<Tag, Tag[]>(
-		`/tags/${tag.id}`,
-		tags,
-		(response, currentTags) => currentTags.map((s) => (s.id === tag.id ? response : s)),
-		{
-			method: 'PUT',
-			body: JSON.stringify(tag)
-		}
-	);
-
-	return result;
+	const { data: result } = await apiClient.PUT('/api/tags/{id}', {
+		params: { path: { id: tag.id } },
+		body: tag
+	});
+	if (result?.success && result.data) {
+		tags.update((current) => current.map((s) => (s.id === tag.id ? result.data! : s)));
+	}
+	return result as ApiResponse<Tag>;
 }
 
 export async function deleteTag(tagId: string) {
-	const result = await api.request<void, Tag[]>(
-		`/tags/${tagId}`,
-		tags,
-		(_, currentTags) => currentTags.filter((s) => s.id !== tagId),
-		{ method: 'DELETE' }
-	);
-
+	const { data: result } = await apiClient.DELETE('/api/tags/{id}', {
+		params: { path: { id: tagId } }
+	});
+	if (result?.success) {
+		tags.update((current) => current.filter((s) => s.id !== tagId));
+	}
 	return result;
 }

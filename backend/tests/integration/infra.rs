@@ -377,7 +377,6 @@ pub async fn setup_authenticated_user(client: &TestClient) -> Result<User, Strin
         networks: vec![NetworkSetup {
             name: "My Network".to_string(),
         }],
-        populate_seed_data: true,
     };
 
     match client.setup(&setup_request).await {

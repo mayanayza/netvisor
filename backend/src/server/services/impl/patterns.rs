@@ -19,7 +19,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::{net::IpAddr, ops::Range};
 use strum_macros::{Display, EnumDiscriminants, IntoStaticStr};
-use ts_rs::TS;
 use utoipa::ToSchema;
 
 use crate::server::{ports::r#impl::base::PortType, services::r#impl::endpoints::Endpoint};
@@ -32,8 +31,7 @@ pub struct MatchResult {
     pub details: MatchDetails,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct MatchDetails {
     pub reason: MatchReason,
     pub confidence: MatchConfidence,
@@ -55,8 +53,7 @@ impl MatchDetails {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Display, Serialize, Deserialize, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Display, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "lowercase")]
 pub enum MatchReason {
@@ -68,15 +65,50 @@ pub enum MatchReason {
 /// Manual ToSchema for MatchReason since internally-tagged enums with tuple variants aren't supported
 impl utoipa::PartialSchema for MatchReason {
     fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::Schema> {
-        use utoipa::openapi::schema::ObjectBuilder;
+        use utoipa::openapi::schema::{
+            ArrayBuilder, ObjectBuilder, OneOfBuilder, SchemaType, Type,
+        };
         use utoipa::openapi::{RefOr, Schema};
 
-        // Just represent as a generic object with type discriminator
-        RefOr::T(Schema::Object(
-            ObjectBuilder::new()
-                .property("type", ObjectBuilder::new().build())
-                .property("data", ObjectBuilder::new().build())
-                .description(Some("Match reason with type discriminator"))
+        // Variant 1: { type: "reason", data: string }
+        let reason_variant = ObjectBuilder::new()
+            .property(
+                "type",
+                ObjectBuilder::new()
+                    .schema_type(SchemaType::new(Type::String))
+                    .enum_values(Some(vec!["reason"])),
+            )
+            .required("type")
+            .property(
+                "data",
+                ObjectBuilder::new().schema_type(SchemaType::new(Type::String)),
+            )
+            .required("data")
+            .build();
+
+        // Variant 2: { type: "container", data: [string, MatchReason[]] }
+        // Note: JSON Schema doesn't perfectly represent Rust tuples, so we use an array
+        let container_variant = ObjectBuilder::new()
+            .property(
+                "type",
+                ObjectBuilder::new()
+                    .schema_type(SchemaType::new(Type::String))
+                    .enum_values(Some(vec!["container"])),
+            )
+            .required("type")
+            .property(
+                "data",
+                ArrayBuilder::new()
+                    .description(Some("Tuple of [name: string, children: MatchReason[]]")),
+            )
+            .required("data")
+            .build();
+
+        RefOr::T(Schema::OneOf(
+            OneOfBuilder::new()
+                .item(reason_variant)
+                .item(container_variant)
+                .description(Some("Match reason - either a simple reason string or a container with nested reasons"))
                 .build(),
         ))
     }
@@ -88,8 +120,9 @@ impl utoipa::ToSchema for MatchReason {
     }
 }
 
-#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Debug, Clone, Hash, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, ToSchema,
+)]
 pub enum MatchConfidence {
     NotApplicable = 0,
     Low = 1,

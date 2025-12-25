@@ -184,14 +184,14 @@
 					label: 'API Keys',
 					icon: entities.getIconComponent('ApiKey'),
 					component: ApiKeyTab,
-					requiredPermissions: ['Member', 'Admin', 'Owner']
+					requiredPermissions: ['Admin', 'Owner']
 				},
 				{
 					id: 'users',
 					label: 'Users',
 					icon: entities.getIconComponent('User'),
 					component: UserTab,
-					requiredPermissions: ['Member', 'Admin', 'Owner']
+					requiredPermissions: ['Admin', 'Owner']
 				},
 				{
 					id: 'tags',

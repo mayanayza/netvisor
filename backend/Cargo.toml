@@ -106,9 +106,6 @@ strum_macros = "0.27.2"
 paste = "1.0"
 inventory = "0.3.21"
 
-# === TypeScript Type Generation ===
-ts-rs = { version = "10", features = ["chrono-impl", "uuid-impl", "serde-json-impl", "no-serde-warnings"] }
-
 # === OpenAPI Documentation ===
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.2"

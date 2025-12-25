@@ -102,6 +102,13 @@ impl EntityFilter {
         self
     }
 
+    pub fn name(mut self, name: String) -> Self {
+        self.conditions
+            .push(format!("name = ${}", self.values.len() + 1));
+        self.values.push(SqlValue::String(name));
+        self
+    }
+
     pub fn group_id(mut self, id: &Uuid) -> Self {
         self.conditions
             .push(format!("group_id = ${}", self.values.len() + 1));

@@ -1,12 +1,10 @@
-// Re-export generated types from backend
-export type {
-	Service,
-	ServiceVirtualization,
-	DockerVirtualization,
-	Binding
-} from '$lib/generated';
+import type { components } from '$lib/api/schema';
 
-import type { Binding } from '$lib/generated';
+// Re-export generated types
+export type Service = components['schemas']['Service'];
+export type ServiceVirtualization = components['schemas']['ServiceVirtualization'];
+export type DockerVirtualization = components['schemas']['DockerVirtualization'];
+export type Binding = components['schemas']['Binding'];
 
 // Utility types for binding discrimination
 export type PortBinding = Binding & { type: 'Port' };

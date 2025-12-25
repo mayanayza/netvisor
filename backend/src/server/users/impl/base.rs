@@ -14,21 +14,18 @@ use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, ToSchema)]
 pub struct UserBase {
-    #[ts(type = "string")]
     #[schema(value_type = String)]
     pub email: EmailAddress,
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
     /// Password hash - None for legacy users created before auth migration or users using OIDC
-    #[serde(skip_serializing)] // Never send password hash to client
+    #[serde(skip)] // Never send to client, never accept from client
     pub password_hash: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oidc_provider: Option<String>,
@@ -37,7 +34,10 @@ pub struct UserBase {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oidc_linked_at: Option<DateTime<Utc>>,
     #[serde(default)]
+    #[schema(required)]
     pub network_ids: Vec<Uuid>,
+    #[serde(default)]
+    #[schema(read_only)]
     pub terms_accepted_at: Option<DateTime<Utc>>,
 }
 
@@ -102,17 +102,16 @@ impl UserBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct User {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: UserBase,
@@ -177,6 +176,14 @@ impl StorableEntity for User {
 
     fn updated_at(&self) -> DateTime<Utc> {
         self.updated_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
     }
 
     fn set_updated_at(&mut self, time: DateTime<Utc>) {

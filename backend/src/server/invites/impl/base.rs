@@ -26,20 +26,21 @@ pub struct InviteBase {
     pub url: String,
     pub created_by: Uuid,
     pub expires_at: DateTime<Utc>,
-    #[schema(value_type = Option<String>)]
+    #[schema(value_type = Option<String>, required)]
+    /// Optional email address to send the invite to
     pub send_to: Option<EmailAddress>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct Invite {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: InviteBase,
@@ -129,6 +130,14 @@ impl StorableEntity for Invite {
 
     fn updated_at(&self) -> DateTime<Utc> {
         self.updated_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
     }
 
     fn set_updated_at(&mut self, time: DateTime<Utc>) {

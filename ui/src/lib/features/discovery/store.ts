@@ -1,4 +1,4 @@
-import { api } from '$lib/shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import { writable } from 'svelte/store';
 import type { Discovery } from './types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
@@ -8,46 +8,49 @@ import type { Daemon } from '../daemons/types/base';
 export const discoveries = writable<Discovery[]>([]);
 
 export async function getDiscoveries() {
-	return await api.request<Discovery[]>(`/discovery`, discoveries, (discoveries) => discoveries, {
-		method: 'GET'
-	});
+	const { data } = await apiClient.GET('/api/discovery');
+	if (data?.success && data.data) {
+		discoveries.set(data.data);
+	}
+	return data as ApiResponse<Discovery[]>;
 }
 
 export async function createDiscovery(data: Discovery) {
-	return api.request<Discovery, Discovery[]>(
-		'/discovery',
-		discoveries,
-		(group, current) => [...current, group],
-		{ method: 'POST', body: JSON.stringify(data) }
-	);
+	const { data: result } = await apiClient.POST('/api/discovery', { body: data });
+	if (result?.success && result.data) {
+		discoveries.update((current) => [...current, result.data!]);
+	}
+	return result as ApiResponse<Discovery>;
 }
 
 export async function updateDiscovery(data: Discovery) {
-	return api.request<Discovery, Discovery[]>(
-		`/discovery/${data.id}`,
-		discoveries,
-		(updatedDiscovery, current) => current.map((g) => (g.id === data.id ? updatedDiscovery : g)),
-		{ method: 'PUT', body: JSON.stringify(data) }
-	);
+	const { data: result } = await apiClient.PUT('/api/discovery/{id}', {
+		params: { path: { id: data.id } },
+		body: data
+	});
+	if (result?.success && result.data) {
+		discoveries.update((current) => current.map((g) => (g.id === data.id ? result.data! : g)));
+	}
+	return result as ApiResponse<Discovery>;
 }
 
 export async function deleteDiscovery(id: string) {
-	await api.request<void, Discovery[]>(
-		`/discovery/${id}`,
-		discoveries,
-		(_, current) => current.filter((g) => g.id !== id),
-		{ method: 'DELETE' }
-	);
+	const { data: result } = await apiClient.DELETE('/api/discovery/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		discoveries.update((current) => current.filter((g) => g.id !== id));
+	}
+	return result;
 }
 
 export async function bulkDeleteDiscoveries(ids: string[]) {
-	const result = await api.request<void, Discovery[]>(
-		`/discovery/bulk-delete`,
-		discoveries,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/discovery/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		discoveries.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 

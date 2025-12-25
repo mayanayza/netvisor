@@ -2,7 +2,7 @@ use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::services::r#impl::definitions::{ServiceDefinition, ServiceDefinitionExt};
 use scanopy::server::shared::types::metadata::EntityMetadataProvider;
 
-/// Generate all fixtures (requires Docker containers to be running)
+/// Generate all fixtures (requires Docker containers to be running, except OpenAPI)
 pub async fn generate_fixtures() {
     generate_db_fixture()
         .await
@@ -20,8 +20,12 @@ pub async fn generate_fixtures() {
         .await
         .expect("Failed to generate billing and features json");
 
-    // Note: OpenAPI spec is generated separately via:
-    // cargo test generate_openapi_spec -- --ignored --nocapture
+    // OpenAPI generation - public spec only (excludes internal endpoints)
+    let openapi_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Failed to get parent directory")
+        .join("ui/static/openapi-public.json");
+    super::openapi_gen::generate_public(&openapi_path).expect("Failed to generate OpenAPI spec");
 
     println!("✅ Generated test fixtures");
 }

@@ -5,14 +5,15 @@ use crate::server::{
     },
     auth::middleware::{
         features::{BlockedInDemoMode, RequireFeature},
-        permissions::RequireMember,
+        permissions::RequireAdmin,
     },
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
-        handlers::{traits::{CrudHandlers, update_handler}},
+        handlers::traits::{CrudHandlers, update_handler},
         services::traits::{CrudService, EventBusService},
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult},
+        validation::validate_network_access,
     },
 };
 use axum::{
@@ -49,13 +50,16 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     path = "",
     tag = "api_keys",
     responses(
-        (status = 200, description = "API key created"),
+        (status = 200, description = "API key created", body = ApiResponse<ApiKeyResponse>),
+        (status = 400, description = "Bad request", body = ApiErrorResponse),
+        (status = 403, description = "Insufficient permissions (admin+ required)", body = ApiErrorResponse),
+        (status = 500, description = "Internal server error", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
 pub async fn create_api_key(
     State(state): State<Arc<AppState>>,
-    RequireMember(user): RequireMember,
+    RequireAdmin(user): RequireAdmin,
     _demo_check: RequireFeature<BlockedInDemoMode>,
     Json(mut api_key): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKeyResponse>>> {
@@ -65,6 +69,8 @@ pub async fn create_api_key(
         user_id = %user.user_id,
         "API key create request received"
     );
+
+    validate_network_access(Some(api_key.base.network_id), &user.network_ids, "create")?;
 
     let (plaintext, hashed) = generate_api_key_for_storage();
 
@@ -119,14 +125,14 @@ pub async fn create_api_key(
     tag = "api_keys",
     params(("id" = Uuid, Path, description = "API key ID")),
     responses(
-        (status = 200, description = "API key updated"),
-        (status = 404, description = "API key not found"),
+        (status = 200, description = "API key updated", body = ApiResponse<ApiKey>),
+        (status = 404, description = "API key not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
 pub async fn update_api_key(
     State(state): State<Arc<AppState>>,
-    user: RequireMember,
+    user: RequireAdmin,
     Path(id): Path<Uuid>,
     Json(mut request): Json<ApiKey>,
 ) -> ApiResult<Json<ApiResponse<ApiKey>>> {
@@ -140,7 +146,7 @@ pub async fn update_api_key(
     request.base.key = existing.base.key;
 
     // Delegate to generic handler
-    update_handler::<ApiKey>(State(state), user, Path(id), Json(request)).await
+    update_handler::<ApiKey>(State(state), user.into(), Path(id), Json(request)).await
 }
 
 /// Rotate an API key
@@ -150,14 +156,14 @@ pub async fn update_api_key(
     tag = "api_keys",
     params(("id" = Uuid, Path, description = "API key ID")),
     responses(
-        (status = 200, description = "API key rotated, returns new key"),
-        (status = 404, description = "API key not found"),
+        (status = 200, description = "API key rotated, returns new key", body = ApiResponse<String>),
+        (status = 404, description = "API key not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
 pub async fn rotate_key_handler(
     State(state): State<Arc<AppState>>,
-    RequireMember(user): RequireMember,
+    RequireAdmin(user): RequireAdmin,
     _demo_check: RequireFeature<BlockedInDemoMode>,
     ClientIp(ip): ClientIp,
     user_agent: Option<TypedHeader<UserAgent>>,

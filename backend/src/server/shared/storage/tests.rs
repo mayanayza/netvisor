@@ -1,5 +1,12 @@
 use crate::server::{
-    api_keys::r#impl::base::ApiKey, bindings::r#impl::base::Binding, daemons::r#impl::base::Daemon, discovery::r#impl::base::Discovery, group_bindings::GroupBinding, groups::r#impl::base::Group, hosts::r#impl::base::Host, interfaces::r#impl::base::Interface, invites::r#impl::base::Invite, networks::r#impl::Network, organizations::r#impl::base::Organization, ports::r#impl::base::Port, services::r#impl::base::Service, shared::storage::traits::StorableEntity, shares::r#impl::base::Share, subnets::r#impl::base::Subnet, tags::r#impl::base::Tag, topology::types::base::Topology, users::r#impl::base::User
+    api_keys::r#impl::base::ApiKey, bindings::r#impl::base::Binding, daemons::r#impl::base::Daemon,
+    discovery::r#impl::base::Discovery, group_bindings::GroupBinding, groups::r#impl::base::Group,
+    hosts::r#impl::base::Host, interfaces::r#impl::base::Interface, invites::r#impl::base::Invite,
+    networks::r#impl::Network, organizations::r#impl::base::Organization,
+    ports::r#impl::base::Port, services::r#impl::base::Service,
+    shared::storage::traits::StorableEntity, shares::r#impl::base::Share,
+    subnets::r#impl::base::Subnet, tags::r#impl::base::Tag, topology::types::base::Topology,
+    users::r#impl::base::User,
 };
 use sqlx::postgres::PgRow;
 use std::collections::HashMap;
@@ -192,7 +199,9 @@ pub async fn test_all_tables_have_entity_mapping() {
 
     let mut missing_mappings = Vec::new();
     for table in &tables {
-        if !deserializers.contains_key(table.as_str()) && !TABLES_WITHOUT_ENTITIES.contains(&table.as_str()) {
+        if !deserializers.contains_key(table.as_str())
+            && !TABLES_WITHOUT_ENTITIES.contains(&table.as_str())
+        {
             missing_mappings.push(table.clone());
         }
     }

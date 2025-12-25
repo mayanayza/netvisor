@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
-import type { CreateNetworkRequest, Network } from './types';
+import { apiClient, type ApiResponse } from '$lib/api/client';
+import type { Network } from './types';
 import { currentUser } from '../auth/store';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 
@@ -10,53 +10,49 @@ export async function getNetworks() {
 	const user = get(currentUser);
 
 	if (user) {
-		await api.request<Network[]>(`/networks`, networks, (networks) => networks, {
-			method: 'GET'
-		});
+		const { data } = await apiClient.GET('/api/networks');
+		if (data?.success && data.data) {
+			networks.set(data.data);
+		}
 	}
 }
 
-export async function createNetwork(data: CreateNetworkRequest) {
-	const result = await api.request<Network, Network[]>(
-		'/networks',
-		networks,
-		(network, current) => [...current, network],
-		{ method: 'POST', body: JSON.stringify(data) }
-	);
-
-	return result;
+export async function createNetwork(data: Network) {
+	const { data: result } = await apiClient.POST('/api/networks', { body: data });
+	if (result?.success && result.data) {
+		networks.update((current) => [...current, result.data!]);
+	}
+	return result as ApiResponse<Network>;
 }
 
 export async function updateNetwork(data: Network) {
-	const result = await api.request<Network, Network[]>(
-		`/networks/${data.id}`,
-		networks,
-		(updatedNetwork, current) => current.map((g) => (g.id === data.id ? updatedNetwork : g)),
-		{ method: 'PUT', body: JSON.stringify(data) }
-	);
-
-	return result;
+	const { data: result } = await apiClient.PUT('/api/networks/{id}', {
+		params: { path: { id: data.id } },
+		body: data
+	});
+	if (result?.success && result.data) {
+		networks.update((current) => current.map((g) => (g.id === data.id ? result.data! : g)));
+	}
+	return result as ApiResponse<Network>;
 }
 
 export async function deleteNetwork(id: string) {
-	const result = await api.request<void, Network[]>(
-		`/networks/${id}`,
-		networks,
-		(_, current) => current.filter((n) => n.id !== id),
-		{ method: 'DELETE' }
-	);
-
+	const { data: result } = await apiClient.DELETE('/api/networks/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		networks.update((current) => current.filter((n) => n.id !== id));
+	}
 	return result;
 }
 
 export async function bulkDeleteNetworks(ids: string[]) {
-	const result = await api.request<void, Network[]>(
-		`/networks/bulk-delete`,
-		networks,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/networks/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		networks.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 

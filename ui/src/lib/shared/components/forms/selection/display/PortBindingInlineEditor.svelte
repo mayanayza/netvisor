@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatInterface } from '$lib/features/hosts/store';
-	import { ALL_INTERFACES, type Host } from '$lib/features/hosts/types/base';
+	import { ALL_INTERFACES, type HostFormData } from '$lib/features/hosts/types/base';
 	import { getServicesForPort } from '$lib/features/services/store';
 	import type { PortBinding, Service } from '$lib/features/services/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
@@ -13,7 +13,8 @@
 	export let onUpdate: (updates: Partial<PortBinding>) => void = () => {};
 	export let formApi: FormApi;
 	export let service: Service | undefined = undefined;
-	export let host: Host | undefined = undefined;
+	// Form data with interfaces/ports for binding selection
+	export let host: HostFormData | undefined = undefined;
 
 	// Type guard for services with Port bindings
 	function isServiceWithPortBindings(svc: Service): svc is Service {
@@ -75,7 +76,9 @@
 			}
 
 			// Check for Port binding conflict (port_id is required for Port bindings)
-			const boundService = binding.port_id ? getConflictingService(binding.port_id, iface.id) : null;
+			const boundService = binding.port_id
+				? getConflictingService(binding.port_id, iface.id)
+				: null;
 			return {
 				iface,
 				disabled: boundService !== null && iface.id !== binding.interface_id,

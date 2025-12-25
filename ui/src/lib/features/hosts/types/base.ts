@@ -1,26 +1,54 @@
-// Re-export generated types from backend
-export type {
-	HostResponse,
-	HostVirtualization,
-	ProxmoxVirtualization,
-	Interface,
-	Port,
-	Service,
-	TransportProtocol,
-	CreateHostRequest,
-	CreateInterfaceInput,
-	CreatePortInput,
-	UpdateHostRequest
-} from '$lib/generated';
+// Re-export generated types from OpenAPI schema
+import type { components } from '$lib/api/schema';
 
-import type { HostResponse, Service } from '$lib/generated';
+// Entity primitive types
+export type Host = components['schemas']['Host'];
+export type HostVirtualization = components['schemas']['HostVirtualization'];
+export type ProxmoxVirtualization = components['schemas']['ProxmoxVirtualization'];
+export type Interface = components['schemas']['Interface'];
+export type Port = components['schemas']['Port'];
+export type Service = components['schemas']['Service'];
+export type TransportProtocol = components['schemas']['TransportProtocol'];
 
-// Type alias for backwards compatibility
-export type Host = HostResponse;
+// API response type (host with hydrated children)
+export type HostResponse = components['schemas']['HostResponse'];
 
-// Internal type for modal state (host + services editing together)
-export interface HostWithServicesRequest {
-	host: HostResponse;
+// API request types
+export type CreateHostRequest = components['schemas']['CreateHostRequest'];
+export type CreateInterfaceInput = components['schemas']['CreateInterfaceInput'];
+export type CreatePortInput = components['schemas']['CreatePortInput'];
+export type UpdateHostRequest = components['schemas']['UpdateHostRequest'];
+
+// Form state type for creating/editing hosts
+// Includes children arrays for form editing - distinct from HostResponse (API response type)
+export interface HostFormData {
+	// Host primitive fields
+	id: string;
+	created_at: string;
+	updated_at: string;
+	name: string;
+	network_id: string;
+	hostname: string | null;
+	description: string | null;
+	source: components['schemas']['EntitySource'];
+	virtualization: HostVirtualization | null;
+	hidden: boolean;
+	tags: string[];
+	// Children for form editing (managed separately from host in stores)
+	interfaces: Interface[];
+	ports: Port[];
+	services: Service[];
+}
+
+// Request type for creating a host (needs form data with children)
+export interface CreateHostWithServicesRequest {
+	host: HostFormData;
+	services: Service[] | null;
+}
+
+// Request type for updating a host (only needs primitive fields)
+export interface UpdateHostWithServicesRequest {
+	host: Host;
 	services: Service[] | null;
 }
 

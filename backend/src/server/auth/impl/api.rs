@@ -1,11 +1,13 @@
 use email_address::EmailAddress;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 /// Login request from client
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
+    #[schema(value_type = String, format = "email")]
     pub email: EmailAddress,
 
     #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
@@ -13,8 +15,9 @@ pub struct LoginRequest {
 }
 
 /// Registration request from client
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct RegisterRequest {
+    #[schema(value_type = String, format = "email")]
     pub email: EmailAddress,
 
     #[validate(length(min = 10, message = "Password must be at least 10 characters"))]
@@ -51,9 +54,10 @@ pub struct OidcCallbackParams {
     pub state: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateEmailPasswordRequest {
     pub password: Option<String>,
+    #[schema(value_type = Option<String>, format = "email")]
     pub email: Option<EmailAddress>,
 }
 
@@ -64,39 +68,39 @@ pub struct OidcAuthorizeParams {
     pub terms_accepted: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ForgotPasswordRequest {
+    #[schema(value_type = String, format = "email")]
     pub email: EmailAddress,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ResetPasswordRequest {
     pub token: String,
     pub password: String,
 }
 
 /// Network configuration for setup
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct NetworkSetup {
     pub name: String,
 }
 
 /// Setup request for pre-registration org/network configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SetupRequest {
     pub organization_name: String,
     pub networks: Vec<NetworkSetup>,
-    pub populate_seed_data: bool,
 }
 
 /// Response from setup endpoint
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SetupResponse {
     pub network_ids: Vec<Uuid>,
 }
 
 /// Daemon setup request for pre-registration daemon configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DaemonSetupRequest {
     pub daemon_name: String,
     pub network_id: Uuid,
@@ -105,7 +109,7 @@ pub struct DaemonSetupRequest {
 }
 
 /// Response from daemon setup endpoint
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DaemonSetupResponse {
     pub api_key: Option<String>,
 }

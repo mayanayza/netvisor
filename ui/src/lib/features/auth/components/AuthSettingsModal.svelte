@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { currentUser, logout } from '$lib/features/auth/store';
-	import { api } from '$lib/shared/utils/api';
+	import { apiClient } from '$lib/api/client';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import { Link, Key, LogOut, User } from 'lucide-svelte';
 	import { field } from 'svelte-forms';
@@ -65,19 +65,15 @@
 	}
 
 	async function unlinkOidcAccount(providerSlug: string) {
-		const result = await api.request(
-			`/auth/oidc/${providerSlug}/unlink`,
-			currentUser,
-			(user) => user,
-			{
-				method: 'POST'
-			}
-		);
+		const { data } = await apiClient.POST('/api/auth/oidc/{slug}/unlink', {
+			params: { path: { slug: providerSlug } }
+		});
 
-		if (result?.success) {
+		if (data?.success && data.data) {
+			currentUser.set(data.data);
 			pushSuccess('OIDC account unlinked successfully');
 		} else {
-			pushError(result?.error || 'Failed to unlink OIDC account');
+			pushError(data?.error || 'Failed to unlink OIDC account');
 		}
 	}
 
@@ -103,17 +99,17 @@
 				return;
 			}
 
-			const result = await api.request('/auth/update', currentUser, (user) => user, {
-				method: 'POST',
-				body: JSON.stringify(updateRequest)
+			const { data } = await apiClient.POST('/api/auth/update', {
+				body: updateRequest
 			});
 
-			if (result?.success) {
+			if (data?.success && data.data) {
+				currentUser.set(data.data);
 				pushSuccess('Credentials updated successfully');
 				activeSection = 'main';
 				formData = { email: '', password: '', confirmPassword: '' };
 			} else {
-				pushError(result?.error || 'Failed to update credentials');
+				pushError(data?.error || 'Failed to update credentials');
 			}
 		} finally {
 			savingCredentials = false;

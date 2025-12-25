@@ -452,7 +452,9 @@ impl HostService {
 
             if matches!(conflict_behavior, ConflictBehavior::Upsert) {
                 // Check if interface already exists by ID
-                if let Some(existing_iface) = self.interface_service.get_by_id(&interface.id).await? {
+                if let Some(existing_iface) =
+                    self.interface_service.get_by_id(&interface.id).await?
+                {
                     created_interfaces.push(existing_iface);
                     continue;
                 }
@@ -461,8 +463,12 @@ impl HostService {
                 let filter = EntityFilter::unfiltered()
                     .host_id(&interface.base.host_id)
                     .subnet_id(&interface.base.subnet_id);
-                let existing_by_key: Vec<Interface> = self.interface_service.get_all(filter).await?;
-                if let Some(existing_iface) = existing_by_key.into_iter().find(|i| i.base.ip_address == interface.base.ip_address) {
+                let existing_by_key: Vec<Interface> =
+                    self.interface_service.get_all(filter).await?;
+                if let Some(existing_iface) = existing_by_key
+                    .into_iter()
+                    .find(|i| i.base.ip_address == interface.base.ip_address)
+                {
                     created_interfaces.push(existing_iface);
                     continue;
                 }

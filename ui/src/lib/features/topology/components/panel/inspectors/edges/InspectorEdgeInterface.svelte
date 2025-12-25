@@ -16,8 +16,8 @@
 
 	let host = $derived(topology ? topology.hosts.find((h) => h.id == hostId) : null);
 
-	let sourceInterface = $derived(host?.interfaces.find((i) => i.id == edge.source));
-	let targetInterface = $derived(host?.interfaces.find((i) => i.id == edge.target));
+	let sourceInterface = $derived(topology?.interfaces.find((i) => i.id == edge.source));
+	let targetInterface = $derived(topology?.interfaces.find((i) => i.id == edge.target));
 </script>
 
 <div class="space-y-3">

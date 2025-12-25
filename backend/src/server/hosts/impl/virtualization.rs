@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use strum_macros::IntoStaticStr;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -11,8 +10,7 @@ use crate::server::shared::{
     types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, IntoStaticStr, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, IntoStaticStr, ToSchema)]
 #[schema(title = "HostVirtualization")]
 #[serde(tag = "type", content = "details")]
 pub enum HostVirtualization {
@@ -20,8 +18,7 @@ pub enum HostVirtualization {
     Proxmox(ProxmoxVirtualization),
 }
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, ToSchema)]
 pub struct ProxmoxVirtualization {
     pub vm_name: Option<String>,
     pub vm_id: Option<String>,

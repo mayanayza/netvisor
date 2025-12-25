@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use mac_address::MacAddress;
 use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -58,8 +57,7 @@ pub struct DiscoveryHostRequest {
 ///
 /// Note: Services are created separately via `POST /api/services` after the host exists,
 /// as service bindings require the real IDs of the interfaces/ports to reference.
-#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::create_host_request)]
 pub struct CreateHostRequest {
     // Host fields
@@ -72,6 +70,7 @@ pub struct CreateHostRequest {
     #[serde(default)]
     pub hidden: bool,
     #[serde(default)]
+    #[schema(required)]
     pub tags: Vec<Uuid>,
 
     // Children to create with host (server assigns host_id/network_id)
@@ -84,14 +83,11 @@ pub struct CreateHostRequest {
 
 /// Input for creating an interface with a host.
 /// `host_id` and `network_id` are assigned by the server.
-#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateInterfaceInput {
     pub subnet_id: Uuid,
-    #[ts(type = "string")]
     #[schema(value_type = String)]
     pub ip_address: IpAddr,
-    #[ts(type = "string | null")]
     #[schema(value_type = Option<String>)]
     pub mac_address: Option<MacAddress>,
     pub name: Option<String>,
@@ -123,8 +119,7 @@ impl CreateInterfaceInput {
 /// Input for creating a port with a host.
 /// `host_id` and `network_id` are assigned by the server.
 /// The port is specified by number and protocol (e.g., 80/tcp, 443/tcp).
-#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreatePortInput {
     /// Port number (1-65535)
     pub number: u16,
@@ -151,8 +146,7 @@ impl CreatePortInput {
 
 /// Request type for updating a host.
 /// Children (interfaces, ports, services) are managed via their own endpoints.
-#[derive(Debug, Clone, Serialize, Deserialize, TS, ToSchema)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateHostRequest {
     pub id: Uuid,
     pub name: String,
@@ -161,6 +155,7 @@ pub struct UpdateHostRequest {
     pub virtualization: Option<HostVirtualization>,
     pub hidden: bool,
     #[serde(default)]
+    #[schema(required)]
     pub tags: Vec<Uuid>,
     // Note: source is not updatable via API
     // Note: network_id is not updatable (would require moving children)

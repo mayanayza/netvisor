@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import { type Edge, type Node } from '@xyflow/svelte';
 import { type Topology, type TopologyOptions } from './types/base';
 import { networks } from '../networks/store';
@@ -236,100 +236,88 @@ function saveAutoRebuildToStorage(autoRebuild: boolean): void {
 
 export async function refreshTopology(data: Topology) {
 	// Updated topology returns through SSE
-	await api.request<Topology, Topology[]>(
-		`/topology/${data.id}/refresh`,
-		topologies,
-		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
-		{
-			method: 'POST',
-			body: JSON.stringify(data)
-		}
-	);
+	await apiClient.POST('/api/topology/{id}/refresh', {
+		params: { path: { id: data.id } },
+		body: data
+	});
 }
 
 export async function lockTopology(data: Topology) {
-	const result = await api.request<Topology, Topology[]>(
-		`/topology/${data.id}/lock`,
-		topologies,
-		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
-		{
-			method: 'POST',
-			body: JSON.stringify(data)
-		}
-	);
+	const { data: result } = await apiClient.POST('/api/topology/{id}/lock', {
+		params: { path: { id: data.id } },
+		body: data
+	});
 
-	if (result && result.success && result.data && get(topology)?.id === data.id) {
-		topology.set(result.data);
+	if (result?.success && result.data) {
+		topologies.update((current) => current.map((t) => (t.id == data.id ? result.data! : t)));
+		if (get(topology)?.id === data.id) {
+			topology.set(result.data);
+		}
 	}
 
-	return result;
+	return result as ApiResponse<Topology>;
 }
 
 export async function unlockTopology(data: Topology) {
-	const result = await api.request<Topology, Topology[]>(
-		`/topology/${data.id}/unlock`,
-		topologies,
-		(updated, current) => current.map((t) => (t.id == updated.id ? updated : t)),
-		{
-			method: 'POST',
-			body: JSON.stringify(data)
-		}
-	);
+	const { data: result } = await apiClient.POST('/api/topology/{id}/unlock', {
+		params: { path: { id: data.id } },
+		body: data
+	});
 
-	if (result && result.success && result.data && get(topology)?.id === data.id) {
-		topology.set(result.data);
+	if (result?.success && result.data) {
+		topologies.update((current) => current.map((t) => (t.id == data.id ? result.data! : t)));
+		if (get(topology)?.id === data.id) {
+			topology.set(result.data);
+		}
 	}
 
-	return result;
+	return result as ApiResponse<Topology>;
 }
 
 export async function getTopologies() {
-	await api.request<Topology[]>('/topology', topologies, (topologies) => topologies, {
-		method: 'GET'
-	});
+	const { data } = await apiClient.GET('/api/topology');
+	if (data?.success && data.data) {
+		topologies.set(data.data);
+	}
 }
 
 export async function rebuildTopology(data: Topology) {
 	// Updated topology returns through SSE
-	await api.request<Topology, Topology[]>(`/topology/${data.id}/rebuild`, null, null, {
-		method: 'POST',
-		body: JSON.stringify(data)
+	await apiClient.POST('/api/topology/{id}/rebuild', {
+		params: { path: { id: data.id } },
+		body: data
 	});
 }
 
 export async function updateTopology(data: Topology) {
 	// Updated topology returns through SSE
-	await api.request<Topology, Topology[]>(`/topology/${data.id}`, null, null, {
-		method: 'PUT',
-		body: JSON.stringify(data)
+	await apiClient.PUT('/api/topology/{id}', {
+		params: { path: { id: data.id } },
+		body: data
 	});
 }
 
 export async function createTopology(data: Topology) {
-	const result = await api.request<Topology, Topology[]>(
-		`/topology`,
-		topologies,
-		(newTopology, current) => [...current, newTopology],
-		{ method: 'POST', body: JSON.stringify(data) }
-	);
+	const { data: result } = await apiClient.POST('/api/topology', { body: data });
 
-	if (result && result.data && result.success) {
+	if (result?.success && result.data) {
+		topologies.update((current) => [...current, result.data!]);
 		topology.set(result.data);
 	}
 
-	return result;
+	return result as ApiResponse<Topology>;
 }
 
 export async function deleteTopology(id: string) {
-	const result = await api.request<void, Topology[]>(
-		`/topology/${id}`,
-		topologies,
-		(_, current) => current.filter((t) => t.id != id),
-		{ method: 'DELETE' }
-	);
+	const { data: result } = await apiClient.DELETE('/api/topology/{id}', {
+		params: { path: { id } }
+	});
 
-	if (result && result.data && result.success && get(topologies).length > 0) {
-		topology.set(get(topologies)[0]);
+	if (result?.success) {
+		topologies.update((current) => current.filter((t) => t.id != id));
+		if (get(topologies).length > 0) {
+			topology.set(get(topologies)[0]);
+		}
 	}
 }
 
@@ -344,16 +332,22 @@ export function createEmptyTopologyFormData(): Topology {
 		nodes: [],
 		options: structuredClone(defaultOptions),
 		hosts: [],
+		interfaces: [],
 		services: [],
 		subnets: [],
 		groups: [],
+		ports: [],
+		bindings: [],
 		is_stale: false,
 		last_refreshed: utcTimeZoneSentinel,
 		is_locked: false,
 		removed_groups: [],
 		removed_hosts: [],
+		removed_interfaces: [],
 		removed_services: [],
 		removed_subnets: [],
+		removed_bindings: [],
+		removed_ports: [],
 		locked_at: null,
 		locked_by: null,
 		parent_id: null,

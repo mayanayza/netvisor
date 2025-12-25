@@ -11,7 +11,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint ."
+		"lint": "prettier --check . && eslint .",
+		"generate:api": "npx tsx scripts/generate-api-types.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -43,6 +44,7 @@
 	"dependencies": {
 		"@beyonk/gdpr-cookie-consent-banner": "^16.0.2",
 		"@tailwindcss/forms": "^0.5.10",
+		"@tanstack/svelte-query": "^6.0.10",
 		"@types/jquery": "^3.5.33",
 		"@xyflow/svelte": "^1.2.4",
 		"company-email-validator": "^1.2.0",
@@ -53,6 +55,8 @@
 		"html-to-image": "^1.11.13",
 		"ipaddr.js": "^2.2.0",
 		"jquery": "^3.7.1",
+		"openapi-fetch": "^0.15.0",
+		"openapi-typescript": "^7.10.1",
 		"postcss": "^8.5.6",
 		"posthog-js": "^1.306.0",
 		"svelte-forms": "^2.3.1",

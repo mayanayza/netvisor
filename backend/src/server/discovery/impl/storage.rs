@@ -53,6 +53,14 @@ impl StorableEntity for Discovery {
         self.updated_at
     }
 
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
     fn set_updated_at(&mut self, time: DateTime<Utc>) {
         self.updated_at = time;
     }

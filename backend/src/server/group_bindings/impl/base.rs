@@ -103,6 +103,14 @@ impl StorableEntity for GroupBinding {
         self.created_at // Junction table doesn't have updated_at
     }
 
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
     fn set_updated_at(&mut self, _time: DateTime<Utc>) {
         // No-op for junction table
     }

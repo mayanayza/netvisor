@@ -5,6 +5,7 @@ use crate::server::shared::handlers::traits::{
 };
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
+use crate::server::shared::types::api::{ApiErrorResponse, EmptyApiResponse};
 use crate::server::shared::validation::{validate_network_access, validate_read_access};
 use crate::server::{
     config::AppState,
@@ -16,7 +17,6 @@ use crate::server::{
 };
 use axum::extract::{Path, State};
 use axum::response::Json;
-use axum::routing::post;
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -27,8 +27,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(get_host_by_id, update_host, delete_host))
         .routes(routes!(bulk_delete_hosts))
         .routes(routes!(consolidate_hosts))
-        // Internal endpoint - registered without OpenAPI docs
-        .route("/discovery", post(create_host_discovery))
+        .routes(routes!(create_host_discovery))
 }
 
 /// List all hosts
@@ -40,7 +39,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     path = "",
     tag = "hosts",
     responses(
-        (status = 200, description = "List of hosts with their children", body = Vec<HostResponse>),
+        (status = 200, description = "List of hosts with their children", body = ApiResponse<Vec<HostResponse>>),
     ),
     security(("session" = []))
 )]
@@ -66,8 +65,8 @@ async fn get_all_hosts(
     tag = "hosts",
     params(("id" = Uuid, Path, description = "Host ID")),
     responses(
-        (status = 200, description = "Host found", body = HostResponse),
-        (status = 404, description = "Host not found"),
+        (status = 200, description = "Host found", body = ApiResponse<HostResponse>),
+        (status = 404, description = "Host not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -102,8 +101,8 @@ async fn get_host_by_id(
     tag = "hosts",
     request_body = CreateHostRequest,
     responses(
-        (status = 200, description = "Host created successfully", body = HostResponse),
-        (status = 400, description = "Invalid request - network not found or subnet mismatch"),
+        (status = 200, description = "Host created successfully", body = ApiResponse<HostResponse>),
+        (status = 400, description = "Invalid request - network not found or subnet mismatch", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -163,8 +162,8 @@ async fn create_host(
     params(("id" = Uuid, Path, description = "Host ID")),
     request_body = UpdateHostRequest,
     responses(
-        (status = 200, description = "Host updated", body = HostResponse),
-        (status = 404, description = "Host not found"),
+        (status = 200, description = "Host updated", body = ApiResponse<HostResponse>),
+        (status = 404, description = "Host not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -195,10 +194,24 @@ async fn update_host(
     Ok(Json(ApiResponse::success(host_response)))
 }
 
-/// Internal endpoint for daemon discovery (not included in public API docs)
+/// Internal endpoint for daemon discovery
 ///
 /// Used by daemons to report discovered hosts. Accepts full entities with
 /// pre-generated IDs. Uses upsert behavior to merge with existing hosts.
+///
+/// Tagged as "internal" - included in OpenAPI spec for client generation
+/// but hidden from public documentation.
+#[utoipa::path(
+    post,
+    path = "/discovery",
+    tags = ["hosts", "internal"],
+    request_body = DiscoveryHostRequest,
+    responses(
+        (status = 200, description = "Host discovered/updated successfully", body = ApiResponse<HostResponse>),
+        (status = 403, description = "Daemon cannot create hosts on other networks", body = ApiErrorResponse),
+    ),
+    security(("api_key" = []))
+)]
 async fn create_host_discovery(
     State(state): State<Arc<AppState>>,
     daemon: AuthenticatedDaemon,
@@ -212,6 +225,12 @@ async fn create_host_discovery(
         ports,
         services,
     } = request;
+
+    if host.base.network_id != daemon.network_id {
+        return Err(ApiError::forbidden(
+            "Daemon cannot create hosts on networks it's not assigned to",
+        ));
+    }
 
     let host_response = host_service
         .discover_host(host, interfaces, ports, services, daemon.into())
@@ -234,9 +253,9 @@ async fn create_host_discovery(
         ("other_host" = Uuid, Path, description = "Host to merge into destination - will be deleted")
     ),
     responses(
-        (status = 200, description = "Hosts consolidated successfully", body = HostResponse),
-        (status = 404, description = "One or both hosts not found"),
-        (status = 400, description = "Hosts are on different networks"),
+        (status = 200, description = "Hosts consolidated successfully", body = ApiResponse<HostResponse>),
+        (status = 404, description = "One or both hosts not found", body = ApiErrorResponse),
+        (status = 400, description = "Hosts are on different networks", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -296,7 +315,7 @@ async fn consolidate_hosts(
 }
 
 /// Delete a host
-/// 
+///
 /// Prevents deletion if the host has a daemon associated with it
 #[utoipa::path(
     delete,
@@ -306,9 +325,9 @@ async fn consolidate_hosts(
         ("id" = Uuid, Path, description = "Host ID")
     ),
     responses(
-        (status = 200, description = "Host deleted"),
-        (status = 404, description = "Host not found"),
-        (status = 409, description = "Host has associated daemon"),
+        (status = 200, description = "Host deleted", body = EmptyApiResponse),
+        (status = 404, description = "Host not found", body = ApiErrorResponse),
+        (status = 409, description = "Host has associated daemon", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -345,8 +364,8 @@ pub async fn delete_host(
     tag = "hosts",
     request_body(content = Vec<Uuid>, description = "Array of host IDs to delete"),
     responses(
-        (status = 200, description = "Hosts deleted successfully", body = BulkDeleteResponse),
-        (status = 409, description = "One or more hosts has an associated daemon - delete daemons first"),
+        (status = 200, description = "Hosts deleted successfully", body = ApiResponse<BulkDeleteResponse>),
+        (status = 409, description = "One or more hosts has an associated daemon - delete daemons first", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]

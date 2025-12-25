@@ -7,7 +7,6 @@
 	import Sidebar from '$lib/shared/components/layout/Sidebar.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { getServices, services } from '$lib/features/services/store';
-	import { watchStores } from '$lib/shared/utils/storeWatcher';
 	import { getNetworks } from '$lib/features/networks/store';
 	import { discoverySSEManager } from '$lib/features/discovery/sse';
 	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
@@ -50,18 +49,32 @@
 
 		await Promise.all([getNetworks(), getMetadata()]);
 
-		// Load initial data
+		// Set up store watchers for cascading data loads
+		let hostsInitialized = false;
+		let servicesInitialized = false;
+		let groupsInitialized = false;
+
 		storeWatcherUnsubs = [
-			watchStores([hosts], () => {
-				getServices();
+			hosts.subscribe(() => {
+				if (hostsInitialized) {
+					getServices();
+					getSubnets();
+				}
+				hostsInitialized = true;
 			}),
-			watchStores([hosts, services], () => {
-				getSubnets();
+			services.subscribe(() => {
+				if (servicesInitialized) {
+					getSubnets();
+				}
+				servicesInitialized = true;
 			}),
-			watchStores([groups], () => {
-				getServices();
+			groups.subscribe(() => {
+				if (groupsInitialized) {
+					getServices();
+				}
+				groupsInitialized = true;
 			})
-		].flatMap((w) => w);
+		];
 
 		topologySSEManager.connect();
 		discoverySSEManager.connect();

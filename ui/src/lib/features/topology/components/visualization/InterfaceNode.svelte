@@ -35,22 +35,18 @@
 		topology ? topology.services.filter((s) => s.host_id == nodeData.host_id) : []
 	);
 
-	// Get the interface for this node
-	let iface = $derived(host ? host.interfaces.find((i) => i.id === data.interface_id) : null);
+	// Get the interface for this node from topology.interfaces
+	let iface = $derived(
+		topology ? topology.interfaces.find((i) => i.id === data.interface_id) : null
+	);
 
 	// Reactively subscribe to the container subnet store
 	let isContainerSubnetValue = $derived(
 		iface ? topology?.subnets.find((s) => s.id == iface.subnet_id)?.cidr == '0.0.0.0/0' : false
 	);
 
-	// Look up port from topology hosts (works for both main app and share pages)
 	function getPortById(portId: string): Port | null {
-		if (!topology) return null;
-		for (const h of topology.hosts) {
-			const port = h.ports.find((p) => p.id === portId);
-			if (port) return port;
-		}
-		return null;
+		return topology?.ports.find((p) => p.id == portId) ?? null;
 	}
 
 	// Compute nodeRenderData reactively

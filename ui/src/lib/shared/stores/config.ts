@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api } from '../utils/api';
+import { apiClient } from '$lib/api/client';
 
 export const config = writable<PublicServerConfig>();
 
@@ -34,7 +34,8 @@ export const isSelfHosted = (cfg: PublicServerConfig) =>
 	cfg.deployment_type === 'commercial' || cfg.deployment_type === 'community';
 
 export async function getConfig() {
-	await api.request<PublicServerConfig>('/config', config, (config) => config, {
-		method: 'GET'
-	});
+	const { data } = await apiClient.GET('/api/config', {});
+	if (data?.success && data.data) {
+		config.set(data.data as PublicServerConfig);
+	}
 }

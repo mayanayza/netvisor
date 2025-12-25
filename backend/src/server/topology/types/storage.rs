@@ -1,5 +1,7 @@
+use crate::server::bindings::r#impl::base::Binding;
 use crate::server::groups::r#impl::base::Group;
 use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::{
@@ -58,6 +60,14 @@ impl StorableEntity for Topology {
         self.updated_at
     }
 
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
     fn set_updated_at(&mut self, time: DateTime<Utc>) {
         self.updated_at = time;
     }
@@ -76,6 +86,8 @@ impl StorableEntity for Topology {
                     options,
                     hosts,
                     interfaces,
+                    ports,
+                    bindings,
                     services,
                     subnets,
                     groups,
@@ -89,6 +101,8 @@ impl StorableEntity for Topology {
                     removed_services,
                     removed_subnets,
                     removed_groups,
+                    removed_bindings,
+                    removed_ports,
                     parent_id,
                     tags,
                 },
@@ -109,6 +123,8 @@ impl StorableEntity for Topology {
                 "subnets",
                 "groups",
                 "services",
+                "bindings",
+                "ports",
                 "is_stale",
                 "last_refreshed",
                 "is_locked",
@@ -119,6 +135,8 @@ impl StorableEntity for Topology {
                 "removed_services",
                 "removed_subnets",
                 "removed_groups",
+                "removed_bindings",
+                "removed_ports",
                 "parent_id",
                 "tags",
             ],
@@ -136,6 +154,8 @@ impl StorableEntity for Topology {
                 SqlValue::Subnets(subnets),
                 SqlValue::Groups(groups),
                 SqlValue::Services(services),
+                SqlValue::Bindings(bindings),
+                SqlValue::Ports(ports),
                 SqlValue::Bool(is_stale),
                 SqlValue::Timestamp(last_refreshed),
                 SqlValue::Bool(is_locked),
@@ -146,6 +166,8 @@ impl StorableEntity for Topology {
                 SqlValue::UuidArray(removed_services),
                 SqlValue::UuidArray(removed_subnets),
                 SqlValue::UuidArray(removed_groups),
+                SqlValue::UuidArray(removed_bindings),
+                SqlValue::UuidArray(removed_ports),
                 SqlValue::OptionalUuid(parent_id),
                 SqlValue::UuidArray(tags),
             ],
@@ -176,6 +198,13 @@ impl StorableEntity for Topology {
         let groups: Vec<Group> = serde_json::from_value(row.get::<serde_json::Value, _>("groups"))
             .map_err(|e| anyhow::anyhow!("Failed to deserialize groups: {}", e))?;
 
+        let ports: Vec<Port> = serde_json::from_value(row.get::<serde_json::Value, _>("ports"))
+            .map_err(|e| anyhow::anyhow!("Failed to deserialize ports: {}", e))?;
+
+        let bindings: Vec<Binding> =
+            serde_json::from_value(row.get::<serde_json::Value, _>("bindings"))
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize bindings: {}", e))?;
+
         Ok(Topology {
             id: row.get("id"),
             created_at: row.get("created_at"),
@@ -193,12 +222,16 @@ impl StorableEntity for Topology {
                 removed_interfaces: row.get("removed_interfaces"),
                 removed_services: row.get("removed_services"),
                 removed_subnets: row.get("removed_subnets"),
+                removed_ports: row.get("removed_subnets"),
+                removed_bindings: row.get("removed_subnets"),
                 parent_id: row.get("parent_id"),
                 nodes,
                 edges,
                 hosts,
                 interfaces,
                 subnets,
+                bindings,
+                ports,
                 services,
                 groups,
                 options,

@@ -141,13 +141,14 @@ impl ServiceFactory {
             subnet_service.clone(),
             group_service.clone(),
             service_service.clone(),
+            port_service.clone(),
+            binding_service.clone(),
             storage.topologies.clone(),
             event_bus.clone(),
         ));
 
         let network_service = Arc::new(NetworkService::new(
             storage.networks.clone(),
-            host_service.clone(),
             subnet_service.clone(),
             event_bus.clone(),
         ));

@@ -6,7 +6,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -14,20 +13,24 @@ use validator::Validate;
 /// Base data for a Host entity (stored in database).
 /// Child entities (interfaces, ports, services) are stored in their own tables
 /// and queried by `host_id`. They are NOT stored on the host.
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, Eq, PartialEq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Validate, Deserialize, Eq, PartialEq, Hash, ToSchema)]
 pub struct HostBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
     pub network_id: Uuid,
+    #[schema(required)]
     pub hostname: Option<String>,
     #[validate(length(min = 0, max = 100))]
     #[serde(deserialize_with = "deserialize_empty_string_as_none")]
+    #[schema(required)]
     pub description: Option<String>,
+    #[schema(read_only)]
     pub source: EntitySource,
+    #[schema(required)]
     pub virtualization: Option<HostVirtualization>,
     pub hidden: bool,
     #[serde(default)]
+    #[schema(required)]
     pub tags: Vec<Uuid>,
 }
 
@@ -46,18 +49,17 @@ impl Default for HostBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::host)]
 pub struct Host {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: HostBase,

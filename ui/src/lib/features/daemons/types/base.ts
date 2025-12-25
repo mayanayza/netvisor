@@ -1,19 +1,7 @@
-export interface DaemonBase {
-	host_id: string;
-	network_id: string;
-	url: string;
-	name: string;
-	last_seen: string;
-	mode: 'Pull' | 'Push';
-	capabilities: {
-		has_docker_socket: boolean;
-		interfaced_subnet_ids: string[];
-	};
-	tags: string[];
-}
+import type { components } from '$lib/api/schema';
 
-export interface Daemon extends DaemonBase {
-	id: string;
-	created_at: string;
-	updated_at: string;
-}
+// Re-export generated types
+export type Daemon = components['schemas']['Daemon'];
+export type DaemonBase = components['schemas']['DaemonBase'];
+export type DaemonMode = components['schemas']['DaemonMode'];
+export type DaemonCapabilities = components['schemas']['DaemonCapabilities'];

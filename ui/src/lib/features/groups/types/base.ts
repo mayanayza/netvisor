@@ -1,28 +1,7 @@
-import type { EntitySource } from '$lib/shared/types';
+import type { components } from '$lib/api/schema';
 
-export type GroupType = 'RequestPath';
-
-export type Group = RequestPathGroup | HubAndSpokeGroup;
-
-interface BaseGroup {
-	id: string;
-	created_at: string;
-	updated_at: string;
-	name: string;
-	description: string;
-	source: EntitySource;
-	network_id: string;
-	color: string;
-	edge_style: 'Straight' | 'SmoothStep' | 'Step' | 'Bezier' | 'SimpleBezier';
-	tags: string[];
-}
-
-export interface RequestPathGroup extends BaseGroup {
-	group_type: 'RequestPath';
-	service_bindings: string[]; // Binding IDs
-}
-
-export interface HubAndSpokeGroup extends BaseGroup {
-	group_type: 'HubAndSpoke';
-	service_bindings: string[]; // Binding IDs
-}
+// Re-export generated types
+export type Group = components['schemas']['Group'];
+export type GroupBase = components['schemas']['GroupBase'];
+export type GroupType = components['schemas']['GroupType'];
+export type EdgeStyle = components['schemas']['EdgeStyle'];

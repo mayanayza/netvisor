@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient } from '$lib/api/client';
 import type { DiscoveryUpdatePayload } from './types/api';
 import { pushError, pushSuccess, pushWarning } from '$lib/shared/stores/feedback';
 import { getHosts } from '../hosts/store';
@@ -14,14 +14,11 @@ export const sessions = writable<DiscoveryUpdatePayload[]>([]);
 export const cancelling = writable<Map<string, boolean>>(new Map());
 
 export async function getActiveSessions() {
-	return await api.request<DiscoveryUpdatePayload[]>(
-		`/discovery/active-sessions`,
-		sessions,
-		(sessions) => sessions,
-		{
-			method: 'GET'
-		}
-	);
+	const { data } = await apiClient.GET('/api/discovery/active-sessions', {});
+	if (data?.success && data.data) {
+		sessions.set(data.data);
+	}
+	return data;
 }
 
 // Track last known processed per session to detect changes
@@ -110,51 +107,48 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 export const discoverySSEManager = new DiscoverySSEManager();
 
 export async function initiateDiscovery(discovery_id: string) {
-	const result = await api.request<DiscoveryUpdatePayload, DiscoveryUpdatePayload[]>(
-		'/discovery/start-session',
-		null,
-		null,
-		{ method: 'POST', body: JSON.stringify(discovery_id) }
-	);
+	const { data: result } = await apiClient.POST('/api/discovery/start-session', {
+		body: discovery_id
+	});
 
-	if (result?.success && result.data) {
+	if (result) {
 		// Add the session immediately to the store (only if it doesn't exist)
 		sessions.update((current) => {
 			// Check if session already exists
-			const existingIndex = current.findIndex((s) => s.session_id === result.data!.session_id);
+			const existingIndex = current.findIndex((s) => s.session_id === result.session_id);
 
 			if (existingIndex >= 0) {
 				// Update existing (shouldn't happen, but defensive)
 				const updated = [...current];
-				updated[existingIndex] = result.data!;
+				updated[existingIndex] = result;
 				return updated;
 			} else {
 				// Add new session
-				return [...current, result.data!];
+				return [...current, result];
 			}
 		});
 
 		discoverySSEManager.connect(); // Start SSE to receive updates
 		pushSuccess(
-			`${result.data.discovery_type.type} discovery session created with session ID ${result.data.session_id}`
+			`${result.discovery_type.type} discovery session created with session ID ${result.session_id}`
 		);
 	}
 }
 
-export async function cancelDiscovery(id: string) {
+export async function cancelDiscovery(session_id: string) {
 	const map = new Map(get(cancelling));
-	map.set(id, true);
+	map.set(session_id, true);
 	cancelling.set(map);
 
-	const result = await api.request<void, void>(`/discovery/${id}/cancel`, null, null, {
-		method: 'POST'
+	const { data: result } = await apiClient.POST('/api/discovery/{session_id}/cancel', {
+		params: { path: { session_id } }
 	});
 
 	if (!result?.success) {
 		// If cancellation failed, remove the cancelling state
 		cancelling.update((c) => {
 			const m = new Map(c);
-			m.delete(id);
+			m.delete(session_id);
 			return m;
 		});
 		pushError('Failed to cancel discovery');

@@ -15,7 +15,7 @@ mod discovery;
 #[cfg(feature = "generate-fixtures")]
 mod fixtures;
 mod infra;
-mod openapi;
+mod openapi_gen;
 mod validations;
 
 use infra::{

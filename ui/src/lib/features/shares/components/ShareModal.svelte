@@ -27,7 +27,7 @@
 	let passwordValue: string = '';
 	let createdShare: Share | null = null;
 
-	$: hasEmbedsFeature = $organization
+	$: hasEmbedsFeature = $organization?.plan
 		? billingPlans.getMetadata($organization.plan.type).features.embeds
 		: true;
 

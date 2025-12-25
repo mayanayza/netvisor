@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type {
 	Share,
 	PublicShareMetadata,
@@ -11,54 +11,50 @@ export const shares = writable<Share[]>([]);
 
 // Authenticated API calls
 
-export async function getShares(topologyId?: string) {
-	const url = topologyId ? `/shares` : '/shares';
-	return await api.request<Share[]>(url, shares, (data) => data, {
-		method: 'GET'
-	});
+export async function getShares() {
+	const { data } = await apiClient.GET('/api/shares');
+	if (data?.success && data.data) {
+		shares.set(data.data);
+	}
+	return data as ApiResponse<Share[]>;
 }
 
 export async function createShare(request: CreateUpdateShareRequest) {
-	const response = await api.request<Share, Share[]>(
-		'/shares',
-		shares,
-		(newShare, current) => [...current, newShare],
-		{ method: 'POST', body: JSON.stringify(request) }
-	);
-
-	return response;
+	const { data: result } = await apiClient.POST('/api/shares', { body: request });
+	if (result?.success && result.data) {
+		shares.update((current) => [...current, result.data!]);
+	}
+	return result as ApiResponse<Share>;
 }
 
 export async function updateShare(id: string, request: CreateUpdateShareRequest) {
-	const response = await api.request<Share, Share[]>(
-		`/shares/${id}`,
-		shares,
-		(updatedShare, current) => current.map((s) => (s.id === id ? updatedShare : s)),
-		{ method: 'PUT', body: JSON.stringify(request) }
-	);
-
-	return response;
+	const { data: result } = await apiClient.PUT('/api/shares/{id}', {
+		params: { path: { id } },
+		body: request
+	});
+	if (result?.success && result.data) {
+		shares.update((current) => current.map((s) => (s.id === id ? result.data! : s)));
+	}
+	return result as ApiResponse<Share>;
 }
 
 export async function deleteShare(id: string) {
-	const result = await api.request<void, Share[]>(
-		`/shares/${id}`,
-		shares,
-		(_, current) => current.filter((s) => s.id !== id),
-		{ method: 'DELETE' }
-	);
-
+	const { data: result } = await apiClient.DELETE('/api/shares/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		shares.update((current) => current.filter((s) => s.id !== id));
+	}
 	return result;
 }
 
 export async function bulkDeleteShares(ids: string[]) {
-	const result = await api.request<void, Share[]>(
-		'/shares/bulk-delete',
-		shares,
-		(_, current) => current.filter((s) => !ids.includes(s.id)),
-		{ method: 'POST', body: JSON.stringify({ ids }) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/shares/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		shares.update((current) => current.filter((s) => !ids.includes(s.id)));
+	}
 	return result;
 }
 

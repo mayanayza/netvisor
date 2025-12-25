@@ -5,6 +5,7 @@ import { edgeTypes, subnetTypes } from '$lib/shared/stores/metadata';
 import type { TopologyEdge, TopologyNode } from './types/base';
 import { getInterfacesOnSubnet, getSubnetFromId } from '../subnets/store';
 import { getHostFromInterfaceId } from '../hosts/store';
+import { getInterfacesForHost } from '../interfaces/store';
 
 // Shared stores for hover state across all component instances
 export const groupHoverState = writable<Map<string, boolean>>(new Map());
@@ -20,13 +21,17 @@ function getVirtualizedContainerNodes(dockerHostInterfaceId: string): Set<string
 
 	const dockerHost = get(getHostFromInterfaceId(dockerHostInterfaceId));
 	if (dockerHost) {
-		const hostInterfaceSubnetIds = dockerHost.interfaces.flatMap((b) => b.subnet_id);
+		// Get all interfaces for this host from the interfaces store
+		const hostInterfaces = get(getInterfacesForHost(dockerHost.id));
+		const hostInterfaceSubnetIds = hostInterfaces.map((i) => i.subnet_id);
+
 		const dockerBridgeSubnets = hostInterfaceSubnetIds
 			.map((s) => get(getSubnetFromId(s)))
 			.filter((s) => s !== null)
 			.filter((s) => subnetTypes.getMetadata(s.subnet_type).is_for_containers);
+
 		const interfacesOnDockerSubnets = dockerBridgeSubnets.flatMap((s) =>
-			get(getInterfacesOnSubnet(s?.id))
+			get(getInterfacesOnSubnet(s.id))
 		);
 
 		for (const iface of interfacesOnDockerSubnets) {
@@ -108,7 +113,7 @@ export function updateConnectedNodes(
 				const eData = edge.data as TopologyEdge;
 				const eMetadata = edgeTypes.getMetadata(eData.edge_type);
 
-				if (eMetadata.is_group_edge && eData.group_id === groupId) {
+				if (eMetadata.is_group_edge && 'group_id' in eData && eData.group_id === groupId) {
 					connected.add(eData.source as string);
 					connected.add(eData.target as string);
 				}

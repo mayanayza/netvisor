@@ -26,16 +26,15 @@ use crate::server::{
         events::types::{TelemetryEvent, TelemetryOperation},
         services::traits::CrudService,
         storage::traits::StorableEntity,
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
     },
     topology::types::base::{Topology, TopologyBase},
     users::r#impl::base::User,
 };
 use axum::{
-    Router,
     extract::{Path, Query, State},
     response::{Json, Redirect},
-    routing::{get, post},
+    routing::get,
 };
 use axum_client_ip::ClientIp;
 use axum_extra::{TypedHeader, extract::Host, headers::UserAgent};
@@ -44,28 +43,41 @@ use chrono::{DateTime, Utc};
 use std::{net::IpAddr, sync::Arc};
 use tower_sessions::Session;
 use url::Url;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 pub const DEMO_HOST: &str = "demo.scanopy.net";
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/register", post(register))
-        .route("/login", post(login))
-        .route("/logout", post(logout))
-        .route("/me", post(get_current_user))
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(register))
+        .routes(routes!(login))
+        .routes(routes!(logout))
+        .routes(routes!(get_current_user))
         // Note: /keys routes are handled separately via OpenApiRouter in factory.rs
-        .route("/update", post(update_password_auth))
-        .route("/setup", post(setup))
-        .route("/daemon-setup", post(daemon_setup))
+        .routes(routes!(update_password_auth))
+        .routes(routes!(setup))
+        .routes(routes!(daemon_setup))
         .route("/oidc/providers", get(list_oidc_providers))
         .route("/oidc/{slug}/authorize", get(oidc_authorize))
         .route("/oidc/{slug}/callback", get(oidc_callback))
-        .route("/oidc/{slug}/unlink", post(unlink_oidc_account))
-        .route("/forgot-password", post(forgot_password))
-        .route("/reset-password", post(reset_password))
+        .routes(routes!(unlink_oidc_account))
+        .routes(routes!(forgot_password))
+        .routes(routes!(reset_password))
 }
 
+#[utoipa::path(
+    post,
+    path = "/register",
+    tag = "auth",
+    request_body = RegisterRequest,
+    responses(
+        (status = 200, description = "User registered successfully", body = ApiResponse<User>),
+        (status = 400, description = "Invalid request", body = ApiErrorResponse),
+        (status = 403, description = "Registration disabled", body = ApiErrorResponse),
+        (status = 409, description = "Email already exists", body = ApiErrorResponse),
+    )
+)]
 async fn register(
     State(state): State<Arc<AppState>>,
     Host(host): Host,
@@ -167,6 +179,16 @@ async fn register(
 }
 
 /// Store pre-registration setup data (org name, networks, seed preference) in session
+#[utoipa::path(
+    post,
+    path = "/setup",
+    tag = "auth",
+    request_body = SetupRequest,
+    responses(
+        (status = 200, description = "Setup data stored", body = ApiResponse<SetupResponse>),
+        (status = 400, description = "Invalid request", body = ApiErrorResponse),
+    )
+)]
 async fn setup(
     session: Session,
     Json(request): Json<SetupRequest>,
@@ -208,7 +230,6 @@ async fn setup(
     let pending_setup = PendingSetup {
         org_name: request.organization_name.trim().to_string(),
         networks,
-        seed_data: request.populate_seed_data,
     };
 
     session
@@ -221,6 +242,16 @@ async fn setup(
 
 /// Store pre-registration daemon setup data in session and generate provisional API key
 /// Supports multiple calls to configure daemons for different networks
+#[utoipa::path(
+    post,
+    path = "/daemon-setup",
+    tag = "auth",
+    request_body = DaemonSetupRequest,
+    responses(
+        (status = 200, description = "Daemon setup data stored", body = ApiResponse<DaemonSetupResponse>),
+        (status = 400, description = "Invalid request", body = ApiErrorResponse),
+    )
+)]
 async fn daemon_setup(
     session: Session,
     Json(request): Json<DaemonSetupRequest>,
@@ -327,15 +358,12 @@ async fn apply_pending_setup(
             first_network_id = Some(network.id);
         }
 
-        // Seed default data only for the first network if requested
-        if setup.seed_data {
-            state
-                .services
-                .network_service
-                .seed_default_data(network.id, auth_entity.clone())
-                .await
-                .map_err(|e| ApiError::internal_error(&format!("Failed to seed data: {}", e)))?;
-        }
+        state
+            .services
+            .network_service
+            .create_organizational_subnets(network.id, auth_entity.clone())
+            .await
+            .map_err(|e| ApiError::internal_error(&format!("Failed to seed data: {}", e)))?;
 
         // Create default topology for each network
         let topology = Topology::new(TopologyBase::new("My Topology".to_string(), network.id));
@@ -435,6 +463,17 @@ async fn apply_pending_setup(
     Ok(())
 }
 
+#[utoipa::path(
+    post,
+    path = "/login",
+    tag = "auth",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = ApiResponse<User>),
+        (status = 401, description = "Invalid credentials", body = ApiErrorResponse),
+        (status = 403, description = "Login forbidden", body = ApiErrorResponse),
+    )
+)]
 async fn login(
     State(state): State<Arc<AppState>>,
     ClientIp(ip): ClientIp,
@@ -484,6 +523,14 @@ async fn login(
     Ok(Json(ApiResponse::success(user)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/logout",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Logout successful", body = EmptyApiResponse),
+    )
+)]
 async fn logout(
     State(state): State<Arc<AppState>>,
     ClientIp(ip): ClientIp,
@@ -508,6 +555,15 @@ async fn logout(
     Ok(Json(ApiResponse::success(())))
 }
 
+#[utoipa::path(
+    post,
+    path = "/me",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Current user", body = ApiResponse<User>),
+        (status = 401, description = "Not authenticated", body = ApiErrorResponse),
+    )
+)]
 async fn get_current_user(
     State(state): State<Arc<AppState>>,
     session: Session,
@@ -528,6 +584,16 @@ async fn get_current_user(
     Ok(Json(ApiResponse::success(user)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/update",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Password updated", body = ApiResponse<User>),
+        (status = 401, description = "Not authenticated", body = ApiErrorResponse),
+        (status = 403, description = "Blocked in demo mode", body = ApiErrorResponse),
+    )
+)]
 async fn update_password_auth(
     State(state): State<Arc<AppState>>,
     session: Session,
@@ -561,6 +627,15 @@ async fn update_password_auth(
     Ok(Json(ApiResponse::success(user)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/forgot-password",
+    tag = "auth",
+    request_body = ForgotPasswordRequest,
+    responses(
+        (status = 200, description = "Password reset email sent", body = EmptyApiResponse),
+    )
+)]
 async fn forgot_password(
     State(state): State<Arc<AppState>>,
     ClientIp(ip): ClientIp,
@@ -583,6 +658,16 @@ async fn forgot_password(
     Ok(Json(ApiResponse::success(())))
 }
 
+#[utoipa::path(
+    post,
+    path = "/reset-password",
+    tag = "auth",
+    request_body = ResetPasswordRequest,
+    responses(
+        (status = 200, description = "Password reset successful", body = ApiResponse<User>),
+        (status = 400, description = "Invalid or expired token", body = ApiErrorResponse),
+    )
+)]
 async fn reset_password(
     State(state): State<Arc<AppState>>,
     ClientIp(ip): ClientIp,
@@ -1151,6 +1236,18 @@ async fn handle_register_flow(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/oidc/{slug}/unlink",
+    tag = "auth",
+    params(("slug" = String, Path, description = "OIDC provider slug")),
+    responses(
+        (status = 200, description = "OIDC account unlinked", body = ApiResponse<User>),
+        (status = 401, description = "Not authenticated", body = ApiErrorResponse),
+        (status = 403, description = "Blocked in demo mode", body = ApiErrorResponse),
+        (status = 404, description = "Provider not found", body = ApiErrorResponse),
+    )
+)]
 async fn unlink_oidc_account(
     State(state): State<Arc<AppState>>,
     Path(slug): Path<String>,

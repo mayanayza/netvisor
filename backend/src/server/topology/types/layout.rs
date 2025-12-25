@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::{
@@ -11,7 +12,7 @@ const SUBNET_CHILD_FOOTER_HEIGHT: usize = 25;
 const HEIGHT_PER_SERVICE_IN_SUBNET_CHILD: usize = 50;
 const SUBNET_CHILD_WIDTH: usize = 250;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, ToSchema)]
 pub struct Uxy {
     pub x: usize,
     pub y: usize,
@@ -66,7 +67,7 @@ impl Uxy {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, ToSchema)]
 pub struct Ixy {
     pub x: isize,
     pub y: isize,

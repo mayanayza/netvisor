@@ -5,7 +5,6 @@
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
 	import { maxLength, minLength } from '$lib/shared/components/forms/validators';
-	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import { onboardingStore } from '../../stores/onboarding';
 	import type { TextFieldType } from '$lib/shared/components/forms/types';
 	import { get } from 'svelte/store';
@@ -35,7 +34,6 @@
 		required(),
 		maxLength(100)
 	]);
-	const seedDataField = field('seedData', storeState.populateSeedData, []);
 
 	// Local state for network fields
 	function newNetworkField(i: number, initialValue: string = ''): TextFieldType {
@@ -66,20 +64,17 @@
 	function handleSubmit() {
 		const formData: SetupRequest = {
 			organization_name: $organizationName.value.trim(),
-			networks: networkFields.map((n) => ({ name: get(n).value.trim() })),
-			populate_seed_data: $seedDataField.value
+			networks: networkFields.map((n) => ({ name: get(n).value.trim() }))
 		};
 
 		trackEvent('onboarding_org_networks_selected', {
 			networks_count: networkFields.length,
-			populate_seed_data: $seedDataField.value,
 			use_case: useCase
 		});
 
 		// Update store with final values
 		onboardingStore.setOrganizationName(formData.organization_name);
 		onboardingStore.setNetworks(formData.networks);
-		onboardingStore.setPopulateSeedData(formData.populate_seed_data);
 
 		onSubmit(formData);
 	}
@@ -165,14 +160,6 @@
 				</button>
 			{/if}
 		</div>
-
-		<Checkbox
-			label="Include external services in your visualization? (Recommended)"
-			helpText="Track cloud services, APIs, and SaaS tools that aren't on a scannable network. We'll add example data to show you how it works."
-			id="seedData"
-			field={seedDataField}
-			{formApi}
-		/>
 	</div>
 
 	<!-- Custom footer -->

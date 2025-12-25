@@ -9,9 +9,11 @@ use uuid::Uuid;
 
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
+    bindings::{r#impl::base::Binding, service::BindingService},
     groups::{r#impl::base::Group, service::GroupService},
     hosts::{r#impl::base::Host, service::HostService},
     interfaces::{r#impl::base::Interface, service::InterfaceService},
+    ports::{r#impl::base::Port, service::PortService},
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
         events::{
@@ -47,6 +49,8 @@ pub struct TopologyService {
     subnet_service: Arc<SubnetService>,
     group_service: Arc<GroupService>,
     service_service: Arc<ServiceService>,
+    port_service: Arc<PortService>,
+    binding_service: Arc<BindingService>,
     event_bus: Arc<EventBus>,
     pub staleness_tx: broadcast::Sender<Topology>,
 }
@@ -82,7 +86,7 @@ impl CrudService<Topology> for TopologyService {
             entity
         };
 
-        let (hosts, interfaces, subnets, groups) =
+        let (hosts, interfaces, subnets, groups, ports, bindings) =
             self.get_entity_data(topology.base.network_id).await?;
 
         let services = self
@@ -95,6 +99,8 @@ impl CrudService<Topology> for TopologyService {
             services: &services,
             subnets: &subnets,
             groups: &groups,
+            ports: &ports,
+            bindings: &bindings,
             old_edges: &[],
             old_nodes: &[],
             options: &topology.base.options,
@@ -140,17 +146,22 @@ pub struct BuildGraphParams<'a> {
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
     pub groups: &'a [Group],
+    pub ports: &'a [Port],
+    pub bindings: &'a [Binding],
     pub old_nodes: &'a [Node],
     pub old_edges: &'a [Edge],
 }
 
 impl TopologyService {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         host_service: Arc<HostService>,
         interface_service: Arc<InterfaceService>,
         subnet_service: Arc<SubnetService>,
         group_service: Arc<GroupService>,
         service_service: Arc<ServiceService>,
+        port_service: Arc<PortService>,
+        binding_service: Arc<BindingService>,
         storage: Arc<GenericPostgresStorage<Topology>>,
         event_bus: Arc<EventBus>,
     ) -> Self {
@@ -162,6 +173,8 @@ impl TopologyService {
             group_service,
             service_service,
             storage,
+            port_service,
+            binding_service,
             event_bus,
             staleness_tx,
         }
@@ -174,7 +187,17 @@ impl TopologyService {
     pub async fn get_entity_data(
         &self,
         network_id: Uuid,
-    ) -> Result<(Vec<Host>, Vec<Interface>, Vec<Subnet>, Vec<Group>), Error> {
+    ) -> Result<
+        (
+            Vec<Host>,
+            Vec<Interface>,
+            Vec<Subnet>,
+            Vec<Group>,
+            Vec<Port>,
+            Vec<Binding>,
+        ),
+        Error,
+    > {
         let network_filter = EntityFilter::unfiltered().network_ids(&[network_id]);
         // Fetch all data
         let hosts = self
@@ -182,15 +205,17 @@ impl TopologyService {
             .get_all(network_filter.clone().hidden_is(false))
             .await?;
 
-        // Fetch interfaces for all hosts
-        let host_ids: Vec<Uuid> = hosts.iter().map(|h| h.id).collect();
-        let interface_filter = EntityFilter::unfiltered().host_ids(&host_ids);
-        let interfaces = self.interface_service.get_all(interface_filter).await?;
-
+        let interfaces = self
+            .interface_service
+            .get_all(network_filter.clone())
+            .await?;
         let subnets = self.subnet_service.get_all(network_filter.clone()).await?;
         let groups = self.group_service.get_all(network_filter.clone()).await?;
 
-        Ok((hosts, interfaces, subnets, groups))
+        let ports = self.port_service.get_all(network_filter.clone()).await?;
+        let bindings = self.binding_service.get_all(network_filter.clone()).await?;
+
+        Ok((hosts, interfaces, subnets, groups, ports, bindings))
     }
 
     pub async fn get_service_data(
@@ -222,13 +247,17 @@ impl TopologyService {
             subnets,
             services,
             groups,
+            ports,
+            bindings,
             old_edges,
             old_nodes,
             options,
         } = params;
 
         // Create context to avoid parameter passing
-        let ctx = TopologyContext::new(hosts, interfaces, subnets, services, groups, options);
+        let ctx = TopologyContext::new(
+            hosts, interfaces, subnets, services, groups, ports, bindings, options,
+        );
 
         // Create all edges (needed for anchor analysis)
         let mut all_edges = Vec::new();

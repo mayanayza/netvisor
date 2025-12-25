@@ -47,11 +47,7 @@
 	// Helper to get interface from topology
 	function getInterfaceFromTopology(ifaceId: string) {
 		if (!topology) return null;
-		for (const host of topology.hosts) {
-			const iface = host.interfaces.find((i) => i.id === ifaceId);
-			if (iface) return iface;
-		}
-		return null;
+		return topology.interfaces.find((i) => i.id === ifaceId) ?? null;
 	}
 
 	// Helper to get subnet from topology
@@ -71,7 +67,7 @@
 				if (binding.type === 'Interface') {
 					ifaceId = binding.interface_id;
 				} else if (binding.type === 'Port') {
-					ifaceId = binding.interface_id;
+					ifaceId = binding.interface_id ?? null;
 				}
 
 				if (!ifaceId) continue;

@@ -8,18 +8,17 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-fn default_true() -> bool {
-    true
-}
-
 /// Share display options
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
 pub struct ShareOptions {
+    #[schema(required)]
     pub show_inspect_panel: bool,
+    #[schema(required)]
     pub show_zoom_controls: bool,
-    #[serde(default = "default_true")]
+    #[schema(required)]
     pub show_export_button: bool,
 }
 
@@ -33,25 +32,33 @@ impl Default for ShareOptions {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct ShareBase {
     pub topology_id: Uuid,
     pub network_id: Uuid,
     pub created_by: Uuid,
     pub name: String,
     pub is_enabled: bool,
+    #[schema(required)]
     pub expires_at: Option<DateTime<Utc>>,
-    /// Password hash - never sent to client, stored internally
-    #[serde(skip_serializing)]
+    /// Password hash - never sent to client, never accept from client
+    #[serde(skip)]
     pub password_hash: Option<String>,
+    #[schema(required)]
     pub allowed_domains: Option<Vec<String>>,
     pub options: ShareOptions,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 pub struct Share {
+    #[serde(default)]
+    #[schema(read_only, required)]
     pub id: Uuid,
+    #[serde(default)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: ShareBase,
@@ -136,6 +143,14 @@ impl StorableEntity for Share {
 
     fn updated_at(&self) -> DateTime<Utc> {
         self.updated_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
     }
 
     fn set_updated_at(&mut self, time: DateTime<Utc>) {

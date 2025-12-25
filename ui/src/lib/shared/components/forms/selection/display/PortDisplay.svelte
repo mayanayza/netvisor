@@ -7,8 +7,8 @@
 	export const PortDisplay: EntityDisplayComponent<Port, object> = {
 		getId: (port: Port) => `${port.id}`,
 		getLabel: (port: Port) => {
-			let metadata = ports.getMetadata(port.type);
-			let name = ports.getName(port.type);
+			let metadata = ports.getMetadata(port.type ?? null);
+			let name = ports.getName(port.type ?? null);
 			if (metadata && !metadata.is_custom && name) {
 				return name + ` (${port.number}/${port.protocol.toLowerCase()})`;
 			}
@@ -54,7 +54,8 @@
 
 <script lang="ts">
 	import ListSelectItem from '../ListSelectItem.svelte';
-	import { formatInterface, getInterfaceFromId } from '$lib/features/hosts/store';
+	import { formatInterface } from '$lib/features/hosts/store';
+	import { getInterfaceFromId } from '$lib/features/interfaces/store';
 	import { get } from 'svelte/store';
 
 	export let item: Port;

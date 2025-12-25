@@ -101,7 +101,10 @@ async fn test_service_deduplication_on_create() {
 
     // Should return same service (upserted) - compare service IDs
     let created_svc1 = &created1.services[0];
-    assert_eq!(created_svc1.id, created2.id, "Services should have been deduplicated");
+    assert_eq!(
+        created_svc1.id, created2.id,
+        "Services should have been deduplicated"
+    );
 
     let filter = EntityFilter::unfiltered().host_id(&created1.id);
     // Verify only one service in DB

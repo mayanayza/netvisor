@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use axum::{
-    Json, Router,
+    Json,
     extract::{Path, Query, State},
     http::{HeaderMap, header},
     response::{IntoResponse, Response},
-    routing::{delete, get, post, put},
 };
 use serde::Deserialize;
+use utoipa::ToSchema;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::server::{
@@ -15,13 +16,10 @@ use crate::server::{
     billing::types::base::BillingPlan,
     config::AppState,
     shared::{
-        handlers::traits::{
-            CrudHandlers, bulk_delete_handler, create_handler, delete_handler, get_all_handler,
-            get_by_id_handler, update_handler,
-        },
+        handlers::traits::{CrudHandlers, create_handler, update_handler},
         services::traits::CrudService,
         storage::traits::Storage,
-        types::api::{ApiError, ApiResponse, ApiResult},
+        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult},
     },
     shares::r#impl::{
         api::{CreateUpdateShareRequest, PublicShareMetadata, ShareWithTopology},
@@ -29,31 +27,45 @@ use crate::server::{
     },
 };
 
-#[derive(Debug, Deserialize)]
+// Generated handlers for generic CRUD operations
+mod generated {
+    use super::*;
+    crate::crud_get_all_handler!(Share, "shares", "share");
+    crate::crud_get_by_id_handler!(Share, "shares", "share");
+    crate::crud_delete_handler!(Share, "shares", "share");
+    crate::crud_bulk_delete_handler!(Share, "shares");
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ShareQuery {
     #[serde(default)]
     pub embed: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ShareTopologyRequest {
     #[serde(default)]
     pub password: Option<String>,
 }
 
-pub fn create_router() -> Router<Arc<AppState>> {
-    Router::new()
-        // Authenticated routes - use generic handlers where possible
-        .route("/", post(create_share))
-        .route("/", get(get_all_handler::<Share>))
-        .route("/{id}", get(get_by_id_handler::<Share>))
-        .route("/{id}", put(update_share))
-        .route("/{id}", delete(delete_handler::<Share>))
-        .route("/bulk-delete", post(bulk_delete_handler::<Share>))
+pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        // Authenticated routes
+        .routes(routes!(generated::get_all, create_share))
+        .routes(routes!(
+            generated::get_by_id,
+            update_share,
+            generated::delete
+        ))
+        .routes(routes!(generated::bulk_delete))
         // Public routes (no auth required)
-        .route("/public/{id}", get(get_public_share_metadata))
-        .route("/public/{id}/verify", post(verify_share_password))
-        .route("/public/{id}/topology", post(get_share_topology))
+        .routes(routes!(get_public_share_metadata))
+        .routes(routes!(verify_share_password))
+        // Public topology route (complex response handling - use regular route for now)
+        .route(
+            "/public/{id}/topology",
+            axum::routing::post(get_share_topology),
+        )
 }
 
 // ============================================================================
@@ -61,6 +73,17 @@ pub fn create_router() -> Router<Arc<AppState>> {
 // ============================================================================
 
 /// Create a new share
+#[utoipa::path(
+    post,
+    path = "",
+    tag = "shares",
+    request_body = CreateUpdateShareRequest,
+    responses(
+        (status = 200, description = "Share created", body = ApiResponse<Share>),
+        (status = 400, description = "Invalid request", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 async fn create_share(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
@@ -82,7 +105,19 @@ async fn create_share(
     create_handler::<Share>(State(state), RequireMember(user), Json(share)).await
 }
 
-/// Update a share, handling password changes
+/// Update a share
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tag = "shares",
+    params(("id" = Uuid, Path, description = "Share ID")),
+    request_body = CreateUpdateShareRequest,
+    responses(
+        (status = 200, description = "Share updated", body = ApiResponse<Share>),
+        (status = 404, description = "Share not found", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 async fn update_share(
     State(state): State<Arc<AppState>>,
     user: RequireMember,
@@ -151,7 +186,19 @@ async fn get_share_org_plan(state: &AppState, share: &Share) -> Result<BillingPl
     Ok(org.base.plan.unwrap_or_default())
 }
 
-/// Get public metadata about a share (no topology data)
+/// Get share metadata
+///
+/// Does not include any topology data
+#[utoipa::path(
+    get,
+    path = "/public/{id}",
+    tag = "shares",
+    params(("id" = Uuid, Path, description = "Share ID")),
+    responses(
+        (status = 200, description = "Share metadata", body = ApiResponse<PublicShareMetadata>),
+        (status = 404, description = "Share not found", body = ApiErrorResponse),
+    )
+)]
 async fn get_public_share_metadata(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -176,6 +223,18 @@ async fn get_public_share_metadata(
 }
 
 /// Verify password for a password-protected share (returns success/failure only)
+#[utoipa::path(
+    post,
+    path = "/public/{id}/verify",
+    tags = ["shares", "internal"],
+    params(("id" = Uuid, Path, description = "Share ID")),
+    request_body = String,
+    responses(
+        (status = 200, description = "Password verified", body = ApiResponse<bool>),
+        (status = 401, description = "Invalid password", body = ApiErrorResponse),
+        (status = 404, description = "Share not found", body = ApiErrorResponse),
+    )
+)]
 async fn verify_share_password(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

@@ -1,3 +1,4 @@
+pub mod api;
 pub mod base;
 pub mod categories;
 pub mod definitions;

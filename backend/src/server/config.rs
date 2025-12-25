@@ -15,6 +15,7 @@ use figment::{
 };
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, sync::Arc};
+use utoipa::ToSchema;
 
 use crate::server::shared::storage::factory::StorageFactory;
 
@@ -129,7 +130,7 @@ pub struct ServerConfig {
     pub enforce_billing_for_testing: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentType {
     Cloud,
@@ -137,7 +138,7 @@ pub enum DeploymentType {
     Community,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PublicConfigResponse {
     pub server_port: u16,
     pub disable_registration: bool,
@@ -291,6 +292,17 @@ impl AppState {
     }
 }
 
+/// Get public server configuration
+///
+/// Returns public configuration settings like OIDC providers, billing status, etc.
+#[utoipa::path(
+    get,
+    path = "/api/config",
+    tags = ["config", "internal"],
+    responses(
+        (status = 200, description = "Public server configuration", body = ApiResponse<PublicConfigResponse>)
+    )
+)]
 pub async fn get_public_config(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let oidc_providers = state
         .services

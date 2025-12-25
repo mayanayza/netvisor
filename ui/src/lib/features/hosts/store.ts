@@ -2,42 +2,122 @@ import { derived, get, writable, type Readable } from 'svelte/store';
 import type {
 	AllInterfaces,
 	CreateHostRequest,
+	CreateHostWithServicesRequest,
 	CreateInterfaceInput,
 	CreatePortInput,
 	Host,
-	HostWithServicesRequest,
+	HostFormData,
+	HostResponse,
 	Interface,
-	Port,
-	UpdateHostRequest
+	UpdateHostRequest,
+	UpdateHostWithServicesRequest
 } from './types/base';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import { pushSuccess } from '$lib/shared/stores/feedback';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { isContainerSubnet } from '../subnets/store';
 import { networks } from '../networks/store';
-import { bulkUpdateServices, createService, deleteService } from '../services/store';
-import type { Service } from '$lib/generated';
+import { bulkUpdateServices, services } from '../services/store';
+import {
+	interfaces,
+	syncInterfaces,
+	syncInterfacesForHost,
+	removeInterfacesForHost
+} from '../interfaces/store';
+import { ports, syncPorts, syncPortsForHost, removePortsForHost } from '../ports/store';
 
+// Store for host primitives (without embedded children)
 export const hosts = writable<Host[]>([]);
 export const polling = writable(false);
 
-export async function getHosts() {
-	return await api.request<Host[]>(`/hosts`, hosts, (hosts) => hosts, { method: 'GET' });
+/**
+ * Extract Host primitive from HostResponse (removes embedded children)
+ */
+export function toHostPrimitive(response: HostResponse): Host {
+	return {
+		id: response.id,
+		created_at: response.created_at,
+		updated_at: response.updated_at,
+		name: response.name,
+		network_id: response.network_id,
+		hostname: response.hostname ?? null,
+		description: response.description ?? null,
+		source: response.source,
+		virtualization: response.virtualization ?? null,
+		hidden: response.hidden,
+		tags: response.tags
+	};
 }
 
 /**
- * Transform Host form data to CreateHostRequest format for API
+ * Extract Host primitive from HostFormData (removes embedded children)
  */
-function toCreateHostRequest(host: Host): CreateHostRequest {
+export function formDataToHostPrimitive(formData: HostFormData): Host {
 	return {
-		name: host.name,
-		network_id: host.network_id,
-		hostname: host.hostname,
-		description: host.description,
-		virtualization: host.virtualization,
-		hidden: host.hidden,
-		tags: host.tags,
-		interfaces: host.interfaces.map(
+		id: formData.id,
+		created_at: formData.created_at,
+		updated_at: formData.updated_at,
+		name: formData.name,
+		network_id: formData.network_id,
+		hostname: formData.hostname,
+		description: formData.description,
+		source: formData.source,
+		virtualization: formData.virtualization,
+		hidden: formData.hidden,
+		tags: formData.tags
+	};
+}
+
+/**
+ * Sync all child entities from HostResponse data to their stores
+ */
+function syncChildrenFromResponse(response: HostResponse) {
+	syncInterfacesForHost(response.id, response.interfaces);
+	syncPortsForHost(response.id, response.ports);
+	// Services are synced via services.update to handle ordering
+	services.update((current) => {
+		const other = current.filter((s) => s.host_id !== response.id);
+		return [...other, ...response.services];
+	});
+}
+
+/**
+ * Sync all child entities from multiple HostResponse objects
+ */
+function syncChildrenFromResponses(responses: HostResponse[]) {
+	const allInterfaces = responses.flatMap((r) => r.interfaces);
+	const allPorts = responses.flatMap((r) => r.ports);
+	const allServices = responses.flatMap((r) => r.services);
+
+	syncInterfaces(allInterfaces);
+	syncPorts(allPorts);
+	services.set(allServices);
+}
+
+export async function getHosts() {
+	const { data } = await apiClient.GET('/api/hosts');
+	if (data?.success && data.data) {
+		// Store host primitives
+		hosts.set(data.data.map(toHostPrimitive));
+		// Sync children to their stores
+		syncChildrenFromResponses(data.data);
+	}
+	return data as ApiResponse<HostResponse[]>;
+}
+
+/**
+ * Transform HostFormData to CreateHostRequest format for API
+ */
+function toCreateHostRequest(formData: HostFormData): CreateHostRequest {
+	return {
+		name: formData.name,
+		network_id: formData.network_id,
+		hostname: formData.hostname,
+		description: formData.description,
+		virtualization: formData.virtualization,
+		hidden: formData.hidden,
+		tags: formData.tags,
+		interfaces: formData.interfaces.map(
 			(iface): CreateInterfaceInput => ({
 				subnet_id: iface.subnet_id,
 				ip_address: iface.ip_address,
@@ -45,7 +125,7 @@ function toCreateHostRequest(host: Host): CreateHostRequest {
 				name: iface.name
 			})
 		),
-		ports: host.ports.map(
+		ports: formData.ports.map(
 			(port): CreatePortInput => ({
 				number: port.number,
 				protocol: port.protocol
@@ -55,7 +135,7 @@ function toCreateHostRequest(host: Host): CreateHostRequest {
 }
 
 /**
- * Transform Host form data to UpdateHostRequest format for API
+ * Transform HostFormData to UpdateHostRequest format for API
  */
 function toUpdateHostRequest(host: Host): UpdateHostRequest {
 	return {
@@ -69,75 +149,104 @@ function toUpdateHostRequest(host: Host): UpdateHostRequest {
 	};
 }
 
-export async function createHost(data: HostWithServicesRequest) {
+export async function createHost(data: CreateHostWithServicesRequest) {
 	const request = toCreateHostRequest(data.host);
 
-	const result = await api.request<Host, Host[]>(
-		'/hosts',
-		hosts,
-		(createdHost, current) => [...current, createdHost],
-		{ method: 'POST', body: JSON.stringify(request) }
-	);
+	const { data: result } = await apiClient.POST('/api/hosts', { body: request });
+	if (result?.success && result.data) {
+		// Store host primitive
+		hosts.update((current) => [...current, toHostPrimitive(result.data!)]);
+		// Sync children
+		syncChildrenFromResponse(result.data);
+	}
 
-	return result;
+	return result as ApiResponse<HostResponse>;
 }
 
-export async function updateHost(data: HostWithServicesRequest) {
+export async function updateHost(data: UpdateHostWithServicesRequest) {
 	const request = toUpdateHostRequest(data.host);
 
-	const result = await api.request<Host, Host[]>(
-		`/hosts/${data.host.id}`,
-		hosts,
-		(updatedHost, current) => {
-			return current.map((n) => (n.id === data.host.id ? updatedHost : n));
-		},
-		{ method: 'PUT', body: JSON.stringify(request) }
-	);
+	const { data: result } = await apiClient.PUT('/api/hosts/{id}', {
+		params: { path: { id: data.host.id } },
+		body: request
+	});
+	if (result?.success && result.data) {
+		// Store host primitive
+		hosts.update((current) =>
+			current.map((n) => (n.id === data.host.id ? toHostPrimitive(result.data!) : n))
+		);
+		// Sync children
+		syncChildrenFromResponse(result.data);
+	}
 
 	// Handle service updates if services are provided
 	if (data.services !== null && result?.success) {
 		await bulkUpdateServices(data.host.id, data.services);
 	}
 
-	return result;
+	return result as ApiResponse<HostResponse>;
 }
 
 export async function deleteHost(id: string) {
-	return await api.request<void, Host[]>(
-		`/hosts/${id}`,
-		hosts,
-		(_, current) => current.filter((g) => g.id !== id),
-		{ method: 'DELETE' }
-	);
+	const { data: result } = await apiClient.DELETE('/api/hosts/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		hosts.update((current) => current.filter((g) => g.id !== id));
+		// Remove children from their stores
+		removeInterfacesForHost(id);
+		removePortsForHost(id);
+		services.update((current) => current.filter((s) => s.host_id !== id));
+	}
+	return result;
 }
 
 export async function bulkDeleteHosts(ids: string[]) {
-	const result = await api.request<void, Host[]>(
-		`/hosts/bulk-delete`,
-		hosts,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/hosts/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		hosts.update((current) => current.filter((k) => !ids.includes(k.id)));
+		// Remove children from their stores
+		for (const id of ids) {
+			removeInterfacesForHost(id);
+			removePortsForHost(id);
+		}
+		services.update((current) => current.filter((s) => !ids.includes(s.host_id)));
+	}
 	return result;
 }
 
 export async function consolidateHosts(destination_host_id: string, other_host_id: string) {
 	const other_host_name = get(getHostFromId(other_host_id))?.name;
 
-	return await api.request<Host, Host[]>(
-		`/hosts/${destination_host_id}/consolidate/${other_host_id}`,
-		hosts,
-		(updatedHost, current) => {
-			current = current.filter((g) => g.id !== other_host_id);
-			pushSuccess(`Consolidated host "${other_host_name}" into host "${updatedHost.name}"`);
-			return current.map((h) => (h.id == destination_host_id ? updatedHost : h));
-		},
-		{ method: 'PUT' }
+	const { data: result } = await apiClient.PUT(
+		'/api/hosts/{destination_host}/consolidate/{other_host}',
+		{
+			params: { path: { destination_host: destination_host_id, other_host: other_host_id } }
+		}
 	);
+	if (result?.success && result.data) {
+		// Remove the consolidated host
+		hosts.update((current) => {
+			current = current.filter((g) => g.id !== other_host_id);
+			pushSuccess(`Consolidated host "${other_host_name}" into host "${result.data!.name}"`);
+			return current.map((h) => (h.id == destination_host_id ? toHostPrimitive(result.data!) : h));
+		});
+		// Remove children of consolidated host
+		removeInterfacesForHost(other_host_id);
+		removePortsForHost(other_host_id);
+		services.update((current) => current.filter((s) => s.host_id !== other_host_id));
+		// Sync updated destination host children
+		syncChildrenFromResponse(result.data);
+	}
+	return result as ApiResponse<HostResponse>;
 }
 
-export function createEmptyHostFormData(): Host {
+/**
+ * Create empty form data for creating a new host.
+ */
+export function createEmptyHostFormData(): HostFormData {
 	return {
 		id: uuidv4Sentinel,
 		created_at: utcTimeZoneSentinel,
@@ -161,7 +270,7 @@ export function createEmptyHostFormData(): Host {
 export function formatInterface(i: Interface | AllInterfaces): string {
 	if (i.id == null) return i.name;
 	return get(isContainerSubnet(i.subnet_id))
-		? i.name ?? i.ip_address
+		? (i.name ?? i.ip_address)
 		: (i.name ? i.name + ': ' : '') + i.ip_address;
 }
 
@@ -172,31 +281,30 @@ export function getHostFromId(id: string): Readable<Host | null> {
 }
 
 export function getHostFromInterfaceId(interface_id: string): Readable<Host | null> {
-	return derived([hosts], ([$hosts]) => {
-		return $hosts.find((h) => h.interfaces.some((i) => i.id == interface_id)) || null;
+	return derived([hosts, interfaces], ([$hosts, $interfaces]) => {
+		const iface = $interfaces.find((i) => i.id === interface_id);
+		if (!iface) return null;
+		return $hosts.find((h) => h.id === iface.host_id) || null;
 	});
 }
 
-export function getInterfaceFromId(id: string): Readable<Interface | null> {
-	return derived([hosts], ([$hosts]) => {
-		for (const host of $hosts) {
-			const iface = host.interfaces.find((i) => i.id == id);
-			if (iface) {
-				return iface;
-			}
-		}
-		return null;
-	});
-}
+// Note: getInterfaceFromId and getPortFromId have been moved to their respective stores:
+// - getInterfaceFromId: import from '$lib/features/interfaces/store'
+// - getPortFromId: import from '$lib/features/ports/store'
 
-export function getPortFromId(id: string): Readable<Port | null> {
-	return derived([hosts], ([$hosts]) => {
-		for (const host of $hosts) {
-			const port = host.ports.find((i) => i.id == id);
-			if (port) {
-				return port;
-			}
-		}
-		return null;
-	});
+/**
+ * Hydrate a Host primitive to HostFormData by looking up children from stores.
+ * Used for form editing where the full form structure is needed.
+ */
+export function hydrateHostToFormData(host: Host): HostFormData {
+	const hostInterfaces = get(interfaces).filter((i) => i.host_id === host.id);
+	const hostPorts = get(ports).filter((p) => p.host_id === host.id);
+	const hostServices = get(services).filter((s) => s.host_id === host.id);
+
+	return {
+		...host,
+		interfaces: hostInterfaces,
+		ports: hostPorts,
+		services: hostServices
+	};
 }

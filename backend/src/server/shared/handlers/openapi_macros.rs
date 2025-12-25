@@ -30,11 +30,15 @@
 //!     .routes(routes!(generated::get_by_id, generated::update, generated::delete))
 //!     .routes(routes!(generated::bulk_delete))
 //! ```
+//!
+//! **Note:** These macros use `crate::` paths for utoipa body types instead of `$crate::`
+//! because utoipa's proc macro cannot resolve `$crate::` tokens. This means these macros
+//! can only be used within this crate, not from external crates.
 
 /// Generates an OpenAPI-annotated get-by-id handler that delegates to `get_by_id_handler::<T>`
 #[macro_export]
 macro_rules! crud_get_by_id_handler {
-    ($entity:ty, $response:ty, $tag:expr, $singular:expr) => {
+    ($entity:ty, $tag:expr, $singular:expr) => {
         #[utoipa::path(
             get,
             path = "/{id}",
@@ -43,8 +47,8 @@ macro_rules! crud_get_by_id_handler {
             summary = concat!("Get ", $singular, " by ID"),
             params(("id" = uuid::Uuid, Path, description = concat!(stringify!($entity), " ID"))),
             responses(
-                (status = 200, description = concat!(stringify!($entity), " found"), body = $response),
-                (status = 404, description = concat!(stringify!($entity), " not found")),
+                (status = 200, description = concat!(stringify!($entity), " found"), body = $crate::server::shared::types::api::ApiResponse<$entity>),
+                (status = 404, description = concat!(stringify!($entity), " not found"), body = $crate::server::shared::types::api::ApiErrorResponse),
             ),
             security(("session" = []))
         )]
@@ -53,56 +57,48 @@ macro_rules! crud_get_by_id_handler {
             user: $crate::server::auth::middleware::permissions::RequireMember,
             path: axum::extract::Path<uuid::Uuid>,
         ) -> $crate::server::shared::types::api::ApiResult<
-            axum::response::Json<$crate::server::shared::types::api::ApiResponse<$response>>,
+            axum::response::Json<$crate::server::shared::types::api::ApiResponse<$entity>>,
         > {
             $crate::server::shared::handlers::traits::get_by_id_handler::<$entity>(state, user, path)
                 .await
         }
-    };
-    // Backwards-compatible version where response = entity
-    ($entity:ty, $tag:expr, $singular:expr) => {
-        $crate::crud_get_by_id_handler!($entity, $entity, $tag, $singular);
     };
 }
 
 /// Generates an OpenAPI-annotated create handler that delegates to `create_handler::<T>`
 #[macro_export]
 macro_rules! crud_create_handler {
-    ($entity:ty, $create_request:ty, $response:ty, $tag:expr, $singular:expr) => {
+    ($entity:ty, $tag:expr, $singular:expr) => {
         #[utoipa::path(
             post,
             path = "",
             tag = $tag,
             operation_id = concat!("create_", $singular),
             summary = concat!("Create new ", $singular),
-            request_body = $create_request,
+            request_body = $entity,
             responses(
-                (status = 200, description = concat!(stringify!($entity), " created"), body = $response),
-                (status = 400, description = "Invalid request"),
+                (status = 200, description = concat!(stringify!($entity), " created"), body = $crate::server::shared::types::api::ApiResponse<$entity>),
+                (status = 400, description = "Invalid request", body = $crate::server::shared::types::api::ApiErrorResponse),
             ),
             security(("session" = []))
         )]
         pub async fn create(
             state: axum::extract::State<std::sync::Arc<$crate::server::config::AppState>>,
             user: $crate::server::auth::middleware::permissions::RequireMember,
-            body: axum::response::Json<$create_request>,
+            body: axum::response::Json<$entity>,
         ) -> $crate::server::shared::types::api::ApiResult<
-            axum::response::Json<$crate::server::shared::types::api::ApiResponse<$response>>,
+            axum::response::Json<$crate::server::shared::types::api::ApiResponse<$entity>>,
         > {
             $crate::server::shared::handlers::traits::create_handler::<$entity>(state, user, body)
                 .await
         }
-    };
-    // Backwards-compatible version where request = response = entity
-    ($entity:ty, $tag:expr, $singular:expr) => {
-        $crate::crud_create_handler!($entity, $entity, $entity, $tag, $singular);
     };
 }
 
 /// Generates an OpenAPI-annotated update handler that delegates to `update_handler::<T>`
 #[macro_export]
 macro_rules! crud_update_handler {
-    ($entity:ty, $update_request:ty, $response:ty, $tag:expr, $singular:expr) => {
+    ($entity:ty, $tag:expr, $singular:expr) => {
         #[utoipa::path(
             put,
             path = "/{id}",
@@ -110,10 +106,10 @@ macro_rules! crud_update_handler {
             operation_id = concat!("update_", $singular),
             summary = concat!("Update ", $singular),
             params(("id" = uuid::Uuid, Path, description = concat!(stringify!($entity), " ID"))),
-            request_body = $update_request,
+            request_body = $entity,
             responses(
-                (status = 200, description = concat!(stringify!($entity), " updated"), body = $response),
-                (status = 404, description = concat!(stringify!($entity), " not found")),
+                (status = 200, description = concat!(stringify!($entity), " updated"), body = $crate::server::shared::types::api::ApiResponse<$entity>),
+                (status = 404, description = concat!(stringify!($entity), " not found"), body = $crate::server::shared::types::api::ApiErrorResponse),
             ),
             security(("session" = []))
         )]
@@ -121,19 +117,15 @@ macro_rules! crud_update_handler {
             state: axum::extract::State<std::sync::Arc<$crate::server::config::AppState>>,
             user: $crate::server::auth::middleware::permissions::RequireMember,
             path: axum::extract::Path<uuid::Uuid>,
-            body: axum::response::Json<$update_request>,
+            body: axum::response::Json<$entity>,
         ) -> $crate::server::shared::types::api::ApiResult<
-            axum::response::Json<$crate::server::shared::types::api::ApiResponse<$response>>,
+            axum::response::Json<$crate::server::shared::types::api::ApiResponse<$entity>>,
         > {
             $crate::server::shared::handlers::traits::update_handler::<$entity>(
                 state, user, path, body,
             )
             .await
         }
-    };
-    // Backwards-compatible version where request = response = entity
-    ($entity:ty, $tag:expr, $singular:expr) => {
-        $crate::crud_update_handler!($entity, $entity, $entity, $tag, $singular);
     };
 }
 
@@ -149,8 +141,8 @@ macro_rules! crud_delete_handler {
             summary = concat!("Delete ", $singular),
             params(("id" = uuid::Uuid, Path, description = concat!(stringify!($entity), " ID"))),
             responses(
-                (status = 200, description = concat!(stringify!($entity), " deleted")),
-                (status = 404, description = concat!(stringify!($entity), " not found")),
+                (status = 200, description = concat!(stringify!($entity), " deleted"), body = $crate::server::shared::types::api::EmptyApiResponse),
+                (status = 404, description = concat!(stringify!($entity), " not found"), body = $crate::server::shared::types::api::ApiErrorResponse),
             ),
             security(("session" = []))
         )]
@@ -179,7 +171,7 @@ macro_rules! crud_bulk_delete_handler {
             summary = concat!("Bulk delete ", $tag),
             request_body(content = Vec<uuid::Uuid>, description = concat!("Array of ", $tag, " IDs to delete")),
             responses(
-                (status = 200, description = concat!(stringify!($entity), "s deleted"), body = $crate::server::shared::handlers::traits::BulkDeleteResponse),
+                (status = 200, description = concat!(stringify!($entity), "s deleted"), body = $crate::server::shared::types::api::ApiResponse<$crate::server::shared::handlers::traits::BulkDeleteResponse>),
             ),
             security(("session" = []))
         )]
@@ -226,7 +218,7 @@ macro_rules! crud_get_all_handler {
             summary = concat!("List all ", $tag),
             params(__GetAllFilterQuery),
             responses(
-                (status = 200, description = concat!("List of ", $tag), body = Vec<$response>),
+                (status = 200, description = concat!("List of ", $tag), body = $crate::server::shared::types::api::ApiResponse<Vec<$response>>),
             ),
             security(("session" = []))
         )]

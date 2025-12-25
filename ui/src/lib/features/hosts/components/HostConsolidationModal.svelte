@@ -9,6 +9,10 @@
 	import EntityList from '$lib/shared/components/data/EntityList.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
+	import { getServicesForHost } from '$lib/features/services/store';
+	import { getInterfacesForHost } from '$lib/features/interfaces/store';
+	import { getPortsForHost } from '$lib/features/ports/store';
+	import { get } from 'svelte/store';
 
 	export let otherHost: Host | null = null;
 	export let isOpen = false;
@@ -40,6 +44,11 @@
 	$: consolidationActions = (() => {
 		if (!otherHost || !selectedTargetHost) return [];
 
+		// Get children counts from their respective stores
+		const services = get(getServicesForHost(otherHost.id));
+		const interfaces = get(getInterfacesForHost(otherHost.id));
+		const ports = get(getPortsForHost(otherHost.id));
+
 		const actions = [
 			{
 				id: 'delete',
@@ -47,24 +56,24 @@
 			}
 		];
 
-		if (otherHost.services?.length > 0) {
+		if (services.length > 0) {
 			actions.push({
 				id: 'services',
-				name: `${otherHost.services.length} service${otherHost.services.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+				name: `${services.length} service${services.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
 			});
 		}
 
-		if (otherHost.interfaces?.length > 0) {
+		if (interfaces.length > 0) {
 			actions.push({
 				id: 'interfaces',
-				name: `${otherHost.interfaces.length} interface${otherHost.interfaces.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+				name: `${interfaces.length} interface${interfaces.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
 			});
 		}
 
-		if (otherHost.ports?.length > 0) {
+		if (ports.length > 0) {
 			actions.push({
 				id: 'ports',
-				name: `${otherHost.ports.length} port${otherHost.ports.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+				name: `${ports.length} port${ports.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
 			});
 		}
 

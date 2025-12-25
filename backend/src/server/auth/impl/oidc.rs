@@ -7,6 +7,7 @@ use openidconnect::{
     reqwest::Client as ReqwestClient,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OidcPendingAuth {
@@ -49,7 +50,7 @@ pub struct OidcProviderConfig {
     pub client_secret: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OidcProviderMetadata {
     pub name: String,
     pub slug: String,

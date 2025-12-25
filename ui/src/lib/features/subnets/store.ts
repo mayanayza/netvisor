@@ -1,64 +1,57 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import type { Subnet } from './types/base';
 import type { Interface } from '../hosts/types/base';
-import { hosts } from '../hosts/store';
+import { interfaces } from '../interfaces/store';
 import { networks } from '../networks/store';
 
 export const subnets = writable<Subnet[]>([]);
 
 export async function getSubnets() {
-	return await api.request<Subnet[]>(`/subnets`, subnets, (subnets) => subnets, { method: 'GET' });
+	const { data } = await apiClient.GET('/api/subnets');
+	if (data?.success && data.data) {
+		subnets.set(data.data);
+	}
+	return data as ApiResponse<Subnet[]>;
 }
 
 export async function createSubnet(subnet: Subnet) {
-	const result = await api.request<Subnet, Subnet[]>(
-		'/subnets',
-		subnets,
-		(response, currentSubnets) => [...currentSubnets, response],
-		{
-			method: 'POST',
-			body: JSON.stringify(subnet)
-		}
-	);
-
-	return result;
+	const { data: result } = await apiClient.POST('/api/subnets', { body: subnet });
+	if (result?.success && result.data) {
+		subnets.update((current) => [...current, result.data!]);
+	}
+	return result as ApiResponse<Subnet>;
 }
 
 export async function bulkDeleteSubnets(ids: string[]) {
-	const result = await api.request<void, Subnet[]>(
-		`/subnets/bulk-delete`,
-		subnets,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/subnets/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		subnets.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 
 export async function updateSubnet(subnet: Subnet) {
-	const result = await api.request<Subnet, Subnet[]>(
-		`/subnets/${subnet.id}`,
-		subnets,
-		(response, currentSubnets) => currentSubnets.map((s) => (s.id === subnet.id ? response : s)),
-		{
-			method: 'PUT',
-			body: JSON.stringify(subnet)
-		}
-	);
-
-	return result;
+	const { data: result } = await apiClient.PUT('/api/subnets/{id}', {
+		params: { path: { id: subnet.id } },
+		body: subnet
+	});
+	if (result?.success && result.data) {
+		subnets.update((current) => current.map((s) => (s.id === subnet.id ? result.data! : s)));
+	}
+	return result as ApiResponse<Subnet>;
 }
 
 export async function deleteSubnet(subnetId: string) {
-	const result = await api.request<void, Subnet[]>(
-		`/subnets/${subnetId}`,
-		subnets,
-		(_, currentSubnets) => currentSubnets.filter((s) => s.id !== subnetId),
-		{ method: 'DELETE' }
-	);
-
+	const { data: result } = await apiClient.DELETE('/api/subnets/{id}', {
+		params: { path: { id: subnetId } }
+	});
+	if (result?.success) {
+		subnets.update((current) => current.filter((s) => s.id !== subnetId));
+	}
 	return result;
 }
 
@@ -96,7 +89,7 @@ export function isContainerSubnet(id: string): Readable<boolean> {
 }
 
 export function getInterfacesOnSubnet(subnet_id: string): Readable<Interface[]> {
-	return derived([hosts], ([$hosts]) => {
-		return $hosts.flatMap((h) => h.interfaces).filter((i) => i.subnet_id == subnet_id);
+	return derived([interfaces], ([$interfaces]) => {
+		return $interfaces.filter((i) => i.subnet_id === subnet_id);
 	});
 }

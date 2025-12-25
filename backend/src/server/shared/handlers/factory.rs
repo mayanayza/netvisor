@@ -1,8 +1,8 @@
 use crate::server::auth::middleware::billing::require_billing_for_users;
-use crate::server::config::get_public_config;
-use crate::server::github::handlers::get_stars;
+use crate::server::config::{__path_get_public_config, get_public_config};
+use crate::server::github::handlers::{__path_get_stars, get_stars};
 use crate::server::openapi::create_docs_router;
-use crate::server::shared::types::metadata::get_metadata_registry;
+use crate::server::shared::types::metadata::{__path_get_metadata_registry, get_metadata_registry};
 use crate::server::{
     api_keys::handlers as api_key_handlers, auth::handlers as auth_handlers,
     billing::handlers as billing_handlers, bindings::handlers as binding_handlers,
@@ -45,11 +45,8 @@ pub fn create_openapi_routes() -> OpenApiRouter<Arc<AppState>> {
         .nest("/api/ports", port_handlers::create_router())
         .nest("/api/bindings", binding_handlers::create_router())
         .nest("/api/auth/keys", api_key_handlers::create_router())
-        // Internal endpoints (no OpenAPI docs)
-        .nest(
-            "/api/topology",
-            OpenApiRouter::from(topology_handlers::create_router()),
-        )
+        // Topology endpoints (tagged as internal - hidden from public docs)
+        .nest("/api/topology", topology_handlers::create_router())
 }
 
 /// Creates the application router and returns both the router and OpenAPI spec.
@@ -59,28 +56,46 @@ pub fn create_router(state: Arc<AppState>) -> (Router<Arc<AppState>>, OpenApi) {
     let billed_routes = create_openapi_routes();
 
     // Extract OpenAPI spec and convert to regular Router for middleware application
-    let (billed_router, openapi) = billed_routes.split_for_parts();
+    let (billed_router, mut openapi) = billed_routes.split_for_parts();
     let billed_router = billed_router.layer(middleware::from_fn_with_state(
         state,
         require_billing_for_users,
     ));
 
-    // Routes exempt from billing checks (includes shares which has public endpoints)
-    let exempt_routes = Router::new()
+    // Extract OpenAPI from billing, shares, and auth routes (exempt from billing middleware but need types)
+    let (billing_router, billing_openapi) = OpenApiRouter::new()
         .nest("/api/billing", billing_handlers::create_router())
-        .nest("/api/auth", auth_handlers::create_router())
+        .split_for_parts();
+    let (shares_router, shares_openapi) = OpenApiRouter::new()
         .nest("/api/shares", share_handlers::create_router())
+        .split_for_parts();
+    let (auth_router, auth_openapi) = OpenApiRouter::new()
+        .nest("/api/auth", auth_handlers::create_router())
+        .split_for_parts();
+
+    // Merge OpenAPI specs into main spec
+    openapi.merge(billing_openapi);
+    openapi.merge(shares_openapi);
+    openapi.merge(auth_openapi);
+
+    // Routes exempt from billing checks
+    let exempt_routes = Router::new()
+        .merge(billing_router)
+        .merge(shares_router)
+        .merge(auth_router)
         .route("/api/health", get(get_health));
 
-    // Cacheable routes (also exempt from billing)
-    let cacheable_routes = Router::new()
-        .route("/api/metadata", get(get_metadata_registry))
-        .route("/api/config", get(get_public_config))
-        .route("/api/github-stars", get(get_stars))
-        .layer(SetResponseHeaderLayer::if_not_present(
-            header::CACHE_CONTROL,
-            HeaderValue::from_static("max-age=3600, must-revalidate"),
-        ));
+    // Cacheable routes with OpenAPI documentation (also exempt from billing)
+    let (cacheable_router, cacheable_openapi) = OpenApiRouter::new()
+        .routes(utoipa_axum::routes!(get_metadata_registry))
+        .routes(utoipa_axum::routes!(get_public_config))
+        .routes(utoipa_axum::routes!(get_stars))
+        .split_for_parts();
+    let cacheable_routes = cacheable_router.layer(SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("max-age=3600, must-revalidate"),
+    ));
+    openapi.merge(cacheable_openapi);
 
     let router = Router::new()
         .merge(billed_router)

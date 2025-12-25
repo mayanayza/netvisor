@@ -65,7 +65,7 @@ pub struct GroupIdQuery {
     /// Filter by group ID
     pub group_id: Uuid,
     /// Filter by network ID
-    pub network_id: Uuid
+    pub network_id: Uuid,
 }
 
 // ============================================================================
@@ -110,7 +110,7 @@ pub struct BindingQuery {
     /// Filter by port ID
     pub port_id: Option<Uuid>,
     /// Filter by interface ID
-    pub interface_id: Option<Uuid>
+    pub interface_id: Option<Uuid>,
 }
 
 impl FilterQueryExtractor for BindingQuery {
@@ -135,7 +135,7 @@ impl FilterQueryExtractor for BindingQuery {
         };
         filter = match self.interface_id {
             Some(id) => filter.uuid_column("interface_id", &id),
-            None => filter
+            None => filter,
         };
 
         filter
@@ -173,7 +173,7 @@ impl FilterQueryExtractor for InterfaceQuery {
             Some(id) => filter.host_id(&id),
             None => filter,
         };
-        
+
         filter
     }
 }
@@ -203,7 +203,37 @@ impl FilterQueryExtractor for DiscoveryQuery {
             Some(id) => filter.uuid_column("daemon_id", &id),
             None => filter,
         };
-        
+
+        filter
+    }
+}
+
+/// Query for filtering shares by network_id or topology_id
+#[derive(Deserialize, Default, Debug, Clone, IntoParams)]
+pub struct SharesQuery {
+    /// Filter by network ID
+    pub network_id: Option<Uuid>,
+    /// Filter by topology ID
+    pub topology_id: Option<Uuid>,
+}
+
+impl FilterQueryExtractor for SharesQuery {
+    fn apply_to_filter(
+        &self,
+        filter: EntityFilter,
+        user_network_ids: &[Uuid],
+        _user_organization_id: Uuid,
+    ) -> EntityFilter {
+        let mut filter = match self.network_id {
+            Some(id) if user_network_ids.contains(&id) => filter.network_ids(&[id]),
+            Some(_) => filter.network_ids(&[]),
+            None => filter.network_ids(user_network_ids),
+        };
+        filter = match self.topology_id {
+            Some(id) => filter.uuid_column("topology_id", &id),
+            None => filter,
+        };
+
         filter
     }
 }

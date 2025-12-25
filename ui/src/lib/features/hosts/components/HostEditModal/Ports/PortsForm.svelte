@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type Host } from '$lib/features/hosts/types/base';
+	import { type HostFormData } from '$lib/features/hosts/types/base';
 	import { ports } from '$lib/shared/stores/metadata';
 	import type { Port } from '$lib/features/hosts/types/base';
 	import { PortTypeDisplay } from '$lib/shared/components/forms/selection/display/PortTypeDisplay.svelte';
@@ -12,7 +12,7 @@
 	import PortConfigPanel from './PortConfigPanel.svelte';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
 
-	export let formData: Host;
+	export let formData: HostFormData;
 	export let formApi: FormApi;
 	export let currentServices: Service[];
 

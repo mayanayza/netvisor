@@ -1,9 +1,11 @@
 use uuid::Uuid;
 
 use crate::server::{
+    bindings::r#impl::base::Binding,
     groups::r#impl::base::Group,
     hosts::r#impl::{base::Host, virtualization::HostVirtualization},
     interfaces::r#impl::base::Interface,
+    ports::r#impl::base::Port,
     services::r#impl::{
         base::Service, definitions::ServiceDefinitionExt, virtualization::ServiceVirtualization,
     },
@@ -23,16 +25,21 @@ pub struct TopologyContext<'a> {
     pub subnets: &'a [Subnet],
     pub services: &'a [Service],
     pub groups: &'a [Group],
+    pub ports: &'a [Port],
+    pub bindings: &'a [Binding],
     pub options: &'a TopologyOptions,
 }
 
 impl<'a> TopologyContext<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         hosts: &'a [Host],
         interfaces: &'a [Interface],
         subnets: &'a [Subnet],
         services: &'a [Service],
         groups: &'a [Group],
+        ports: &'a [Port],
+        bindings: &'a [Binding],
         options: &'a TopologyOptions,
     ) -> Self {
         Self {
@@ -41,6 +48,8 @@ impl<'a> TopologyContext<'a> {
             subnets,
             services,
             groups,
+            ports,
+            bindings,
             options,
         }
     }

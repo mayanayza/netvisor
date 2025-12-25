@@ -230,7 +230,9 @@ impl PartialSchema for Box<dyn ServiceDefinition> {
         RefOr::T(Schema::Object(
             ObjectBuilder::new()
                 .schema_type(SchemaType::new(Type::String))
-                .description(Some("Service definition ID - references metadata from /api/metadata"))
+                .description(Some(
+                    "Service definition ID - references metadata from /api/metadata",
+                ))
                 .build(),
         ))
     }

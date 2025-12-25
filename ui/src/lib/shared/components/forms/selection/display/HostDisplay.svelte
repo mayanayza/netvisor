@@ -1,13 +1,21 @@
 <script lang="ts" context="module">
-	import type { Host } from '$lib/features/hosts/types/base';
+	import type { Host, Interface, Port, Service } from '$lib/features/hosts/types/base';
 	import { entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	export const HostDisplay: EntityDisplayComponent<Host, object> = {
-		getId: (host: Host) => host.id,
-		getLabel: (host: Host) => host.name,
-		getDescription: (host: Host) => host.hostname || 'No Hostname',
-		getIcon: (host: Host) => {
-			const firstService = host.services.length > 0 ? host.services[0] : null;
+	// Context provides the host's children (interfaces, ports, services)
+	export interface HostDisplayContext {
+		interfaces?: Interface[];
+		ports?: Port[];
+		services?: Service[];
+	}
+
+	export const HostDisplay: EntityDisplayComponent<Host, HostDisplayContext> = {
+		getId: (host) => host.id,
+		getLabel: (host) => host.name,
+		getDescription: (host) => host.hostname || 'No Hostname',
+		getIcon: (host, context) => {
+			const services = context?.services ?? [];
+			const firstService = services.length > 0 ? services[0] : null;
 			if (firstService) {
 				return serviceDefinitions.getIconComponent(firstService.service_definition);
 			} else {
@@ -15,8 +23,9 @@
 			}
 		},
 		getIconColor: () => entities.getColorHelper('Host').icon,
-		getTags: (host: Host) => {
-			return host.services.map((service) => ({
+		getTags: (host, context) => {
+			const services = context?.services ?? [];
+			return services.map((service) => ({
 				label: serviceDefinitions.getName(service.service_definition),
 				color: entities.getColorHelper('Service').string
 			}));
@@ -25,13 +34,11 @@
 </script>
 
 <script lang="ts">
-	import { getServiceById, getServicesForHost } from '$lib/features/services/store';
 	import type { EntityDisplayComponent } from '../types';
 	import ListSelectItem from '../ListSelectItem.svelte';
-	import { get } from 'svelte/store';
 
 	export let item: Host;
-	export let context = {};
+	export let context: HostDisplayContext = {};
 </script>
 
 <ListSelectItem {item} {context} displayComponent={HostDisplay} />

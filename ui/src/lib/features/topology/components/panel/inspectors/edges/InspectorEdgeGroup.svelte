@@ -101,7 +101,7 @@
 		{/if}
 
 		<span class="text-secondary mb-2 block text-sm font-medium">Services</span>
-		{#each group.service_bindings as binding (binding)}
+		{#each group.binding_ids ?? [] as binding (binding)}
 			{@const bindingService = getServiceForBindingFromTopology(binding)}
 			{@const bindingHost = bindingService ? getHostForService(bindingService.host_id) : null}
 			{@const bindingData = getBindingFromTopology(binding)}

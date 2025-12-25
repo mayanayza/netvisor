@@ -12,20 +12,21 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::shared::storage::traits::{SqlValue, StorableEntity};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, Hash, Default, ToSchema,
+)]
 pub struct NetworkBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
     pub organization_id: Uuid,
     #[serde(default)]
+    #[schema(required)]
     pub tags: Vec<Uuid>,
 }
 
@@ -39,18 +40,17 @@ impl NetworkBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::network)]
 pub struct Network {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: NetworkBase,
@@ -116,6 +116,14 @@ impl StorableEntity for Network {
 
     fn updated_at(&self) -> DateTime<Utc> {
         self.updated_at
+    }
+
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
     }
 
     fn set_updated_at(&mut self, time: DateTime<Utc>) {

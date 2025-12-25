@@ -1,5 +1,5 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type { ApiKey } from './types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { networks } from '../networks/store';
@@ -7,51 +7,50 @@ import { networks } from '../networks/store';
 export const apiKeys = writable<ApiKey[]>([]);
 
 export async function getApiKeys() {
-	return await api.request<ApiKey[]>(`/auth/keys`, apiKeys, (apiKeys) => apiKeys, {
-		method: 'GET'
-	});
+	const { data } = await apiClient.GET('/api/auth/keys');
+	if (data?.success && data.data) {
+		apiKeys.set(data.data);
+	}
+	return data as ApiResponse<ApiKey[]>;
 }
 
 export async function deleteApiKey(id: string) {
-	const result = await api.request<void, ApiKey[]>(
-		`/auth/keys/${id}`,
-		apiKeys,
-		(_, current) => current.filter((k) => k.id !== id),
-		{ method: 'DELETE' }
-	);
-
+	const { data: result } = await apiClient.DELETE('/api/auth/keys/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		apiKeys.update((current) => current.filter((k) => k.id !== id));
+	}
 	return result;
 }
 
 export async function bulkDeleteApiKeys(ids: string[]) {
-	const result = await api.request<void, ApiKey[]>(
-		`/auth/keys/bulk-delete`,
-		apiKeys,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/auth/keys/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		apiKeys.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 
 export async function updateApiKey(apiKey: ApiKey) {
-	const result = await api.request<ApiKey, ApiKey[]>(
-		`/auth/keys/${apiKey.id}`,
-		apiKeys,
-		(updatedKey, current) => current.map((k) => (k.id == apiKey.id ? updatedKey : k)),
-		{ method: 'PUT', body: JSON.stringify(apiKey) }
-	);
-
-	return result;
+	const { data: result } = await apiClient.PUT('/api/auth/keys/{id}', {
+		params: { path: { id: apiKey.id } },
+		body: apiKey
+	});
+	if (result?.success && result.data) {
+		apiKeys.update((current) => current.map((k) => (k.id == apiKey.id ? result.data! : k)));
+	}
+	return result as ApiResponse<ApiKey>;
 }
 
 export async function rotateKey(key_id: string) {
-	const response = await api.request<string, void>(`/auth/keys/${key_id}/rotate`, null, () => {}, {
-		method: 'POST'
+	const { data: result } = await apiClient.POST('/api/auth/keys/{id}/rotate', {
+		params: { path: { id: key_id } }
 	});
-
-	if (response && response?.success && response.data) {
-		return response.data;
+	if (result?.success && result.data) {
+		return result.data;
 	}
 }
 
@@ -61,15 +60,10 @@ export interface ApiKeyReponse {
 }
 
 export async function createNewApiKey(api_key: ApiKey) {
-	const response = await api.request<ApiKeyReponse, ApiKey[]>(
-		`/auth/keys`,
-		apiKeys,
-		(newKey, current) => [...current, newKey.api_key],
-		{ method: 'POST', body: JSON.stringify(api_key) }
-	);
-
-	if (response && response?.success && response.data) {
-		return response.data.key;
+	const { data: result } = await apiClient.POST('/api/auth/keys', { body: api_key });
+	if (result?.success && result.data) {
+		apiKeys.update((current) => [...current, result.data!.api_key]);
+		return result.data.key;
 	}
 }
 

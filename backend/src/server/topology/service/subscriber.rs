@@ -1,9 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::Error;
-use async_trait::async_trait;
-use uuid::Uuid;
-
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
     shared::{
@@ -17,6 +13,10 @@ use crate::server::{
     },
     topology::service::main::TopologyService,
 };
+use anyhow::Error;
+use async_trait::async_trait;
+use std::collections::HashSet;
+use uuid::Uuid;
 
 #[derive(Default)]
 struct TopologyChanges {
@@ -25,11 +25,15 @@ struct TopologyChanges {
     updated_services: bool,
     updated_subnets: bool,
     updated_groups: bool,
-    removed_hosts: std::collections::HashSet<Uuid>,
-    removed_interfaces: std::collections::HashSet<Uuid>,
-    removed_services: std::collections::HashSet<Uuid>,
-    removed_subnets: std::collections::HashSet<Uuid>,
-    removed_groups: std::collections::HashSet<Uuid>,
+    updated_ports: bool,
+    updated_bindings: bool,
+    removed_hosts: HashSet<Uuid>,
+    removed_interfaces: HashSet<Uuid>,
+    removed_services: HashSet<Uuid>,
+    removed_subnets: HashSet<Uuid>,
+    removed_groups: HashSet<Uuid>,
+    removed_ports: HashSet<Uuid>,
+    removed_bindings: HashSet<Uuid>,
     should_mark_stale: bool,
     clear_stale: bool,
 }
@@ -43,6 +47,8 @@ impl EventSubscriber for TopologyService {
             (EntityDiscriminants::Service, None),
             (EntityDiscriminants::Subnet, None),
             (EntityDiscriminants::Group, None),
+            (EntityDiscriminants::Port, None),
+            (EntityDiscriminants::Binding, None),
             (
                 EntityDiscriminants::Topology,
                 Some(vec![EntityOperation::Created, EntityOperation::Updated]),
@@ -116,6 +122,10 @@ impl EventSubscriber for TopologyService {
                         }
                         Entity::Subnet(_) => changes.removed_subnets.insert(entity_event.entity_id),
                         Entity::Group(_) => changes.removed_groups.insert(entity_event.entity_id),
+                        Entity::Port(_) => changes.removed_ports.insert(entity_event.entity_id),
+                        Entity::Binding(_) => {
+                            changes.removed_bindings.insert(entity_event.entity_id)
+                        }
                         _ => false,
                     };
                 }
@@ -133,6 +143,8 @@ impl EventSubscriber for TopologyService {
                         Entity::Service(_) => changes.updated_services = true,
                         Entity::Subnet(_) => changes.updated_subnets = true,
                         Entity::Group(_) => changes.updated_groups = true,
+                        Entity::Port(_) => changes.updated_ports = true,
+                        Entity::Binding(_) => changes.updated_bindings = true,
                         _ => (),
                     };
                 }
@@ -144,7 +156,8 @@ impl EventSubscriber for TopologyService {
             let network_filter = StorageFilter::unfiltered().network_ids(&[network_id]);
             let topologies = self.get_all(network_filter).await?;
 
-            let (hosts, interfaces, subnets, groups) = self.get_entity_data(network_id).await?;
+            let (hosts, interfaces, subnets, groups, ports, bindings) =
+                self.get_entity_data(network_id).await?;
 
             if let Some(changes) = topology_updates.get(&network_id) {
                 for mut topology in topologies {
@@ -178,6 +191,16 @@ impl EventSubscriber for TopologyService {
                             topology.base.removed_groups.push(*group_id);
                         }
                     }
+                    for port_id in &changes.removed_ports {
+                        if !topology.base.removed_ports.contains(port_id) {
+                            topology.base.removed_ports.push(*port_id);
+                        }
+                    }
+                    for binding_id in &changes.removed_bindings {
+                        if !topology.base.removed_bindings.contains(binding_id) {
+                            topology.base.removed_bindings.push(*binding_id);
+                        }
+                    }
 
                     // Mark stale if needed
                     if changes.should_mark_stale && !changes.clear_stale {
@@ -207,6 +230,14 @@ impl EventSubscriber for TopologyService {
 
                     if changes.updated_groups {
                         topology.base.groups = groups.clone();
+                    }
+
+                    if changes.updated_ports {
+                        topology.base.ports = ports.clone();
+                    }
+
+                    if changes.updated_bindings {
+                        topology.base.bindings = bindings.clone();
                     }
 
                     // Update topology in database

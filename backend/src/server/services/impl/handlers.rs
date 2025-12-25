@@ -2,10 +2,7 @@ use crate::server::{
     config::AppState,
     services::{r#impl::base::Service, service::ServiceService},
     shared::{
-        handlers::{
-            query::{HostChildQuery},
-            traits::{CrudHandlers},
-        },
+        handlers::{query::HostChildQuery, traits::CrudHandlers},
         types::entities::EntitySource,
     },
 };
@@ -20,5 +17,10 @@ impl CrudHandlers for Service {
 
     fn set_source(&mut self, source: EntitySource) {
         self.base.source = source;
+    }
+
+    fn preserve_immutable_fields(&mut self, existing: &Self) {
+        // source is set at creation time (Manual or Discovery), cannot be changed
+        self.base.source = existing.base.source.clone();
     }
 }

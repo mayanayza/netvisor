@@ -10,16 +10,15 @@ use crate::server::shared::handlers::traits::{CrudHandlers, update_handler};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::storage::traits::StorableEntity;
-use crate::server::shared::types::api::ApiError;
 use crate::server::shared::types::api::ApiResponse;
 use crate::server::shared::types::api::ApiResult;
+use crate::server::shared::types::api::{ApiError, ApiErrorResponse, EmptyApiResponse};
 use crate::server::users::r#impl::base::{User, UserBase};
 use crate::server::users::r#impl::permissions::UserOrgPermissions;
 use anyhow::anyhow;
 use axum::Json;
 use axum::extract::Path;
 use axum::extract::State;
-use axum::routing::{get, post};
 use email_address::EmailAddress;
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -27,13 +26,22 @@ use uuid::Uuid;
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
-        .routes(routes!(update_org_name))
-        // Internal endpoints - no OpenAPI docs
-        .route("/", get(get_organization))
-        .route("/{id}/reset", post(reset))
-        .route("/{id}/populate-demo", post(populate_demo_data))
+        .routes(routes!(get_organization, update_org_name))
+        .routes(routes!(reset))
+        .routes(routes!(populate_demo_data))
 }
 
+/// Get the current user's organization
+#[utoipa::path(
+    get,
+    path = "",
+    tag = "organizations",
+    responses(
+        (status = 200, description = "Organization details", body = ApiResponse<Organization>),
+        (status = 404, description = "Organization not found", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 pub async fn get_organization(
     State(state): State<Arc<AppState>>,
     user: AuthenticatedUser,
@@ -58,9 +66,9 @@ pub async fn get_organization(
     params(("id" = Uuid, Path, description = "Organization ID")),
     request_body = String,
     responses(
-        (status = 200, description = "Organization updated", body = Organization),
-        (status = 403, description = "Only owners can update organization"),
-        (status = 404, description = "Organization not found"),
+        (status = 200, description = "Organization updated", body = ApiResponse<Organization>),
+        (status = 403, description = "Only owners can update organization", body = ApiErrorResponse),
+        (status = 404, description = "Organization not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -90,6 +98,18 @@ pub async fn update_org_name(
 }
 
 /// Reset all organization data (delete all entities except organization and owner user)
+#[utoipa::path(
+    post,
+    path = "/{id}/reset",
+    tags = ["organizations", "internal"],
+    params(("id" = Uuid, Path, description = "Organization ID")),
+    responses(
+        (status = 200, description = "Organization reset", body = EmptyApiResponse),
+        (status = 403, description = "Cannot reset another organization", body = ApiErrorResponse),
+        (status = 404, description = "Organization not found", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 pub async fn reset(
     State(state): State<Arc<AppState>>,
     RequireOwner(user): RequireOwner,
@@ -115,6 +135,18 @@ pub async fn reset(
 }
 
 /// Populate demo data (only available for demo organizations)
+#[utoipa::path(
+    post,
+    path = "/{id}/populate-demo",
+    tags = ["organizations", "internal"],
+    params(("id" = Uuid, Path, description = "Organization ID")),
+    responses(
+        (status = 200, description = "Demo data populated", body = EmptyApiResponse),
+        (status = 403, description = "Only available for demo organizations", body = ApiErrorResponse),
+        (status = 404, description = "Organization not found", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
 pub async fn populate_demo_data(
     State(state): State<Arc<AppState>>,
     RequireOwner(user): RequireOwner,

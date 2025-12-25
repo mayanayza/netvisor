@@ -11,4 +11,13 @@ impl CrudHandlers for Daemon {
     fn get_service(state: &AppState) -> &Self::Service {
         &state.services.daemon_service
     }
+
+    fn preserve_immutable_fields(&mut self, existing: &Self) {
+        // url is set at registration time, cannot be changed via update
+        self.base.url = existing.base.url.clone();
+        // last_seen is server-set only
+        self.base.last_seen = existing.base.last_seen;
+        // capabilities are reported by the daemon, not user-editable
+        self.base.capabilities = existing.base.capabilities.clone();
+    }
 }

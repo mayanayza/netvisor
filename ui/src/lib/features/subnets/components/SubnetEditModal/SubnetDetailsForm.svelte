@@ -46,7 +46,7 @@
 
 	<TextInput
 		label="CIDR"
-		id="name"
+		id="cidr"
 		{formApi}
 		disabled={!!get(isContainerSubnet(formData.id)) || isEditing}
 		placeholder="192.168.1.0/24"

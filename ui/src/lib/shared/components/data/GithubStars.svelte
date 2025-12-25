@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Star, Github } from 'lucide-svelte';
 	import { onMount } from 'svelte';
-	import { api } from '$lib/shared/utils/api';
-	import { writable } from 'svelte/store';
+	import { apiClient } from '$lib/api/client';
 
 	interface Props {
 		class?: string;
@@ -10,17 +9,15 @@
 
 	let { class: className = '' }: Props = $props();
 
-	let stars = writable<number>();
+	let stars = $state<number | undefined>(undefined);
 	let loading = $state(true);
 	let error = $state(false);
 
 	async function fetchStars() {
 		try {
-			const response = await api.request<number>('/github-stars', stars, (updated) => updated, {
-				method: 'GET'
-			});
-
-			if (response) {
+			const { data } = await apiClient.GET('/api/github-stars', {});
+			if (data?.success && typeof data.data === 'number') {
+				stars = data.data;
 				error = false;
 			} else {
 				error = true;
@@ -45,7 +42,7 @@
 	}
 </script>
 
-{#if !loading && !error && $stars != null && $stars != undefined}
+{#if !loading && !error && stars != null && stars != undefined}
 	<a
 		href="https://github.com/scanopy/scanopy"
 		target="_blank"
@@ -55,7 +52,7 @@
 		<Github class="h-4 w-4" />
 		<span class="flex items-center gap-1">
 			<Star class="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-			<span>{formatStars($stars)}</span>
+			<span>{formatStars(stars)}</span>
 		</span>
 	</a>
 {:else if loading}

@@ -350,7 +350,9 @@ impl Display for EntityEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash, Deserialize, strum::Display, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, PartialEq, Eq, Hash, Deserialize, strum::Display, utoipa::ToSchema,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum TelemetryOperation {
     // Onboarding funnel

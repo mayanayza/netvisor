@@ -10,17 +10,17 @@ use crate::server::{
 };
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
 pub struct Edge {
     pub id: Uuid,
     pub source: Uuid,
     pub target: Uuid,
     #[serde(flatten)]
     pub edge_type: EdgeType,
+    #[schema(required)]
     pub label: Option<String>,
     pub source_handle: EdgeHandle,
     pub target_handle: EdgeHandle,
@@ -28,7 +28,18 @@ pub struct Edge {
 }
 
 #[derive(
-    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Default,
+    Serialize,
+    Copy,
+    Deserialize,
+    Debug,
+    Clone,
+    Eq,
+    PartialEq,
+    Hash,
+    PartialOrd,
+    Ord,
+    Default,
+    ToSchema,
 )]
 pub enum EdgeHandle {
     #[default]
@@ -39,9 +50,19 @@ pub enum EdgeHandle {
 }
 
 #[derive(
-    Serialize, Copy, Deserialize, Debug, Clone, Eq, PartialEq, Hash, Default, IntoStaticStr, Display, ToSchema, TS,
+    Serialize,
+    Copy,
+    Deserialize,
+    Debug,
+    Clone,
+    Eq,
+    PartialEq,
+    Hash,
+    Default,
+    IntoStaticStr,
+    Display,
+    ToSchema,
 )]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
 pub enum EdgeStyle {
     Straight,
     #[default]
@@ -233,8 +254,9 @@ impl EdgeHandle {
     EnumDiscriminants,
     IntoStaticStr,
     EnumIter,
+    ToSchema,
 )]
-#[strum_discriminants(derive(Display, Hash, Serialize, Deserialize, EnumIter))]
+#[strum_discriminants(derive(Display, Hash, Serialize, Deserialize, EnumIter, ToSchema))]
 #[serde(tag = "edge_type")]
 pub enum EdgeType {
     Interface {

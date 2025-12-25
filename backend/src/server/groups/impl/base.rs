@@ -8,13 +8,13 @@ use crate::server::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Debug, Clone, Serialize, Validate, Deserialize, PartialEq, Eq, Hash, Default, ToSchema,
+)]
 pub struct GroupBase {
     #[validate(length(min = 0, max = 100))]
     pub name: String,
@@ -24,30 +24,33 @@ pub struct GroupBase {
     pub description: Option<String>,
     pub group_type: GroupType,
     /// Ordered list of binding IDs for this group.
-    /// Stored in group_bindings junction table and hydrated on fetch.
     #[serde(default)]
+    #[schema(required)]
     pub binding_ids: Vec<Uuid>,
-    #[serde(skip_deserializing, default)]
+    #[serde(default)]
+    #[schema(read_only)]
+    /// Will be automatically set to Manual for creation through API
     pub source: EntitySource,
     pub color: String,
     #[serde(default)]
+    #[schema(required)]
     pub edge_style: EdgeStyle,
     #[serde(default)]
+    #[schema(required)]
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::group)]
 pub struct Group {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: GroupBase,

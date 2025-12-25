@@ -1,5 +1,5 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type { Group } from '$lib/features/groups/types/base';
 import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
 import { getServices } from '../services/store';
@@ -9,62 +9,52 @@ import { networks } from '../networks/store';
 export const groups = writable<Group[]>([]);
 
 export async function getGroups() {
-	return await api.request<Group[]>(`/groups`, groups, (groups) => groups, { method: 'GET' });
+	const { data } = await apiClient.GET('/api/groups');
+	if (data?.success && data.data) {
+		groups.set(data.data);
+	}
+	return data as ApiResponse<Group[]>;
 }
 
 export async function createGroup(data: Group) {
-	const result = await api.request<Group, Group[]>(
-		'/groups',
-		groups,
-		(group, current) => [...current, group],
-		{ method: 'POST', body: JSON.stringify(data) }
-	);
-
-	if (result?.success) {
+	const { data: result } = await apiClient.POST('/api/groups', { body: data });
+	if (result?.success && result.data) {
+		groups.update((current) => [...current, result.data!]);
 		await getServices();
 	}
-
-	return result;
+	return result as ApiResponse<Group>;
 }
 
 export async function updateGroup(data: Group) {
-	const result = await api.request<Group, Group[]>(
-		`/groups/${data.id}`,
-		groups,
-		(updatedGroup, current) => current.map((g) => (g.id === data.id ? updatedGroup : g)),
-		{ method: 'PUT', body: JSON.stringify(data) }
-	);
-
-	if (result?.success) {
+	const { data: result } = await apiClient.PUT('/api/groups/{id}', {
+		params: { path: { id: data.id } },
+		body: data
+	});
+	if (result?.success && result.data) {
+		groups.update((current) => current.map((g) => (g.id === data.id ? result.data! : g)));
 		await getServices();
 	}
-
-	return result;
+	return result as ApiResponse<Group>;
 }
 
 export async function deleteGroup(id: string) {
-	const result = await api.request<void, Group[]>(
-		`/groups/${id}`,
-		groups,
-		(_, current) => current.filter((g) => g.id !== id),
-		{ method: 'DELETE' }
-	);
-
+	const { data: result } = await apiClient.DELETE('/api/groups/{id}', {
+		params: { path: { id } }
+	});
 	if (result?.success) {
+		groups.update((current) => current.filter((g) => g.id !== id));
 		await getServices();
 	}
-
 	return result;
 }
 
 export async function bulkDeleteGroups(ids: string[]) {
-	const result = await api.request<void, Group[]>(
-		`/groups/bulk-delete`,
-		groups,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/groups/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		groups.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 
@@ -73,7 +63,7 @@ export function createEmptyGroupFormData(): Group {
 		id: uuidv4Sentinel,
 		name: '',
 		description: '',
-		service_bindings: [],
+		binding_ids: [],
 		created_at: utcTimeZoneSentinel,
 		updated_at: utcTimeZoneSentinel,
 		group_type: 'RequestPath',

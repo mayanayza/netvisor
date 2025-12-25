@@ -15,6 +15,17 @@ struct GitHubRepoResponse {
 
 const CACHE_KEY: &str = "github_stars";
 
+/// Get GitHub star count
+///
+/// Returns the current star count for the Scanopy GitHub repository.
+#[utoipa::path(
+    get,
+    path = "/api/github-stars",
+    tags = ["github", "internal"],
+    responses(
+        (status = 200, description = "GitHub star count", body = ApiResponse<u32>)
+    )
+)]
 pub async fn get_stars(
     Extension(cache): Extension<Arc<AppCache>>,
 ) -> ApiResult<Json<ApiResponse<u32>>> {

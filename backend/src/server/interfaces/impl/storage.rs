@@ -57,6 +57,14 @@ impl StorableEntity for Interface {
         self.updated_at
     }
 
+    fn set_id(&mut self, id: Uuid) {
+        self.id = id;
+    }
+
+    fn set_created_at(&mut self, time: DateTime<Utc>) {
+        self.created_at = time;
+    }
+
     fn set_updated_at(&mut self, time: DateTime<Utc>) {
         self.updated_at = time;
     }
@@ -111,9 +119,9 @@ impl StorableEntity for Interface {
         let ip_address: IpAddr = ip_network.ip();
 
         // Read mac_address from MACADDR column - sqlx returns [u8; 6] for mac_address feature
-        let mac_address: Option<MacAddress> = row
-            .try_get::<Option<MacAddress>, _>("mac_address")
-            .map_err(|e| anyhow::anyhow!("Failed to read mac_address: {}", e))?;
+        let mac_address: Option<MacAddress> =
+            row.try_get::<Option<MacAddress>, _>("mac_address")
+                .map_err(|e| anyhow::anyhow!("Failed to read mac_address: {}", e))?;
 
         Ok(Interface {
             id: row.get("id"),

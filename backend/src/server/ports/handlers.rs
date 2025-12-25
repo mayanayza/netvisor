@@ -1,10 +1,8 @@
+use crate::server::shared::types::api::ApiResponse;
 use crate::server::{
     config::AppState,
     ports::{r#impl::base::Port, service::PortService},
-    shared::handlers::{
-        query::HostChildQuery,
-        traits::CrudHandlers,
-    },
+    shared::handlers::{query::HostChildQuery, traits::CrudHandlers},
 };
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -31,6 +29,10 @@ mod generated {
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(generated::get_all, generated::create))
-        .routes(routes!(generated::get_by_id, generated::update, generated::delete))
+        .routes(routes!(
+            generated::get_by_id,
+            generated::update,
+            generated::delete
+        ))
         .routes(routes!(generated::bulk_delete))
 }

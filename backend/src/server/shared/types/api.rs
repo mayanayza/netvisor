@@ -1,12 +1,22 @@
 use axum::{Json, http::StatusCode, response::Response};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
+use utoipa::ToSchema;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ApiResponse<T> {
     pub success: bool,
     pub data: Option<T>,
+    pub error: Option<String>,
+}
+
+pub type EmptyApiResponse = ApiResponse<()>;
+
+/// Error response type for API errors (no data field)
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct ApiErrorResponse {
+    pub success: bool,
     pub error: Option<String>,
 }
 

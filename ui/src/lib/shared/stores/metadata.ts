@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import { api } from '../utils/api';
+import { apiClient } from '$lib/api/client';
 import {
 	createColorHelper,
 	createIconComponent,
@@ -285,7 +285,8 @@ export const permissions = createTypeMetadataHelpers('permissions');
 export const concepts = createEntityMetadataHelpers('concepts');
 
 export async function getMetadata() {
-	await api.request<MetadataRegistry>('/metadata', metadata, (metadata) => metadata, {
-		method: 'GET'
-	});
+	const { data } = await apiClient.GET('/api/metadata', {});
+	if (data?.success && data.data) {
+		metadata.set(data.data as MetadataRegistry);
+	}
 }

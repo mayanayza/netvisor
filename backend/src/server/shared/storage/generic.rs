@@ -75,6 +75,7 @@ where
             SqlValue::OptionalServiceVirtualization(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Interfaces(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Ports(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::Bindings(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::OptionalHostVirtualization(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::DaemonCapabilities(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::IpAddr(v) => {

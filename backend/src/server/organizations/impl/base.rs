@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -11,30 +10,38 @@ use crate::server::{
     shared::{entities::ChangeTriggersTopologyStaleness, events::types::TelemetryOperation},
 };
 
-#[derive(Debug, Clone, Serialize, Validate, Deserialize, Default, PartialEq, Eq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Debug, Clone, Serialize, Validate, Deserialize, Default, PartialEq, Eq, Hash, ToSchema,
+)]
 pub struct OrganizationBase {
+    #[serde(default)]
+    #[schema(read_only, required)]
+    #[serde(skip_serializing)]
     pub stripe_customer_id: Option<String>,
     #[validate(length(min = 0, max = 100))]
     pub name: String,
-    #[ts(skip)]
+    #[serde(default)]
+    #[schema(read_only, required)]
     pub plan: Option<BillingPlan>,
+    #[serde(default)]
+    #[schema(read_only, required)]
     pub plan_status: Option<String>,
-    #[ts(skip)]
+    #[schema(read_only, required)]
     pub onboarding: Vec<TelemetryOperation>,
 }
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Debug, Clone, Validate, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema,
+)]
 pub struct Organization {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     #[validate(nested)]

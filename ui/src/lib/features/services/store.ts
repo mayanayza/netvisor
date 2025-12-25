@@ -1,8 +1,10 @@
 import { writable, derived, type Readable, readable, get } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient, type ApiResponse } from '$lib/api/client';
 import type { Binding, Service } from './types/base';
 import { formatPort, utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
-import { formatInterface, getInterfaceFromId, getPortFromId, hosts } from '../hosts/store';
+import { formatInterface, hosts } from '../hosts/store';
+import { interfaces, getInterfaceFromId } from '../interfaces/store';
+import { ports, getPortFromId } from '../ports/store';
 import { ALL_INTERFACES, type Host } from '../hosts/types/base';
 import { groups } from '../groups/store';
 import type { Subnet } from '../subnets/types/base';
@@ -11,50 +13,53 @@ export const services = writable<Service[]>([]);
 
 // Get all services
 export async function getServices() {
-	return await api.request<Service[]>(`/services`, services, (services) => services, {
-		method: 'GET'
-	});
+	const { data } = await apiClient.GET('/api/services');
+	if (data?.success && data.data) {
+		services.set(data.data);
+	}
+	return data as ApiResponse<Service[]>;
 }
 
 // Create a service
 export async function createService(data: Service) {
-	return await api.request<Service, Service[]>(
-		'/services',
-		services,
-		(createdService, current) => [...current, createdService],
-		{ method: 'POST', body: JSON.stringify(data) }
-	);
+	const { data: result } = await apiClient.POST('/api/services', { body: data });
+	if (result?.success && result.data) {
+		services.update((current) => [...current, result.data!]);
+	}
+	return result as ApiResponse<Service>;
 }
 
 // Delete a service
 export async function deleteService(id: string) {
-	return await api.request<void, Service[]>(
-		`/services/${id}`,
-		services,
-		(_, current) => current.filter((g) => g.id !== id),
-		{ method: 'DELETE' }
-	);
+	const { data: result } = await apiClient.DELETE('/api/services/{id}', {
+		params: { path: { id } }
+	});
+	if (result?.success) {
+		services.update((current) => current.filter((g) => g.id !== id));
+	}
+	return result;
 }
 
 export async function bulkDeleteServices(ids: string[]) {
-	const result = await api.request<void, Service[]>(
-		`/services/bulk-delete`,
-		services,
-		(_, current) => current.filter((k) => !ids.includes(k.id)),
-		{ method: 'POST', body: JSON.stringify(ids) }
-	);
-
+	const { data: result } = await apiClient.POST('/api/services/bulk-delete', {
+		body: ids
+	});
+	if (result?.success) {
+		services.update((current) => current.filter((k) => !ids.includes(k.id)));
+	}
 	return result;
 }
 
 // Update a service
 export async function updateService(data: Service) {
-	return await api.request<Service, Service[]>(
-		`/services/${data.id}`,
-		services,
-		(updatedService, current) => current.map((s) => (s.id === data.id ? updatedService : s)),
-		{ method: 'PUT', body: JSON.stringify(data) }
-	);
+	const { data: result } = await apiClient.PUT('/api/services/{id}', {
+		params: { path: { id: data.id } },
+		body: data
+	});
+	if (result?.success && result.data) {
+		services.update((current) => current.map((s) => (s.id === data.id ? result.data! : s)));
+	}
+	return result as ApiResponse<Service>;
 }
 
 /**
@@ -71,14 +76,10 @@ export async function bulkUpdateServices(hostId: string, newServices: Service[])
 	const toDelete = currentServices.filter((s) => !newIds.has(s.id));
 
 	// Services to create (in new but not in current, or with sentinel ID)
-	const toCreate = newServices.filter(
-		(s) => !currentIds.has(s.id) || s.id === uuidv4Sentinel
-	);
+	const toCreate = newServices.filter((s) => !currentIds.has(s.id) || s.id === uuidv4Sentinel);
 
 	// Services to update (in both, excluding new ones)
-	const toUpdate = newServices.filter(
-		(s) => currentIds.has(s.id) && s.id !== uuidv4Sentinel
-	);
+	const toUpdate = newServices.filter((s) => currentIds.has(s.id) && s.id !== uuidv4Sentinel);
 
 	// Execute operations
 	const promises: Promise<unknown>[] = [];
@@ -168,14 +169,11 @@ export function getServiceHost(service_id: string): Readable<Host | null> {
 }
 
 export function getServicesForSubnet(subnet: Subnet): Readable<Service[]> {
-	return derived([services, hosts], ([$services, $hosts]) => {
-		const host_ids = $hosts
-			.filter((h) => h.interfaces.some((i) => i.subnet_id == subnet.id))
-			.map((h) => h.id);
-		const interface_ids = $hosts
-			.flatMap((h) => h.interfaces)
-			.filter((i) => i.subnet_id == subnet.id)
-			.map((i) => i.id);
+	return derived([services, interfaces], ([$services, $interfaces]) => {
+		// Get all interfaces on this subnet
+		const subnetInterfaces = $interfaces.filter((i) => i.subnet_id === subnet.id);
+		const interface_ids = subnetInterfaces.map((i) => i.id);
+		const host_ids = [...new Set(subnetInterfaces.map((i) => i.host_id))];
 
 		return $services.filter((s) => {
 			return s.bindings.some(
@@ -188,19 +186,11 @@ export function getServicesForSubnet(subnet: Subnet): Readable<Service[]> {
 }
 
 export function getServicesForHost(host_id: string): Readable<Service[]> {
-	return derived([services, hosts], ([$services, $hosts]) => {
-		const host = $hosts.find((h) => h.id == host_id);
-
-		return $services
-			.filter((s) => s.host_id == host_id)
-			.sort((a, b) => {
-				if (host) {
-					const aIndex = host.services.findIndex((s) => s.id === a.id);
-					const bIndex = host.services.findIndex((s) => s.id === b.id);
-					return aIndex - bIndex;
-				}
-				return 0;
-			});
+	return derived([services], ([$services]) => {
+		// Note: Service ordering was previously stored on HostResponse.services,
+		// but is no longer available with primitive stores.
+		// Services are returned in their store order (typically creation order).
+		return $services.filter((s) => s.host_id === host_id);
 	});
 }
 
@@ -211,7 +201,7 @@ export function getServicesForGroup(group_id: string): Readable<Service[]> {
 		if (group) {
 			if (group.group_type === 'RequestPath' || group.group_type === 'HubAndSpoke') {
 				const serviceMap = new Map($services.flatMap((s) => s.bindings.map((b) => [b.id, s])));
-				return group.service_bindings
+				return group.binding_ids
 					.map((sb) => serviceMap.get(sb))
 					.filter((s) => s !== null && s !== undefined);
 			} else {
@@ -223,12 +213,10 @@ export function getServicesForGroup(group_id: string): Readable<Service[]> {
 }
 
 export function serviceHasInterfaceOnSubnet(service: Service, subnetId: string): Readable<boolean> {
-	return derived([hosts], ([$hosts]) => {
-		const host = $hosts.find((h) => h.id == service.host_id);
-		if (!host) return false;
-
+	return derived([interfaces], ([$interfaces]) => {
 		return service.bindings.some((binding) => {
-			const iface = host.interfaces.find((iface) => iface.id === binding.interface_id);
+			if (!binding.interface_id) return false;
+			const iface = $interfaces.find((i) => i.id === binding.interface_id);
 			return iface && iface.subnet_id === subnetId;
 		});
 	});
@@ -239,29 +227,26 @@ export function getServiceName(service: Service): string {
 }
 
 export function getServicesForPort(port_id: string): Readable<Service[]> {
-	return derived([hosts, services], ([$hosts, $services]) => {
-		const host = $hosts.find((h) => h.ports.some((p) => p.id === port_id));
+	return derived([ports, services], ([$ports, $services]) => {
+		const port = $ports.find((p) => p.id === port_id);
+		if (!port) return [];
 
-		if (host) {
-			return $services.filter(
-				(s) =>
-					s.host_id == host.id && s.bindings.some((b) => b.type == 'Port' && b.port_id === port_id)
-			);
-		}
-		return [];
+		return $services.filter(
+			(s) =>
+				s.host_id === port.host_id &&
+				s.bindings.some((b) => b.type === 'Port' && b.port_id === port_id)
+		);
 	});
 }
 
 export function getServicesForInterface(interface_id: string): Readable<Service[]> {
-	return derived([hosts, services], ([$hosts, $services]) => {
-		const host = $hosts.find((h) => h.interfaces.some((i) => i.id === interface_id));
+	return derived([interfaces, services], ([$interfaces, $services]) => {
+		const iface = $interfaces.find((i) => i.id === interface_id);
+		if (!iface) return [];
 
-		if (host) {
-			return $services.filter(
-				(s) => s.host_id == host.id && s.bindings.some((b) => b.interface_id === interface_id)
-			);
-		}
-		return [];
+		return $services.filter(
+			(s) => s.host_id === iface.host_id && s.bindings.some((b) => b.interface_id === interface_id)
+		);
 	});
 }
 

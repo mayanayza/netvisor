@@ -39,19 +39,19 @@
 	$: availableServiceBindings = $services
 		.filter((s) => s.network_id == formData.network_id)
 		.flatMap((s) => s.bindings)
-		.filter((sb) => !formData.service_bindings.some((binding) => binding === sb.id));
+		.filter((sb) => !(formData.binding_ids ?? []).some((binding) => binding === sb.id));
 
-	$: selectedServiceBindings = formData.service_bindings
+	$: selectedServiceBindings = (formData.binding_ids ?? [])
 		.map((bindingId) => $services.flatMap((s) => s.bindings).find((sb) => sb.id === bindingId))
 		.filter(Boolean);
 
 	// Handlers for service bindings
 	function handleAdd(bindingId: string) {
-		formData.service_bindings = [...formData.service_bindings, bindingId];
+		formData.binding_ids = [...(formData.binding_ids ?? []), bindingId];
 	}
 
 	function handleRemove(index: number) {
-		formData.service_bindings = formData.service_bindings.filter((_, i) => i !== index);
+		formData.binding_ids = (formData.binding_ids ?? []).filter((_, i) => i !== index);
 	}
 
 	async function handleSubmit() {
@@ -88,14 +88,14 @@
 	function handleServiceBindingsReorder(fromIndex: number, toIndex: number) {
 		if (fromIndex === toIndex) return;
 
-		const updatedServiceBindings = [...formData.service_bindings];
-		const [movedBinding] = updatedServiceBindings.splice(fromIndex, 1);
-		updatedServiceBindings.splice(toIndex, 0, movedBinding);
+		const updatedBindingIds = [...(formData.binding_ids ?? [])];
+		const [movedBinding] = updatedBindingIds.splice(fromIndex, 1);
+		updatedBindingIds.splice(toIndex, 0, movedBinding);
 
 		// Trigger reactivity by reassigning the entire formData object
 		formData = {
 			...formData,
-			service_bindings: updatedServiceBindings
+			binding_ids: updatedBindingIds
 		};
 	}
 

@@ -172,7 +172,11 @@ async fn test_host_upsert_merges_new_data() {
     assert_eq!(upserted.id, created.id);
 
     // Check interface count - use returned HostResponse
-    assert_eq!(upserted.interfaces.len(), 2, "Upserted host should have 2 interfaces");
+    assert_eq!(
+        upserted.interfaces.len(),
+        2,
+        "Upserted host should have 2 interfaces"
+    );
 
     if let EntitySource::Discovery { metadata } = upserted.source {
         assert_eq!(metadata.len(), 2)

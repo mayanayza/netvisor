@@ -11,4 +11,9 @@ impl CrudHandlers for User {
     fn get_service(state: &AppState) -> &Self::Service {
         &state.services.user_service
     }
+
+    fn preserve_immutable_fields(&mut self, existing: &Self) {
+        // terms_accepted_at is set when user accepts terms, cannot be changed
+        self.base.terms_accepted_at = existing.base.terms_accepted_at;
+    }
 }

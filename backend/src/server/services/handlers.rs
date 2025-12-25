@@ -1,10 +1,15 @@
 use crate::server::auth::middleware::permissions::RequireMember;
-use crate::server::shared::handlers::traits::{create_handler, update_handler};
+use crate::server::shared::handlers::traits::update_handler;
 use crate::server::shared::services::traits::CrudService;
-use crate::server::shared::types::api::{ApiError, ApiResponse, ApiResult};
-use crate::server::{config::AppState, services::r#impl::base::Service};
-use axum::extract::{Path, State};
+use crate::server::shared::types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult};
+use crate::server::shared::types::entities::EntitySource;
+use crate::server::shared::validation::validate_network_access;
+use crate::server::{
+    config::AppState,
+    services::r#impl::{api::CreateServiceRequest, base::Service},
+};
 use axum::Json;
+use axum::extract::{Path, State};
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -21,43 +26,64 @@ mod generated {
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(generated::get_all, create_service))
-        .routes(routes!(generated::get_by_id, update_service, generated::delete))
+        .routes(routes!(
+            generated::get_by_id,
+            update_service,
+            generated::delete
+        ))
         .routes(routes!(generated::bulk_delete))
 }
 
 /// Create a new service
+///
+/// Creates a service with optional bindings to interfaces or ports.
+/// The `id`, `created_at`, `updated_at`, and `source` fields are generated server-side.
+/// Bindings are specified without `service_id` or `network_id` - these are assigned automatically.
 #[utoipa::path(
     post,
     path = "",
     tag = "services",
-    request_body = Service,
+    request_body = CreateServiceRequest,
     responses(
-        (status = 200, description = "Service created successfully", body = Service),
-        (status = 400, description = "Host network mismatch"),
+        (status = 200, description = "Service created successfully", body = ApiResponse<Service>),
+        (status = 400, description = "Host network mismatch or invalid request", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
 pub async fn create_service(
     State(state): State<Arc<AppState>>,
-    user: RequireMember,
-    Json(service): Json<Service>,
+    RequireMember(user): RequireMember,
+    Json(request): Json<CreateServiceRequest>,
 ) -> ApiResult<Json<ApiResponse<Service>>> {
+    // Validate user has access to the network
+    validate_network_access(Some(request.network_id()), &user.network_ids, "create")?;
+
     // Custom validation: Check host network matches service network
     if let Some(host) = state
         .services
         .host_service
-        .get_by_id(&service.base.host_id)
+        .get_by_id(&request.host_id())
         .await?
-        && host.base.network_id != service.base.network_id
+        && host.base.network_id != request.network_id()
     {
         return Err(ApiError::bad_request(&format!(
-            "Host is on network {}, Service \"{}\" can't be on a different network ({}).",
-            host.base.network_id, service.base.name, service.base.network_id
+            "Host is on network {}, Service can't be on a different network ({}).",
+            host.base.network_id,
+            request.network_id()
         )));
     }
 
-    // Delegate to generic handler (handles validation, auth checks, creation)
-    create_handler::<Service>(State(state), user, Json(service)).await
+    // Convert request to Service entity
+    let service = request.into_service(EntitySource::Manual);
+
+    // Create the service
+    let created = state
+        .services
+        .service_service
+        .create(service, user.into())
+        .await?;
+
+    Ok(Json(ApiResponse::success(created)))
 }
 
 /// Update a service
@@ -68,9 +94,9 @@ pub async fn create_service(
     params(("id" = Uuid, Path, description = "Service ID")),
     request_body = Service,
     responses(
-        (status = 200, description = "Service updated", body = Service),
-        (status = 400, description = "Host network mismatch"),
-        (status = 404, description = "Service not found"),
+        (status = 200, description = "Service updated", body = ApiResponse<Service>),
+        (status = 400, description = "Host network mismatch", body = ApiErrorResponse),
+        (status = 404, description = "Service not found", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]

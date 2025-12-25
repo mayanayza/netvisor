@@ -6,7 +6,7 @@
 	import { subnets } from '$lib/features/subnets/store';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
-	import type { Docker, Network, SelfReport } from '../../types/api';
+	import type { DockerDiscovery, NetworkDiscovery, SelfReportDiscovery } from '../../types/api';
 	import type { Discovery } from '../../types/base';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { discoveryTypes, subnetTypes } from '$lib/shared/stores/metadata';
@@ -73,20 +73,20 @@
 				type: 'Network',
 				subnet_ids: daemon.capabilities.interfaced_subnet_ids,
 				host_naming_fallback: 'BestService'
-			} as Network;
+			} as NetworkDiscovery;
 			hostNameFallbackField.set('BestService');
 		} else if (type === 'Docker' && formData.discovery_type.type !== 'Docker') {
 			formData.discovery_type = {
 				type: 'Docker',
 				host_id: daemonHostId,
 				host_naming_fallback: 'BestService'
-			} as Docker;
+			} as DockerDiscovery;
 			hostNameFallbackField.set('BestService');
 		} else if (type === 'SelfReport' && formData.discovery_type.type !== 'SelfReport') {
 			formData.discovery_type = {
 				type: 'SelfReport',
 				host_id: daemonHostId
-			} as SelfReport;
+			} as SelfReportDiscovery;
 		}
 	}
 

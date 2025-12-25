@@ -12,29 +12,29 @@ use cidr::{IpCidr, Ipv4Cidr};
 use pnet::ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::{interfaces::r#impl::base::Interface, services::r#impl::base::Service};
 
-#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Validate, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema)]
 pub struct SubnetBase {
-    #[ts(type = "string")]
     #[schema(value_type = String)]
     pub cidr: IpCidr,
     pub network_id: Uuid,
     #[validate(length(min = 0, max = 100))]
-    pub name: String, // "Home LAN", "VPN Network", etc.
+    pub name: String,
     #[serde(deserialize_with = "deserialize_empty_string_as_none")]
     #[validate(length(min = 0, max = 500))]
     pub description: Option<String>,
     pub subnet_type: SubnetType,
-    #[serde(skip_deserializing, default)]
+    #[serde(default)]
+    #[schema(required)]
+    /// Will be automatically set to Manual for creation through API
     pub source: EntitySource,
     #[serde(default)]
+    #[schema(required)]
     pub tags: Vec<Uuid>,
 }
 
@@ -52,18 +52,17 @@ impl Default for SubnetBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::subnet)]
 pub struct Subnet {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: SubnetBase,

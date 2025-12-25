@@ -17,7 +17,7 @@
 	// Create form fields with validation
 	const name = field('name', formData.name, [required(), maxLength(100)]);
 	const expires_at = field('expires_at', formData.expires_at || '', []);
-	const is_enabled = field('is_enabled', formData.is_enabled, []);
+	const is_enabled = field('is_enabled', formData.is_enabled ?? true, []);
 
 	// Update formData when field values change
 	$: formData.name = $name.value;

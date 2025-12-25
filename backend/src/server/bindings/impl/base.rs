@@ -2,26 +2,29 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, hash::Hash};
 use strum_macros::{EnumDiscriminants, IntoStaticStr};
-use ts_rs::TS;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 
 /// The type of binding - either to an interface or to a port
-#[derive(Copy, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, EnumDiscriminants, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(
+    Copy, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, EnumDiscriminants, ToSchema,
+)]
 #[strum_discriminants(derive(IntoStaticStr))]
 #[serde(tag = "type")]
 pub enum BindingType {
     #[schema(title = "Interface")]
+    /// Interface bindings are used when a service is present on a given interface, but not listening on any particular port
     Interface { interface_id: Uuid },
     #[schema(title = "Port")]
+    /// Port bindings are used when a service is present on a given interface, and listening on one, many, or all ports
     Port {
         port_id: Uuid,
         #[serde(skip_serializing_if = "Option::is_none")]
-        /// None = service is listening on this port on all interfaces
-        interface_id: Option<Uuid>, 
+        #[schema(required)]
+        /// null = service is listening on this port on all interfaces
+        interface_id: Option<Uuid>,
     },
 }
 
@@ -35,8 +38,7 @@ impl Default for BindingType {
 }
 
 /// The base data for a Binding entity (everything except id, created_at, updated_at)
-#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema)]
 pub struct BindingBase {
     pub service_id: Uuid,
     pub network_id: Uuid,
@@ -101,18 +103,17 @@ impl Hash for BindingType {
 }
 
 /// Association between a service and a port / interface that the service is listening on
-#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema, TS)]
-#[ts(export, export_to = "../../ui/src/lib/generated/")]
+#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema)]
 #[schema(example = crate::server::shared::types::examples::binding)]
 pub struct Binding {
     #[serde(default)]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub id: Uuid,
     #[serde(default = "Utc::now")]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(default = "Utc::now")]
-    #[schema(read_only)]
+    #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
     pub base: BindingBase,

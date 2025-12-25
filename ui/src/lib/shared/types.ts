@@ -1,15 +1,13 @@
-// Re-export generated types from backend
-export type {
-	EntitySource,
-	DiscoveryMetadata,
-	DiscoveryType,
-	MatchDetails,
-	MatchConfidence,
-	MatchReason,
-	HostNamingFallback
-} from '$lib/generated';
+import type { components } from '$lib/api/schema';
 
-import type { MatchConfidence, MatchDetails, MatchReason } from '$lib/generated';
+// Re-export generated types
+export type EntitySource = components['schemas']['EntitySource'];
+export type DiscoveryMetadata = components['schemas']['DiscoveryMetadata'];
+export type DiscoveryType = components['schemas']['DiscoveryType'];
+export type MatchDetails = components['schemas']['MatchDetails'];
+export type MatchConfidence = components['schemas']['MatchConfidence'];
+export type MatchReason = components['schemas']['MatchReason'];
+export type HostNamingFallback = components['schemas']['HostNamingFallback'];
 
 // Frontend-specific types
 export interface GetAllEntitiesRequest {
@@ -43,8 +41,8 @@ export function matchReasonLabel(reason: MatchReason): string {
 	if (reason.type === 'reason') {
 		return reason.data;
 	} else {
-		// Container type: [name, children]
-		return reason.data[0];
+		// Container type: [name, children] - data is typed as unknown[] in schema
+		return reason.data[0] as string;
 	}
 }
 

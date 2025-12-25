@@ -19,9 +19,9 @@
 
 	let host = $derived(topology ? topology.hosts.find((h) => h.id == nodeData.host_id) : null);
 
-	// Get the interface for this node
+	// Get the interface for this node from topology.interfaces
 	let thisInterface = $derived(
-		host ? host.interfaces.find((i) => i.id === nodeData.interface_id) : null
+		topology ? topology.interfaces.find((i) => i.id === nodeData.interface_id) : null
 	);
 
 	// Get all services for this host
@@ -38,7 +38,11 @@
 
 	// Get other interfaces on this host (excluding the current one)
 	let otherInterfaces = $derived(
-		host ? host.interfaces.filter((i) => i.id !== nodeData.interface_id) : []
+		topology
+			? topology.interfaces.filter(
+					(i) => i.host_id === nodeData.host_id && i.id !== nodeData.interface_id
+				)
+			: []
 	);
 </script>
 

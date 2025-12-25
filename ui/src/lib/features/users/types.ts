@@ -1,20 +1,9 @@
+import type { components } from '$lib/api/schema';
 import type { OrganizationInvite } from '../organizations/types';
 
-export interface User {
-	id: string;
-	organization_id: string;
-	created_at: string;
-	updated_at: string;
-	email: string;
-	oidc_provider?: string;
-	oidc_subject?: string;
-	oidc_linked_at?: string;
-	permissions: UserOrgPermissions;
-	network_ids: string[];
-	tags: string[];
-}
-
-export type UserOrgPermissions = 'Owner' | 'Admin' | 'Member' | 'Viewer';
+// Re-export generated types
+export type User = components['schemas']['User'];
+export type UserOrgPermissions = components['schemas']['UserOrgPermissions'];
 
 export type UserOrInvite =
 	| { type: 'user'; data: User; id: string }

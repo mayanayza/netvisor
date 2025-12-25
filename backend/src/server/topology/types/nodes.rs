@@ -3,9 +3,10 @@ use crate::server::topology::types::edges::Edge;
 use crate::server::topology::types::layout::{Ixy, Uxy};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ToSchema)]
 pub struct Node {
     #[serde(flatten)]
     pub node_type: NodeType,
@@ -16,7 +17,16 @@ pub struct Node {
 }
 
 #[derive(
-    Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, EnumDiscriminants, IntoStaticStr,
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    Eq,
+    PartialEq,
+    Hash,
+    EnumDiscriminants,
+    IntoStaticStr,
+    ToSchema,
 )]
 #[serde(tag = "node_type")]
 #[strum_discriminants(derive(Display, Hash, Serialize, Deserialize, EnumIter))]

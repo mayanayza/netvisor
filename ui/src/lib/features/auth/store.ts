@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { api } from '../../shared/utils/api';
+import { apiClient } from '$lib/api/client';
 import type {
 	DaemonSetupRequest,
 	DaemonSetupResponse,
@@ -24,15 +24,10 @@ export const isCheckingAuth = writable<boolean>(true);
 export async function checkAuth(): Promise<boolean> {
 	isCheckingAuth.set(true);
 
-	const result = await api.request<User, User | null>(
-		'/auth/me',
-		currentUser,
-		(user) => user,
-		{ method: 'POST' },
-		true
-	);
+	const { data: result } = await apiClient.POST('/api/auth/me', {});
 
-	if (result && result.success && result.data) {
+	if (result?.success && result.data) {
+		currentUser.set(result.data);
 		isAuthenticated.set(true);
 		isCheckingAuth.set(false);
 		return true;
@@ -48,12 +43,10 @@ export async function checkAuth(): Promise<boolean> {
  * Login user
  */
 export async function login(request: LoginRequest): Promise<User | null> {
-	const result = await api.request<User, User | null>('/auth/login', currentUser, (user) => user, {
-		method: 'POST',
-		body: JSON.stringify(request)
-	});
+	const { data: result } = await apiClient.POST('/api/auth/login', { body: request });
 
-	if (result && result.success && result.data != undefined) {
+	if (result?.success && result.data) {
+		currentUser.set(result.data);
 		isAuthenticated.set(true);
 		// Mark that user has an account (for redirect logic after logout)
 		if (typeof localStorage !== 'undefined') {
@@ -71,17 +64,10 @@ export async function login(request: LoginRequest): Promise<User | null> {
  * Register new user
  */
 export async function register(request: RegisterRequest): Promise<User | null> {
-	const result = await api.request<User, User | null>(
-		'/auth/register',
-		currentUser,
-		(user) => user,
-		{
-			method: 'POST',
-			body: JSON.stringify(request)
-		}
-	);
+	const { data: result } = await apiClient.POST('/api/auth/register', { body: request });
 
-	if (result && result.success && result.data != undefined) {
+	if (result?.success && result.data) {
+		currentUser.set(result.data);
 		isAuthenticated.set(true);
 		// Mark that user has an account (for redirect logic after logout)
 		if (typeof localStorage !== 'undefined') {
@@ -99,9 +85,9 @@ export async function register(request: RegisterRequest): Promise<User | null> {
  * Logout user
  */
 export async function logout(): Promise<void> {
-	const result = await api.request<void>('/auth/logout', null, null, { method: 'POST' });
+	const { data: result } = await apiClient.POST('/api/auth/logout', {});
 
-	if (result && result.success) {
+	if (result?.success) {
 		isAuthenticated.set(false);
 		currentUser.set(null);
 		resetIdentity();
@@ -115,12 +101,9 @@ export async function logout(): Promise<void> {
  * Forgot password
  */
 export async function forgotPassword(request: ForgotPasswordRequest): Promise<void> {
-	const result = await api.request<void>('/auth/forgot-password', null, null, {
-		method: 'POST',
-		body: JSON.stringify(request)
-	});
+	const { data: result } = await apiClient.POST('/api/auth/forgot-password', { body: request });
 
-	if (result && result.success) {
+	if (result?.success) {
 		pushSuccess('Password reset link sent to your email');
 	} else {
 		pushError('Failed to send password reset link');
@@ -131,17 +114,10 @@ export async function forgotPassword(request: ForgotPasswordRequest): Promise<vo
  * Reset password
  */
 export async function resetPassword(request: ResetPasswordRequest): Promise<User | null> {
-	const result = await api.request<User, User | null>(
-		'/auth/reset-password',
-		currentUser,
-		(user) => user,
-		{
-			method: 'POST',
-			body: JSON.stringify(request)
-		}
-	);
+	const { data: result } = await apiClient.POST('/api/auth/reset-password', { body: request });
 
-	if (result && result.success && result.data != undefined) {
+	if (result?.success && result.data) {
+		currentUser.set(result.data);
 		isAuthenticated.set(true);
 		// Mark that user has an account (for redirect logic after logout)
 		if (typeof localStorage !== 'undefined') {
@@ -160,17 +136,9 @@ export async function resetPassword(request: ResetPasswordRequest): Promise<User
  * Returns the provisional network ID to use for daemon setup
  */
 export async function submitSetup(request: SetupRequest): Promise<SetupResponse | null> {
-	const result = await api.request<SetupResponse, SetupResponse | null>(
-		'/auth/setup',
-		null,
-		(data) => data,
-		{
-			method: 'POST',
-			body: JSON.stringify(request)
-		}
-	);
+	const { data: result } = await apiClient.POST('/api/auth/setup', { body: request });
 
-	if (result && result.success && result.data) {
+	if (result?.success && result.data) {
 		return result.data;
 	}
 
@@ -185,17 +153,9 @@ export async function submitSetup(request: SetupRequest): Promise<SetupResponse 
 export async function submitDaemonSetup(
 	request: DaemonSetupRequest
 ): Promise<DaemonSetupResponse | null> {
-	const result = await api.request<DaemonSetupResponse, DaemonSetupResponse | null>(
-		'/auth/daemon-setup',
-		null,
-		(data) => data,
-		{
-			method: 'POST',
-			body: JSON.stringify(request)
-		}
-	);
+	const { data: result } = await apiClient.POST('/api/auth/daemon-setup', { body: request });
 
-	if (result && result.success && result.data) {
+	if (result?.success && result.data) {
 		return result.data;
 	}
 

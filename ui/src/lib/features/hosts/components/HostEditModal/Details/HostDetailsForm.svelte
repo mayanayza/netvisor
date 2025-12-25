@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
-	import type { Host } from '$lib/features/hosts/types/base';
+	import type { Host, HostFormData } from '$lib/features/hosts/types/base';
 	import {
 		hostname as hostnameValidator,
 		maxLength
@@ -15,7 +15,7 @@
 
 	export let host: Host | null = null;
 	export let formApi: FormApi;
-	export let formData: Host;
+	export let formData: HostFormData;
 	export let isEditing: boolean;
 
 	// Create form fields with validation

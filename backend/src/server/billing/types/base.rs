@@ -122,7 +122,9 @@ pub enum Hosting {
     Cloud,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Display, Default, Copy, PartialEq, Eq, Hash, ToSchema,
+)]
 pub enum BillingRate {
     #[default]
     Month,
