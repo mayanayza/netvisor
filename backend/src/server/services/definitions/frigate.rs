@@ -20,7 +20,7 @@ impl ServiceDefinition for Frigate {
     fn discovery_pattern(&self) -> Pattern<'_> {
         Pattern::AnyOf(vec![
             Pattern::Endpoint(PortBase::Https, "/", "<title>Frigate</title>", None),
-            Pattern::Endpoint(PortBase::new_tcp(5000), "/", "<title>Frigate</title>", None),
+            Pattern::Endpoint(PortBase::Http5000, "/", "<title>Frigate</title>", None),
         ])
     }
 
