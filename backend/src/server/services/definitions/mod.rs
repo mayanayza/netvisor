@@ -287,6 +287,7 @@ pub mod client;
 pub mod amazon_echo;
 pub mod camera;
 pub mod chromecast;
+pub mod frigate;
 pub mod google_home;
 pub mod iot;
 pub mod nest_protect;
