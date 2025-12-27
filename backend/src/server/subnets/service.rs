@@ -88,7 +88,9 @@ impl CrudService<Subnet> for SubnetService {
                             if let Some(metadata) = metadata.first() {
                                 existing_metadata.iter().any(|other_m| {
                                     match (&metadata.discovery_type, &other_m.discovery_type) {
-                                        // Only return existing if they originate from the same host
+                                        // For Docker, only return existing if they originate from the same host
+                                        // If not from the same host, they can have the same CIDR without being considered a collision
+                                        // so create a new subnet rather than returning the existing
                                         (
                                             DiscoveryType::Docker { host_id, .. },
                                             DiscoveryType::Docker {
@@ -112,7 +114,7 @@ impl CrudService<Subnet> for SubnetService {
                     }
                 } =>
             {
-                tracing::warn!(
+                tracing::info!(
                     existing_subnet_id = %existing_subnet.id,
                     existing_subnet_name = %existing_subnet.base.name,
                     new_subnet_id = %subnet.id,

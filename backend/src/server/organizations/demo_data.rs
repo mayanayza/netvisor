@@ -28,7 +28,7 @@ use crate::server::{
         definitions::ServiceDefinitionRegistry,
         r#impl::base::{Service, ServiceBase},
     },
-    shared::types::entities::EntitySource,
+    shared::types::{Color, entities::EntitySource},
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
         types::SubnetType,
@@ -122,17 +122,17 @@ fn generate_topologies(networks: &[Network], now: DateTime<Utc>) -> Vec<Topology
 // ============================================================================
 
 fn generate_tags(organization_id: Uuid, now: DateTime<Utc>) -> Vec<Tag> {
-    let tag_definitions = [
-        ("Production", "Systems running in production", "red"),
-        ("Development", "Development and test systems", "blue"),
-        ("Critical", "Business-critical services", "orange"),
-        ("Backup Target", "Backup destinations", "green"),
-        ("Monitoring", "Monitoring infrastructure", "purple"),
-        ("Database", "Database servers", "cyan"),
-        ("Web Tier", "Web and application servers", "teal"),
-        ("IoT Device", "Smart devices", "yellow"),
-        ("Needs Attention", "Requires admin review", "rose"),
-        ("Managed Client", "Client-owned assets", "indigo"),
+    let tag_definitions: [(&str, &str, Color); 10] = [
+        ("Production", "Systems running in production", Color::Red),
+        ("Development", "Development and test systems", Color::Blue),
+        ("Critical", "Business-critical services", Color::Orange),
+        ("Backup Target", "Backup destinations", Color::Green),
+        ("Monitoring", "Monitoring infrastructure", Color::Purple),
+        ("Database", "Database servers", Color::Cyan),
+        ("Web Tier", "Web and application servers", Color::Teal),
+        ("IoT Device", "Smart devices", Color::Yellow),
+        ("Needs Attention", "Requires admin review", Color::Rose),
+        ("Managed Client", "Client-owned assets", Color::Indigo),
     ];
 
     tag_definitions
@@ -144,7 +144,7 @@ fn generate_tags(organization_id: Uuid, now: DateTime<Utc>) -> Vec<Tag> {
             base: TagBase {
                 name: name.to_string(),
                 description: Some(description.to_string()),
-                color: color.to_string(),
+                color: *color,
                 organization_id,
             },
         })
@@ -1590,7 +1590,7 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
                 group_type: GroupType::RequestPath,
                 binding_ids: vec![traefik, app, pg],
                 source: EntitySource::Manual,
-                color: "blue".to_string(),
+                color: Color::Blue,
                 edge_style: EdgeStyle::Bezier,
                 tags: vec![],
             },
@@ -1620,7 +1620,7 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
                 group_type: GroupType::HubAndSpoke,
                 binding_ids: bindings,
                 source: EntitySource::Manual,
-                color: "purple".to_string(),
+                color: Color::Purple,
                 edge_style: EdgeStyle::Straight,
                 tags: monitoring_tag.into_iter().collect(),
             },
@@ -1643,7 +1643,7 @@ pub fn generate_groups(networks: &[Network], services: &[Service], tags: &[Tag])
                 group_type: GroupType::RequestPath,
                 binding_ids: vec![proxmox, truenas],
                 source: EntitySource::Manual,
-                color: "green".to_string(),
+                color: Color::Green,
                 edge_style: EdgeStyle::SmoothStep,
                 tags: vec![],
             },

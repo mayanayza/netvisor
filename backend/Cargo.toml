@@ -115,6 +115,7 @@ utoipa-scalar = { version = "0.3", features = ["axum"] }
 fastrand = "2.3.0"
 url = "2.5.7"
 rand = "0.9.2"
+lucide-icons = { version = "0.562", features = ["serde"] }
 
 # === Dynamic Types Support ===
 dyn-clone = "1.0.20"

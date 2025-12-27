@@ -1,18 +1,23 @@
 <script lang="ts">
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
-	import { updateGroup } from '$lib/features/groups/store';
-	import { BindingWithServiceDisplay } from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
+	import { useUpdateGroupMutation } from '$lib/features/groups/queries';
+	import {
+		BindingWithServiceDisplay,
+		type BindingWithServiceContext
+	} from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
 	import { GroupDisplay } from '$lib/shared/components/forms/selection/display/GroupDisplay.svelte';
 	import { ArrowDown } from 'lucide-svelte';
 	import EdgeStyleForm from '$lib/features/groups/components/GroupEditModal/EdgeStyleForm.svelte';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import type { Group } from '$lib/features/groups/types/base';
-	import { autoRebuild, topology as globalTopology } from '$lib/features/topology/store';
+	import { useTopologiesQuery } from '$lib/features/topology/queries';
+	import { autoRebuild, topology as selectedTopology } from '$lib/features/topology/store';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import { getTopologyStateInfo } from '$lib/features/topology/state';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
+	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 
 	let {
 		groupId,
@@ -20,12 +25,21 @@
 		targetBindingId
 	}: { groupId: string; sourceBindingId: string; targetBindingId: string } = $props();
 
-	// Try to get topology from context (for share/embed pages), fallback to global store
+	// Try to get topology from context (for share/embed pages), fallback to query + selected topology
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
+	const topologiesQuery = useTopologiesQuery();
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let topology = $derived(
+		topologyContext
+			? $topologyContext
+			: (topologiesData.find((t) => t.id === $selectedTopology?.id) ?? $selectedTopology)
+	);
 
 	// Check if we're in readonly mode (context exists means we're on share page)
 	let isReadonly = $derived(!!topologyContext);
+
+	// TanStack Query mutation for updating groups
+	const updateGroupMutation = useUpdateGroupMutation();
 
 	let group = $derived(topology ? topology.groups.find((g) => g.id == groupId) : null);
 
@@ -51,13 +65,23 @@
 			group &&
 			(localGroup.color !== group.color || localGroup.edge_style !== group.edge_style)
 		) {
-			updateGroup(localGroup);
+			updateGroupMutation.mutate(localGroup);
 		}
 	});
 
-	let groupColor = $derived(createColorHelper(group?.color || 'gray'));
+	let groupColor = $derived(createColorHelper(group?.color || 'Gray'));
 
 	let isRequestPath = $derived(group?.group_type == 'RequestPath');
+
+	// TanStack Query for subnets (for isContainerSubnet check)
+	const subnetsQuery = useSubnetsQuery();
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+
+	// Create isContainerSubnet function from subnets data
+	let isContainerSubnetFn = $derived((subnetId: string) => {
+		const subnet = subnetsData.find((s) => s.id === subnetId);
+		return subnet ? isContainerSubnet(subnet) : false;
+	});
 
 	// Helper functions to get data from topology
 	function getServiceForBindingFromTopology(bindingId: string) {
@@ -78,6 +102,15 @@
 		if (!topology) return null;
 		return topology.hosts.find((h) => h.id === serviceHostId) || null;
 	}
+
+	// Build context for BindingWithServiceDisplay
+	let bindingContext: BindingWithServiceContext = $derived({
+		services: topology?.services ?? [],
+		hosts: topology?.hosts ?? [],
+		interfaces: topology?.interfaces ?? [],
+		ports: topology?.ports ?? [],
+		isContainerSubnet: isContainerSubnetFn
+	});
 </script>
 
 <div class="space-y-3">
@@ -112,7 +145,7 @@
 						: `card ${binding == sourceBindingId ? `ring-1 ${groupColor.ring}` : binding == targetBindingId ? 'ring-1 ring-gray-500' : ''}`}
 				>
 					<EntityDisplayWrapper
-						context={{ host: bindingHost, service: bindingService }}
+						context={bindingContext}
 						item={bindingData}
 						displayComponent={BindingWithServiceDisplay}
 					/>

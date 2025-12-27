@@ -4,30 +4,46 @@
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import { initiateDiscovery } from '../../sse';
 	import type { Discovery } from '../../types/base';
-	import {
-		bulkDeleteDiscoveries,
-		createDiscovery,
-		deleteDiscovery,
-		discoveries,
-		discoveryFields,
-		getDiscoveries,
-		updateDiscovery
-	} from '../../store';
+	import { discoveryFields } from '../../store';
 	import DiscoveryEditModal from '../DiscoveryModal/DiscoveryEditModal.svelte';
-	import { daemons, getDaemons } from '$lib/features/daemons/store';
-	import { getSubnets } from '$lib/features/subnets/store';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
-	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import DiscoveryRunCard from '../cards/DiscoveryScheduledCard.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import {
+		useDiscoveriesQuery,
+		useCreateDiscoveryMutation,
+		useUpdateDiscoveryMutation,
+		useDeleteDiscoveryMutation,
+		useBulkDeleteDiscoveriesMutation
+	} from '../../queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
 
-	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const discoveriesQuery = useDiscoveriesQuery();
+	const daemonsQuery = useDaemonsQuery();
+	const hostsQuery = useHostsQuery();
 
-	let showDiscoveryModal = false;
-	let editingDiscovery: Discovery | null = null;
+	// Mutations
+	const createDiscoveryMutation = useCreateDiscoveryMutation();
+	const updateDiscoveryMutation = useUpdateDiscoveryMutation();
+	const deleteDiscoveryMutation = useDeleteDiscoveryMutation();
+	const bulkDeleteDiscoveriesMutation = useBulkDeleteDiscoveriesMutation();
+
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let discoveriesData = $derived(discoveriesQuery.data ?? []);
+	let daemonsData = $derived(daemonsQuery.data ?? []);
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let isLoading = $derived(
+		discoveriesQuery.isPending || daemonsQuery.isPending || hostsQuery.isPending
+	);
+
+	let showDiscoveryModal = $state(false);
+	let editingDiscovery: Discovery | null = $state(null);
 
 	function handleCreateDiscovery() {
 		editingDiscovery = null;
@@ -41,7 +57,7 @@
 
 	function handleDeleteDiscovery(discovery: Discovery) {
 		if (confirm(`Are you sure you want to delete "${discovery.name}"?`)) {
-			deleteDiscovery(discovery.id);
+			deleteDiscoveryMutation.mutate(discovery.id);
 		}
 	}
 
@@ -50,19 +66,15 @@
 	}
 
 	async function handleDiscoveryCreate(data: Discovery) {
-		const result = await createDiscovery(data);
-		if (result?.success) {
-			showDiscoveryModal = false;
-			editingDiscovery = null;
-		}
+		await createDiscoveryMutation.mutateAsync(data);
+		showDiscoveryModal = false;
+		editingDiscovery = null;
 	}
 
 	async function handleDiscoveryUpdate(id: string, data: Discovery) {
-		const result = await updateDiscovery(data);
-		if (result?.success) {
-			showDiscoveryModal = false;
-			editingDiscovery = null;
-		}
+		await updateDiscoveryMutation.mutateAsync(data);
+		showDiscoveryModal = false;
+		editingDiscovery = null;
 	}
 
 	function handleCloseEditor() {
@@ -72,14 +84,12 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Scheduled Discoveries?`)) {
-			await bulkDeleteDiscoveries(ids);
+			await bulkDeleteDiscoveriesMutation.mutateAsync(ids);
 		}
 	}
 
-	let fields: FieldConfig<Discovery>[];
-
-	$: fields = [
-		...discoveryFields($daemons),
+	let fields: FieldConfig<Discovery>[] = $derived([
+		...discoveryFields(daemonsData),
 		{
 			key: 'run_type',
 			label: 'Run Type',
@@ -99,26 +109,26 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
-	];
+	]);
 </script>
 
 <div class="space-y-6">
 	<!-- Header -->
 	<TabHeader title="Scheduled Discovery" subtitle="Schedule discovery sessions">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateDiscovery}
+			<button class="btn-primary flex items-center" onclick={handleCreateDiscovery}
 				><Plus class="h-5 w-5" />Schedule Discovery</button
 			>
 		</svelte:fragment>
 	</TabHeader>
 
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $discoveries.length === 0}
+	{:else if discoveriesData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No discovery sessions are scheduled"
@@ -128,7 +138,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$discoveries.filter(
+			items={discoveriesData.filter(
 				(d) => d.run_type.type == 'AdHoc' || d.run_type.type == 'Scheduled'
 			)}
 			{fields}
@@ -158,8 +168,8 @@
 
 <DiscoveryEditModal
 	isOpen={showDiscoveryModal}
-	daemons={$daemons}
-	hosts={$hosts}
+	daemons={daemonsData}
+	hosts={hostsData}
 	discovery={editingDiscovery}
 	onCreate={handleDiscoveryCreate}
 	onUpdate={handleDiscoveryUpdate}

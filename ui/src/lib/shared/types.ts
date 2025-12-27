@@ -1,4 +1,5 @@
 import type { components } from '$lib/api/schema';
+import type { Color } from '$lib/shared/utils/styling';
 
 // Re-export generated types
 export type EntitySource = components['schemas']['EntitySource'];
@@ -14,13 +15,13 @@ export interface GetAllEntitiesRequest {
 	network_id: string;
 }
 
-export function matchConfidenceColor(confidence: MatchConfidence): string {
-	const confidenceColor: Record<MatchConfidence, string> = {
-		NotApplicable: 'gray',
-		Low: 'red',
-		Medium: 'yellow',
-		High: 'green',
-		Certain: 'green'
+export function matchConfidenceColor(confidence: MatchConfidence): Color {
+	const confidenceColor: Record<MatchConfidence, Color> = {
+		NotApplicable: 'Gray',
+		Low: 'Red',
+		Medium: 'Yellow',
+		High: 'Green',
+		Certain: 'Green'
 	};
 	return confidenceColor[confidence];
 }

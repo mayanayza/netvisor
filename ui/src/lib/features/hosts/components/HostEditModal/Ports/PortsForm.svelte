@@ -11,10 +11,17 @@
 	import ListConfigEditor from '$lib/shared/components/forms/selection/ListConfigEditor.svelte';
 	import PortConfigPanel from './PortConfigPanel.svelte';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
+	import ConfirmationDialog from '$lib/shared/components/feedback/ConfirmationDialog.svelte';
 
 	export let formData: HostFormData;
 	export let formApi: FormApi;
 	export let currentServices: Service[];
+	export let onServicesChange: (services: Service[]) => void = () => {};
+
+	// Confirmation dialog state
+	let showDeleteConfirmation = false;
+	let pendingDeleteIndex: number | null = null;
+	let affectedServiceNames: string[] = [];
 
 	$: selectablePorts = ports
 		.getItems()
@@ -24,16 +31,25 @@
 		)
 		.sort((a, b) => a.metadata.number - b.metadata.number);
 
-	// Check against currentServices instead of the global store
-	function isPortUsed(port: Port): boolean {
-		return currentServices.some((service) =>
-			service.bindings.some((b) => b.type === 'Port' && b.port_id === port.id)
+	// Find services that have bindings to a specific port
+	function getServicesWithBindingsToPort(portId: string): Service[] {
+		return currentServices.filter((service) =>
+			service.bindings.some((b) => b.type === 'Port' && b.port_id === portId)
 		);
+	}
+
+	// Remove bindings to a port from all services
+	function removeBindingsToPort(portId: string) {
+		const updatedServices = currentServices.map((service) => ({
+			...service,
+			bindings: service.bindings.filter((b) => !(b.type === 'Port' && b.port_id === portId))
+		}));
+		onServicesChange(updatedServices);
 	}
 
 	function handleCreateNewPort() {
 		const newPort: Port = {
-			id: uuidv4(),
+			id: uuidv4(), // Temp ID for form - store will detect as new since it's not in ports store
 			host_id: formData.id,
 			network_id: formData.network_id,
 			protocol: 'Tcp',
@@ -51,7 +67,7 @@
 
 		if (portType) {
 			const newPort: Port = {
-				id: uuidv4(),
+				id: uuidv4(), // Temp ID for form - store will detect as new since it's not in ports store
 				host_id: formData.id,
 				network_id: formData.network_id,
 				number: portType.metadata.number as number,
@@ -65,7 +81,38 @@
 	}
 
 	function handleRemovePort(index: number) {
-		formData.ports = formData.ports.filter((_, i) => i != index);
+		const port = formData.ports[index];
+		const affectedServices = getServicesWithBindingsToPort(port.id);
+
+		if (affectedServices.length > 0) {
+			// Show confirmation dialog
+			pendingDeleteIndex = index;
+			affectedServiceNames = affectedServices.map((s) => s.name);
+			showDeleteConfirmation = true;
+		} else {
+			// No bindings, delete immediately
+			formData.ports = formData.ports.filter((_, i) => i !== index);
+		}
+	}
+
+	function confirmDelete() {
+		if (pendingDeleteIndex !== null) {
+			const port = formData.ports[pendingDeleteIndex];
+			// Remove bindings from services first
+			removeBindingsToPort(port.id);
+			// Then remove the port
+			formData.ports = formData.ports.filter((_, i) => i !== pendingDeleteIndex);
+		}
+		// Reset dialog state
+		showDeleteConfirmation = false;
+		pendingDeleteIndex = null;
+		affectedServiceNames = [];
+	}
+
+	function cancelDelete() {
+		showDeleteConfirmation = false;
+		pendingDeleteIndex = null;
+		affectedServiceNames = [];
 	}
 </script>
 
@@ -81,7 +128,6 @@
 			itemClickAction="edit"
 			createNewLabel="Custom Port"
 			allowDuplicates={false}
-			allowItemRemove={(port: Port) => !isPortUsed(port)}
 			{formApi}
 			options={selectablePorts}
 			{items}
@@ -116,3 +162,15 @@
 		{/if}
 	</svelte:fragment>
 </ListConfigEditor>
+
+<ConfirmationDialog
+	isOpen={showDeleteConfirmation}
+	title="Delete Port"
+	message="This port has bindings from the following services. Deleting it will remove those bindings."
+	details={affectedServiceNames}
+	confirmLabel="Delete Port"
+	cancelLabel="Cancel"
+	variant="warning"
+	onConfirm={confirmDelete}
+	onCancel={cancelDelete}
+/>

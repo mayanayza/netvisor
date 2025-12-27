@@ -3,28 +3,41 @@
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { Discovery } from '../../types/base';
-	import {
-		bulkDeleteDiscoveries,
-		createDiscovery,
-		discoveries,
-		discoveryFields,
-		getDiscoveries,
-		updateDiscovery
-	} from '../../store';
+	import { discoveryFields } from '../../store';
 	import DiscoveryEditModal from '../DiscoveryModal/DiscoveryEditModal.svelte';
-	import { daemons, getDaemons } from '$lib/features/daemons/store';
-	import { getSubnets } from '$lib/features/subnets/store';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
-	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import DiscoveryHistoryCard from '../cards/DiscoveryHistoryCard.svelte';
 	import { formatDuration, formatTimestamp } from '$lib/shared/utils/formatting';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
+	import {
+		useDiscoveriesQuery,
+		useCreateDiscoveryMutation,
+		useUpdateDiscoveryMutation,
+		useBulkDeleteDiscoveriesMutation
+	} from '../../queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
 
-	const loading = loadData([getDiscoveries, getDaemons, getSubnets, getHosts]);
+	// Queries
+	const discoveriesQuery = useDiscoveriesQuery();
+	const daemonsQuery = useDaemonsQuery();
+	const hostsQuery = useHostsQuery();
 
-	let showDiscoveryModal = false;
-	let editingDiscovery: Discovery | null = null;
+	// Mutations
+	const createDiscoveryMutation = useCreateDiscoveryMutation();
+	const updateDiscoveryMutation = useUpdateDiscoveryMutation();
+	const bulkDeleteDiscoveriesMutation = useBulkDeleteDiscoveriesMutation();
+
+	// Derived data
+	let discoveriesData = $derived(discoveriesQuery.data ?? []);
+	let daemonsData = $derived(daemonsQuery.data ?? []);
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let isLoading = $derived(
+		discoveriesQuery.isPending || daemonsQuery.isPending || hostsQuery.isPending
+	);
+
+	let showDiscoveryModal = $state(false);
+	let editingDiscovery: Discovery | null = $state(null);
 
 	function handleEditDiscovery(discovery: Discovery) {
 		editingDiscovery = discovery;
@@ -32,19 +45,15 @@
 	}
 
 	async function handleDiscoveryCreate(data: Discovery) {
-		const result = await createDiscovery(data);
-		if (result?.success) {
-			showDiscoveryModal = false;
-			editingDiscovery = null;
-		}
+		await createDiscoveryMutation.mutateAsync(data);
+		showDiscoveryModal = false;
+		editingDiscovery = null;
 	}
 
 	async function handleDiscoveryUpdate(id: string, data: Discovery) {
-		const result = await updateDiscovery(data);
-		if (result?.success) {
-			showDiscoveryModal = false;
-			editingDiscovery = null;
-		}
+		await updateDiscoveryMutation.mutateAsync(data);
+		showDiscoveryModal = false;
+		editingDiscovery = null;
 	}
 
 	function handleCloseEditor() {
@@ -54,14 +63,12 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Historical Discoveries?`)) {
-			await bulkDeleteDiscoveries(ids);
+			await bulkDeleteDiscoveriesMutation.mutateAsync(ids);
 		}
 	}
 
-	let fields: FieldConfig<Discovery>[];
-
-	$: fields = [
-		...discoveryFields($daemons),
+	let fields: FieldConfig<Discovery>[] = $derived([
+		...discoveryFields(daemonsData),
 		{
 			key: 'started_at',
 			label: 'Started At',
@@ -101,21 +108,21 @@
 				return 'Unknown';
 			}
 		}
-	];
+	]);
 </script>
 
 <div class="space-y-6">
 	<!-- Header -->
 	<TabHeader title="Discovery History" subtitle="Review historical discovery sessions" />
 
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $discoveries.length === 0}
+	{:else if discoveriesData.length === 0}
 		<!-- Empty state -->
 		<EmptyState title="No discovery sessions have been run" subtitle="" />
 	{:else}
 		<DataControls
-			items={$discoveries.filter((d) => d.run_type.type == 'Historical')}
+			items={discoveriesData.filter((d) => d.run_type.type == 'Historical')}
 			{fields}
 			onBulkDelete={handleBulkDelete}
 			storageKey="scanopy-discovery-historical-table-state"
@@ -141,8 +148,8 @@
 
 <DiscoveryEditModal
 	isOpen={showDiscoveryModal}
-	hosts={$hosts}
-	daemons={$daemons}
+	hosts={hostsData}
+	daemons={daemonsData}
 	discovery={editingDiscovery}
 	onCreate={handleDiscoveryCreate}
 	onUpdate={handleDiscoveryUpdate}

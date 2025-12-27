@@ -4,10 +4,21 @@ use std::{fmt::Display, hash::Hash};
 use strum_macros::{EnumDiscriminants, IntoStaticStr};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 
-/// The type of binding - either to an interface or to a port
+/// The type of binding - either to an interface or to a port.
+///
+/// Bindings associate a service with network resources (interfaces/ports) on a host.
+///
+/// ## Validation Rules
+///
+/// - All bindings must reference ports/interfaces that belong to the same host as the service.
+/// - Interface bindings conflict with port bindings on the same interface.
+/// - A port binding on all interfaces (`interface_id: null`) conflicts with any interface binding.
+/// - When a port binding with `interface_id: null` is created, it supersedes (removes) any
+///   existing specific-interface bindings for the same port.
 #[derive(
     Copy, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, EnumDiscriminants, ToSchema,
 )]
@@ -15,15 +26,19 @@ use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
 #[serde(tag = "type")]
 pub enum BindingType {
     #[schema(title = "Interface")]
-    /// Interface bindings are used when a service is present on a given interface, but not listening on any particular port
+    /// Interface binding: Service is present at an interface (IP address) without a specific port.
+    /// Used for non-port-bound services like gateways. Conflicts with port bindings on the same interface.
     Interface { interface_id: Uuid },
     #[schema(title = "Port")]
-    /// Port bindings are used when a service is present on a given interface, and listening on one, many, or all ports
+    /// Port binding: Service listens on a specific port, optionally on a specific interface.
+    /// If `interface_id` is `null`, the service listens on this port across all interfaces,
+    /// which supersedes any specific-interface bindings for the same port.
     Port {
         port_id: Uuid,
         #[serde(skip_serializing_if = "Option::is_none")]
         #[schema(required)]
-        /// null = service is listening on this port on all interfaces
+        /// The interface this port binding applies to. If `null`, the binding applies to all
+        /// interfaces on the host (and supersedes specific-interface bindings for this port).
         interface_id: Option<Uuid>,
     },
 }
@@ -38,7 +53,7 @@ impl Default for BindingType {
 }
 
 /// The base data for a Binding entity (everything except id, created_at, updated_at)
-#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema, Validate)]
 pub struct BindingBase {
     pub service_id: Uuid,
     pub network_id: Uuid,
@@ -103,7 +118,7 @@ impl Hash for BindingType {
 }
 
 /// Association between a service and a port / interface that the service is listening on
-#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Copy, Debug, Clone, Eq, Serialize, Deserialize, ToSchema, Validate)]
 #[schema(example = crate::server::shared::types::examples::binding)]
 pub struct Binding {
     #[serde(default)]
@@ -116,6 +131,7 @@ pub struct Binding {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: BindingBase,
 }
 

@@ -102,7 +102,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('ApiKey')} color={colorHelper.string} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('ApiKey')} color={colorHelper.color} />
 	</svelte:fragment>
 
 	<div class="space-y-6">

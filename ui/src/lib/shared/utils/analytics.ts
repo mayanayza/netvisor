@@ -1,14 +1,15 @@
 import posthog from 'posthog-js';
 import { get } from 'svelte/store';
 import { config } from '../stores/config';
-import { organization } from '$lib/features/organizations/store';
+import { queryClient, queryKeys } from '$lib/api/query-client';
+import type { Organization } from '$lib/features/organizations/types';
 
 /**
  * Check if the current organization is in demo mode.
  * Demo users should not have their data tracked.
  */
 export function isDemo(): boolean {
-	const org = get(organization);
+	const org = queryClient.getQueryData<Organization | null>(queryKeys.organizations.current());
 	return org?.plan?.type === 'Demo';
 }
 

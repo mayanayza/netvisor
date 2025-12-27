@@ -114,7 +114,7 @@ impl StorableEntity for Group {
                 SqlValue::Uuid(network_id),
                 SqlValue::EntitySource(source),
                 SqlValue::String(group_type_str.to_string()),
-                SqlValue::String(color),
+                SqlValue::String(color.to_string()),
                 SqlValue::String(serde_json::to_string(&edge_style)?),
                 SqlValue::UuidArray(tags),
             ],
@@ -149,7 +149,7 @@ impl StorableEntity for Group {
                 edge_style,
                 group_type,
                 binding_ids: Vec::new(), // Hydrated by GroupService via GroupBindingStorage
-                color: row.get("color"),
+                color: row.get::<String, _>("color").parse().unwrap_or_default(),
                 tags: row.get("tags"),
             },
         })

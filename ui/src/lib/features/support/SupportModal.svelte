@@ -3,11 +3,11 @@
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { VERSION } from '$lib/version';
-	import { createColorHelper, type AvailableColor } from '$lib/shared/utils/styling';
+	import { createColorHelper, type Color } from '$lib/shared/utils/styling';
 	import type { IconComponent } from '$lib/shared/utils/types';
-	import { organization } from '../organizations/store';
+	import { useOrganizationQuery } from '../organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
 
@@ -15,7 +15,7 @@
 		title: string;
 		description: string;
 		url: string;
-		color: AvailableColor;
+		color: Color;
 		icon: IconComponent | string;
 	};
 
@@ -27,10 +27,17 @@
 		onClose: () => void;
 	} = $props();
 
-	let hasEmailSupport = $derived.by(() => {
-		if (!$organization || !$organization.plan) return false;
+	// TanStack Query for current user and organization
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
 
-		let features = billingPlans.getMetadata($organization.plan.type).features;
+	const organizationQuery = useOrganizationQuery();
+	let organization = $derived(organizationQuery.data);
+
+	let hasEmailSupport = $derived.by(() => {
+		if (!organization || !organization.plan) return false;
+
+		let features = billingPlans.getMetadata(organization.plan.type).features;
 		return features.email_support;
 	});
 
@@ -40,35 +47,35 @@
 				title: 'User Guide',
 				description: 'Read the full documentation and guides',
 				url: 'https://scanopy.net/docs/',
-				color: 'gray',
+				color: 'Gray',
 				icon: BookOpen
 			},
 			{
 				title: 'Incorrect Service Detection',
 				description: 'Report a service that was incorrectly identified',
 				url: 'https://github.com/scanopy/scanopy/issues/new?template=service-detection-issue.md',
-				color: 'yellow',
+				color: 'Yellow',
 				icon: AlertTriangle
 			},
 			{
 				title: 'Request a Feature',
 				description: 'Suggest a new feature or improvement',
 				url: 'https://github.com/scanopy/scanopy/issues/new?template=feature_request.md',
-				color: 'green',
+				color: 'Green',
 				icon: Lightbulb
 			},
 			{
 				title: 'Report a Bug',
 				description: 'Found an issue? Let us know so we can fix it',
 				url: 'https://github.com/scanopy/scanopy/issues/new?template=bug_report.md',
-				color: 'red',
+				color: 'Red',
 				icon: Bug
 			},
 			{
 				title: 'Discord',
 				description: 'Join our community for help and discussions',
 				url: 'https://discord.gg/b7ffQr8AcZ',
-				color: 'indigo',
+				color: 'Indigo',
 				icon: 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/discord.svg'
 			}
 		];
@@ -78,7 +85,7 @@
 				title: 'Email',
 				description: 'Email the Scanopy team directly',
 				url: 'mailto:support@scanopy.net',
-				color: 'blue',
+				color: 'Blue',
 				icon: Mail
 			});
 		}
@@ -93,7 +100,7 @@
 
 <GenericModal {isOpen} title="Support & Help" {onClose} size="xl">
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={LifeBuoy} color="blue" />
+		<ModalHeaderIcon Icon={LifeBuoy} color="Blue" />
 	</svelte:fragment>
 
 	<div class="space-y-6">
@@ -126,9 +133,9 @@
 		<InfoCard title="Support Information">
 			<InfoRow label="Version">{VERSION}</InfoRow>
 			<InfoRow label="Organization ID" mono={true}>
-				{$organization?.id ?? '—'}
+				{organization?.id ?? '—'}
 			</InfoRow>
-			<InfoRow label="User ID" mono={true}>{$currentUser?.id ?? '—'}</InfoRow>
+			<InfoRow label="User ID" mono={true}>{currentUser?.id ?? '—'}</InfoRow>
 		</InfoCard>
 	</div>
 

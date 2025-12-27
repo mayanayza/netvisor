@@ -6,16 +6,38 @@
 	import VmManagerConfigPanel from './VmManagerConfigPanel.svelte';
 	import ContainerManagerConfigPanel from './ContainerManagerConfigPanel.svelte';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
-	import { VirtualizationManagerServiceDisplay } from '$lib/shared/components/forms/selection/display/VirtualizationManagerServiceDisplay.svelte';
+	import {
+		VirtualizationManagerServiceDisplay,
+		type VirtualizationManagerContext
+	} from '$lib/shared/components/forms/selection/display/VirtualizationManagerServiceDisplay.svelte';
 	import type { Host } from '$lib/features/hosts/types/base';
 	import { uuidv4Sentinel } from '$lib/shared/utils/formatting';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import type { FormApi } from '$lib/shared/components/forms/types';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
 
-	export let virtualizationManagerServices: Service[];
-	export let onServiceChange: (service: Service) => void;
-	export let onVirtualizedHostChange: (host: Host) => void;
-	export let formApi: FormApi;
+	interface Props {
+		virtualizationManagerServices: Service[];
+		onServiceChange: (service: Service) => void;
+		onVirtualizedHostChange: (host: Host) => void;
+		formApi: FormApi;
+	}
+
+	let { virtualizationManagerServices, onServiceChange, onVirtualizedHostChange, formApi }: Props =
+		$props();
+
+	// TanStack Query hooks for context data
+	const hostsQuery = useHostsQuery();
+	const servicesQuery = useServicesQuery();
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+
+	// Context for VirtualizationManagerServiceDisplay
+	let displayContext: VirtualizationManagerContext = $derived({
+		hosts: hostsData,
+		services: servicesData
+	});
 </script>
 
 <div class="space-y-6">
@@ -34,6 +56,7 @@
 				options={[] as Service[]}
 				itemDisplayComponent={VirtualizationManagerServiceDisplay}
 				optionDisplayComponent={VirtualizationManagerServiceDisplay}
+				getItemContext={() => displayContext}
 				{onEdit}
 				{highlightedIndex}
 			/>

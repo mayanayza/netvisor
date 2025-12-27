@@ -3,23 +3,60 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import type { Group } from '../types/base';
 	import { entities, groupTypes } from '$lib/shared/stores/metadata';
-	import { formatServiceLabels, getServicesForGroup } from '$lib/features/services/store';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { toColor } from '$lib/shared/utils/styling';
+	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 
-	export let group: Group;
-	export let onEdit: (group: Group) => void = () => {};
-	export let onDelete: (group: Group) => void = () => {};
-	export let viewMode: 'card' | 'list';
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const servicesQuery = useServicesQuery();
 
-	$: groupServicesStore = getServicesForGroup(group.id);
-	$: groupServices = $groupServicesStore;
-	$: groupServiceLabelsStore = formatServiceLabels(groupServices.map((s) => s.id));
-	$: groupServiceLabels = $groupServiceLabelsStore;
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+
+	let {
+		group,
+		onEdit = () => {},
+		onDelete = () => {},
+		viewMode,
+		selected,
+		onSelectionChange = () => {}
+	}: {
+		group: Group;
+		onEdit?: (group: Group) => void;
+		onDelete?: (group: Group) => void;
+		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	} = $props();
+
+	// Get services for this group via binding_ids
+	let groupServices = $derived(
+		(() => {
+			if (group.group_type === 'RequestPath' || group.group_type === 'HubAndSpoke') {
+				const serviceMap = new Map(servicesData.flatMap((s) => s.bindings.map((b) => [b.id, s])));
+				return group.binding_ids
+					.map((bindingId) => serviceMap.get(bindingId))
+					.filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
+			}
+			return [];
+		})()
+	);
+
+	let groupServiceLabels = $derived(
+		groupServices.map((s) => {
+			const def = serviceDefinitions.getItem(s.service_definition);
+			return {
+				id: s.id,
+				label: def ? `${s.name} (${def.name})` : s.name
+			};
+		})
+	);
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: group.name,
 		iconColor: groupTypes.getColorHelper(group.group_type).icon,
 		Icon: groupTypes.getIconComponent(group.group_type),
@@ -56,7 +93,7 @@
 					{
 						id: 'type',
 						label: group.edge_style,
-						color: 'gray'
+						color: toColor('gray')
 					}
 				],
 				emptyText: 'No type specified'
@@ -75,10 +112,10 @@
 			{
 				label: 'Tags',
 				value: group.tags.map((t) => {
-					const tag = $tags.find((tag) => tag.id == t);
+					const tag = tagsData.find((tag) => tag.id == t);
 					return tag
 						? { id: tag.id, color: tag.color, label: tag.name }
-						: { id: t, color: 'gray', label: 'Unknown Tag' };
+						: { id: t, color: toColor('gray'), label: 'Unknown Tag' };
 				})
 			}
 		],
@@ -96,7 +133,7 @@
 				onClick: () => onEdit(group)
 			}
 		]
-	};
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

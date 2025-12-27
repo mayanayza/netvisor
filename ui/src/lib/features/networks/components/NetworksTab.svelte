@@ -2,41 +2,60 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import {
-		bulkDeleteNetworks,
-		createNetwork,
-		deleteNetwork,
-		getNetworks,
-		networks,
-		updateNetwork
-	} from '$lib/features/networks/store';
 	import type { Network } from '../types';
 	import NetworkCard from './NetworkCard.svelte';
-	import { getHosts } from '$lib/features/hosts/store';
-	import { getDaemons } from '$lib/features/daemons/store';
-	import { getSubnets } from '$lib/features/subnets/store';
-	import { getGroups } from '$lib/features/groups/store';
 	import NetworkEditModal from './NetworkEditModal.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
-	import { tags } from '$lib/features/tags/store';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { permissions } from '$lib/shared/stores/metadata';
+	import {
+		useNetworksQuery,
+		useCreateNetworkMutation,
+		useUpdateNetworkMutation,
+		useDeleteNetworkMutation,
+		useBulkDeleteNetworksMutation
+	} from '../queries';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useSubnetsQuery } from '$lib/features/subnets/queries';
+	import { useGroupsQuery } from '$lib/features/groups/queries';
 
-	const loading = loadData([getNetworks, getHosts, getDaemons, getSubnets, getGroups]);
+	// Queries
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
 
-	let showCreateNetworkModal = false;
-	let editingNetwork: Network | null = null;
+	const tagsQuery = useTagsQuery();
+	const networksQuery = useNetworksQuery();
+	// Load related data
+	useHostsQuery();
+	useDaemonsQuery();
+	useSubnetsQuery();
+	useGroupsQuery();
 
-	$: allowBulkDelete = $currentUser
-		? permissions.getMetadata($currentUser.permissions).manage_org_entities
-		: false;
+	// Mutations
+	const createNetworkMutation = useCreateNetworkMutation();
+	const updateNetworkMutation = useUpdateNetworkMutation();
+	const deleteNetworkMutation = useDeleteNetworkMutation();
+	const bulkDeleteNetworksMutation = useBulkDeleteNetworksMutation();
 
-	$: canManageNetworks =
-		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
-		false;
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let isLoading = $derived(networksQuery.isPending);
+
+	let showCreateNetworkModal = $state(false);
+	let editingNetwork = $state<Network | null>(null);
+
+	let allowBulkDelete = $derived(
+		currentUser ? permissions.getMetadata(currentUser.permissions).manage_org_entities : false
+	);
+
+	let canManageNetworks = $derived(
+		(currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities) || false
+	);
 
 	function handleDeleteNetwork(network: Network) {
 		if (
@@ -44,7 +63,7 @@
 				`Are you sure you want to delete network "${network.name}"? All hosts, groups, and subnets will be deleted along with it.`
 			)
 		) {
-			deleteNetwork(network.id);
+			deleteNetworkMutation.mutate(network.id);
 		}
 	}
 
@@ -60,23 +79,27 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Networks?`)) {
-			await bulkDeleteNetworks(ids);
+			await bulkDeleteNetworksMutation.mutateAsync(ids);
 		}
 	}
 
 	async function handleNetworkCreate(data: Network) {
-		const result = await createNetwork(data);
-		if (result?.success) {
+		try {
+			await createNetworkMutation.mutateAsync(data);
 			showCreateNetworkModal = false;
 			editingNetwork = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleNetworkUpdate(id: string, data: Network) {
-		const result = await updateNetwork(data);
-		if (result?.success) {
+		try {
+			await updateNetworkMutation.mutateAsync(data);
 			showCreateNetworkModal = false;
 			editingNetwork = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
@@ -105,7 +128,7 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
@@ -117,7 +140,7 @@
 	<TabHeader title="Networks" subtitle="Manage networks">
 		<svelte:fragment slot="actions">
 			{#if canManageNetworks}
-				<button class="btn-primary flex items-center" on:click={handleCreateNetwork}
+				<button class="btn-primary flex items-center" onclick={handleCreateNetwork}
 					><Plus class="h-5 w-5" />Create Network</button
 				>
 			{/if}
@@ -125,9 +148,9 @@
 	</TabHeader>
 
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $networks.length === 0}
+	{:else if networksData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No networks configured yet"
@@ -137,7 +160,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$networks}
+			items={networksData}
 			fields={networkFields}
 			onBulkDelete={handleBulkDelete}
 			{allowBulkDelete}

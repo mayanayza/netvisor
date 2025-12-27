@@ -69,7 +69,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
 #[utoipa::path(
     post,
     path = "/register",
-    tag = "auth",
+    tags = ["auth", "internal"],
     request_body = RegisterRequest,
     responses(
         (status = 200, description = "User registered successfully", body = ApiResponse<User>),
@@ -182,7 +182,7 @@ async fn register(
 #[utoipa::path(
     post,
     path = "/setup",
-    tag = "auth",
+    tags = ["auth", "internal"],
     request_body = SetupRequest,
     responses(
         (status = 200, description = "Setup data stored", body = ApiResponse<SetupResponse>),
@@ -245,7 +245,7 @@ async fn setup(
 #[utoipa::path(
     post,
     path = "/daemon-setup",
-    tag = "auth",
+    tags = ["auth", "internal"],
     request_body = DaemonSetupRequest,
     responses(
         (status = 200, description = "Daemon setup data stored", body = ApiResponse<DaemonSetupResponse>),
@@ -466,7 +466,7 @@ async fn apply_pending_setup(
 #[utoipa::path(
     post,
     path = "/login",
-    tag = "auth",
+    tags = ["auth", "internal"],
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Login successful", body = ApiResponse<User>),
@@ -526,7 +526,7 @@ async fn login(
 #[utoipa::path(
     post,
     path = "/logout",
-    tag = "auth",
+    tags = ["auth", "internal"],
     responses(
         (status = 200, description = "Logout successful", body = EmptyApiResponse),
     )
@@ -558,7 +558,7 @@ async fn logout(
 #[utoipa::path(
     post,
     path = "/me",
-    tag = "auth",
+    tags = ["auth", "internal"],
     responses(
         (status = 200, description = "Current user", body = ApiResponse<User>),
         (status = 401, description = "Not authenticated", body = ApiErrorResponse),
@@ -587,7 +587,7 @@ async fn get_current_user(
 #[utoipa::path(
     post,
     path = "/update",
-    tag = "auth",
+    tags = ["auth", "internal"],
     responses(
         (status = 200, description = "Password updated", body = ApiResponse<User>),
         (status = 401, description = "Not authenticated", body = ApiErrorResponse),
@@ -630,7 +630,7 @@ async fn update_password_auth(
 #[utoipa::path(
     post,
     path = "/forgot-password",
-    tag = "auth",
+    tags = ["auth", "internal"],
     request_body = ForgotPasswordRequest,
     responses(
         (status = 200, description = "Password reset email sent", body = EmptyApiResponse),
@@ -661,7 +661,7 @@ async fn forgot_password(
 #[utoipa::path(
     post,
     path = "/reset-password",
-    tag = "auth",
+    tags = ["auth", "internal"],
     request_body = ResetPasswordRequest,
     responses(
         (status = 200, description = "Password reset successful", body = ApiResponse<User>),
@@ -1239,7 +1239,7 @@ async fn handle_register_flow(
 #[utoipa::path(
     post,
     path = "/oidc/{slug}/unlink",
-    tag = "auth",
+    tags = ["auth", "internal"],
     params(("slug" = String, Path, description = "OIDC provider slug")),
     responses(
         (status = 200, description = "OIDC account unlinked", body = ApiResponse<User>),

@@ -3,27 +3,46 @@
 	import { entities } from '$lib/shared/stores/metadata';
 	import { Edit, Play, Trash2 } from 'lucide-svelte';
 	import type { Discovery } from '../../types/base';
-	import { daemons } from '$lib/features/daemons/store';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { parseCronToHours } from '../../store';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
-	import { tags } from '$lib/features/tags/store';
+	import { toColor } from '$lib/shared/utils/styling';
+	import { useTagsQuery } from '$lib/features/tags/queries';
 
-	export let viewMode: 'card' | 'list';
-	export let discovery: Discovery;
-	export let onEdit: (discovery: Discovery) => void = () => {};
-	export let onDelete: (discovery: Discovery) => void = () => {};
-	export let onRun: (discovery: Discovery) => void = () => {};
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const daemonsQuery = useDaemonsQuery();
 
-	$: cardData = {
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let daemonsData = $derived(daemonsQuery.data ?? []);
+
+	let {
+		viewMode,
+		discovery,
+		onEdit = () => {},
+		onDelete = () => {},
+		onRun = () => {},
+		selected,
+		onSelectionChange = () => {}
+	}: {
+		viewMode: 'card' | 'list';
+		discovery: Discovery;
+		onEdit?: (discovery: Discovery) => void;
+		onDelete?: (discovery: Discovery) => void;
+		onRun?: (discovery: Discovery) => void;
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	} = $props();
+
+	let cardData = $derived({
 		title: discovery.name,
 		iconColor: entities.getColorHelper('Discovery').icon,
 		Icon: entities.getIconComponent('Discovery'),
 		fields: [
 			{
 				label: 'Daemon',
-				value: $daemons.find((d) => d.id == discovery.daemon_id)?.name || 'Unknown Daemon'
+				value: daemonsData.find((d) => d.id == discovery.daemon_id)?.name || 'Unknown Daemon'
 			},
 			{
 				label: 'Type',
@@ -46,10 +65,10 @@
 			{
 				label: 'Tags',
 				value: discovery.tags.map((t) => {
-					const tag = $tags.find((tag) => tag.id == t);
+					const tag = tagsData.find((tag) => tag.id == t);
 					return tag
 						? { id: tag.id, color: tag.color, label: tag.name }
-						: { id: t, color: 'gray', label: 'Unknown Tag' };
+						: { id: t, color: toColor('gray'), label: 'Unknown Tag' };
 				})
 			}
 		],
@@ -73,7 +92,7 @@
 				onClick: () => onDelete(discovery)
 			}
 		]
-	};
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

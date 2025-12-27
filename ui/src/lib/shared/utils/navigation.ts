@@ -1,7 +1,8 @@
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { get } from 'svelte/store';
-import { organization } from '$lib/features/organizations/store';
+import { queryClient, queryKeys } from '$lib/api/query-client';
+import type { Organization } from '$lib/features/organizations/types';
 import { config } from '$lib/shared/stores/config';
 import { isBillingPlanActive } from '$lib/features/organizations/types';
 
@@ -9,7 +10,9 @@ import { isBillingPlanActive } from '$lib/features/organizations/types';
  * Determines the correct route for an authenticated user based on their state
  */
 export function getRoute(): string {
-	const $organization = get(organization);
+	const $organization = queryClient.getQueryData<Organization | null>(
+		queryKeys.organizations.current()
+	);
 	const $config = get(config);
 
 	if (!$organization) {

@@ -11,7 +11,7 @@ use crate::server::shared::storage::{
 };
 
 /// The base data for a GroupBinding junction record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GroupBindingBase {
     pub group_id: Uuid,
     pub binding_id: Uuid,
@@ -29,7 +29,7 @@ impl GroupBindingBase {
 }
 
 /// A junction record linking a group to a binding with a position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GroupBinding {
     pub id: Uuid,
     pub created_at: DateTime<Utc>,

@@ -2,19 +2,33 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
+	import { toColor } from '$lib/shared/utils/styling';
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import type { ApiKey } from '../types/base';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
 
-	export let apiKey: ApiKey;
-	export let onDelete: (apiKey: ApiKey) => void = () => {};
-	export let onEdit: (apiKey: ApiKey) => void = () => {};
-	export let viewMode: 'card' | 'list';
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	// Tags query
+	const tagsQuery = useTagsQuery();
+	let tagsData = $derived(tagsQuery.data ?? []);
+
+	let {
+		apiKey,
+		onDelete = () => {},
+		onEdit = () => {},
+		viewMode,
+		selected,
+		onSelectionChange = () => {}
+	}: {
+		apiKey: ApiKey;
+		onDelete?: (apiKey: ApiKey) => void;
+		onEdit?: (apiKey: ApiKey) => void;
+		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	} = $props();
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: apiKey.name,
 		iconColor: entities.getColorHelper('ApiKey').icon,
 		Icon: entities.getIconComponent('ApiKey'),
@@ -42,10 +56,10 @@
 			{
 				label: 'Tags',
 				value: apiKey.tags.map((t) => {
-					const tag = $tags.find((tag) => tag.id == t);
+					const tag = tagsData.find((tag) => tag.id == t);
 					return tag
 						? { id: tag.id, color: tag.color, label: tag.name }
-						: { id: t, color: 'gray', label: 'Unknown Tag' };
+						: { id: t, color: toColor('gray'), label: 'Unknown Tag' };
 				})
 			}
 		],
@@ -63,7 +77,7 @@
 				onClick: () => onEdit(apiKey)
 			}
 		]
-	};
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

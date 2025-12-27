@@ -5,35 +5,61 @@
 	import { Share2 } from 'lucide-svelte';
 	import type { Share } from '../types/base';
 	import { createEmptyShare } from '../types/base';
-	import { createShare, updateShare, deleteShare } from '../store';
+	import {
+		useCreateShareMutation,
+		useUpdateShareMutation,
+		useDeleteShareMutation
+	} from '../queries';
 	import ShareDetailsForm from './ShareDetailsForm.svelte';
-	import { currentUser } from '$lib/features/auth/store';
-	import { organization } from '$lib/features/organizations/store';
-	import { billingPlans } from '$lib/shared/stores/metadata';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { billingPlans, entities } from '$lib/shared/stores/metadata';
 
-	export let isOpen = false;
-	export let onClose: () => void;
-	export let share: Share | null = null;
-	export let topologyId: string = '';
-	export let networkId: string = '';
+	let {
+		isOpen = false,
+		onClose,
+		share = null,
+		topologyId = '',
+		networkId = ''
+	}: {
+		isOpen?: boolean;
+		onClose: () => void;
+		share?: Share | null;
+		topologyId?: string;
+		networkId?: string;
+	} = $props();
 
-	let loading = false;
-	let deleting = false;
+	// Mutations
+	const createShareMutation = useCreateShareMutation();
+	const updateShareMutation = useUpdateShareMutation();
+	const deleteShareMutation = useDeleteShareMutation();
 
-	$: isEditing = share !== null;
-	$: title = isEditing ? `Edit ${share?.name || 'Share'}` : 'Share Topology';
+	// TanStack Query for current user and organization
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
 
-	let formData: Share = createEmptyShare('', '');
-	let passwordValue: string = '';
-	let createdShare: Share | null = null;
+	const organizationQuery = useOrganizationQuery();
+	let organization = $derived(organizationQuery.data);
 
-	$: hasEmbedsFeature = $organization?.plan
-		? billingPlans.getMetadata($organization.plan.type).features.embeds
-		: true;
+	let loading = $state(false);
+	let deleting = $state(false);
 
-	$: if (isOpen) {
-		resetForm();
-	}
+	let isEditing = $derived(share !== null);
+	let title = $derived(isEditing ? `Edit ${share?.name || 'Share'}` : 'Share Topology');
+
+	let formData: Share = $state(createEmptyShare('', ''));
+	let passwordValue = $state('');
+	let createdShare: Share | null = $state(null);
+
+	let hasEmbedsFeature = $derived(
+		organization?.plan ? billingPlans.getMetadata(organization.plan.type).features.embeds : true
+	);
+
+	$effect(() => {
+		if (isOpen) {
+			resetForm();
+		}
+	});
 
 	function resetForm() {
 		if (share) {
@@ -51,7 +77,7 @@
 	}
 
 	async function handleSubmit() {
-		if ($currentUser) formData.created_by = $currentUser.id;
+		if (currentUser) formData.created_by = currentUser.id;
 
 		loading = true;
 
@@ -59,21 +85,21 @@
 			if (isEditing && share) {
 				// For updates: undefined preserves existing password, empty string removes it, value sets new
 				const password = passwordValue || undefined;
-				const result = await updateShare(share.id, { share: formData, password });
-				if (result?.success) {
-					handleClose();
-				} else {
-					pushError(result?.error || 'Failed to update share');
-				}
+				await updateShareMutation.mutateAsync({
+					id: share.id,
+					request: { share: formData, password }
+				});
+				handleClose();
 			} else {
 				// For create: send the password (empty string means no password)
-				const result = await createShare({ share: formData, password: passwordValue || undefined });
-				if (result?.success && result.data) {
-					createdShare = result.data;
-				} else {
-					pushError(result?.error || 'Failed to create share');
-				}
+				const result = await createShareMutation.mutateAsync({
+					share: formData,
+					password: passwordValue || undefined
+				});
+				createdShare = result;
 			}
+		} catch (error) {
+			pushError(error instanceof Error ? error.message : 'Failed to save share');
 		} finally {
 			loading = false;
 		}
@@ -84,14 +110,16 @@
 
 		deleting = true;
 		try {
-			await deleteShare(share.id);
+			await deleteShareMutation.mutateAsync(share.id);
 			handleClose();
+		} catch (error) {
+			pushError(error instanceof Error ? error.message : 'Failed to delete share');
 		} finally {
 			deleting = false;
 		}
 	}
 
-	$: saveLabel = isEditing ? 'Save' : 'Create';
+	let saveLabel = $derived(isEditing ? 'Save' : 'Create');
 </script>
 
 <EditModal
@@ -109,7 +137,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={Share2} color="rgb(59, 130, 246)" />
+		<ModalHeaderIcon Icon={Share2} color={entities.getColorHelper('Share').color} />
 	</svelte:fragment>
 
 	<div class="space-y-6">

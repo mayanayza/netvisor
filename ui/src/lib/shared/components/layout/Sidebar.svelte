@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import AuthSettingsModal from '$lib/features/auth/components/AuthSettingsModal.svelte';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import BillingSettingsModal from '$lib/features/billing/BillingSettingsModal.svelte';
-	import { organization } from '$lib/features/organizations/store';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
 	import SupportModal from '$lib/features/support/SupportModal.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
@@ -52,10 +52,17 @@
 		allTabs?: Array<{ id: string; component: any }>;
 	} = $props();
 
-	// Derived values from stores
-	let userPermissions = $derived($currentUser?.permissions);
-	let isBillingEnabled = $derived($organization ? isBillingPlanActive($organization) : false);
-	let isDemoOrg = $derived($organization?.plan?.type === 'Demo');
+	// TanStack Query for current user and organization
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	const organizationQuery = useOrganizationQuery();
+	let organization = $derived(organizationQuery.data);
+
+	// Derived values from queries
+	let userPermissions = $derived(currentUser?.permissions);
+	let isBillingEnabled = $derived(organization ? isBillingPlanActive(organization) : false);
+	let isDemoOrg = $derived(organization?.plan?.type === 'Demo');
 
 	let showAuthSettings = $state(false);
 	let showSupport = $state(false);
@@ -462,7 +469,7 @@
 			</button>
 			{#if !collapsed && isDemoOrg}
 				<div class="mt-2 flex justify-center">
-					<Tag label="Demo" color="yellow" />
+					<Tag label="Demo" color="Yellow" />
 				</div>
 			{/if}
 		</div>

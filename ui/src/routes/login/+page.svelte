@@ -2,15 +2,24 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { checkAuth, forgotPassword, login, resetPassword } from '$lib/features/auth/store';
+	import {
+		useLoginMutation,
+		useForgotPasswordMutation,
+		useResetPasswordMutation
+	} from '$lib/features/auth/queries';
 	import LoginModal from '$lib/features/auth/components/LoginModal.svelte';
 	import ForgotPasswordModal from '$lib/features/auth/components/ForgotPasswordModal.svelte';
 	import ResetPasswordModal from '$lib/features/auth/components/ResetPasswordModal.svelte';
 	import type { LoginRequest } from '$lib/features/auth/types/base';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
-	import { getOrganization } from '$lib/features/organizations/store';
 	import { navigate } from '$lib/shared/utils/navigation';
+	import { fetchOrganization } from '$lib/features/organizations/queries';
 	import { resolve } from '$app/paths';
+
+	// TanStack Query mutations
+	const loginMutation = useLoginMutation();
+	const forgotPasswordMutation = useForgotPasswordMutation();
+	const resetPasswordMutation = useResetPasswordMutation();
 
 	type ModalType = 'login' | 'forgot' | 'reset';
 	let activeModal = $state<ModalType>('login');
@@ -32,29 +41,35 @@
 	});
 
 	async function handleLogin(data: LoginRequest) {
-		const user = await login(data);
-		if (!user) return;
-
-		// Refresh auth state and organization
-		await Promise.all([checkAuth(), getOrganization()]);
-
-		// Navigate to correct destination
-		await navigate();
+		try {
+			await loginMutation.mutateAsync(data);
+			// Fetch organization data before navigating
+			await fetchOrganization();
+			// Navigate to correct destination
+			await navigate();
+		} catch {
+			// Error handled by mutation
+		}
 	}
 
 	async function handleRequestReset(email: string) {
-		await forgotPassword({ email });
+		try {
+			await forgotPasswordMutation.mutateAsync({ email });
+		} catch {
+			// Error handled by mutation
+		}
 	}
 
 	async function handleResetPassword(token: string, password: string) {
-		const user = await resetPassword({ password, token });
-		if (!user) return;
-
-		// Refresh auth state and organization
-		await Promise.all([checkAuth(), getOrganization()]);
-
-		// Navigate to correct destination
-		await navigate();
+		try {
+			await resetPasswordMutation.mutateAsync({ password, token });
+			// Fetch organization data before navigating
+			await fetchOrganization();
+			// Navigate to correct destination
+			await navigate();
+		} catch {
+			// Error handled by mutation
+		}
 	}
 
 	function switchToForgot() {

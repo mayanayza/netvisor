@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { groups } from '$lib/features/groups/store';
-	import { hosts } from '$lib/features/hosts/store';
-	import { getSubnets } from '$lib/features/subnets/store';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import Sidebar from '$lib/shared/components/layout/Sidebar.svelte';
 	import { onDestroy, onMount } from 'svelte';
-	import { getServices, services } from '$lib/features/services/store';
-	import { getNetworks } from '$lib/features/networks/store';
 	import { discoverySSEManager } from '$lib/features/discovery/sse';
-	import { isAuthenticated, isCheckingAuth } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { getMetadata } from '$lib/shared/stores/metadata';
 	import { topologySSEManager } from '$lib/features/topology/sse';
 
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
+
+	// TanStack Query for current user
+	const currentUserQuery = useCurrentUserQuery();
+	let isAuthenticated = $derived(currentUserQuery.data != null);
+	let isCheckingAuth = $derived(currentUserQuery.isPending);
 
 	let activeTab = $state(initialHash || 'topology');
 	let appInitialized = $state(false);
@@ -40,53 +40,27 @@
 		}
 	}
 
-	let storeWatcherUnsubs: (() => void)[] = [];
-
-	// Load data only when authenticated
-	async function loadData() {
+	// Initialize app when authenticated
+	// TanStack Query handles data fetching in components - no need for cascading loads
+	async function initializeApp() {
 		if (dataLoadingStarted) return;
 		dataLoadingStarted = true;
 
-		await Promise.all([getNetworks(), getMetadata()]);
+		// Load metadata (static config) - required before components render
+		await getMetadata();
 
-		// Set up store watchers for cascading data loads
-		let hostsInitialized = false;
-		let servicesInitialized = false;
-		let groupsInitialized = false;
-
-		storeWatcherUnsubs = [
-			hosts.subscribe(() => {
-				if (hostsInitialized) {
-					getServices();
-					getSubnets();
-				}
-				hostsInitialized = true;
-			}),
-			services.subscribe(() => {
-				if (servicesInitialized) {
-					getSubnets();
-				}
-				servicesInitialized = true;
-			}),
-			groups.subscribe(() => {
-				if (groupsInitialized) {
-					getServices();
-				}
-				groupsInitialized = true;
-			})
-		];
-
+		// Connect SSE managers for real-time updates
 		topologySSEManager.connect();
 		discoverySSEManager.connect();
 
 		appInitialized = true;
 	}
 
-	// Reactive effect: load data when authenticated
-	// The layout handles checkAuth(), so we just wait for it to complete
+	// Reactive effect: initialize app when authenticated
+	// The layout handles auth check via TanStack Query, so we just wait for it to complete
 	$effect(() => {
-		if ($isAuthenticated && !$isCheckingAuth && !dataLoadingStarted) {
-			loadData();
+		if (isAuthenticated && !isCheckingAuth && !dataLoadingStarted) {
+			initializeApp();
 		}
 	});
 
@@ -98,10 +72,6 @@
 	});
 
 	onDestroy(() => {
-		storeWatcherUnsubs.forEach((unsub) => {
-			unsub();
-		});
-
 		topologySSEManager.disconnect();
 		discoverySSEManager.disconnect();
 

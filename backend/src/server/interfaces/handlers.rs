@@ -31,8 +31,9 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(generated::bulk_delete))
 }
 
-/// Validate that interface's host and subnet are on the same network as the interface
-async fn validate_interface_network_consistency(
+/// Validate that interface's host and subnet are on the same network as the interface,
+/// and that the IP address falls within the subnet's CIDR range.
+async fn validate_interface_consistency(
     state: &AppState,
     interface: &Interface,
 ) -> Result<(), ApiError> {
@@ -50,18 +51,27 @@ async fn validate_interface_network_consistency(
         )));
     }
 
-    // Validate subnet is on the same network
+    // Validate subnet is on the same network AND IP is within CIDR
     if let Some(subnet) = state
         .services
         .subnet_service
         .get_by_id(&interface.base.subnet_id)
         .await?
-        && subnet.base.network_id != interface.base.network_id
     {
-        return Err(ApiError::bad_request(&format!(
-            "Subnet \"{}\" is on network {}, interface can't be on a different network ({})",
-            subnet.base.name, subnet.base.network_id, interface.base.network_id
-        )));
+        if subnet.base.network_id != interface.base.network_id {
+            return Err(ApiError::bad_request(&format!(
+                "Subnet \"{}\" is on network {}, interface can't be on a different network ({})",
+                subnet.base.name, subnet.base.network_id, interface.base.network_id
+            )));
+        }
+
+        // Validate IP address is within subnet CIDR
+        if !subnet.base.cidr.contains(&interface.base.ip_address) {
+            return Err(ApiError::bad_request(&format!(
+                "IP address {} is not within subnet \"{}\" CIDR range ({})",
+                interface.base.ip_address, subnet.base.name, subnet.base.cidr
+            )));
+        }
     }
 
     Ok(())
@@ -84,7 +94,7 @@ async fn create_interface(
     user: RequireMember,
     Json(interface): Json<Interface>,
 ) -> ApiResult<Json<ApiResponse<Interface>>> {
-    validate_interface_network_consistency(&state, &interface).await?;
+    validate_interface_consistency(&state, &interface).await?;
     create_handler::<Interface>(State(state), user, Json(interface)).await
 }
 
@@ -108,6 +118,6 @@ async fn update_interface(
     path: Path<Uuid>,
     Json(interface): Json<Interface>,
 ) -> ApiResult<Json<ApiResponse<Interface>>> {
-    validate_interface_network_consistency(&state, &interface).await?;
+    validate_interface_consistency(&state, &interface).await?;
     update_handler::<Interface>(State(state), user, path, Json(interface)).await
 }

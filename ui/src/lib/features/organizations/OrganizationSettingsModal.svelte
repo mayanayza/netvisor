@@ -3,46 +3,39 @@
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { Building2 } from 'lucide-svelte';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
 	import {
-		getOrganization,
-		organization,
-		populateDemoData,
-		resetOrganizationData,
-		updateOrganizationName
-	} from './store';
+		useOrganizationQuery,
+		useUpdateOrganizationMutation,
+		useResetOrganizationDataMutation,
+		usePopulateDemoDataMutation
+	} from './queries';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
-	// Force Svelte to track organization reactivity
-	$effect(() => {
-		void $organization;
-	});
+	// TanStack Query for current user
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
 
-	let saving = $state(false);
-	let resetting = $state(false);
-	let populating = $state(false);
+	// TanStack Query for organization
+	const organizationQuery = useOrganizationQuery();
+	const updateOrganizationMutation = useUpdateOrganizationMutation();
+	const resetOrganizationDataMutation = useResetOrganizationDataMutation();
+	const populateDemoDataMutation = usePopulateDemoDataMutation();
+
+	let saving = $derived(updateOrganizationMutation.isPending);
+	let resetting = $derived(resetOrganizationDataMutation.isPending);
+	let populating = $derived(populateDemoDataMutation.isPending);
 	let activeSection = $state<'main' | 'edit'>('main');
 
-	$effect(() => {
-		if (isOpen && $currentUser) {
-			loadOrganization();
-		}
-	});
-
-	async function loadOrganization() {
-		if (!$currentUser) return;
-		await getOrganization();
-	}
-
-	let org = $derived($organization);
-	let isOwner = $derived($currentUser?.permissions === 'Owner');
+	let org = $derived(organizationQuery.data);
+	let isOwner = $derived(currentUser?.permissions === 'Owner');
 	let isDemoOrg = $derived(org?.plan?.type === 'Demo');
 
 	// Form data
@@ -66,19 +59,13 @@
 	async function handleSave() {
 		if (!org) return;
 
-		saving = true;
 		try {
-			const result = await updateOrganizationName(org.id, formData.name);
-
-			if (result?.success) {
-				pushSuccess('Organization updated successfully');
-				activeSection = 'main';
-				formData = { name: '' };
-			} else {
-				pushError(result?.error || 'Failed to update organization');
-			}
-		} finally {
-			saving = false;
+			await updateOrganizationMutation.mutateAsync({ id: org.id, name: formData.name });
+			pushSuccess('Organization updated successfully');
+			activeSection = 'main';
+			formData = { name: '' };
+		} catch {
+			pushError('Failed to update organization');
 		}
 	}
 
@@ -103,16 +90,11 @@
 			return;
 		}
 
-		resetting = true;
 		try {
-			const result = await resetOrganizationData(org.id);
-			if (result?.success) {
-				pushSuccess('Organization data has been reset');
-			} else {
-				pushError(result?.error || 'Failed to reset organization data');
-			}
-		} finally {
-			resetting = false;
+			await resetOrganizationDataMutation.mutateAsync(org.id);
+			pushSuccess('Organization data has been reset');
+		} catch {
+			pushError('Failed to reset organization data');
 		}
 	}
 
@@ -127,16 +109,11 @@
 			return;
 		}
 
-		populating = true;
 		try {
-			const result = await populateDemoData(org.id);
-			if (result?.success) {
-				pushSuccess('Demo data has been populated');
-			} else {
-				pushError(result?.error || 'Failed to populate demo data');
-			}
-		} finally {
-			populating = false;
+			await populateDemoDataMutation.mutateAsync(org.id);
+			pushSuccess('Demo data has been populated');
+		} catch {
+			pushError('Failed to populate demo data');
 		}
 	}
 
@@ -161,7 +138,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={Building2} color="#3b82f6" />
+		<ModalHeaderIcon Icon={Building2} color="Blue" />
 	</svelte:fragment>
 
 	{#if org}
@@ -205,7 +182,8 @@
 							<div>
 								<p class="text-primary text-sm font-medium">Reset Organization Data</p>
 								<p class="text-secondary text-xs">
-									Delete all networks, hosts, daemons, and invites. This cannot be undone.
+									Delete everything except for any organization owner user account. This cannot be
+									undone.
 								</p>
 							</div>
 							<button onclick={handleReset} disabled={resetting} class="btn-danger">

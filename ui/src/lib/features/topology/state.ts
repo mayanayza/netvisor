@@ -1,6 +1,7 @@
 import { Lock, Radio, RefreshCcw } from 'lucide-svelte';
 import type { Topology } from './types/base';
 import type { IconComponent } from '$lib/shared/utils/types';
+import type { Color } from '$lib/shared/utils/styling';
 
 export type TopologyStateType = 'locked' | 'fresh' | 'stale_safe' | 'stale_conflicts';
 
@@ -8,7 +9,7 @@ export interface TopologyStateInfo {
 	type: TopologyStateType;
 	icon: IconComponent;
 	hoverIcon?: IconComponent;
-	color: 'blue' | 'green' | 'yellow' | 'red';
+	color: Color;
 	class: string;
 	label: string;
 	buttonText: string;
@@ -29,7 +30,7 @@ export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): 
 		return {
 			type: 'locked',
 			icon: Lock,
-			color: 'blue',
+			color: 'Blue',
 			class: 'btn-info',
 			buttonText: 'Locked',
 			label: 'Locked',
@@ -42,7 +43,7 @@ export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): 
 		return {
 			type: 'fresh',
 			icon: Radio,
-			color: 'green',
+			color: 'Green',
 			class: 'btn-success',
 			buttonText: 'Auto',
 			label: 'Auto',
@@ -56,7 +57,7 @@ export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): 
 			type: 'fresh',
 			icon: RefreshCcw,
 			class: 'btn-secondary',
-			color: 'green',
+			color: 'Green',
 			buttonText: 'Rebuild',
 			label: 'Up to date'
 		};
@@ -74,7 +75,7 @@ export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): 
 		return {
 			type: 'stale_conflicts',
 			icon: RefreshCcw,
-			color: 'red',
+			color: 'Red',
 			class: 'btn-danger',
 			buttonText: 'Rebuild',
 			label: 'Conflicts'
@@ -85,7 +86,7 @@ export function getTopologyStateInfo(topology: Topology, autoRebuild: boolean): 
 	return {
 		type: 'stale_safe',
 		icon: RefreshCcw,
-		color: 'yellow',
+		color: 'Yellow',
 		class: 'btn-warning',
 		buttonText: 'Rebuild',
 		label: 'Stale'

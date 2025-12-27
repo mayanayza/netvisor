@@ -5,6 +5,7 @@ import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formattin
 import { getServices } from '../services/store';
 import { entities } from '$lib/shared/stores/metadata';
 import { networks } from '../networks/store';
+import type { Color } from '$lib/shared/utils/styling';
 
 export const groups = writable<Group[]>([]);
 
@@ -71,7 +72,7 @@ export function createEmptyGroupFormData(): Group {
 			type: 'Manual'
 		},
 		network_id: get(networks)[0]?.id || '',
-		color: entities.getColorHelper('Group').string,
+		color: entities.getColorHelper('Group').color as Color,
 		edge_style: 'Straight',
 		tags: []
 	};

@@ -2,6 +2,10 @@ import * as LucideIcons from 'lucide-svelte';
 import type { IconComponent } from './types';
 import colors from 'tailwindcss/colors';
 import LogoIcon from '$lib/shared/components/data/LogoIcon.svelte';
+import type { components } from '$lib/api/schema';
+
+// Use the generated Color type from OpenAPI schema
+export type Color = components['schemas']['Color'];
 
 export interface ColorStyle {
 	text: string;
@@ -10,14 +14,14 @@ export interface ColorStyle {
 	icon: string;
 	ring: string;
 	stroke: string;
-	string: string;
+	color: Color;
 	rgb: string; // Added RGB value
 }
 
 // Map backend color names to Tailwind classes with RGB values
-export const COLOR_MAP: Record<string, ColorStyle> = {
-	pink: {
-		string: 'pink',
+export const COLOR_MAP: Record<Color, ColorStyle> = {
+	Pink: {
+		color: 'Pink',
 		text: 'text-pink-400',
 		bg: 'bg-pink-900/50 border-pink-600',
 		border: 'border-pink-600',
@@ -26,8 +30,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-pink-400',
 		rgb: 'rgb(244, 114, 182)' // pink-400
 	},
-	rose: {
-		string: 'rose',
+	Rose: {
+		color: 'Rose',
 		text: 'text-rose-400',
 		bg: 'bg-rose-900/50 border-rose-600',
 		border: 'border-rose-600',
@@ -36,8 +40,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-rose-400',
 		rgb: 'rgb(251, 113, 133)' // rose-400
 	},
-	red: {
-		string: 'red',
+	Red: {
+		color: 'Red',
 		text: 'text-red-400',
 		bg: 'bg-red-900/50 border-red-600',
 		border: 'border-red-600',
@@ -46,8 +50,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-red-400',
 		rgb: 'rgb(248, 113, 113)' // red-400
 	},
-	orange: {
-		string: 'orange',
+	Orange: {
+		color: 'Orange',
 		text: 'text-orange-400',
 		bg: 'bg-orange-900/50 border-orange-600',
 		border: 'border-orange-600',
@@ -56,8 +60,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-orange-400',
 		rgb: 'rgb(251, 146, 60)' // orange-400
 	},
-	yellow: {
-		string: 'yellow',
+	Yellow: {
+		color: 'Yellow',
 		text: 'text-yellow-400',
 		bg: 'bg-yellow-900/50 border-yellow-600',
 		border: 'border-yellow-600',
@@ -66,8 +70,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-yellow-400',
 		rgb: 'rgb(250, 204, 21)' // yellow-400
 	},
-	green: {
-		string: 'green',
+	Green: {
+		color: 'Green',
 		text: 'text-green-400',
 		bg: 'bg-green-900/50 border-green-600',
 		border: 'border-green-600',
@@ -76,8 +80,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-green-400',
 		rgb: 'rgb(74, 222, 128)' // green-400
 	},
-	emerald: {
-		string: 'emerald',
+	Emerald: {
+		color: 'Emerald',
 		text: 'text-emerald-400',
 		bg: 'bg-emerald-900/50 border-emerald-600',
 		border: 'border-emerald-600',
@@ -86,8 +90,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-emerald-400',
 		rgb: 'rgb(52, 211, 153)' // emerald-400
 	},
-	teal: {
-		string: 'teal',
+	Teal: {
+		color: 'Teal',
 		text: 'text-teal-400',
 		bg: 'bg-teal-900/50 border-teal-600',
 		border: 'border-teal-600',
@@ -96,8 +100,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-teal-400',
 		rgb: 'rgb(45, 212, 191)' // teal-400
 	},
-	cyan: {
-		string: 'cyan',
+	Cyan: {
+		color: 'Cyan',
 		text: 'text-cyan-400',
 		bg: 'bg-cyan-900/50 border-cyan-600',
 		border: 'border-cyan-600',
@@ -106,8 +110,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-cyan-400',
 		rgb: 'rgb(34, 211, 238)' // cyan-400
 	},
-	blue: {
-		string: 'blue',
+	Blue: {
+		color: 'Blue',
 		text: 'text-blue-400',
 		bg: 'bg-blue-900/50 border-blue-600',
 		border: 'border-blue-600',
@@ -116,8 +120,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-blue-400',
 		rgb: 'rgb(96, 165, 250)' // blue-400
 	},
-	indigo: {
-		string: 'indigo',
+	Indigo: {
+		color: 'Indigo',
 		text: 'text-indigo-400',
 		bg: 'bg-indigo-900/50 border-indigo-600',
 		border: 'border-indigo-600',
@@ -126,8 +130,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-indigo-400',
 		rgb: 'rgb(129, 140, 248)' // indigo-400
 	},
-	purple: {
-		string: 'purple',
+	Purple: {
+		color: 'Purple',
 		text: 'text-purple-400',
 		bg: 'bg-purple-900/50 border-purple-600',
 		border: 'border-purple-600',
@@ -136,8 +140,8 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 		stroke: 'stroke-purple-400',
 		rgb: 'rgb(196, 181, 253)' // purple-400
 	},
-	gray: {
-		string: 'gray',
+	Gray: {
+		color: 'Gray',
 		text: 'text-gray-400',
 		bg: 'bg-gray-900/50 border-gray-600',
 		border: 'border-gray-600',
@@ -149,13 +153,16 @@ export const COLOR_MAP: Record<string, ColorStyle> = {
 };
 
 // Export available colors array derived from COLOR_MAP keys
-export const AVAILABLE_COLORS = Object.keys(COLOR_MAP) as Array<keyof typeof COLOR_MAP>;
+export const AVAILABLE_COLORS = Object.keys(COLOR_MAP) as Color[];
 
-export type AvailableColor = keyof typeof COLOR_MAP;
+// Convert a string to a validated Color, with fallback to 'gray'
+export function toColor(value: string | null | undefined): Color {
+	return value && AVAILABLE_COLORS.includes(value as Color) ? (value as Color) : 'Gray';
+}
 
 // Unified color helper - works everywhere!
-export function createColorHelper(colorName: string | null): ColorStyle {
-	const color = colorName && COLOR_MAP[colorName] ? colorName : 'gray';
+export function createColorHelper(colorName: Color | null): ColorStyle {
+	const color = colorName && COLOR_MAP[colorName] ? colorName : 'Gray';
 
 	return COLOR_MAP[color];
 }
@@ -193,7 +200,7 @@ export function createLogoIconComponent(
 }
 
 // Convenience wrapper that returns both color and icon
-export function createStyle(color: string | null, icon: string | null) {
+export function createStyle(color: Color | null, icon: string | null) {
 	return {
 		colors: createColorHelper(color),
 		IconComponent: createIconComponent(icon),

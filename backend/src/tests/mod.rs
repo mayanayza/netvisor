@@ -20,7 +20,7 @@ use crate::server::{
     shared::{
         services::factory::ServiceFactory,
         storage::{factory::StorageFactory, traits::StorableEntity},
-        types::entities::EntitySource,
+        types::{Color, entities::EntitySource},
     },
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
@@ -154,7 +154,7 @@ pub fn group(network_id: &Uuid) -> Group {
         name: "Test Group".to_string(),
         description: None,
         network_id: *network_id,
-        color: "".to_string(),
+        color: Color::default(),
         group_type: GroupType::RequestPath,
         binding_ids: vec![],
         source: EntitySource::System,

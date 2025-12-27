@@ -2,21 +2,30 @@
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { CreditCard, CheckCircle, AlertCircle } from 'lucide-svelte';
-	import { organization, getOrganization } from '$lib/features/organizations/store';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { isBillingPlanActive } from '../organizations/types';
-	import { currentUser } from '$lib/features/auth/store';
 	import { billingPlans } from '$lib/shared/stores/metadata';
 	import { openCustomerPortal } from './store';
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
-	import { users } from '../users/store';
-	import { networks } from '../networks/store';
+	import { useUsersQuery } from '$lib/features/users/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
-	let org = $derived($organization);
+	// TanStack Query for users
+	const usersQuery = useUsersQuery();
+	let usersData = $derived(usersQuery.data ?? []);
 
-	let seatCount = $derived($users.length);
-	let networkCount = $derived($networks.length);
+	// TanStack Query for networks
+	const networksQuery = useNetworksQuery();
+	let networksData = $derived(networksQuery.data ?? []);
+
+	// TanStack Query for organization
+	const organizationQuery = useOrganizationQuery();
+	let org = $derived(organizationQuery.data);
+
+	let seatCount = $derived(usersData.length);
+	let networkCount = $derived(networksData.length);
 
 	let extraSeats = $derived.by(() => {
 		if (!org?.plan?.included_seats) return 0;
@@ -30,22 +39,6 @@
 
 	let extraSeatsCents = $derived(extraSeats * (org?.plan?.seat_cents || 0));
 	let extraNetworksCents = $derived(extraNetworks * (org?.plan?.network_cents || 0));
-
-	// Force Svelte to track organization reactivity
-	$effect(() => {
-		void $organization;
-	});
-
-	$effect(() => {
-		if (isOpen && $currentUser) {
-			loadOrganization();
-		}
-	});
-
-	async function loadOrganization() {
-		if (!$currentUser) return;
-		await getOrganization();
-	}
 
 	let planActive = $derived(org ? isBillingPlanActive(org) : false);
 
@@ -88,7 +81,7 @@
 	size="md"
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={CreditCard} color="#3b82f6" />
+		<ModalHeaderIcon Icon={CreditCard} color="Blue" />
 	</svelte:fragment>
 
 	{#if org}

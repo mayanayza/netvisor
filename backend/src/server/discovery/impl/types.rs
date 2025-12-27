@@ -9,7 +9,10 @@ use uuid::Uuid;
 use crate::server::shared::entities::EntityDiscriminants;
 use crate::server::{
     daemons::r#impl::api::DiscoveryUpdatePayload,
-    shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    shared::types::{
+        Color, Icon,
+        metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    },
 };
 
 #[derive(
@@ -112,11 +115,11 @@ impl HasId for DiscoveryType {
 }
 
 impl EntityMetadataProvider for DiscoveryType {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         EntityDiscriminants::Discovery.color()
     }
 
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         EntityDiscriminants::Discovery.icon()
     }
 }

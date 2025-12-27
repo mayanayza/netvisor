@@ -11,7 +11,7 @@
 		getTags: (group: Group) => [
 			{
 				label: groupTypes.getName(group.group_type),
-				color: groupTypes.getColorHelper(group.group_type).string
+				color: groupTypes.getColorHelper(group.group_type).color
 			}
 		]
 	};

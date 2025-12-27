@@ -118,6 +118,10 @@ const cachingMiddleware: Middleware = {
 const errorMiddleware: Middleware = {
 	async onResponse({ response, options }) {
 		if (!response.ok) {
+			// Don't show error toasts for 401 (expected when not logged in)
+			if (response.status === 401) {
+				return response;
+			}
 			try {
 				const errorData = await response.clone().json();
 				const errorMsg = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
@@ -149,7 +153,7 @@ export const apiClient = createClient<paths>({
 	}
 });
 
-// Add middleware (order matters - caching runs first, then error handling)
+// Add middleware (order matters - logging first, then caching, then error handling)
 apiClient.use(cachingMiddleware);
 apiClient.use(errorMiddleware);
 

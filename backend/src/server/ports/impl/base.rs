@@ -9,7 +9,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::server::shared::entities::{ChangeTriggersTopologyStaleness, EntityDiscriminants};
-use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
+use crate::server::shared::types::{
+    Color, Icon,
+    metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+};
 
 #[derive(
     Copy,
@@ -93,6 +96,7 @@ pub struct Port {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: PortBase,
 }
 
@@ -575,10 +579,10 @@ impl HasId for PortType {
 }
 
 impl EntityMetadataProvider for PortType {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         EntityDiscriminants::Port.color()
     }
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         EntityDiscriminants::Port.icon()
     }
 }

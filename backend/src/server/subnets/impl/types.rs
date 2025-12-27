@@ -6,7 +6,10 @@ use utoipa::ToSchema;
 use crate::server::shared::{
     concepts::Concept,
     entities::EntityDiscriminants,
-    types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    types::{
+        Color, Icon,
+        metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    },
 };
 
 #[derive(
@@ -160,31 +163,31 @@ impl HasId for SubnetType {
 }
 
 impl EntityMetadataProvider for SubnetType {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
-            SubnetType::Internet => "blue",
+            SubnetType::Internet => Color::Blue,
             SubnetType::Remote => EntityDiscriminants::Subnet.color(),
 
             SubnetType::Gateway => Concept::Gateway.color(),
             SubnetType::VpnTunnel => Concept::Vpn.color(),
-            SubnetType::Dmz => "rose",
+            SubnetType::Dmz => Color::Rose,
 
             SubnetType::Lan => EntityDiscriminants::Subnet.color(),
             SubnetType::IoT => Concept::IoT.color(),
-            SubnetType::Guest => "green",
-            SubnetType::WiFi => "teal",
+            SubnetType::Guest => Color::Green,
+            SubnetType::WiFi => Color::Teal,
 
-            SubnetType::Management => "gray",
+            SubnetType::Management => Color::Gray,
             SubnetType::DockerBridge => Concept::Virtualization.color(),
             SubnetType::Storage => Concept::Storage.color(),
 
-            SubnetType::Unknown => "gray",
-            SubnetType::None => "gray",
+            SubnetType::Unknown => Color::Gray,
+            SubnetType::None => Color::Gray,
         }
     }
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
-            SubnetType::Internet => "Globe",
+            SubnetType::Internet => Icon::Globe,
             SubnetType::Remote => EntityDiscriminants::Subnet.icon(),
 
             SubnetType::Gateway => Concept::Gateway.icon(),
@@ -193,11 +196,11 @@ impl EntityMetadataProvider for SubnetType {
 
             SubnetType::Lan => EntityDiscriminants::Subnet.icon(),
             SubnetType::IoT => Concept::IoT.icon(),
-            SubnetType::Guest => "User",
-            SubnetType::WiFi => "WiFi",
+            SubnetType::Guest => Icon::User,
+            SubnetType::WiFi => Icon::Wifi,
 
-            SubnetType::Management => "ServerCog",
-            SubnetType::DockerBridge => "Box",
+            SubnetType::Management => Icon::ServerCog,
+            SubnetType::DockerBridge => Icon::Box,
             SubnetType::Storage => Concept::Storage.icon(),
 
             SubnetType::Unknown => EntityDiscriminants::Subnet.icon(),

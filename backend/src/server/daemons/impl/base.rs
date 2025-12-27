@@ -6,12 +6,15 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::server::{
     daemons::r#impl::api::DaemonCapabilities, shared::entities::ChangeTriggersTopologyStaleness,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct DaemonBase {
     pub host_id: Uuid,
     pub network_id: Uuid,
@@ -31,7 +34,9 @@ pub struct DaemonBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct Daemon {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -43,6 +48,7 @@ pub struct Daemon {
     #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: DaemonBase,
 }
 

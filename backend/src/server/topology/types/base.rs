@@ -27,7 +27,9 @@ pub struct SetEntitiesParams {
     pub interfaces: Vec<Interface>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct Topology {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -39,6 +41,7 @@ pub struct Topology {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: TopologyBase,
 }
 

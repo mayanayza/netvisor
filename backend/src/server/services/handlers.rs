@@ -39,6 +39,16 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
 /// Creates a service with optional bindings to interfaces or ports.
 /// The `id`, `created_at`, `updated_at`, and `source` fields are generated server-side.
 /// Bindings are specified without `service_id` or `network_id` - these are assigned automatically.
+///
+/// ### Binding Validation Rules
+///
+/// - **Cross-host validation**: All bindings must reference ports/interfaces that belong to the
+///   service's host. Bindings referencing entities from other hosts will be rejected.
+/// - **Deduplication**: Duplicate bindings in the same request are automatically deduplicated.
+/// - **All-interfaces precedence**: If a port binding with `interface_id: null` (all interfaces)
+///   is included, any specific-interface bindings for the same port are automatically removed.
+/// - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
+///   A port binding on all interfaces conflicts with any interface binding.
 #[utoipa::path(
     post,
     path = "",
@@ -46,7 +56,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     request_body = CreateServiceRequest,
     responses(
         (status = 200, description = "Service created successfully", body = ApiResponse<Service>),
-        (status = 400, description = "Host network mismatch or invalid request", body = ApiErrorResponse),
+        (status = 400, description = "Validation error: host network mismatch, cross-host binding, or binding conflict", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -87,6 +97,17 @@ pub async fn create_service(
 }
 
 /// Update a service
+///
+/// Updates an existing service. All binding validation rules from service creation apply here as well.
+///
+/// ## Binding Validation Rules
+///
+/// - **Cross-host validation**: All bindings must reference ports/interfaces that belong to the
+///   service's host. Bindings referencing entities from other hosts will be rejected.
+/// - **Deduplication**: Duplicate bindings are automatically deduplicated.
+/// - **All-interfaces precedence**: If a port binding with `interface_id: null` (all interfaces)
+///   is included, any specific-interface bindings for the same port are automatically removed.
+/// - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
 #[utoipa::path(
     put,
     path = "/{id}",
@@ -95,7 +116,7 @@ pub async fn create_service(
     request_body = Service,
     responses(
         (status = 200, description = "Service updated", body = ApiResponse<Service>),
-        (status = 400, description = "Host network mismatch", body = ApiErrorResponse),
+        (status = 400, description = "Validation error: host network mismatch, cross-host binding, or binding conflict", body = ApiErrorResponse),
         (status = 404, description = "Service not found", body = ApiErrorResponse),
     ),
     security(("session" = []))

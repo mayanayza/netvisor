@@ -5,7 +5,10 @@ use utoipa::ToSchema;
 use crate::server::shared::{
     concepts::Concept,
     entities::EntityDiscriminants,
-    types::metadata::{EntityMetadataProvider, HasId},
+    types::{
+        Color, Icon,
+        metadata::{EntityMetadataProvider, HasId},
+    },
 };
 
 #[derive(
@@ -83,113 +86,113 @@ impl HasId for ServiceCategory {
 }
 
 impl EntityMetadataProvider for ServiceCategory {
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
             // Infrastructure (always-on, core network services)
-            ServiceCategory::NetworkCore => "Network",
-            ServiceCategory::NetworkAccess => "Router",
-            ServiceCategory::NetworkSecurity => "BrickWallShield",
+            ServiceCategory::NetworkCore => Icon::Network,
+            ServiceCategory::NetworkAccess => Icon::Router,
+            ServiceCategory::NetworkSecurity => Icon::BrickWall,
 
             // Server Services
-            ServiceCategory::Storage => "HardDrive",
-            ServiceCategory::Media => "PlayCircle",
-            ServiceCategory::HomeAutomation => "Home",
+            ServiceCategory::Storage => Icon::HardDrive,
+            ServiceCategory::Media => Icon::CirclePlay,
+            ServiceCategory::HomeAutomation => Icon::House,
             ServiceCategory::Virtualization => Concept::Virtualization.icon(),
-            ServiceCategory::Backup => "DatabaseBackup",
+            ServiceCategory::Backup => Icon::DatabaseBackup,
 
             // Network Services
             ServiceCategory::DNS => Concept::Dns.icon(),
             ServiceCategory::VPN => Concept::Vpn.icon(),
-            ServiceCategory::Monitoring => "Activity",
-            ServiceCategory::AdBlock => "ShieldCheck",
+            ServiceCategory::Monitoring => Icon::Activity,
+            ServiceCategory::AdBlock => Icon::ShieldCheck,
             ServiceCategory::ReverseProxy => Concept::ReverseProxy.icon(),
 
             // End devices
-            ServiceCategory::Workstation => "Monitor",
-            ServiceCategory::Mobile => "Smartphone",
+            ServiceCategory::Workstation => Icon::Monitor,
+            ServiceCategory::Mobile => Icon::Smartphone,
             ServiceCategory::IoT => Concept::IoT.icon(),
-            ServiceCategory::Printer => "Printer",
+            ServiceCategory::Printer => Icon::Printer,
 
             // Applications
-            ServiceCategory::Database => "Database",
-            ServiceCategory::Development => "Code",
-            ServiceCategory::MessageQueue => "MessageSquareCode",
-            ServiceCategory::Dashboard => "LayoutDashboard",
-            ServiceCategory::IdentityAndAccess => "KeyRound",
+            ServiceCategory::Database => Icon::Database,
+            ServiceCategory::Development => Icon::Code,
+            ServiceCategory::MessageQueue => Icon::MessageSquareCode,
+            ServiceCategory::Dashboard => Icon::LayoutDashboard,
+            ServiceCategory::IdentityAndAccess => Icon::KeyRound,
 
             // Office & Productivity
-            ServiceCategory::Office => "FileText",
-            ServiceCategory::ProjectManagement => "KanbanSquare",
+            ServiceCategory::Office => Icon::FileText,
+            ServiceCategory::ProjectManagement => Icon::SquareKanban,
 
             // Communication
-            ServiceCategory::Messaging => "MessageCircle",
-            ServiceCategory::Conferencing => "Video",
-            ServiceCategory::Telephony => "Phone",
-            ServiceCategory::Email => "Mail",
+            ServiceCategory::Messaging => Icon::MessageCircle,
+            ServiceCategory::Conferencing => Icon::Video,
+            ServiceCategory::Telephony => Icon::Phone,
+            ServiceCategory::Email => Icon::Mail,
 
             // Content
-            ServiceCategory::Publishing => "PenLine",
+            ServiceCategory::Publishing => Icon::PenLine,
 
             // Special
-            ServiceCategory::Scanopy => "Zap",
-            ServiceCategory::Custom => "Sparkle",
+            ServiceCategory::Scanopy => Icon::Zap,
+            ServiceCategory::Custom => Icon::Sparkle,
             ServiceCategory::OpenPorts => EntityDiscriminants::Port.icon(),
-            ServiceCategory::Unknown => "CircleQuestionMark",
+            ServiceCategory::Unknown => Icon::CircleQuestionMark,
         }
     }
 
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
             // Infrastructure (always-on, core network services)
-            ServiceCategory::NetworkCore => "yellow",
-            ServiceCategory::NetworkAccess => "green",
-            ServiceCategory::NetworkSecurity => "red",
+            ServiceCategory::NetworkCore => Color::Yellow,
+            ServiceCategory::NetworkAccess => Color::Green,
+            ServiceCategory::NetworkSecurity => Color::Red,
 
             // Server Services
-            ServiceCategory::Storage => "green",
-            ServiceCategory::Media => "blue",
-            ServiceCategory::HomeAutomation => "blue",
+            ServiceCategory::Storage => Color::Green,
+            ServiceCategory::Media => Color::Blue,
+            ServiceCategory::HomeAutomation => Color::Blue,
             ServiceCategory::Virtualization => Concept::Virtualization.color(),
-            ServiceCategory::Backup => "gray",
+            ServiceCategory::Backup => Color::Gray,
 
             // Network Services
             ServiceCategory::DNS => Concept::Dns.color(),
             ServiceCategory::VPN => Concept::Vpn.color(),
-            ServiceCategory::Monitoring => "orange",
+            ServiceCategory::Monitoring => Color::Orange,
             ServiceCategory::AdBlock => Concept::Dns.color(),
             ServiceCategory::ReverseProxy => Concept::ReverseProxy.color(),
 
             // End devices
-            ServiceCategory::Workstation => "green",
-            ServiceCategory::Mobile => "blue",
+            ServiceCategory::Workstation => Color::Green,
+            ServiceCategory::Mobile => Color::Blue,
             ServiceCategory::IoT => Concept::IoT.color(),
-            ServiceCategory::Printer => "gray",
+            ServiceCategory::Printer => Color::Gray,
 
             // Applications
-            ServiceCategory::Database => "gray",
-            ServiceCategory::Development => "red",
-            ServiceCategory::Dashboard => "purple",
-            ServiceCategory::MessageQueue => "green",
-            ServiceCategory::IdentityAndAccess => "yellow",
+            ServiceCategory::Database => Color::Gray,
+            ServiceCategory::Development => Color::Red,
+            ServiceCategory::Dashboard => Color::Purple,
+            ServiceCategory::MessageQueue => Color::Green,
+            ServiceCategory::IdentityAndAccess => Color::Yellow,
 
             // Office & Productivity
-            ServiceCategory::Office => "blue",
-            ServiceCategory::ProjectManagement => "indigo",
+            ServiceCategory::Office => Color::Blue,
+            ServiceCategory::ProjectManagement => Color::Indigo,
 
             // Communication
-            ServiceCategory::Messaging => "green",
-            ServiceCategory::Conferencing => "teal",
-            ServiceCategory::Telephony => "orange",
-            ServiceCategory::Email => "rose",
+            ServiceCategory::Messaging => Color::Green,
+            ServiceCategory::Conferencing => Color::Teal,
+            ServiceCategory::Telephony => Color::Orange,
+            ServiceCategory::Email => Color::Rose,
 
             // Content
-            ServiceCategory::Publishing => "violet",
+            ServiceCategory::Publishing => Color::Purple, // was "violet", mapped to purple
 
             // Special
-            ServiceCategory::Scanopy => "purple",
-            ServiceCategory::Custom => "rose",
+            ServiceCategory::Scanopy => Color::Purple,
+            ServiceCategory::Custom => Color::Rose,
             ServiceCategory::OpenPorts => EntityDiscriminants::Port.color(),
-            ServiceCategory::Unknown => "gray",
+            ServiceCategory::Unknown => Color::Gray,
         }
     }
 }

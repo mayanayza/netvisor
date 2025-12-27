@@ -1,6 +1,9 @@
 use crate::server::{
     billing::types::features::Feature,
-    shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    shared::types::{
+        Color, Icon,
+        metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
@@ -480,29 +483,29 @@ impl HasId for BillingPlan {
 }
 
 impl EntityMetadataProvider for BillingPlan {
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
-            BillingPlan::Community { .. } => "Heart",
-            BillingPlan::Starter { .. } => "ThumbsUp",
-            BillingPlan::Pro { .. } => "Zap",
-            BillingPlan::Team { .. } => "Users",
-            BillingPlan::Business { .. } => "Briefcase",
-            BillingPlan::Enterprise { .. } => "Building",
-            BillingPlan::Demo { .. } => "TestTube",
-            BillingPlan::CommercialSelfHosted { .. } => "ServerCog",
+            BillingPlan::Community { .. } => Icon::Heart,
+            BillingPlan::Starter { .. } => Icon::ThumbsUp,
+            BillingPlan::Pro { .. } => Icon::Zap,
+            BillingPlan::Team { .. } => Icon::Users,
+            BillingPlan::Business { .. } => Icon::Briefcase,
+            BillingPlan::Enterprise { .. } => Icon::Building,
+            BillingPlan::Demo { .. } => Icon::TestTube,
+            BillingPlan::CommercialSelfHosted { .. } => Icon::ServerCog,
         }
     }
 
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
-            BillingPlan::Community { .. } => "pink",
-            BillingPlan::Starter { .. } => "blue",
-            BillingPlan::Pro { .. } => "yellow",
-            BillingPlan::Team { .. } => "orange",
-            BillingPlan::Business { .. } => "indigo",
-            BillingPlan::Enterprise { .. } => "teal",
-            BillingPlan::Demo { .. } => "purple",
-            BillingPlan::CommercialSelfHosted { .. } => "gray",
+            BillingPlan::Community { .. } => Color::Pink,
+            BillingPlan::Starter { .. } => Color::Blue,
+            BillingPlan::Pro { .. } => Color::Yellow,
+            BillingPlan::Team { .. } => Color::Orange,
+            BillingPlan::Business { .. } => Color::Indigo,
+            BillingPlan::Enterprise { .. } => Color::Teal,
+            BillingPlan::Demo { .. } => Color::Purple,
+            BillingPlan::CommercialSelfHosted { .. } => Color::Gray,
         }
     }
 }

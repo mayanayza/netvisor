@@ -2,31 +2,51 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { getDaemons } from '$lib/features/daemons/store';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { networks } from '$lib/features/networks/store';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import CreateApiKeyModal from './ApiKeyModal.svelte';
 	import type { ApiKey } from '../types/base';
-	import { apiKeys, bulkDeleteApiKeys, deleteApiKey, getApiKeys, updateApiKey } from '../store';
 	import ApiKeyCard from './ApiKeyCard.svelte';
 	import { Plus } from 'lucide-svelte';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import {
+		useApiKeysQuery,
+		useUpdateApiKeyMutation,
+		useDeleteApiKeyMutation,
+		useBulkDeleteApiKeysMutation
+	} from '../queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 
-	const loading = loadData([getApiKeys, getDaemons]);
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const apiKeysQuery = useApiKeysQuery();
+	const networksQuery = useNetworksQuery();
+	// Daemons query to ensure data is loaded (needed for API key display)
+	useDaemonsQuery();
 
-	let showCreateApiKeyModal = false;
-	let editingApiKey: ApiKey | null = null;
+	// Mutations
+	const updateApiKeyMutation = useUpdateApiKeyMutation();
+	const deleteApiKeyMutation = useDeleteApiKeyMutation();
+	const bulkDeleteApiKeysMutation = useBulkDeleteApiKeysMutation();
+
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let apiKeysData = $derived(apiKeysQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let isLoading = $derived(apiKeysQuery.isPending);
+
+	let showCreateApiKeyModal = $state(false);
+	let editingApiKey = $state<ApiKey | null>(null);
 
 	async function handleDeleteApiKey(apiKey: ApiKey) {
 		if (confirm(`Are you sure you want to delete api key "${apiKey.name}"?`)) {
-			deleteApiKey(apiKey.id);
+			deleteApiKeyMutation.mutate(apiKey.id);
 		}
 	}
 
 	async function handleUpdateApiKey(apiKey: ApiKey) {
-		await updateApiKey(apiKey);
+		await updateApiKeyMutation.mutateAsync(apiKey);
 		showCreateApiKeyModal = false;
 		editingApiKey = null;
 	}
@@ -48,7 +68,7 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Api Keys?`)) {
-			await bulkDeleteApiKeys(ids);
+			await bulkDeleteApiKeysMutation.mutateAsync(ids);
 		}
 	}
 
@@ -69,7 +89,7 @@
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
 			}
 		},
 		{
@@ -82,7 +102,7 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
@@ -93,15 +113,15 @@
 	<!-- Header -->
 	<TabHeader title="API Keys" subtitle="Manage API Keys">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateApiKey}
+			<button class="btn-primary flex items-center" onclick={handleCreateApiKey}
 				><Plus class="h-5 w-5" />Create API Key</button
 			>
 		</svelte:fragment>
 	</TabHeader>
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $apiKeys.length === 0}
+	{:else if apiKeysData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No API Keys configured yet"
@@ -111,7 +131,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$apiKeys}
+			items={apiKeysData}
 			fields={apiKeyFields}
 			onBulkDelete={handleBulkDelete}
 			storageKey="scanopy-api-keys-table-state"

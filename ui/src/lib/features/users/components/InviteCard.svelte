@@ -2,29 +2,41 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { UserPlus, UserX } from 'lucide-svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
-	import { formatInviteUrl, revokeInvite } from '$lib/features/organizations/store';
+	import { formatInviteUrl, useRevokeInviteMutation } from '$lib/features/organizations/queries';
 	import { entities, permissions } from '$lib/shared/stores/metadata';
 	import type { OrganizationInvite } from '$lib/features/organizations/types';
-	import { users } from '../store';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useUsersQuery } from '$lib/features/users/queries';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 
-	export let invite: OrganizationInvite;
-	export let viewMode: 'card' | 'list';
+	let { invite, viewMode }: { invite: OrganizationInvite; viewMode: 'card' | 'list' } = $props();
+
+	// TanStack Query for current user
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	// TanStack Query for users
+	const usersQuery = useUsersQuery();
+	let usersData = $derived(usersQuery.data ?? []);
+
+	// Mutation for revoking invite
+	const revokeInviteMutation = useRevokeInviteMutation();
 
 	function handleRevokeInvite() {
 		if (confirm(`Are you sure you want to revoke this invite URL?`)) {
-			revokeInvite(invite.id);
+			revokeInviteMutation.mutate(invite.id);
 		}
 	}
 
-	$: canManage = $currentUser
-		? permissions
-				.getMetadata($currentUser.permissions)
-				.can_manage_user_permissions.includes(invite.permissions)
-		: false;
+	let canManage = $derived(
+		currentUser
+			? permissions
+					.getMetadata(currentUser.permissions)
+					.can_manage_user_permissions.includes(invite.permissions)
+			: false
+	);
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: 'Pending Invite',
 		iconColor: entities.getColorHelper('User').icon,
 		Icon: UserPlus,
@@ -39,7 +51,7 @@
 			},
 			{
 				label: 'Created By',
-				value: $users.find((u) => u.id == invite.created_by)?.email || 'Unknown User'
+				value: usersData.find((u) => u.id == invite.created_by)?.email || 'Unknown User'
 			},
 			{
 				label: 'Sent To',
@@ -62,7 +74,7 @@
 					]
 				: [])
 		]
-	};
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} selectable={false} />

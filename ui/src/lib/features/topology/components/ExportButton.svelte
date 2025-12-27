@@ -3,14 +3,18 @@
 	import { useSvelteFlow, type Node } from '@xyflow/svelte';
 	import { Download } from 'lucide-svelte';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
-	import { organization } from '$lib/features/organizations/store';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
 
 	const { getNodes, getEdges, getViewport, setViewport } = useSvelteFlow();
 
+	// TanStack Query for organization
+	const organizationQuery = useOrganizationQuery();
+	let organization = $derived(organizationQuery.data);
+
 	let hideCreatedWith = $derived.by(() => {
-		if ($organization && $organization.plan && $organization.plan.type) {
-			return billingPlans.getMetadata($organization.plan.type).features.remove_created_with;
+		if (organization && organization.plan && organization.plan.type) {
+			return billingPlans.getMetadata(organization.plan.type).features.remove_created_with;
 		} else {
 			return false;
 		}

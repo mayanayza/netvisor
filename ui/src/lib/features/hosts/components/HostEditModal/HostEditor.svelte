@@ -6,11 +6,8 @@
 		CreateHostWithServicesRequest,
 		UpdateHostWithServicesRequest
 	} from '$lib/features/hosts/types/base';
-	import {
-		createEmptyHostFormData,
-		hydrateHostToFormData,
-		formDataToHostPrimitive
-	} from '$lib/features/hosts/store';
+	import { formDataToHostPrimitive } from '$lib/features/hosts/queries';
+	import { createEmptyHostFormData, hydrateHostToFormData } from '$lib/features/hosts/store';
 	import DetailsForm from './Details/HostDetailsForm.svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import InterfacesForm from './Interfaces/InterfacesForm.svelte';
@@ -18,37 +15,56 @@
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Service } from '$lib/features/services/types/base';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
-	import { getServicesForHost } from '$lib/features/services/store';
+	import { useServicesQuery } from '$lib/features/services/queries';
 	import PortsForm from './Ports/PortsForm.svelte';
 	import VirtualizationForm from './Virtualization/VirtualizationForm.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { get } from 'svelte/store';
 
-	export let host: Host | null = null;
-	export let isOpen = false;
-	export let onCreate: (data: CreateHostWithServicesRequest) => Promise<void> | void;
-	export let onCreateAndContinue: (data: CreateHostWithServicesRequest) => Promise<void> | void;
-	export let onUpdate: (data: UpdateHostWithServicesRequest) => Promise<void> | void;
-	export let onClose: () => void;
-	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
-
-	let loading = false;
-	let deleting = false;
-
-	let currentHostServices: Service[] = [];
-
-	$: isEditing = host !== null;
-	$: title = isEditing ? `Edit ${host?.name}` : 'Create Host';
-
-	let formData: HostFormData = createEmptyHostFormData();
-
-	// Initialize form data when host changes or modal opens
-	$: if (isOpen) {
-		resetForm();
+	interface Props {
+		host?: Host | null;
+		isOpen?: boolean;
+		onCreate: (data: CreateHostWithServicesRequest) => Promise<void> | void;
+		onCreateAndContinue: (data: CreateHostWithServicesRequest) => Promise<void> | void;
+		onUpdate: (data: UpdateHostWithServicesRequest) => Promise<void> | void;
+		onClose: () => void;
+		onDelete?: ((id: string) => Promise<void> | void) | null;
 	}
 
-	$: vmManagerServices = currentHostServices.filter(
-		(s) => serviceDefinitions.getMetadata(s.service_definition).manages_virtualization != null
+	let {
+		host = null,
+		isOpen = false,
+		onCreate,
+		onCreateAndContinue,
+		onUpdate,
+		onClose,
+		onDelete = null
+	}: Props = $props();
+
+	// TanStack Query hook for services
+	const servicesQuery = useServicesQuery();
+	let servicesData = $derived(servicesQuery.data ?? []);
+
+	let loading = $state(false);
+	let deleting = $state(false);
+
+	let currentHostServices = $state<Service[]>([]);
+
+	let isEditing = $derived(host !== null);
+	let title = $derived(isEditing ? `Edit ${host?.name}` : 'Create Host');
+
+	let formData = $state<HostFormData>(createEmptyHostFormData());
+
+	// Initialize form data when host changes or modal opens
+	$effect(() => {
+		if (isOpen) {
+			resetForm();
+		}
+	});
+
+	let vmManagerServices = $derived(
+		currentHostServices.filter(
+			(s) => serviceDefinitions.getMetadata(s.service_definition).manages_virtualization != null
+		)
 	);
 
 	function handleVirtualizationServiceChange(updatedService: Service) {
@@ -69,8 +85,8 @@
 	}
 
 	// Tab management
-	let activeTab = 'details';
-	$: tabs = [
+	let activeTab = $state('details');
+	let tabs = $derived([
 		{
 			id: 'details',
 			label: 'Details',
@@ -105,9 +121,9 @@
 					}
 				]
 			: [])
-	];
+	]);
 
-	$: currentTabIndex = tabs.findIndex((t) => t.id === activeTab) || 0;
+	let currentTabIndex = $derived(tabs.findIndex((t) => t.id === activeTab) || 0);
 
 	function nextTab() {
 		if (currentTabIndex < tabs.length - 1) {
@@ -126,8 +142,8 @@
 		formData = host ? hydrateHostToFormData(host) : createEmptyHostFormData();
 
 		if (host && host.id) {
-			// Sort as ordered for host to get high confidence services with logo first
-			currentHostServices = get(getServicesForHost(host.id));
+			// Get services for this host from query data
+			currentHostServices = servicesData.filter((s) => s.host_id === host.id);
 		} else {
 			currentHostServices = [];
 		}
@@ -140,17 +156,29 @@
 		if (isEditing && host) {
 			// Extract Host primitive from form data for update
 			const hostPrimitive = formDataToHostPrimitive(formData);
-			promises.push(onUpdate({ host: hostPrimitive, services: currentHostServices }));
+			promises.push(
+				onUpdate({
+					host: hostPrimitive,
+					interfaces: formData.interfaces,
+					ports: formData.ports,
+					services: currentHostServices
+				})
+			);
 		} else {
 			// Create needs full form data (includes interfaces/ports)
 			promises.push(onCreate({ host: formData, services: currentHostServices }));
 		}
 
-		// VM managed hosts are already Host primitives
+		// VM managed hosts are already Host primitives - only update host fields, not children
 		for (const updatedHost of vmManagedHostUpdates.values()) {
-			const hostServicesStore = getServicesForHost(updatedHost.id);
-			const hostServices = get(hostServicesStore);
-			promises.push(onUpdate({ host: updatedHost, services: hostServices }));
+			promises.push(
+				onUpdate({
+					host: updatedHost,
+					interfaces: null, // Don't modify
+					ports: null, // Don't modify
+					services: null // Don't modify
+				})
+			);
 		}
 
 		await Promise.all(promises);
@@ -184,16 +212,14 @@
 	}
 
 	// Check if we're on the services tab during create mode
-	$: isServicesTabDuringCreate = !isEditing && activeTab === 'services';
+	let isServicesTabDuringCreate = $derived(!isEditing && activeTab === 'services');
 
 	// Dynamic labels based on create/edit mode and tab position
-	$: saveLabel = isEditing
-		? 'Update Host'
-		: currentTabIndex === tabs.length - 1
-			? 'Create Host'
-			: 'Next';
-	$: cancelLabel = isEditing ? 'Cancel' : 'Previous';
-	$: showCancel = isEditing ? true : currentTabIndex !== 0;
+	let saveLabel = $derived(
+		isEditing ? 'Update Host' : currentTabIndex === tabs.length - 1 ? 'Create Host' : 'Next'
+	);
+	let cancelLabel = $derived(isEditing ? 'Cancel' : 'Previous');
+	let showCancel = $derived(isEditing ? true : currentTabIndex !== 0);
 
 	// Handler for "Create Host & Add Services" - creates host and keeps modal open
 	async function handleCreateAndContinue() {
@@ -241,7 +267,7 @@
 					{#each tabs as tab (tab.id)}
 						<button
 							type="button"
-							on:click={() => {
+							onclick={() => {
 								activeTab = tab.id;
 							}}
 							class="border-b-2 px-1 py-4 text-sm font-medium transition-colors
@@ -251,7 +277,7 @@
 							aria-current={activeTab === tab.id ? 'page' : undefined}
 						>
 							<div class="flex items-center gap-2">
-								<svelte:component this={tab.icon} class="h-4 w-4" />
+								<tab.icon class="h-4 w-4" />
 								{tab.label}
 							</div>
 						</button>
@@ -275,7 +301,12 @@
 			{#if activeTab === 'interfaces'}
 				<div class="h-full">
 					<div class="relative flex-1">
-						<InterfacesForm {formApi} bind:formData />
+						<InterfacesForm
+							{formApi}
+							bind:formData
+							currentServices={currentHostServices}
+							onServicesChange={(services) => (currentHostServices = services)}
+						/>
 					</div>
 				</div>
 			{/if}
@@ -284,7 +315,12 @@
 			{#if activeTab === 'ports'}
 				<div class="h-full">
 					<div class="relative flex-1">
-						<PortsForm {formApi} bind:formData currentServices={currentHostServices} />
+						<PortsForm
+							{formApi}
+							bind:formData
+							currentServices={currentHostServices}
+							onServicesChange={(services) => (currentHostServices = services)}
+						/>
 					</div>
 				</div>
 			{/if}
@@ -333,13 +369,13 @@
 			<div class="flex items-center justify-between">
 				<div></div>
 				<div class="flex items-center gap-3">
-					<button type="button" disabled={loading} on:click={handleCancel} class="btn-secondary">
+					<button type="button" disabled={loading} onclick={handleCancel} class="btn-secondary">
 						Previous
 					</button>
 					<button
 						type="button"
 						disabled={actualDisableSave}
-						on:click={handleCreateAndClose}
+						onclick={handleCreateAndClose}
 						class="btn-secondary"
 					>
 						{loading ? 'Creating...' : 'Create Host'}
@@ -347,7 +383,7 @@
 					<button
 						type="button"
 						disabled={actualDisableSave}
-						on:click={handleCreateAndContinue}
+						onclick={handleCreateAndContinue}
 						class="btn-primary"
 					>
 						{loading ? 'Creating...' : 'Create Host & Add Services'}
@@ -362,7 +398,7 @@
 						<button
 							type="button"
 							disabled={deleting || loading}
-							on:click={handleDelete}
+							onclick={handleDelete}
 							class="btn-danger"
 						>
 							{deleting ? 'Deleting...' : 'Delete'}
@@ -374,7 +410,7 @@
 						<button
 							type="button"
 							disabled={loading || deleting}
-							on:click={handleCancel}
+							onclick={handleCancel}
 							class="btn-secondary"
 						>
 							{cancelLabel}

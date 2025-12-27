@@ -2,7 +2,6 @@
 	import { SvelteFlowProvider, type Node, type Edge } from '@xyflow/svelte';
 	import BaseTopologyViewer from '$lib/features/topology/components/visualization/BaseTopologyViewer.svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
-	import { selectedNode, selectedEdge } from '$lib/features/topology/store';
 	import { setContext } from 'svelte';
 	import { writable } from 'svelte/store';
 	import ReadOnlyInspectorPanel from './ReadOnlyInspectorPanel.svelte';
@@ -20,6 +19,12 @@
 	const topologyContext = writable<Topology>(topology);
 	setContext('topology', topologyContext);
 
+	// Create local stores for selected node/edge (instead of using global store)
+	const selectedNodeStore = writable<Node | null>(null);
+	const selectedEdgeStore = writable<Edge | null>(null);
+	setContext('selectedNode', selectedNodeStore);
+	setContext('selectedEdge', selectedEdgeStore);
+
 	// Keep context in sync with prop
 	$: topologyContext.set(topology);
 
@@ -27,20 +32,20 @@
 	let localSelectedNode: Node | null = null;
 	let localSelectedEdge: Edge | null = null;
 
-	// Update global stores when selection changes (needed for node/edge highlighting)
+	// Update local stores when selection changes (needed for node/edge highlighting)
 	function handleNodeSelect(node: Node | null) {
-		selectedNode.set(node);
-		selectedEdge.set(null);
+		selectedNodeStore.set(node);
+		selectedEdgeStore.set(null);
 	}
 
 	function handleEdgeSelect(edge: Edge | null) {
-		selectedEdge.set(edge);
-		selectedNode.set(null);
+		selectedEdgeStore.set(edge);
+		selectedNodeStore.set(null);
 	}
 
 	function handlePaneSelect() {
-		selectedNode.set(null);
-		selectedEdge.set(null);
+		selectedNodeStore.set(null);
+		selectedEdgeStore.set(null);
 	}
 </script>
 

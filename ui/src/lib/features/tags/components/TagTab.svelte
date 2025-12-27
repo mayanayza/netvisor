@@ -1,30 +1,47 @@
 <script lang="ts">
-	import { bulkDeleteTags, createTag, deleteTag, getTags, tags, updateTag } from '../store';
+	import {
+		useTagsQuery,
+		useCreateTagMutation,
+		useUpdateTagMutation,
+		useDeleteTagMutation,
+		useBulkDeleteTagsMutation
+	} from '../queries';
 	import TagCard from './TagCard.svelte';
 	import TagEditModal from './TagEditModal.svelte';
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import type { Tag } from '../types/base';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import { Plus } from 'lucide-svelte';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { permissions } from '$lib/shared/stores/metadata';
 
-	let showTagEditor = false;
-	let editingTag: Tag | null = null;
+	let showTagEditor = $state(false);
+	let editingTag: Tag | null = $state(null);
 
-	$: canManageNetworks =
-		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
-		false;
+	// Queries and mutations
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
 
-	const loading = loadData([getTags]);
+	const tagsQuery = useTagsQuery();
+	const createTagMutation = useCreateTagMutation();
+	const updateTagMutation = useUpdateTagMutation();
+	const deleteTagMutation = useDeleteTagMutation();
+	const bulkDeleteTagsMutation = useBulkDeleteTagsMutation();
 
-	$: allowBulkDelete = $currentUser
-		? permissions.getMetadata($currentUser.permissions).manage_org_entities
-		: false;
+	// Derived state
+	let tags = $derived(tagsQuery.data ?? []);
+	let isLoading = $derived(tagsQuery.isLoading);
+
+	let canManageNetworks = $derived(
+		(currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities) || false
+	);
+
+	let allowBulkDelete = $derived(
+		currentUser ? permissions.getMetadata(currentUser.permissions).manage_org_entities : false
+	);
 
 	function handleCreateTag() {
 		editingTag = null;
@@ -36,26 +53,22 @@
 		showTagEditor = true;
 	}
 
-	function handleDeleteTag(tag: Tag) {
+	async function handleDeleteTag(tag: Tag) {
 		if (confirm(`Are you sure you want to delete "${tag.name}"?`)) {
-			deleteTag(tag.id);
+			await deleteTagMutation.mutateAsync(tag.id);
 		}
 	}
 
 	async function handleTagCreate(data: Tag) {
-		const result = await createTag(data);
-		if (result?.success) {
-			showTagEditor = false;
-			editingTag = null;
-		}
+		await createTagMutation.mutateAsync(data);
+		showTagEditor = false;
+		editingTag = null;
 	}
 
 	async function handleTagUpdate(_id: string, data: Tag) {
-		const result = await updateTag(data);
-		if (result?.success) {
-			showTagEditor = false;
-			editingTag = null;
-		}
+		await updateTagMutation.mutateAsync(data);
+		showTagEditor = false;
+		editingTag = null;
 	}
 
 	function handleCloseTagEditor() {
@@ -65,7 +78,7 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} tags?`)) {
-			await bulkDeleteTags(ids);
+			await bulkDeleteTagsMutation.mutateAsync(ids);
 		}
 	}
 
@@ -109,16 +122,16 @@
 	<TabHeader title="Tags" subtitle="Manage organization-wide tags for categorizing entities">
 		<svelte:fragment slot="actions">
 			{#if canManageNetworks}
-				<button class="btn-primary flex items-center" on:click={handleCreateTag}>
+				<button class="btn-primary flex items-center" onclick={handleCreateTag}>
 					<Plus class="h-5 w-5" />Create Tag
 				</button>
 			{/if}
 		</svelte:fragment>
 	</TabHeader>
 
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $tags.length === 0}
+	{:else if tags.length === 0}
 		<EmptyState
 			title="No tags configured yet"
 			subtitle="Tags help you organize and filter hosts, services, and other entities"
@@ -127,7 +140,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$tags}
+			items={tags}
 			fields={tagFields}
 			{allowBulkDelete}
 			storageKey="scanopy-tags-table-state"

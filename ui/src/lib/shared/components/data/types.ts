@@ -1,11 +1,12 @@
 import type { IconComponent } from '$lib/shared/utils/types';
 import type { Component, Snippet } from 'svelte';
+import type { Color } from '$lib/shared/utils/styling';
 
 export interface TagProps {
 	label: string;
 	textColor?: string;
 	bgColor?: string;
-	color?: string;
+	color?: Color;
 }
 
 export interface CardAction {
@@ -23,7 +24,7 @@ export interface CardFieldItem {
 	icon?: Component; // Svelte component instead of HTML
 	iconColor?: string;
 	bgColor?: string;
-	color?: string;
+	color?: Color;
 	disabled?: boolean;
 	metadata?: Record<string, unknown>;
 	badge?: string; // For things like "5m", "Critical", etc.
@@ -34,7 +35,7 @@ export interface CardField {
 	label: string;
 	value?: string | CardFieldItem[] | undefined | null;
 	snippet?: Snippet; // Allow snippet as an alternative to value
-	color?: string; // Used for tags when value is an array
+	color?: Color; // Used for tags when value is an array
 	emptyText?: string; // Used when value is empty array
 }
 

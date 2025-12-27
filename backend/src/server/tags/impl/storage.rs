@@ -90,7 +90,7 @@ impl StorableEntity for Tag {
                 SqlValue::Uuid(id),
                 SqlValue::String(name),
                 SqlValue::OptionalString(description),
-                SqlValue::String(color),
+                SqlValue::String(color.to_string()),
                 SqlValue::Uuid(organization_id),
                 SqlValue::Timestamp(created_at),
                 SqlValue::Timestamp(updated_at),
@@ -107,7 +107,7 @@ impl StorableEntity for Tag {
                 name: row.get("name"),
                 description: row.get("description"),
                 organization_id: row.get("organization_id"),
-                color: row.get("color"),
+                color: row.get::<String, _>("color").parse().unwrap_or_default(),
             },
         })
     }

@@ -9,10 +9,11 @@ use std::hash::Hash;
 use std::net::{IpAddr, Ipv4Addr};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 pub const ALL_INTERFACES_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, ToSchema, Validate)]
 pub struct InterfaceBase {
     pub network_id: Uuid,
     pub host_id: Uuid,
@@ -56,7 +57,7 @@ impl InterfaceBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema, Validate)]
 #[schema(example = crate::server::shared::types::examples::interface)]
 pub struct Interface {
     #[serde(default)]
@@ -69,6 +70,7 @@ pub struct Interface {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: InterfaceBase,
 }
 

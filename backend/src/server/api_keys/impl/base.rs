@@ -6,8 +6,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct ApiKeyBase {
     #[serde(default)]
     #[serde(serialize_with = "serialize_sensitive_info")]
@@ -26,7 +29,9 @@ pub struct ApiKeyBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct ApiKey {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -38,6 +43,7 @@ pub struct ApiKey {
     #[schema(read_only, required)]
     pub created_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: ApiKeyBase,
 }
 

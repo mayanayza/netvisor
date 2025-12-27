@@ -49,7 +49,7 @@ impl Default for HostBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema, Validate)]
 #[schema(example = crate::server::shared::types::examples::host)]
 pub struct Host {
     #[serde(default)]
@@ -62,6 +62,7 @@ pub struct Host {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: HostBase,
 }
 

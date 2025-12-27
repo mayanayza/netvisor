@@ -1,26 +1,63 @@
 <script lang="ts">
-	import { formatInterface } from '$lib/features/hosts/store';
-	import { getInterfaceFromId } from '$lib/features/interfaces/store';
+	import { formatInterface } from '$lib/features/hosts/queries';
+	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import type { HostFormData } from '$lib/features/hosts/types/base';
 	import type { InterfaceBinding, Service } from '$lib/features/services/types/base';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import { field } from 'svelte-forms';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 
-	export let binding: InterfaceBinding;
-	export let onUpdate: (updates: Partial<InterfaceBinding>) => void = () => {};
-	export let formApi: FormApi;
-	export let service: Service | undefined = undefined;
-	// Form data with interfaces for binding selection
-	export let host: HostFormData | undefined = undefined;
+	// TanStack Query hooks
+	const interfacesQuery = useInterfacesQuery();
+	const subnetsQuery = useSubnetsQuery();
+	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let subnetsData = $derived(subnetsQuery.data ?? []);
 
-	// Interface binding must have an interface_id
-	$: ifaceStore = binding.interface_id ? getInterfaceFromId(binding.interface_id) : null;
-	$: iface = ifaceStore ? $ifaceStore : null;
+	// Helper to check if subnet is a container subnet
+	let isContainerSubnetFn = $derived((subnetId: string) => {
+		const subnet = subnetsData.find((s) => s.id === subnetId);
+		return subnet ? isContainerSubnet(subnet) : false;
+	});
+
+	// Check if an interface is unsaved (not yet in the query cache)
+	function isInterfaceUnsaved(id: string): boolean {
+		return !interfacesData.some((i) => i.id === id);
+	}
+
+	interface Props {
+		binding: InterfaceBinding;
+		onUpdate?: (updates: Partial<InterfaceBinding>) => void;
+		formApi: FormApi;
+		service?: Service;
+		host?: HostFormData;
+	}
+
+	let {
+		binding,
+		onUpdate = () => {},
+		formApi,
+		service = undefined,
+		host = undefined
+	}: Props = $props();
+
+	// Interface binding must have an interface_id - look up from query data
+	let iface = $derived(
+		binding.interface_id ? interfacesData.find((i) => i.id === binding.interface_id) : null
+	);
 
 	// Create interface options with disabled state
-	$: interfaceOptions =
+	let interfaceOptions = $derived(
 		host?.interfaces.map((iface) => {
+			// Check if interface is unsaved (not in query cache) - can't bind until host is saved
+			if (isInterfaceUnsaved(iface.id)) {
+				return {
+					iface,
+					disabled: true,
+					reason: 'Save host first'
+				};
+			}
+
 			// Can't select if THIS service has Port bindings on this interface
 			const thisServiceHasPortBindings = service?.bindings.some(
 				(b) => b.type === 'Port' && b.interface_id === iface.id
@@ -38,7 +75,8 @@
 				disabled: false,
 				reason: null
 			};
-		}) || [];
+		}) || []
+	);
 
 	// Create svelte-forms field - interface_id is required for Interface bindings
 	const getInterfaceField = () => {
@@ -47,32 +85,39 @@
 		});
 	};
 
-	let currentBindingId: string = binding.id;
-	let interfaceField = getInterfaceField();
+	let currentBindingId = $state(binding.id);
+	let interfaceField = $state(getInterfaceField());
 
 	// Reinitialize field when binding changes
-	$: if (binding.id !== currentBindingId) {
-		currentBindingId = binding.id;
-		interfaceField = getInterfaceField();
-	}
+	$effect(() => {
+		if (binding.id !== currentBindingId) {
+			currentBindingId = binding.id;
+			interfaceField = getInterfaceField();
+		}
+	});
 
 	// Update binding when field value changes
-	$: if ($interfaceField) {
-		const interfaceId: string = $interfaceField.value;
+	$effect(() => {
+		if ($interfaceField) {
+			const interfaceId: string = $interfaceField.value;
 
-		// Only trigger onUpdate if value actually changed
-		if (interfaceId !== binding.interface_id) {
-			onUpdate({ interface_id: interfaceId });
+			// Only trigger onUpdate if value actually changed
+			if (interfaceId !== binding.interface_id) {
+				onUpdate({ interface_id: interfaceId });
+			}
 		}
-	}
+	});
 
 	// Build select options for interfaces
-	$: interfaceSelectOptions = interfaceOptions.map(({ iface, disabled, reason }) => ({
-		value: iface.id,
-		label: formatInterface(iface) + (disabled && reason ? ` - ${reason}` : ''),
-		id: iface.id,
-		disabled
-	}));
+	let interfaceSelectOptions = $derived(
+		interfaceOptions.map(({ iface, disabled, reason }) => ({
+			value: iface.id,
+			label:
+				formatInterface(iface, isContainerSubnetFn) + (disabled && reason ? ` - ${reason}` : ''),
+			id: iface.id,
+			disabled
+		}))
+	);
 </script>
 
 <div class="flex-1">
@@ -98,7 +143,7 @@
 				{:else if host.interfaces && host.interfaces.length === 1}
 					<!-- Single interface - show as read-only -->
 					<div class="text-secondary rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm">
-						{iface ? formatInterface(iface) : 'Unknown Interface'}
+						{iface ? formatInterface(iface, isContainerSubnetFn) : 'Unknown Interface'}
 					</div>
 				{:else if host.interfaces.length > 0 && $interfaceField}
 					<!-- Multiple interfaces - show as dropdown with SelectInput -->

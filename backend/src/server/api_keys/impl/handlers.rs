@@ -3,6 +3,7 @@ use crate::server::{
     config::AppState,
     shared::handlers::{query::NetworkFilterQuery, traits::CrudHandlers},
 };
+use uuid::Uuid;
 
 impl CrudHandlers for ApiKey {
     type Service = ApiKeyService;
@@ -17,5 +18,13 @@ impl CrudHandlers for ApiKey {
         self.base.key = existing.base.key.clone();
         // last_used is server-set only
         self.base.last_used = existing.base.last_used;
+    }
+
+    fn get_tags(&self) -> Option<&Vec<Uuid>> {
+        Some(&self.base.tags)
+    }
+
+    fn set_tags(&mut self, tags: Vec<Uuid>) {
+        self.base.tags = tags;
     }
 }

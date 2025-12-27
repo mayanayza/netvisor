@@ -5,7 +5,8 @@ import {
 	createIconComponent,
 	createLogoIconComponent,
 	createStyle,
-	type ColorStyle
+	type ColorStyle,
+	type Color
 } from '../utils/styling';
 
 export interface TypeMetadata<TMetadata = Record<string, unknown>> {
@@ -14,13 +15,13 @@ export interface TypeMetadata<TMetadata = Record<string, unknown>> {
 	description: string;
 	category: string;
 	icon: string;
-	color: string;
+	color: Color;
 	metadata: TMetadata;
 }
 
 export interface EntityMetadata {
 	id: string;
-	color: string;
+	color: Color;
 	icon: string;
 }
 
@@ -113,10 +114,10 @@ export const metadata = writable<MetadataRegistry>();
 // Shared color helper functions that work for both TypeMetadata and EntityMetadata
 function createSharedHelpers<T extends keyof MetadataRegistry>(category: T) {
 	return {
-		getColorString: (id: string | null): string => {
+		getColorString: (id: string | null): Color => {
 			const $registry = get(metadata);
 			const item = $registry?.[category]?.find((item) => item.id === id);
-			return item?.color || 'gray';
+			return item?.color || 'Gray';
 		},
 
 		getColorHelper: (id: string | null): ColorStyle => {

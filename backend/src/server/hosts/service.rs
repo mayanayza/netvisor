@@ -1,8 +1,12 @@
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
+    bindings::r#impl::base::BindingType,
     daemons::service::DaemonService,
     hosts::r#impl::{
-        api::{ConflictBehavior, CreateHostRequest, HostResponse, UpdateHostRequest},
+        api::{
+            ConflictBehavior, CreateHostRequest, HostResponse, UpdateHostRequest,
+            UpdateInterfaceInput, UpdatePortInput,
+        },
         base::{Host, HostBase},
     },
     interfaces::{r#impl::base::Interface, service::InterfaceService},
@@ -20,7 +24,10 @@ use crate::server::{
             generic::GenericPostgresStorage,
             traits::{StorableEntity, Storage},
         },
-        types::entities::{EntitySource, EntitySourceDiscriminants},
+        types::{
+            api::ValidationError,
+            entities::{EntitySource, EntitySourceDiscriminants},
+        },
     },
 };
 use anyhow::{Error, Result, anyhow};
@@ -121,7 +128,7 @@ impl CrudService<Host> for HostService {
             }
             _ => {
                 if let Some(existing_host) = self.get_by_id(&host.id).await? {
-                    return Err(anyhow!(
+                    return Err(ValidationError::new(format!(
                         "Network mismatch: Daemon is trying to update host '{}' (id: {}) but cannot proceed. \
                         The host belongs to network {} while the daemon is assigned to network {}. \
                         To resolve this, either reassign the daemon to the correct network or delete the mismatched host.",
@@ -129,7 +136,7 @@ impl CrudService<Host> for HostService {
                         host.id,
                         existing_host.base.network_id,
                         host.base.network_id
-                    ));
+                    )).into());
                 }
 
                 let created = self.storage().create(&host).await?;
@@ -212,6 +219,16 @@ impl HostService {
             host_locks: Arc::new(Mutex::new(HashMap::new())),
             event_bus,
         }
+    }
+
+    /// Get ports for a specific host
+    pub async fn get_ports_for_host(&self, host_id: &Uuid) -> Result<Vec<Port>> {
+        self.port_service.get_for_host(host_id).await
+    }
+
+    /// Get interfaces for a specific host
+    pub async fn get_interfaces_for_host(&self, host_id: &Uuid) -> Result<Vec<Interface>> {
+        self.interface_service.get_for_host(host_id).await
     }
 
     // =========================================================================
@@ -408,12 +425,12 @@ impl HostService {
             match conflict_behavior {
                 ConflictBehavior::Error => {
                     // API users should edit the existing host rather than create a duplicate
-                    return Err(anyhow!(
+                    return Err(ValidationError::new(format!(
                         "A host with matching interfaces already exists: '{}' (id: {}). \
                          Edit the existing host instead of creating a new one.",
-                        existing_host.base.name,
-                        existing_host.id
-                    ));
+                        existing_host.base.name, existing_host.id
+                    ))
+                    .into());
                 }
                 ConflictBehavior::Upsert => {
                     // For discovery: align the incoming host ID with the existing host
@@ -482,9 +499,33 @@ impl HostService {
         }
 
         // Create ports with correct host_id
+        // For Upsert: deduplicate by checking existing ports first
+        // For Error: just create (will fail on duplicate constraint)
         let mut created_ports = Vec::new();
         for port in ports {
             let port_with_host = port.with_host(created_host.id, created_host.base.network_id);
+
+            if matches!(conflict_behavior, ConflictBehavior::Upsert) {
+                // Check if port already exists by ID
+                if let Some(existing_port) = self.port_service.get_by_id(&port_with_host.id).await?
+                {
+                    created_ports.push(existing_port);
+                    continue;
+                }
+
+                // Check by unique constraint (host_id, port_number, protocol)
+                let existing_ports = self.port_service.get_for_host(&created_host.id).await?;
+                let port_config = port_with_host.base.port_type.config();
+                if let Some(existing_port) = existing_ports.into_iter().find(|p| {
+                    let existing_config = p.base.port_type.config();
+                    existing_config.number == port_config.number
+                        && existing_config.protocol == port_config.protocol
+                }) {
+                    created_ports.push(existing_port);
+                    continue;
+                }
+            }
+
             let created = self.port_service.create_direct(&port_with_host).await?;
             created_ports.push(created);
         }
@@ -530,6 +571,7 @@ impl HostService {
     }
 
     /// Update a host from an UpdateHostRequest
+    /// Optionally syncs interfaces and ports if provided in the request.
     pub async fn update_from_request(
         &self,
         request: UpdateHostRequest,
@@ -541,6 +583,8 @@ impl HostService {
             .await?
             .ok_or_else(|| anyhow!("Host '{}' not found", request.id))?;
 
+        let network_id = existing.base.network_id;
+
         // Destructure request for exhaustive field handling
         let UpdateHostRequest {
             id,
@@ -550,7 +594,28 @@ impl HostService {
             virtualization,
             hidden,
             tags,
+            expected_updated_at,
+            interfaces: interface_inputs,
+            ports: port_inputs,
         } = request;
+
+        // Optimistic locking: check if host was modified since user loaded it
+        if let Some(expected) = expected_updated_at
+            && existing.updated_at != expected
+        {
+            tracing::warn!(
+                host_id = %id,
+                expected = %expected,
+                actual = %existing.updated_at,
+                "Host update conflict - host was modified since user loaded it"
+            );
+            return Err(ValidationError::new(format!(
+                "Host was modified by another process (possibly discovery). \
+                     Please reload and try again. Expected: {}, Actual: {}",
+                expected, existing.updated_at
+            ))
+            .into());
+        }
 
         // Build updated host preserving non-updatable fields
         let mut updated_host = Host {
@@ -559,7 +624,7 @@ impl HostService {
             updated_at: existing.updated_at,
             base: HostBase {
                 name,
-                network_id: existing.base.network_id, // Not updatable
+                network_id, // Not updatable
                 hostname,
                 description,
                 source: existing.base.source, // Not updatable via API
@@ -569,12 +634,122 @@ impl HostService {
             },
         };
 
-        let updated = self.update(&mut updated_host, authentication).await?;
+        let updated = self
+            .update(&mut updated_host, authentication.clone())
+            .await?;
+
+        // Sync interfaces if provided
+        if let Some(inputs) = interface_inputs {
+            self.sync_interfaces(&updated.id, &network_id, inputs, authentication.clone())
+                .await?;
+        }
+
+        // Sync ports if provided
+        if let Some(inputs) = port_inputs {
+            self.sync_ports(&updated.id, &network_id, inputs, authentication.clone())
+                .await?;
+        }
+
+        // Load fresh children after sync
         let (interfaces, ports, services) = self.load_children_for_host(&updated.id).await?;
 
         Ok(HostResponse::from_host_with_children(
             updated, interfaces, ports, services,
         ))
+    }
+
+    /// Sync interfaces for a host: delete removed, update existing, create new.
+    async fn sync_interfaces(
+        &self,
+        host_id: &Uuid,
+        network_id: &Uuid,
+        inputs: Vec<UpdateInterfaceInput>,
+        authentication: AuthenticatedEntity,
+    ) -> Result<()> {
+        use std::collections::HashSet;
+
+        // Get existing interfaces for this host
+        let existing = self.interface_service.get_for_host(host_id).await?;
+        let existing_ids: HashSet<Uuid> = existing.iter().map(|i| i.id).collect();
+
+        // Partition inputs into new vs existing
+        let input_ids: HashSet<Uuid> = inputs
+            .iter()
+            .filter_map(|i| if i.is_new() { None } else { i.id })
+            .collect();
+
+        // Delete interfaces that are not in the input list
+        let to_delete: Vec<Uuid> = existing_ids.difference(&input_ids).copied().collect();
+        if !to_delete.is_empty() {
+            self.interface_service
+                .delete_many(&to_delete, authentication.clone())
+                .await?;
+        }
+
+        // Process each input
+        for input in inputs {
+            let is_new = input.is_new();
+            let mut interface = input.into_interface(*host_id, *network_id);
+
+            if is_new {
+                // Create new interface
+                self.interface_service
+                    .create(interface, authentication.clone())
+                    .await?;
+            } else if existing_ids.contains(&interface.id) {
+                // Update existing interface - preserve created_at from existing
+                if let Some(existing_iface) = existing.iter().find(|i| i.id == interface.id) {
+                    interface.created_at = existing_iface.created_at;
+                }
+                self.interface_service
+                    .update(&mut interface, authentication.clone())
+                    .await?;
+            }
+            // Note: if ID doesn't exist in existing, it's silently skipped (invalid reference)
+        }
+
+        Ok(())
+    }
+
+    /// Sync ports for a host: delete removed, create new (ports are not updated, just kept or replaced).
+    async fn sync_ports(
+        &self,
+        host_id: &Uuid,
+        network_id: &Uuid,
+        inputs: Vec<UpdatePortInput>,
+        authentication: AuthenticatedEntity,
+    ) -> Result<()> {
+        use std::collections::HashSet;
+
+        // Get existing ports for this host
+        let existing = self.port_service.get_for_host(host_id).await?;
+        let existing_ids: HashSet<Uuid> = existing.iter().map(|p| p.id).collect();
+
+        // Partition inputs into new vs existing
+        let input_ids: HashSet<Uuid> = inputs
+            .iter()
+            .filter_map(|p| if p.is_new() { None } else { p.id })
+            .collect();
+
+        // Delete ports that are not in the input list
+        let to_delete: Vec<Uuid> = existing_ids.difference(&input_ids).copied().collect();
+        if !to_delete.is_empty() {
+            self.port_service
+                .delete_many(&to_delete, authentication.clone())
+                .await?;
+        }
+
+        // Create new ports (existing ports are kept as-is)
+        for input in inputs {
+            if input.is_new() {
+                let port = input.into_port(*host_id, *network_id);
+                self.port_service
+                    .create(port, authentication.clone())
+                    .await?;
+            }
+        }
+
+        Ok(())
     }
 
     // =========================================================================
@@ -744,7 +919,17 @@ impl HostService {
         authentication: AuthenticatedEntity,
     ) -> Result<HostResponse> {
         if destination_host.id == other_host.id {
-            return Err(anyhow!("Can't consolidate a host with itself"));
+            return Err(ValidationError::new("Can't consolidate a host with itself").into());
+        }
+
+        let host_filter = EntityFilter::unfiltered().host_id(&other_host.id);
+
+        if self.daemon_service.get_one(host_filter).await?.is_some() {
+            return Err(ValidationError::new(
+                "Can't consolidate a host that has a daemon associated with it. \
+                 Consolidate the other host into the host with the daemon instead.",
+            )
+            .into());
         }
 
         let lock = self.get_host_lock(&destination_host.id).await;
@@ -756,7 +941,105 @@ impl HostService {
             destination_host
         );
 
-        // Get services and interfaces for both hosts
+        // Get interfaces and ports for both hosts
+        let dest_interfaces = self
+            .interface_service
+            .get_for_host(&destination_host.id)
+            .await?;
+        let other_interfaces = self.interface_service.get_for_host(&other_host.id).await?;
+
+        let dest_ports = self.port_service.get_for_host(&destination_host.id).await?;
+        let other_ports = self.port_service.get_for_host(&other_host.id).await?;
+
+        // Build interface ID mapping: source_interface_id -> dest_interface_id
+        // Transfer non-conflicting interfaces to destination
+        let mut interface_id_map: HashMap<Uuid, Uuid> = HashMap::new();
+        for other_iface in &other_interfaces {
+            // Check for conflict: same (subnet_id + ip_address) or same MAC address
+            let matching_dest_iface = dest_interfaces.iter().find(|dest_iface| {
+                // Match by subnet + IP
+                (dest_iface.base.subnet_id == other_iface.base.subnet_id
+                    && dest_iface.base.ip_address == other_iface.base.ip_address)
+                    // Or match by MAC if both have one
+                    || (dest_iface.base.mac_address.is_some()
+                        && dest_iface.base.mac_address == other_iface.base.mac_address)
+            });
+
+            if let Some(dest_iface) = matching_dest_iface {
+                // Conflict: map source ID to destination ID
+                tracing::debug!(
+                    source_interface_id = %other_iface.id,
+                    dest_interface_id = %dest_iface.id,
+                    ip = %other_iface.base.ip_address,
+                    "Interface conflict - mapping to existing destination interface"
+                );
+                interface_id_map.insert(other_iface.id, dest_iface.id);
+            } else {
+                // No conflict: transfer interface to destination host
+                let mut transferred = other_iface.clone();
+                transferred.base.host_id = destination_host.id;
+                self.interface_service
+                    .update(&mut transferred, authentication.clone())
+                    .await?;
+                tracing::debug!(
+                    interface_id = %other_iface.id,
+                    ip = %other_iface.base.ip_address,
+                    "Transferred interface to destination host"
+                );
+                // Map to itself (ID unchanged, just host_id changed)
+                interface_id_map.insert(other_iface.id, other_iface.id);
+            }
+        }
+
+        // Build port ID mapping: source_port_id -> dest_port_id
+        // Transfer non-conflicting ports to destination
+        let mut port_id_map: HashMap<Uuid, Uuid> = HashMap::new();
+        for other_port in &other_ports {
+            let other_config = other_port.base.port_type.config();
+
+            // Check for conflict: same (number + protocol)
+            let matching_dest_port = dest_ports.iter().find(|dest_port| {
+                let dest_config = dest_port.base.port_type.config();
+                dest_config.number == other_config.number
+                    && dest_config.protocol == other_config.protocol
+            });
+
+            if let Some(dest_port) = matching_dest_port {
+                // Conflict: map source ID to destination ID
+                tracing::debug!(
+                    source_port_id = %other_port.id,
+                    dest_port_id = %dest_port.id,
+                    port = %other_config.number,
+                    "Port conflict - mapping to existing destination port"
+                );
+                port_id_map.insert(other_port.id, dest_port.id);
+            } else {
+                // No conflict: transfer port to destination host
+                let mut transferred =
+                    other_port.with_host(destination_host.id, destination_host.base.network_id);
+                self.port_service
+                    .update(&mut transferred, authentication.clone())
+                    .await?;
+                tracing::debug!(
+                    port_id = %other_port.id,
+                    port = %other_config.number,
+                    "Transferred port to destination host"
+                );
+                // Map to itself (ID unchanged, just host_id changed)
+                port_id_map.insert(other_port.id, other_port.id);
+            }
+        }
+
+        // Upsert host data (metadata merge)
+        let updated_host = self
+            .upsert_host(
+                destination_host.clone(),
+                other_host.clone(),
+                authentication.clone(),
+            )
+            .await?;
+
+        // Get services for both hosts
         let destination_services = self
             .service_service
             .get_all(EntityFilter::unfiltered().host_id(&destination_host.id))
@@ -767,62 +1050,89 @@ impl HostService {
             .get_all(EntityFilter::unfiltered().host_id(&other_host.id))
             .await?;
 
-        let other_interfaces = self.interface_service.get_for_host(&other_host.id).await?;
+        // Transfer services, updating binding IDs using the maps
+        for mut service in other_services {
+            // Check for duplicate by name + service_definition
+            let is_duplicate = destination_services.iter().any(|dest_svc| {
+                dest_svc.base.name == service.base.name
+                    && dest_svc.base.service_definition.id() == service.base.service_definition.id()
+            });
 
-        // Load ports for both hosts
-        let other_ports = self.port_service.get_for_host(&other_host.id).await?;
-
-        // Move daemon if exists
-        if let Some(mut daemon) = self
-            .daemon_service
-            .get_one(EntityFilter::unfiltered().host_id(&other_host.id))
-            .await?
-        {
-            daemon.base.host_id = destination_host.id;
-            self.daemon_service
-                .update(&mut daemon, authentication.clone())
-                .await?;
-        }
-
-        // Upsert host data
-        let updated_host = self
-            .upsert_host(
-                destination_host.clone(),
-                other_host.clone(),
-                authentication.clone(),
-            )
-            .await?;
-
-        let updated_interfaces = self
-            .interface_service
-            .get_for_host(&updated_host.id)
-            .await?;
-
-        let updated_ports = self.port_service.get_for_host(&updated_host.id).await?;
-
-        // Transfer services
-        for service in other_services {
-            if !destination_services.iter().any(|s| s == &service) {
-                let mut reassigned = self
-                    .service_service
-                    .reassign_service_interface_bindings(
-                        service,
-                        &other_host,
-                        &other_interfaces,
-                        &other_ports,
-                        &updated_host,
-                        &updated_interfaces,
-                        &updated_ports,
-                    )
-                    .await;
-                let _ = self
-                    .service_service
-                    .update(&mut reassigned, authentication.clone())
-                    .await;
+            if is_duplicate {
+                tracing::debug!(
+                    service_name = %service.base.name,
+                    service_def = %service.base.service_definition.id(),
+                    "Skipping duplicate service during consolidation"
+                );
+                continue;
             }
+
+            // Update host_id
+            service.base.host_id = updated_host.id;
+            service.base.network_id = updated_host.base.network_id;
+
+            // Remap binding IDs using our maps
+            for binding in &mut service.base.bindings {
+                match &mut binding.base.binding_type {
+                    BindingType::Interface { interface_id } => {
+                        if let Some(&new_id) = interface_id_map.get(interface_id) {
+                            *interface_id = new_id;
+                        } else {
+                            tracing::warn!(
+                                service = %service.base.name,
+                                interface_id = %interface_id,
+                                "Interface not found in mapping during consolidation"
+                            );
+                        }
+                    }
+                    BindingType::Port {
+                        port_id,
+                        interface_id,
+                    } => {
+                        if let Some(&new_port_id) = port_id_map.get(port_id) {
+                            *port_id = new_port_id;
+                        } else {
+                            tracing::warn!(
+                                service = %service.base.name,
+                                port_id = %port_id,
+                                "Port not found in mapping during consolidation"
+                            );
+                        }
+                        if let Some(iface_id) = interface_id {
+                            if let Some(&new_iface_id) = interface_id_map.get(iface_id) {
+                                *interface_id = Some(new_iface_id);
+                            } else {
+                                tracing::warn!(
+                                    service = %service.base.name,
+                                    interface_id = %iface_id,
+                                    "Interface not found in mapping, falling back to all-interfaces"
+                                );
+                                *interface_id = None;
+                            }
+                        }
+                    }
+                }
+            }
+
+            self.service_service
+                .update(&mut service, authentication.clone())
+                .await
+                .map_err(|e| {
+                    tracing::error!(
+                        service_id = %service.id,
+                        service_name = %service.base.name,
+                        "Failed to update service during consolidation: {}",
+                        e
+                    );
+                    anyhow!(
+                        "Failed to update service '{}' during consolidation: {}",
+                        service.base.name,
+                        e
+                    )
+                })?;
         }
 
-        // Delete other host (cascades children)
+        // Delete other host (remaining children that weren't transferred will cascade)
         self.delete_host(&other_host.id, authentication).await?;
 
         tracing::info!(
@@ -830,6 +1140,8 @@ impl HostService {
             source_host_name = %other_host.base.name,
             dest_host_id = %updated_host.id,
             dest_host_name = %updated_host.base.name,
+            interfaces_mapped = %interface_id_map.len(),
+            ports_mapped = %port_id_map.len(),
             "Hosts consolidated"
         );
 
@@ -852,9 +1164,10 @@ impl HostService {
             .await?
             .is_some()
         {
-            return Err(anyhow!(
-                "Can't delete a host with an associated daemon. Delete the daemon first."
-            ));
+            return Err(ValidationError::new(
+                "Can't delete a host with an associated daemon. Delete the daemon first.",
+            )
+            .into());
         }
 
         let host = self

@@ -59,7 +59,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={Key} color="#3b82f6" />
+		<ModalHeaderIcon Icon={Key} color="Blue" />
 	</svelte:fragment>
 
 	{#if resetComplete}

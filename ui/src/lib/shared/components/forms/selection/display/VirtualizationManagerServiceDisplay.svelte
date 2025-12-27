@@ -1,14 +1,27 @@
 <script lang="ts" context="module">
 	import { concepts, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import type { Host } from '$lib/features/hosts/types/base';
+	import type { Service } from '$lib/features/services/types/base';
 
-	export const VirtualizationManagerServiceDisplay: EntityDisplayComponent<Service, object> = {
+	// Context for virtualization manager display - needs access to hosts and services for counts
+	export interface VirtualizationManagerContext {
+		hosts: Host[];
+		services: Service[];
+	}
+
+	export const VirtualizationManagerServiceDisplay: EntityDisplayComponent<
+		Service,
+		VirtualizationManagerContext
+	> = {
 		getId: (service: Service) => service.id,
 		getLabel: (service: Service) => service.name,
-		getDescription: (service: Service) => {
-			let container_count = get(services).filter(
+		getDescription: (service: Service, context: VirtualizationManagerContext) => {
+			const hostsData = context?.hosts ?? [];
+			const servicesData = context?.services ?? [];
+			let container_count = servicesData.filter(
 				(s) => s.virtualization && s.virtualization.details.service_id == service.id
 			).length;
-			let vm_count = get(hosts).filter(
+			let vm_count = hostsData.filter(
 				(h) => h.virtualization && h.virtualization.details.service_id == service.id
 			).length;
 			return container_count > 0
@@ -24,7 +37,7 @@
 			if (service.virtualization) {
 				const tag: TagProps = {
 					label: service.virtualization.type,
-					color: concepts.getColorHelper('Virtualization').string
+					color: concepts.getColorHelper('Virtualization').color
 				};
 
 				tags.push(tag);
@@ -39,14 +52,10 @@
 <script lang="ts">
 	import ListSelectItem from '$lib/shared/components/forms/selection/ListSelectItem.svelte';
 	import type { EntityDisplayComponent } from '../types';
-	import type { Service } from '$lib/features/services/types/base';
 	import type { TagProps } from '$lib/shared/components/data/types';
-	import { services } from '$lib/features/services/store';
-	import { get } from 'svelte/store';
-	import { hosts } from '$lib/features/hosts/store';
 
 	export let item: Service;
-	export let context = {};
+	export let context: VirtualizationManagerContext = { hosts: [], services: [] };
 </script>
 
 <ListSelectItem {item} {context} displayComponent={VirtualizationManagerServiceDisplay} />

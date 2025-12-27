@@ -36,8 +36,6 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
 }
 
 /// List all users
-///
-/// Returns a list of users with permissions below the permissions of the user making the request.
 #[utoipa::path(
     get,
     path = "",

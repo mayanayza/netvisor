@@ -6,6 +6,7 @@ use crate::server::{
     },
     topology::{service::main::TopologyService, types::base::Topology},
 };
+use uuid::Uuid;
 
 impl CrudHandlers for Topology {
     type Service = TopologyService;
@@ -21,5 +22,13 @@ impl CrudHandlers for Topology {
 
     fn validate(&self) -> Result<(), String> {
         Ok(())
+    }
+
+    fn get_tags(&self) -> Option<&Vec<Uuid>> {
+        Some(&self.base.tags)
+    }
+
+    fn set_tags(&mut self, tags: Vec<Uuid>) {
+        self.base.tags = tags;
     }
 }

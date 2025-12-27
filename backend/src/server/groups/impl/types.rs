@@ -1,5 +1,8 @@
 use crate::server::shared::entities::EntityDiscriminants;
-use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider};
+use crate::server::shared::types::{
+    Color, Icon,
+    metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+};
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumDiscriminants, EnumIter, IntoStaticStr};
 use utoipa::ToSchema;
@@ -34,17 +37,17 @@ impl HasId for GroupTypeDiscriminants {
 }
 
 impl EntityMetadataProvider for GroupTypeDiscriminants {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
             GroupTypeDiscriminants::RequestPath => EntityDiscriminants::Group.color(),
             GroupTypeDiscriminants::HubAndSpoke => EntityDiscriminants::Group.color(),
         }
     }
 
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
-            GroupTypeDiscriminants::RequestPath => "Route",
-            GroupTypeDiscriminants::HubAndSpoke => "Share2",
+            GroupTypeDiscriminants::RequestPath => Icon::Route,
+            GroupTypeDiscriminants::HubAndSpoke => Icon::Share2,
         }
     }
 }

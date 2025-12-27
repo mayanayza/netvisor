@@ -1,11 +1,15 @@
 <script lang="ts" module>
 	import { entities } from '$lib/shared/stores/metadata';
+	import { queryClient, queryKeys } from '$lib/api/query-client';
+	import type { Network } from '$lib/features/networks/types';
+	import { autoRebuild } from '$lib/features/topology/store';
 
 	export const TopologyDisplay: EntityDisplayComponent<Topology, object> = {
 		getId: (topology: Topology) => topology.id,
 		getLabel: (topology: Topology) => topology.name,
 		getDescription: (topology: Topology) => {
-			const network = get(networks).find((n) => n.id == topology.network_id);
+			const networksData = queryClient.getQueryData<Network[]>(queryKeys.networks.all) ?? [];
+			const network = networksData.find((n) => n.id == topology.network_id);
 			return network ? network.name : 'Unknown Network';
 		},
 		getIcon: () => entities.getIconComponent('Topology'),
@@ -37,9 +41,7 @@
 	import ListSelectItem from '../ListSelectItem.svelte';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import { getTopologyStateInfo } from '$lib/features/topology/state';
-	import { networks } from '$lib/features/networks/store';
 	import { get } from 'svelte/store';
-	import { autoRebuild } from '$lib/features/topology/store';
 
 	let {
 		item,

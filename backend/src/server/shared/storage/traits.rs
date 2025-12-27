@@ -47,7 +47,7 @@ pub trait Storage<T: StorableEntity>: Send + Sync {
     async fn delete_by_filter(&self, filter: EntityFilter) -> Result<usize, anyhow::Error>;
 }
 
-pub trait StorableEntity: Sized + Clone + Send + Sync + 'static {
+pub trait StorableEntity: Sized + Clone + Send + Sync + 'static + Default {
     type BaseData;
 
     fn new(base: Self::BaseData) -> Self;
@@ -61,6 +61,12 @@ pub trait StorableEntity: Sized + Clone + Send + Sync + 'static {
     fn id(&self) -> Uuid;
     fn network_id(&self) -> Option<Uuid>;
     fn organization_id(&self) -> Option<Uuid>;
+    fn is_network_keyed() -> bool {
+        Self::default().network_id().is_some()
+    }
+    fn is_organization_keyed() -> bool {
+        Self::default().organization_id().is_some()
+    }
     fn created_at(&self) -> DateTime<Utc>;
     fn updated_at(&self) -> DateTime<Utc>;
     fn set_id(&mut self, id: Uuid);

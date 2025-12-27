@@ -9,14 +9,18 @@
 	import BlockerFlow from '$lib/features/auth/components/onboarding/BlockerFlow.svelte';
 	import MultiDaemonSetup from '$lib/features/auth/components/onboarding/MultiDaemonSetup.svelte';
 	import type { RegisterRequest, SetupRequest } from '$lib/features/auth/types/base';
-	import { submitSetup, register, checkAuth } from '$lib/features/auth/store';
-	import { getOrganization } from '$lib/features/organizations/store';
+	import { useSetupMutation, useRegisterMutation } from '$lib/features/auth/queries';
+	import { fetchOrganization } from '$lib/features/organizations/queries';
 	import { navigate } from '$lib/shared/utils/navigation';
 	import { config, isSelfHosted } from '$lib/shared/stores/config';
 	import { resolve } from '$app/paths';
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { setPreferredNetwork } from '$lib/features/topology/store';
 	import { trackEvent, trackPlunkEvent } from '$lib/shared/utils/analytics';
+
+	// TanStack Query mutations
+	const setupMutation = useSetupMutation();
+	const registerMutation = useRegisterMutation();
 
 	// URL params for invite flow
 	let orgName = $derived($page.url.searchParams.get('org_name'));
@@ -81,13 +85,15 @@
 	}
 
 	async function handleSetupSubmit(formData: SetupRequest) {
-		// Submit setup data to backend (stored in session)
-		const result = await submitSetup(formData);
-		if (result) {
+		try {
+			// Submit setup data to backend (stored in session)
+			const result = await setupMutation.mutateAsync(formData);
 			// Update store with network IDs
 			onboardingStore.setNetworkIds(result.network_ids);
 			// Skip daemon step if server has integrated daemon
 			currentStep = hasIntegratedDaemon ? 'register' : 'daemon';
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
@@ -113,44 +119,47 @@
 	}
 
 	async function handleRegister(data: RegisterRequest, subscribed: boolean) {
-		// Extract subscribed for Plunk, send rest to backend
-		const user = await register(data);
-		if (!user) return;
+		try {
+			// Extract subscribed for Plunk, send rest to backend
+			const user = await registerMutation.mutateAsync(data);
 
-		// Track registration in Plunk for email marketing
-		trackPlunkEvent('register', user.email, subscribed);
+			// Track registration in Plunk for email marketing
+			trackPlunkEvent('register', user.email, subscribed);
 
-		// Before clearing onboarding store, get state for tracking and network preference
-		const state = onboardingStore.getState();
+			// Before clearing onboarding store, get state for tracking and network preference
+			const state = onboardingStore.getState();
 
-		// Track successful registration with context
-		const daemonsInstalled = Array.from(state.daemonSetups.values()).filter(
-			(d) => d.installNow
-		).length;
-		trackEvent('onboarding_registration_completed', {
-			use_case: state.useCase,
-			daemons_installed: daemonsInstalled
-		});
+			// Track successful registration with context
+			const daemonsInstalled = Array.from(state.daemonSetups.values()).filter(
+				(d) => d.installNow
+			).length;
+			trackEvent('onboarding_registration_completed', {
+				use_case: state.useCase,
+				daemons_installed: daemonsInstalled
+			});
 
-		// Set preferred network for topology view
-		// This ensures the topology tab shows the network being scanned
-		const networkWithDaemon = state.networks.find((n) => {
-			if (!n.id) return false;
-			const setup = state.daemonSetups.get(n.id);
-			return setup?.installNow === true;
-		});
-		if (networkWithDaemon?.id) {
-			setPreferredNetwork(networkWithDaemon.id);
+			// Set preferred network for topology view
+			// This ensures the topology tab shows the network being scanned
+			const networkWithDaemon = state.networks.find((n) => {
+				if (!n.id) return false;
+				const setup = state.daemonSetups.get(n.id);
+				return setup?.installNow === true;
+			});
+			if (networkWithDaemon?.id) {
+				setPreferredNetwork(networkWithDaemon.id);
+			}
+
+			// Fetch organization data before navigating
+			await fetchOrganization();
+
+			// Clear onboarding store
+			onboardingStore.reset();
+
+			// Navigate to correct destination (billing or main app)
+			await navigate();
+		} catch {
+			// Error handled by mutation
 		}
-
-		// Refresh auth state and organization
-		await Promise.all([checkAuth(), getOrganization()]);
-
-		// Clear onboarding store
-		onboardingStore.reset();
-
-		// Navigate to correct destination (billing or main app)
-		await navigate();
 	}
 
 	function handleSwitchToLogin() {

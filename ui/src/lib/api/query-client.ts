@@ -48,6 +48,14 @@ export const queryClient = createQueryClient();
  *   queryKeys.hosts.list(filters) -> ['hosts', 'list', filters]
  */
 export const queryKeys = {
+	auth: {
+		all: ['auth'] as const,
+		currentUser: () => [...queryKeys.auth.all, 'currentUser'] as const
+	},
+	invites: {
+		all: ['invites'] as const,
+		detail: (id: string) => [...queryKeys.invites.all, 'detail', id] as const
+	},
 	hosts: {
 		all: ['hosts'] as const,
 		lists: () => [...queryKeys.hosts.all, 'list'] as const,
@@ -110,10 +118,25 @@ export const queryKeys = {
 		detail: (id: string) => [...queryKeys.apiKeys.all, 'detail', id] as const
 	},
 	tags: {
-		all: ['tags'] as const
+		all: ['tags'] as const,
+		detail: (id: string) => [...queryKeys.tags.all, 'detail', id] as const
 	},
 	topology: {
 		all: ['topology'] as const,
 		detail: (id: string) => [...queryKeys.topology.all, 'detail', id] as const
+	},
+	billing: {
+		all: ['billing'] as const,
+		plans: () => [...queryKeys.billing.all, 'plans'] as const
+	},
+	shares: {
+		all: ['shares'] as const,
+		detail: (id: string) => [...queryKeys.shares.all, 'detail', id] as const
+	},
+	config: {
+		all: ['config'] as const
+	},
+	metadata: {
+		all: ['metadata'] as const
 	}
 } as const;

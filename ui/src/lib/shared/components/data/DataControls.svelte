@@ -558,7 +558,7 @@
 				<SlidersHorizontal class="h-4 w-4" />
 				Filters
 				{#if hasActiveFilters}
-					<Tag label="Active" color="blue" />
+					<Tag label="Active" color="Blue" />
 				{/if}
 			</button>
 		{/if}

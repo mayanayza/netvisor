@@ -53,7 +53,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={Lock} color="rgb(59, 130, 246)" />
+		<ModalHeaderIcon Icon={Lock} color="Blue" />
 	</svelte:fragment>
 
 	<div class="space-y-4">

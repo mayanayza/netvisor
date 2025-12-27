@@ -17,7 +17,10 @@ use crate::server::{
     hosts::r#impl::base::Host,
     networks::r#impl::Network,
     organizations::r#impl::base::Organization,
-    shared::types::metadata::{EntityMetadataProvider, HasId},
+    shared::types::{
+        Color, Icon,
+        metadata::{EntityMetadataProvider, HasId},
+    },
     users::r#impl::base::User,
 };
 
@@ -69,49 +72,49 @@ impl HasId for EntityDiscriminants {
 }
 
 impl EntityMetadataProvider for EntityDiscriminants {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
-            EntityDiscriminants::Organization => "blue",
-            EntityDiscriminants::Network => "gray",
-            EntityDiscriminants::Daemon => "green",
-            EntityDiscriminants::Discovery => "green",
-            EntityDiscriminants::ApiKey => "yellow",
-            EntityDiscriminants::User => "blue",
-            EntityDiscriminants::Invite => "green",
-            EntityDiscriminants::Share => "teal",
-            EntityDiscriminants::Tag => "yellow",
+            EntityDiscriminants::Organization => Color::Blue,
+            EntityDiscriminants::Network => Color::Gray,
+            EntityDiscriminants::Daemon => Color::Green,
+            EntityDiscriminants::Discovery => Color::Green,
+            EntityDiscriminants::ApiKey => Color::Yellow,
+            EntityDiscriminants::User => Color::Blue,
+            EntityDiscriminants::Invite => Color::Green,
+            EntityDiscriminants::Share => Color::Teal,
+            EntityDiscriminants::Tag => Color::Yellow,
 
-            EntityDiscriminants::Host => "blue",
-            EntityDiscriminants::Service => "purple",
-            EntityDiscriminants::Interface => "cyan",
-            EntityDiscriminants::Port => "cyan",
-            EntityDiscriminants::Binding => "purple",
+            EntityDiscriminants::Host => Color::Blue,
+            EntityDiscriminants::Service => Color::Purple,
+            EntityDiscriminants::Interface => Color::Cyan,
+            EntityDiscriminants::Port => Color::Cyan,
+            EntityDiscriminants::Binding => Color::Purple,
 
-            EntityDiscriminants::Subnet => "orange",
-            EntityDiscriminants::Group => "rose",
-            EntityDiscriminants::Topology => "pink",
+            EntityDiscriminants::Subnet => Color::Orange,
+            EntityDiscriminants::Group => Color::Rose,
+            EntityDiscriminants::Topology => Color::Pink,
         }
     }
 
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
-            EntityDiscriminants::Organization => "Building",
-            EntityDiscriminants::Network => "Globe",
-            EntityDiscriminants::User => "User",
-            EntityDiscriminants::Tag => "Tag",
-            EntityDiscriminants::Invite => "UserPlus",
-            EntityDiscriminants::Share => "Share2",
-            EntityDiscriminants::ApiKey => "Key",
-            EntityDiscriminants::Daemon => "SatelliteDish",
-            EntityDiscriminants::Discovery => "Radar",
-            EntityDiscriminants::Host => "Server",
-            EntityDiscriminants::Service => "Layers",
-            EntityDiscriminants::Interface => "Binary",
-            EntityDiscriminants::Port => "EthernetPort",
-            EntityDiscriminants::Binding => "Link",
-            EntityDiscriminants::Subnet => "Network",
-            EntityDiscriminants::Group => "Group",
-            EntityDiscriminants::Topology => "ChartNetwork",
+            EntityDiscriminants::Organization => Icon::Building,
+            EntityDiscriminants::Network => Icon::Globe,
+            EntityDiscriminants::User => Icon::User,
+            EntityDiscriminants::Tag => Icon::Tag,
+            EntityDiscriminants::Invite => Icon::UserPlus,
+            EntityDiscriminants::Share => Icon::Share2,
+            EntityDiscriminants::ApiKey => Icon::Key,
+            EntityDiscriminants::Daemon => Icon::SatelliteDish,
+            EntityDiscriminants::Discovery => Icon::Radar,
+            EntityDiscriminants::Host => Icon::Server,
+            EntityDiscriminants::Service => Icon::Layers,
+            EntityDiscriminants::Interface => Icon::Binary,
+            EntityDiscriminants::Port => Icon::EthernetPort,
+            EntityDiscriminants::Binding => Icon::Link,
+            EntityDiscriminants::Subnet => Icon::Network,
+            EntityDiscriminants::Group => Icon::Group,
+            EntityDiscriminants::Topology => Icon::ChartNetwork,
         }
     }
 }

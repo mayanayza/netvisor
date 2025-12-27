@@ -7,29 +7,44 @@
 	import { createEmptyNetworkFormData } from '../store';
 	import NetworkDetailsForm from './NetworkDetailsForm.svelte';
 	import { pushError } from '$lib/shared/stores/feedback';
-	import { organization } from '$lib/features/organizations/store';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import { field } from 'svelte-forms';
 
-	export let network: Network | null = null;
-	export let isOpen = false;
-	export let onCreate: (data: Network) => Promise<void> | void;
-	export let onUpdate: (id: string, data: Network) => Promise<void> | void;
-	export let onClose: () => void;
-	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
+	let {
+		network = null,
+		isOpen = false,
+		onCreate,
+		onUpdate,
+		onClose,
+		onDelete = null
+	}: {
+		network?: Network | null;
+		isOpen?: boolean;
+		onCreate: (data: Network) => Promise<void> | void;
+		onUpdate: (id: string, data: Network) => Promise<void> | void;
+		onClose: () => void;
+		onDelete?: ((id: string) => Promise<void> | void) | null;
+	} = $props();
 
-	let loading = false;
-	let deleting = false;
+	// TanStack Query for organization
+	const organizationQuery = useOrganizationQuery();
+	let organization = $derived(organizationQuery.data);
 
-	$: isEditing = network !== null;
-	$: title = isEditing ? `Edit ${network?.name}` : 'Create Network';
+	let loading = $state(false);
+	let deleting = $state(false);
 
-	let formData: Network = createEmptyNetworkFormData();
+	let isEditing = $derived(network !== null);
+	let title = $derived(isEditing ? `Edit ${network?.name}` : 'Create Network');
 
-	// Initialize form data when group changes or modal opens
-	$: if (isOpen) {
-		resetForm();
-	}
+	let formData: Network = $state(createEmptyNetworkFormData());
+
+	// Initialize form data when network changes or modal opens
+	$effect(() => {
+		if (isOpen) {
+			resetForm();
+		}
+	});
 
 	function resetForm() {
 		formData = network ? { ...network } : createEmptyNetworkFormData();
@@ -38,11 +53,11 @@
 	async function handleSubmit() {
 		// Clean up the data before sending
 
-		if ($organization) {
+		if (organization) {
 			const networkData: Network = {
 				...formData,
 				name: formData.name.trim(),
-				organization_id: $organization.id
+				organization_id: organization.id
 			};
 
 			loading = true;
@@ -73,7 +88,7 @@
 	}
 
 	// Dynamic labels based on create/edit mode
-	$: saveLabel = isEditing ? 'Update Network' : 'Create Network';
+	let saveLabel = $derived(isEditing ? 'Update Network' : 'Create Network');
 
 	const seedDataField = field('seedData', true, []);
 
@@ -95,7 +110,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Network')} color={colorHelper.string} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('Network')} color={colorHelper.color} />
 	</svelte:fragment>
 
 	<!-- Content -->

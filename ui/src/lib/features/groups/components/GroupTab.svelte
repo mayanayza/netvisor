@@ -1,30 +1,44 @@
 <script lang="ts">
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
-	import {
-		bulkDeleteGroups,
-		createGroup,
-		deleteGroup,
-		getGroups,
-		groups,
-		updateGroup
-	} from '../store';
 	import type { Group } from '../types/base';
 	import GroupCard from './GroupCard.svelte';
 	import GroupEditModal from './GroupEditModal/GroupEditModal.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getServices } from '$lib/features/services/store';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
-	import { networks } from '$lib/features/networks/store';
 	import { Plus } from 'lucide-svelte';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import {
+		useGroupsQuery,
+		useCreateGroupMutation,
+		useUpdateGroupMutation,
+		useDeleteGroupMutation,
+		useBulkDeleteGroupsMutation
+	} from '../queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
-	const loading = loadData([getServices, getGroups]);
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const groupsQuery = useGroupsQuery();
+	const networksQuery = useNetworksQuery();
+	useServicesQuery();
 
-	let showGroupEditor = false;
-	let editingGroup: Group | null = null;
+	// Mutations
+	const createGroupMutation = useCreateGroupMutation();
+	const updateGroupMutation = useUpdateGroupMutation();
+	const deleteGroupMutation = useDeleteGroupMutation();
+	const bulkDeleteGroupsMutation = useBulkDeleteGroupsMutation();
+
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let groupsData = $derived(groupsQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let isLoading = $derived(groupsQuery.isPending);
+
+	let showGroupEditor = $state(false);
+	let editingGroup = $state<Group | null>(null);
 
 	function handleCreateGroup() {
 		editingGroup = null;
@@ -38,23 +52,27 @@
 
 	function handleDeleteGroup(group: Group) {
 		if (confirm(`Are you sure you want to delete "${group.name}"?`)) {
-			deleteGroup(group.id);
+			deleteGroupMutation.mutate(group.id);
 		}
 	}
 
 	async function handleGroupCreate(data: Group) {
-		const result = await createGroup(data);
-		if (result?.success) {
+		try {
+			await createGroupMutation.mutateAsync(data);
 			showGroupEditor = false;
 			editingGroup = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleGroupUpdate(id: string, data: Group) {
-		const result = await updateGroup(data);
-		if (result?.success) {
+		try {
+			await updateGroupMutation.mutateAsync(data);
 			showGroupEditor = false;
 			editingGroup = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
@@ -65,7 +83,7 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Groups?`)) {
-			await bulkDeleteGroups(ids);
+			await bulkDeleteGroupsMutation.mutateAsync(ids);
 		}
 	}
 
@@ -111,7 +129,7 @@
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
 			}
 		},
 		{
@@ -124,7 +142,7 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
@@ -134,15 +152,15 @@
 <div class="space-y-6">
 	<TabHeader title="Groups" subtitle="Create custom groups to improve topology visualization">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateGroup}
+			<button class="btn-primary flex items-center" onclick={handleCreateGroup}
 				><Plus class="h-5 w-5" />Create Group</button
 			>
 		</svelte:fragment>
 	</TabHeader>
 
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $groups.length === 0}
+	{:else if groupsData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No groups configured yet"
@@ -152,7 +170,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$groups}
+			items={groupsData}
 			fields={groupFields}
 			storageKey="scanopy-groups-table-state"
 			onBulkDelete={handleBulkDelete}

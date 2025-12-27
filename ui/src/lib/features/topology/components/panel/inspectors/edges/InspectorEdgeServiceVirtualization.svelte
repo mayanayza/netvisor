@@ -3,7 +3,8 @@
 	import EntityDisplayWrapper from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
-	import { topology as globalTopology, topologyOptions } from '$lib/features/topology/store';
+	import { useTopologiesQuery } from '$lib/features/topology/queries';
+	import { topology as selectedTopology, topologyOptions } from '$lib/features/topology/store';
 	import type { Topology } from '$lib/features/topology/types/base';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -13,9 +14,15 @@
 
 	let { edge, containerizingServiceId }: { edge: Edge; containerizingServiceId: string } = $props();
 
-	// Try to get topology from context (for share/embed pages), fallback to global store
+	// Try to get topology from context (for share/embed pages), fallback to query + selected topology
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
+	const topologiesQuery = useTopologiesQuery();
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let topology = $derived(
+		topologyContext
+			? $topologyContext
+			: (topologiesData.find((t) => t.id === $selectedTopology?.id) ?? $selectedTopology)
+	);
 
 	let containerizingService = $derived(
 		topology ? topology.services.find((s) => s.id == containerizingServiceId) : null

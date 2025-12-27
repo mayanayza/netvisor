@@ -7,16 +7,23 @@
 	import DiscoverySessionCard from '../cards/DiscoverySessionCard.svelte';
 	import { type DiscoveryUpdatePayload } from '../../types/api';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
-	import { daemons, getDaemons } from '$lib/features/daemons/store';
-	import { loadData } from '$lib/shared/utils/dataLoader';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import { onMount } from 'svelte';
 
-	const loading = loadData([getDaemons, getActiveSessions]);
+	// Queries
+	const daemonsQuery = useDaemonsQuery();
+
+	// Derived data
+	let daemonsData = $derived(daemonsQuery.data ?? []);
+	let isLoading = $derived(daemonsQuery.isPending);
 
 	let sessionsList = $state<DiscoveryUpdatePayload[]>([]);
 
 	onMount(() => {
+		// Fetch active sessions on mount
+		getActiveSessions();
+
 		const unsubscribe = sessions.subscribe((value) => {
 			sessionsList = value;
 		});
@@ -50,7 +57,7 @@
 			filterable: true,
 			sortable: true,
 			getValue: (item) => {
-				const daemon = $daemons.find((d) => d.id == item.daemon_id);
+				const daemon = daemonsData.find((d) => d.id == item.daemon_id);
 				return daemon ? daemon.name : 'Unknown Daemon';
 			}
 		},
@@ -86,7 +93,7 @@
 <div class="space-y-6">
 	<!-- Header -->
 	<TabHeader title="Discovery Sessions" subtitle="Monitor active discovery sessions" />
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
 	{:else if sessionsList.length === 0}
 		<!-- Empty state -->

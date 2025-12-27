@@ -20,7 +20,7 @@
 
 	// Ensure formData has default values if not set
 	$: if (!formData.color) {
-		formData.color = 'blue';
+		formData.color = 'Blue';
 	}
 	$: if (!formData.edge_style) {
 		formData.edge_style = 'SmoothStep';

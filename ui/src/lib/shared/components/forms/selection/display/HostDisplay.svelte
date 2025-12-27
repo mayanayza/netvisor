@@ -27,7 +27,7 @@
 			const services = context?.services ?? [];
 			return services.map((service) => ({
 				label: serviceDefinitions.getName(service.service_definition),
-				color: entities.getColorHelper('Service').string
+				color: entities.getColorHelper('Service').color
 			}));
 		}
 	};

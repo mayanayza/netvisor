@@ -10,6 +10,7 @@ use sqlx::Row;
 use sqlx::postgres::PgRow;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 /// Share display options
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
@@ -32,7 +33,9 @@ impl Default for ShareOptions {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct ShareBase {
     pub topology_id: Uuid,
     pub network_id: Uuid,
@@ -49,7 +52,9 @@ pub struct ShareBase {
     pub options: ShareOptions,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct Share {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -61,6 +66,7 @@ pub struct Share {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: ShareBase,
 }
 

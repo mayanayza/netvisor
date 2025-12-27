@@ -1,8 +1,43 @@
 use axum::{Json, http::StatusCode, response::Response};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
+use std::fmt;
 use utoipa::ToSchema;
 
 pub type ApiResult<T> = Result<T, ApiError>;
+
+/// A validation error that should be returned as HTTP 400 Bad Request.
+/// Use this for user-facing errors like invalid input, constraint violations, etc.
+#[derive(Debug, Clone)]
+pub struct ValidationError(pub String);
+
+impl ValidationError {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self(message.into())
+    }
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for ValidationError {}
+
+impl From<ValidationError> for ApiError {
+    fn from(err: ValidationError) -> Self {
+        tracing::warn!("Validation error: {}", err.0);
+        ApiError::bad_request(&err.0)
+    }
+}
+
+/// Helper macro to return a validation error from a function returning anyhow::Result
+#[macro_export]
+macro_rules! bail_validation {
+    ($($arg:tt)*) => {
+        return Err($crate::server::shared::types::api::ValidationError::new(format!($($arg)*)).into())
+    };
+}
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ApiResponse<T> {
@@ -95,17 +130,48 @@ impl axum::response::IntoResponse for ApiError {
 
 impl From<anyhow::Error> for ApiError {
     fn from(err: anyhow::Error) -> Self {
-        tracing::error!("Internal error: {}", err);
-        Self::internal_error(&err.to_string())
+        // Check if this is a ValidationError (should return 400)
+        if let Some(validation_err) = err.downcast_ref::<ValidationError>() {
+            tracing::warn!("Validation error: {}", validation_err.0);
+            return Self::bad_request(&validation_err.0);
+        }
+
+        // All other anyhow errors are internal server errors
+        let msg = err.to_string();
+        tracing::error!("Internal error: {}", msg);
+        Self::internal_error(&msg)
     }
 }
 
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
-        tracing::error!("Database error: {}", err);
-        match err {
-            sqlx::Error::RowNotFound => Self::not_found("Row not found".to_string()),
-            _ => Self::internal_error("Database operation failed"),
+        match &err {
+            sqlx::Error::RowNotFound => {
+                tracing::warn!("Database error: row not found");
+                Self::not_found("Row not found".to_string())
+            }
+            sqlx::Error::Database(db_err) => {
+                // Check for constraint violations that indicate user error (400)
+                if db_err.is_foreign_key_violation() {
+                    tracing::warn!("Database error: foreign key violation - {}", db_err);
+                    return Self::bad_request("Referenced entity does not exist");
+                }
+                if db_err.is_unique_violation() {
+                    tracing::warn!("Database error: unique constraint violation - {}", db_err);
+                    return Self::bad_request("Entity already exists");
+                }
+                if db_err.is_check_violation() {
+                    tracing::warn!("Database error: check constraint violation - {}", db_err);
+                    return Self::bad_request("Invalid data");
+                }
+                // Other database errors are internal
+                tracing::error!("Database error: {}", db_err);
+                Self::internal_error("Database operation failed")
+            }
+            _ => {
+                tracing::error!("Database error: {}", err);
+                Self::internal_error("Database operation failed")
+            }
         }
     }
 }

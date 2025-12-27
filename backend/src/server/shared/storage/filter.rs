@@ -175,15 +175,6 @@ impl EntityFilter {
         self
     }
 
-    pub fn service_binding_id(mut self, id: &Uuid) -> Self {
-        self.conditions.push(format!(
-            "EXISTS (SELECT 1 FROM jsonb_array_elements(bindings) AS b WHERE b->>'id' = ${})",
-            self.values.len() + 1
-        ));
-        self.values.push(SqlValue::String(id.to_string()));
-        self
-    }
-
     pub fn scheduled_discovery(mut self) -> Self {
         self.conditions
             .push("run_type->>'type' = 'Scheduled'".to_string());

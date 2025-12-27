@@ -99,7 +99,7 @@
 	</svelte:fragment>
 
 	<!-- Main content wrapped in form (includes footer so type="submit" works) -->
-	<form on:submit|preventDefault={handleFormSubmit} class="flex h-full flex-col">
+	<form onsubmit={handleFormSubmit} class="flex h-full flex-col">
 		<!-- Form content -->
 		<div class="flex-1 overflow-auto p-6">
 			<!-- Form fields slot -->
@@ -130,7 +130,7 @@
 							<button
 								type="button"
 								disabled={deleting || loading}
-								on:click={handleDelete}
+								onclick={handleDelete}
 								class="btn-danger"
 							>
 								{deleting ? 'Deleting...' : 'Delete'}
@@ -144,7 +144,7 @@
 							<button
 								type="button"
 								disabled={loading || deleting}
-								on:click={handleCancel}
+								onclick={handleCancel}
 								class="btn-secondary"
 							>
 								{cancelLabel}

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { createColorHelper } from '$lib/shared/utils/styling';
+	import { createColorHelper, type Color } from '$lib/shared/utils/styling';
 	import type { IconComponent } from '$lib/shared/utils/types';
 
 	export let Icon: IconComponent; // Expects Svelte component, not string
-	export let color: string;
+	export let color: Color;
 
 	let colorHelper = createColorHelper(color);
 </script>

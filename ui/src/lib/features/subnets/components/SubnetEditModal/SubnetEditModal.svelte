@@ -84,7 +84,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Subnet')} color={colorHelper.string} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('Subnet')} color={colorHelper.color} />
 	</svelte:fragment>
 
 	<!-- Content -->

@@ -4,16 +4,23 @@
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
-	import { topology as globalTopology } from '$lib/features/topology/store';
+	import { useTopologiesQuery } from '$lib/features/topology/queries';
+	import { topology as selectedTopology } from '$lib/features/topology/store';
 	import type { InterfaceNode, Topology } from '$lib/features/topology/types/base';
 	import { getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 
 	let { node }: { node: Node } = $props();
 
-	// Try to get topology from context (for share/embed pages), fallback to global store
+	// Try to get topology from context (for share/embed pages), fallback to query + selected topology
 	const topologyContext = getContext<Writable<Topology> | undefined>('topology');
-	let topology = $derived(topologyContext ? $topologyContext : $globalTopology);
+	const topologiesQuery = useTopologiesQuery();
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let topology = $derived(
+		topologyContext
+			? $topologyContext
+			: (topologiesData.find((t) => t.id === $selectedTopology?.id) ?? $selectedTopology)
+	);
 
 	let nodeData = node.data as InterfaceNode;
 
@@ -44,6 +51,9 @@
 				)
 			: []
 	);
+
+	// Context for interface displays
+	let interfaceContext = $derived({ subnets: topology?.subnets ?? [] });
 </script>
 
 <div class="space-y-4">
@@ -53,7 +63,7 @@
 			<span class="text-secondary mb-2 block text-sm font-medium">This Interface</span>
 			<div class="card">
 				<EntityDisplayWrapper
-					context={{}}
+					context={interfaceContext}
 					item={thisInterface}
 					displayComponent={InterfaceDisplay}
 				/>
@@ -71,7 +81,7 @@
 				{#each servicesOnThisInterface as service (service.id)}
 					<div class="card">
 						<EntityDisplayWrapper
-							context={{ interfaceId: node.data.interface_id }}
+							context={{ interfaceId: nodeData.interface_id ?? null }}
 							item={service}
 							displayComponent={ServiceDisplay}
 						/>
@@ -103,7 +113,11 @@
 			<div class="space-y-1">
 				{#each otherInterfaces as iface (iface.id)}
 					<div class="card">
-						<EntityDisplayWrapper context={{}} item={iface} displayComponent={InterfaceDisplay} />
+						<EntityDisplayWrapper
+							context={interfaceContext}
+							item={iface}
+							displayComponent={InterfaceDisplay}
+						/>
 					</div>
 				{/each}
 			</div>

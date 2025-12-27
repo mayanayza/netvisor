@@ -9,12 +9,15 @@ import type {
 	HostFormData,
 	HostResponse,
 	Interface,
+	Port,
 	UpdateHostRequest,
-	UpdateHostWithServicesRequest
+	UpdateHostWithServicesRequest,
+	UpdateInterfaceInput,
+	UpdatePortInput
 } from './types/base';
 import { apiClient, type ApiResponse } from '$lib/api/client';
 import { pushSuccess } from '$lib/shared/stores/feedback';
-import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting';
+import { utcTimeZoneSentinel, uuidv4Sentinel } from '$lib/shared/utils/formatting'; // uuidv4Sentinel still used in createEmptyHostFormData
 import { isContainerSubnet } from '../subnets/store';
 import { networks } from '../networks/store';
 import { bulkUpdateServices, services } from '../services/store';
@@ -135,9 +138,19 @@ function toCreateHostRequest(formData: HostFormData): CreateHostRequest {
 }
 
 /**
- * Transform HostFormData to UpdateHostRequest format for API
+ * Transform host and optional children to UpdateHostRequest format for API.
+ * Uses global stores to determine if an interface/port is new (not yet saved).
+ * Includes expected_updated_at for optimistic locking to detect concurrent modifications.
  */
-function toUpdateHostRequest(host: Host): UpdateHostRequest {
+function toUpdateHostRequest(
+	host: Host,
+	formInterfaces: Interface[] | null,
+	formPorts: Port[] | null
+): UpdateHostRequest {
+	// Get current saved interfaces/ports from stores to detect new items
+	const savedInterfaceIds = new Set(get(interfaces).map((i) => i.id));
+	const savedPortIds = new Set(get(ports).map((p) => p.id));
+
 	return {
 		id: host.id,
 		name: host.name,
@@ -145,7 +158,34 @@ function toUpdateHostRequest(host: Host): UpdateHostRequest {
 		description: host.description,
 		virtualization: host.virtualization,
 		hidden: host.hidden,
-		tags: host.tags
+		tags: host.tags,
+		// Include expected_updated_at for optimistic locking
+		// If the host was modified since we loaded it (e.g., by discovery), the server will reject
+		expected_updated_at: host.updated_at,
+		// Convert interfaces to input format if provided
+		// New interfaces (not in store) get id: null so server creates them
+		interfaces: formInterfaces
+			? formInterfaces.map(
+					(iface): UpdateInterfaceInput => ({
+						id: savedInterfaceIds.has(iface.id) ? iface.id : null,
+						subnet_id: iface.subnet_id,
+						ip_address: iface.ip_address,
+						mac_address: iface.mac_address,
+						name: iface.name
+					})
+				)
+			: null,
+		// Convert ports to input format if provided
+		// New ports (not in store) get id: null so server creates them
+		ports: formPorts
+			? formPorts.map(
+					(port): UpdatePortInput => ({
+						id: savedPortIds.has(port.id) ? port.id : null,
+						number: port.number,
+						protocol: port.protocol
+					})
+				)
+			: null
 	};
 }
 
@@ -164,7 +204,7 @@ export async function createHost(data: CreateHostWithServicesRequest) {
 }
 
 export async function updateHost(data: UpdateHostWithServicesRequest) {
-	const request = toUpdateHostRequest(data.host);
+	const request = toUpdateHostRequest(data.host, data.interfaces, data.ports);
 
 	const { data: result } = await apiClient.PUT('/api/hosts/{id}', {
 		params: { path: { id: data.host.id } },
@@ -175,7 +215,7 @@ export async function updateHost(data: UpdateHostWithServicesRequest) {
 		hosts.update((current) =>
 			current.map((n) => (n.id === data.host.id ? toHostPrimitive(result.data!) : n))
 		);
-		// Sync children
+		// Sync children from response (includes newly created interfaces/ports with real IDs)
 		syncChildrenFromResponse(result.data);
 	}
 

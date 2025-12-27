@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumDiscriminants, EnumIter, IntoStaticStr};
 
-use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId};
+use crate::server::shared::types::{
+    Color, Icon,
+    metadata::{EntityMetadataProvider, HasId},
+};
 
 #[derive(
     Debug,
@@ -34,27 +37,27 @@ impl HasId for Concept {
 }
 
 impl EntityMetadataProvider for Concept {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
-            Concept::Dns => "emerald",
-            Concept::Vpn => "green",
-            Concept::Gateway => "teal",
-            Concept::ReverseProxy => "cyan",
-            Concept::IoT => "yellow",
-            Concept::Storage => "green",
-            Concept::Virtualization => "indigo",
+            Concept::Dns => Color::Emerald,
+            Concept::Vpn => Color::Green,
+            Concept::Gateway => Color::Teal,
+            Concept::ReverseProxy => Color::Cyan,
+            Concept::IoT => Color::Yellow,
+            Concept::Storage => Color::Green,
+            Concept::Virtualization => Color::Indigo,
         }
     }
 
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
-            Concept::Dns => "Search",
-            Concept::Vpn => "VenetianMask",
-            Concept::Gateway => "Router",
-            Concept::ReverseProxy => "Split",
-            Concept::IoT => "Cpu",
-            Concept::Storage => "HardDrive",
-            Concept::Virtualization => "MonitorCog",
+            Concept::Dns => Icon::Search,
+            Concept::Vpn => Icon::VenetianMask,
+            Concept::Gateway => Icon::Router,
+            Concept::ReverseProxy => Icon::Split,
+            Concept::IoT => Icon::Cpu,
+            Concept::Storage => Icon::HardDrive,
+            Concept::Virtualization => Icon::MonitorCog,
         }
     }
 }

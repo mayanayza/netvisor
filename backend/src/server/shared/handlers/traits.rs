@@ -9,8 +9,8 @@ use crate::server::{
         types::api::{ApiError, ApiResponse, ApiResult},
         types::entities::EntitySource,
         validation::{
-            validate_bulk_delete_access, validate_create_access, validate_delete_access,
-            validate_entity, validate_read_access, validate_update_access,
+            validate_and_dedupe_tags, validate_bulk_delete_access, validate_create_access,
+            validate_delete_access, validate_entity, validate_read_access, validate_update_access,
         },
     },
 };
@@ -29,7 +29,8 @@ use uuid::Uuid;
 
 /// Trait for creating standard CRUD handlers for an entity
 #[async_trait]
-pub trait CrudHandlers: StorableEntity + Serialize + for<'de> Deserialize<'de>
+pub trait CrudHandlers:
+    StorableEntity + Serialize + for<'de> Deserialize<'de> + validator::Validate
 where
     Self: Display + ChangeTriggersTopologyStaleness<Self> + Default,
     Entity: From<Self>,
@@ -48,9 +49,9 @@ where
         Self::table_name()
     }
 
-    /// Optional: Validate entity before create/update
+    /// Validate entity before create/update (uses validator crate by default)
     fn validate(&self) -> Result<(), String> {
-        Ok(())
+        validator::Validate::validate(self).map_err(|e| e.to_string())
     }
 
     /// Optional: Set the source field on the entity.
@@ -65,6 +66,19 @@ where
     /// For example, ApiKey should preserve `key` and `last_used`.
     /// Default is a no-op for entities without extra immutable fields.
     fn preserve_immutable_fields(&mut self, _existing: &Self) {
+        // Default: no-op
+    }
+
+    /// Optional: Get the tags field from the entity for validation.
+    /// Override for entities with a tags field.
+    /// Returns None for entities without tags.
+    fn get_tags(&self) -> Option<&Vec<Uuid>> {
+        None
+    }
+
+    /// Optional: Set the tags field on the entity.
+    /// Override for entities with a tags field.
+    fn set_tags(&mut self, _tags: Vec<Uuid>) {
         // Default: no-op
     }
 }
@@ -96,7 +110,7 @@ where
     // Set source to Manual for user-created entities
     entity.set_source(EntitySource::Manual);
 
-    validate_entity(|| entity.validate(), T::entity_name())?;
+    validate_entity(|| CrudHandlers::validate(&entity), T::entity_name())?;
 
     let service = T::get_service(&state);
 
@@ -107,17 +121,32 @@ where
         user.organization_id,
     )?;
 
+    // Validate and dedupe tags if entity has them
+    if let Some(tags) = entity.get_tags() {
+        let validated_tags = validate_and_dedupe_tags(
+            tags.clone(),
+            user.organization_id,
+            &state.services.tag_service,
+        )
+        .await?;
+        entity.set_tags(validated_tags);
+    }
+
     let created = service
         .create(entity, user.clone().into())
         .await
         .map_err(|e| {
-            tracing::error!(
-                entity_type = T::table_name(),
-                user_id = %user.user_id,
-                error = %e,
-                "Failed to create entity"
-            );
-            ApiError::internal_error(&e.to_string())
+            // Use From<anyhow::Error> to properly handle ValidationError (400) vs internal errors (500)
+            let api_error = ApiError::from(e);
+            if api_error.status.is_server_error() {
+                tracing::error!(
+                    entity_type = T::table_name(),
+                    user_id = %user.user_id,
+                    error = %api_error.message,
+                    "Failed to create entity"
+                );
+            }
+            api_error
         })?;
 
     Ok(Json(ApiResponse::success(created)))
@@ -132,11 +161,13 @@ where
     T: CrudHandlers + 'static + ChangeTriggersTopologyStaleness<T> + Default,
     Entity: From<T>,
 {
-    let filter = query.apply_to_filter(
-        EntityFilter::unfiltered(),
-        &user.network_ids,
-        user.organization_id,
-    );
+    let base_filter = if T::is_network_keyed() {
+        EntityFilter::unfiltered().network_ids(&user.network_ids)
+    } else {
+        EntityFilter::unfiltered().organization_id(&user.organization_id)
+    };
+
+    let filter = query.apply_to_filter(base_filter, &user.network_ids, user.organization_id);
 
     let service = T::get_service(&state);
 
@@ -241,6 +272,9 @@ where
     entity.set_created_at(existing.created_at());
     entity.preserve_immutable_fields(&existing);
 
+    // Validate entity (e.g., name length limits)
+    validate_entity(|| CrudHandlers::validate(&entity), T::entity_name())?;
+
     validate_update_access(
         service.get_network_id(&existing),
         service.get_organization_id(&existing),
@@ -250,18 +284,33 @@ where
         user.organization_id,
     )?;
 
+    // Validate and dedupe tags if entity has them
+    if let Some(tags) = entity.get_tags() {
+        let validated_tags = validate_and_dedupe_tags(
+            tags.clone(),
+            user.organization_id,
+            &state.services.tag_service,
+        )
+        .await?;
+        entity.set_tags(validated_tags);
+    }
+
     let updated = service
         .update(&mut entity, user.clone().into())
         .await
         .map_err(|e| {
-            tracing::error!(
-                entity_type = T::table_name(),
-                entity_id = %id,
-                user_id = %user.user_id,
-                error = %e,
-                "Failed to update entity"
-            );
-            ApiError::internal_error(&e.to_string())
+            // Use From<anyhow::Error> to properly handle ValidationError (400) vs internal errors (500)
+            let api_error = ApiError::from(e);
+            if api_error.status.is_server_error() {
+                tracing::error!(
+                    entity_type = T::table_name(),
+                    entity_id = %id,
+                    user_id = %user.user_id,
+                    error = %api_error.message,
+                    "Failed to update entity"
+                );
+            }
+            api_error
         })?;
 
     Ok(Json(ApiResponse::success(updated)))
@@ -308,13 +357,17 @@ where
     )?;
 
     service.delete(&id, user.into()).await.map_err(|e| {
-        tracing::error!(
-            entity_type = T::table_name(),
-            entity_id = %id,
-            error = %e,
-            "Failed to delete entity"
-        );
-        ApiError::internal_error(&e.to_string())
+        // Use From<anyhow::Error> to properly handle ValidationError (400) vs internal errors (500)
+        let api_error = ApiError::from(e);
+        if api_error.status.is_server_error() {
+            tracing::error!(
+                entity_type = T::table_name(),
+                entity_id = %id,
+                error = %api_error.message,
+                "Failed to delete entity"
+            );
+        }
+        api_error
     })?;
 
     Ok(Json(ApiResponse::success(())))
@@ -368,13 +421,17 @@ where
         .delete_many(&valid_ids, user.clone().into())
         .await
         .map_err(|e| {
-            tracing::error!(
-                entity_type = T::table_name(),
-                user_id = %user.user_id,
-                error = %e,
-                "Failed to bulk delete entities"
-            );
-            ApiError::internal_error(&e.to_string())
+            // Use From<anyhow::Error> to properly handle ValidationError (400) vs internal errors (500)
+            let api_error = ApiError::from(e);
+            if api_error.status.is_server_error() {
+                tracing::error!(
+                    entity_type = T::table_name(),
+                    user_id = %user.user_id,
+                    error = %api_error.message,
+                    "Failed to bulk delete entities"
+                );
+            }
+            api_error
         })?;
 
     Ok(Json(ApiResponse::success(BulkDeleteResponse {

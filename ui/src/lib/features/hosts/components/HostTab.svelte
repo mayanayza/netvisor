@@ -9,35 +9,53 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { getDaemons } from '$lib/features/daemons/store';
 	import HostEditor from './HostEditModal/HostEditor.svelte';
 	import HostConsolidationModal from './HostConsolidationModal.svelte';
-	import {
-		bulkDeleteHosts,
-		consolidateHosts,
-		createHost,
-		deleteHost,
-		getHosts,
-		hosts,
-		updateHost
-	} from '../store';
-	import { getGroups, groups } from '$lib/features/groups/store';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getServiceById, getServices, services } from '$lib/features/services/store';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
-	import { networks } from '$lib/features/networks/store';
-	import { get } from 'svelte/store';
 	import { Plus } from 'lucide-svelte';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import {
+		useHostsQuery,
+		useCreateHostMutation,
+		useUpdateHostMutation,
+		useDeleteHostMutation,
+		useBulkDeleteHostsMutation,
+		useConsolidateHostsMutation
+	} from '../queries';
+	import { useGroupsQuery } from '$lib/features/groups/queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
-	const loading = loadData([getHosts, getGroups, getServices, getDaemons]);
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const hostsQuery = useHostsQuery();
+	const groupsQuery = useGroupsQuery();
+	const servicesQuery = useServicesQuery();
+	const networksQuery = useNetworksQuery();
+	useDaemonsQuery();
 
-	let showHostEditor = false;
-	let editingHost: Host | null = null;
+	// Mutations
+	const createHostMutation = useCreateHostMutation();
+	const updateHostMutation = useUpdateHostMutation();
+	const deleteHostMutation = useDeleteHostMutation();
+	const bulkDeleteHostsMutation = useBulkDeleteHostsMutation();
+	const consolidateHostsMutation = useConsolidateHostsMutation();
 
-	let otherHost: Host | null = null;
-	let showHostConsolidationModal = false;
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let groupsData = $derived(groupsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let isLoading = $derived(hostsQuery.isPending);
+
+	let showHostEditor = $state(false);
+	let editingHost = $state<Host | null>(null);
+
+	let otherHost = $state<Host | null>(null);
+	let showHostConsolidationModal = $state(false);
 
 	// Define field configuration for the DataTableControls
 	const hostFields: FieldConfig<Host>[] = [
@@ -74,7 +92,9 @@
 			sortable: true,
 			getValue: (host) => {
 				if (host.virtualization) {
-					const virtualizationService = get(getServiceById(host.virtualization.details.service_id));
+					const virtualizationService = servicesData.find(
+						(s) => s.id === host.virtualization?.details.service_id
+					);
 					if (virtualizationService) {
 						return virtualizationService?.name || 'Unknown Service';
 					}
@@ -106,7 +126,7 @@
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
 			}
 		},
 		{
@@ -119,26 +139,28 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
 	];
 
-	$: hostGroups = new Map(
-		$hosts.map((host) => {
-			const foundGroups = $groups.filter((g) => {
-				return (g.binding_ids ?? []).some((b) => {
-					// Use $services instead of getServiceForBinding to maintain reactivity
-					let service = $services.find((s) => s.bindings.map((sb) => sb.id).includes(b));
-					// Check if the service belongs to this host
-					if (service) return service.host_id === host.id;
-					return false;
+	let hostGroups = $derived(
+		new Map(
+			hostsData.map((host) => {
+				const foundGroups = groupsData.filter((g) => {
+					return (g.binding_ids ?? []).some((b) => {
+						// Use servicesData instead of getServiceForBinding to maintain reactivity
+						let service = servicesData.find((s) => s.bindings.map((sb) => sb.id).includes(b));
+						// Check if the service belongs to this host
+						if (service) return service.host_id === host.id;
+						return false;
+					});
 				});
-			});
 
-			return [host.id, foundGroups];
-		})
+				return [host.id, foundGroups];
+			})
+		)
 	);
 
 	function handleCreateHost() {
@@ -158,52 +180,65 @@
 
 	function handleDeleteHost(host: Host) {
 		if (confirm(`Are you sure you want to delete "${host.name}"?`)) {
-			deleteHost(host.id);
+			deleteHostMutation.mutate(host.id);
 		}
 	}
 
 	async function handleHostCreate(data: CreateHostWithServicesRequest) {
-		const result = await createHost(data);
-		if (result?.success) {
+		try {
+			await createHostMutation.mutateAsync(data);
 			showHostEditor = false;
 			editingHost = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleHostCreateAndContinue(data: CreateHostWithServicesRequest) {
-		const result = await createHost(data);
-		if (result?.success && result.data) {
+		try {
+			const result = await createHostMutation.mutateAsync(data);
 			// Keep modal open and switch to edit mode with the created host
 			// Extract Host primitive from HostResponse
-			editingHost = toHostPrimitive(result.data);
+			editingHost = toHostPrimitive(result);
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleHostUpdate(data: UpdateHostWithServicesRequest) {
-		const result = await updateHost(data);
-		if (result?.success) {
+		try {
+			await updateHostMutation.mutateAsync(data);
 			showHostEditor = false;
 			editingHost = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
-	async function handleConsolidateHosts(destination_host_id: string, other_host_id: string) {
-		const result = await consolidateHosts(destination_host_id, other_host_id);
-		if (result?.success) {
+	async function handleConsolidateHosts(destinationHostId: string, otherHostId: string) {
+		try {
+			await consolidateHostsMutation.mutateAsync({ destinationHostId, otherHostId });
 			showHostConsolidationModal = false;
 			otherHost = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Hosts?`)) {
-			await bulkDeleteHosts(ids);
+			await bulkDeleteHostsMutation.mutateAsync(ids);
 		}
 	}
 
 	async function handleHostHide(host: Host) {
 		const updatedHost = { ...host, hidden: !host.hidden };
-		await updateHost({ host: updatedHost, services: null });
+		await updateHostMutation.mutateAsync({
+			host: updatedHost,
+			interfaces: null,
+			ports: null,
+			services: null
+		});
 	}
 
 	function handleCloseHostEditor() {
@@ -216,16 +251,16 @@
 	<!-- Header -->
 	<TabHeader title="Hosts" subtitle="Manage hosts on the network">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateHost}
+			<button class="btn-primary flex items-center" onclick={handleCreateHost}
 				><Plus class="h-5 w-5" />Create Host</button
 			>
 		</svelte:fragment>
 	</TabHeader>
 
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $hosts.length === 0}
+	{:else if hostsData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No hosts configured yet"
@@ -235,7 +270,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$hosts}
+			items={hostsData}
 			fields={hostFields}
 			storageKey="scanopy-hosts-table-state"
 			onBulkDelete={handleBulkDelete}

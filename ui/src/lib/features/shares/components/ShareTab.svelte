@@ -5,17 +5,29 @@
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
 	import ShareModal from './ShareModal.svelte';
-	import { bulkDeleteShares, deleteShare, getShares, shares } from '../store';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
-	import { topologies, getTopologies } from '$lib/features/topology/store';
-	import { networks, getNetworks } from '$lib/features/networks/store';
+	import { useTopologiesQuery } from '$lib/features/topology/queries';
+	import { useSharesQuery, useDeleteShareMutation, useBulkDeleteSharesMutation } from '../queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
-	const loading = loadData([getShares, getTopologies, getNetworks]);
+	// Queries
+	const sharesQuery = useSharesQuery();
+	const networksQuery = useNetworksQuery();
+	const topologiesQuery = useTopologiesQuery();
+
+	// Mutations
+	const deleteShareMutation = useDeleteShareMutation();
+	const bulkDeleteSharesMutation = useBulkDeleteSharesMutation();
+
+	// Derived data
+	let sharesData = $derived(sharesQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let isLoading = $derived(sharesQuery.isPending);
 
 	let showEditor = $state(false);
-	let editingShare: Share | null = $state(null);
+	let editingShare = $state<Share | null>(null);
 
 	// Define field configuration for DataControls
 	const shareFields: FieldConfig<Share>[] = [
@@ -35,7 +47,7 @@
 			filterable: true,
 			sortable: true,
 			getValue: (share) => {
-				return $topologies.find((t) => t.id === share.topology_id)?.name || 'Unknown Topology';
+				return topologiesData.find((t) => t.id === share.topology_id)?.name || 'Unknown Topology';
 			}
 		},
 		{
@@ -46,7 +58,7 @@
 			filterable: true,
 			sortable: true,
 			getValue: (share) => {
-				return $networks.find((n) => n.id === share.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id === share.network_id)?.name || 'Unknown Network';
 			}
 		},
 		{
@@ -82,13 +94,13 @@
 
 	function handleDelete(share: Share) {
 		if (confirm(`Are you sure you want to delete "${share.name}"?`)) {
-			deleteShare(share.id);
+			deleteShareMutation.mutate(share.id);
 		}
 	}
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} shares?`)) {
-			await bulkDeleteShares(ids);
+			await bulkDeleteSharesMutation.mutateAsync(ids);
 		}
 	}
 
@@ -103,9 +115,9 @@
 	<TabHeader title="Sharing" subtitle="View and manage shared topology links and embeds" />
 
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $shares.length === 0}
+	{:else if sharesData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No links or embeds created yet"
@@ -113,7 +125,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$shares}
+			items={sharesData}
 			fields={shareFields}
 			storageKey="scanopy-shares-table-state"
 			onBulkDelete={handleBulkDelete}

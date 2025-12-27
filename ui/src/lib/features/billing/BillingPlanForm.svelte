@@ -12,7 +12,7 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import type { BillingPlan } from './types';
 	import type { BillingPlanMetadata, FeatureMetadata } from '$lib/shared/stores/metadata';
-	import type { ColorStyle } from '$lib/shared/utils/styling';
+	import type { ColorStyle, Color } from '$lib/shared/utils/styling';
 	import type { IconComponent } from '$lib/shared/utils/types';
 
 	/**
@@ -265,16 +265,16 @@
 		return billingPlanHelpers.getMetadata(plan.type)?.custom_price !== null;
 	}
 
-	function getHostingColor(hosting: string): string {
+	function getHostingColor(hosting: string): Color {
 		switch (hosting) {
 			case 'Cloud':
-				return 'sky';
+				return 'Cyan';
 			case 'Managed':
-				return 'purple';
+				return 'Purple';
 			case 'Self-Hosted':
-				return 'green';
+				return 'Green';
 			default:
-				return 'gray';
+				return 'Gray';
 		}
 	}
 
@@ -335,7 +335,7 @@
 								>
 							</div>
 							{#if isRecommended}
-								<Tag label="Recommended" color="yellow" />
+								<Tag label="Recommended" color="Yellow" />
 							{/if}
 						</div>
 					</div>
@@ -478,7 +478,7 @@
 										{@const value = getFeatureValue(plan.type, featureKey)}
 										<div class="grid-cell plan-cell text-center">
 											{#if comingSoon && value}
-												<Tag label="Coming Soon" color="gray" />
+												<Tag label="Coming Soon" color="Gray" />
 											{:else if typeof value === 'boolean'}
 												{#if value}
 													<Check class="mx-auto h-5 w-5 text-success lg:h-8 lg:w-8" />

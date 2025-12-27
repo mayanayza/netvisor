@@ -17,6 +17,8 @@ use crate::server::{
     users::r#impl::permissions::UserOrgPermissions,
 };
 
+use super::{Color, Icon};
+
 #[derive(Serialize, Debug, Clone, ToSchema)]
 pub struct MetadataRegistry {
     pub service_definitions: Vec<TypeMetadata>,
@@ -38,16 +40,18 @@ pub struct TypeMetadata {
     pub name: Option<&'static str>,
     pub description: Option<&'static str>,
     pub category: Option<&'static str>,
-    pub icon: Option<&'static str>,
-    pub color: Option<&'static str>,
+    #[schema(value_type = Option<String>)]
+    pub icon: Option<Icon>,
+    pub color: Color,
     pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Serialize, Debug, Clone, ToSchema)]
 pub struct EntityMetadata {
     pub id: &'static str,
-    pub color: &'static str,
-    pub icon: &'static str,
+    pub color: Color,
+    #[schema(value_type = String)]
+    pub icon: Icon,
 }
 
 pub trait HasId {
@@ -59,8 +63,8 @@ pub trait MetadataProvider<T>: HasId {
 }
 
 pub trait EntityMetadataProvider: MetadataProvider<EntityMetadata> {
-    fn color(&self) -> &'static str;
-    fn icon(&self) -> &'static str;
+    fn color(&self) -> Color;
+    fn icon(&self) -> Icon;
 }
 
 pub trait TypeMetadataProvider: EntityMetadataProvider + MetadataProvider<TypeMetadata> {
@@ -107,8 +111,8 @@ where
             name: (!name.is_empty()).then_some(name),
             description: (!description.is_empty()).then_some(description),
             category: (!category.is_empty()).then_some(category),
-            icon: (!icon.is_empty()).then_some(icon),
-            color: (!color.is_empty()).then_some(color),
+            icon: Some(icon),
+            color,
             metadata: (!metadata.as_object().is_some_and(|obj| obj.is_empty())).then_some(metadata),
         }
     }

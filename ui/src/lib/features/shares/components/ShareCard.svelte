@@ -3,8 +3,8 @@
 	import type { Share } from '../types/base';
 	import { generateShareUrl } from '../store';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
-	import { topologies } from '$lib/features/topology/store';
-	import { networks } from '$lib/features/networks/store';
+	import { useTopologiesQuery } from '$lib/features/topology/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { entities } from '$lib/shared/stores/metadata';
 
 	let {
@@ -22,6 +22,12 @@
 		selected?: boolean;
 		onSelectionChange?: (selected: boolean) => void;
 	} = $props();
+
+	// Queries
+	const topologiesQuery = useTopologiesQuery();
+	const networksQuery = useNetworksQuery();
+	let topologiesData = $derived(topologiesQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
 
 	let copied = $state(false);
 
@@ -46,8 +52,8 @@
 	}
 
 	let cardData = $derived.by(() => {
-		const topology = $topologies.find((t) => t.id === share.topology_id);
-		const network = $networks.find((n) => n.id === share.network_id);
+		const topology = topologiesData.find((t) => t.id === share.topology_id);
+		const network = networksData.find((n) => n.id === share.network_id);
 
 		return {
 			title: share.name,
@@ -61,7 +67,7 @@
 								{
 									id: topology.id,
 									label: topology.name,
-									color: entities.getColorHelper('Topology').string
+									color: entities.getColorHelper('Topology').color
 								}
 							]
 						: 'Unknown Topology'
@@ -73,7 +79,7 @@
 								{
 									id: network.id,
 									label: network.name,
-									color: entities.getColorHelper('Network').string
+									color: entities.getColorHelper('Network').color
 								}
 							]
 						: 'Unknown Network'

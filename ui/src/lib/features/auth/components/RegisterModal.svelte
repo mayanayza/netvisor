@@ -8,8 +8,7 @@
 	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
 	import { emailValidator } from '$lib/shared/components/forms/validators';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
-	import { config, getConfig } from '$lib/shared/stores/config';
-	import { loadData } from '$lib/shared/utils/dataLoader';
+	import { config } from '$lib/shared/stores/config';
 	import { onboardingStore } from '../stores/onboarding';
 	import type { RegisterRequest } from '../types/base';
 
@@ -27,13 +26,12 @@
 		onClose: () => void;
 	} = $props();
 
-	const loading = loadData([getConfig]);
 	let registering = $state(false);
 
-	let oidcProviders = $derived($loading ? [] : ($config?.oidc_providers ?? []));
+	let oidcProviders = $derived($config?.oidc_providers ?? []);
 	let hasOidcProviders = $derived(oidcProviders.length > 0);
-	let enableEmailOptIn = $derived($loading ? false : ($config?.has_email_opt_in ?? false));
-	let enableTermsCheckbox = $derived($loading ? false : ($config?.billing_enabled ?? false));
+	let enableEmailOptIn = $derived($config?.has_email_opt_in ?? false);
+	let enableTermsCheckbox = $derived($config?.billing_enabled ?? false);
 
 	// Get networks with daemon setups that will scan after registration
 	let networksWithDaemons = $derived.by(() => {
@@ -116,7 +114,7 @@
 <EditModal
 	{isOpen}
 	title="Create your account"
-	loading={registering || $loading}
+	loading={registering}
 	centerTitle={true}
 	saveLabel="Create Account"
 	showCancel={false}

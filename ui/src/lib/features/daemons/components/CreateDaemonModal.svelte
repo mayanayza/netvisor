@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { networks } from '$lib/features/networks/store';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { entities } from '$lib/shared/stores/metadata';
-	import { writable, type Writable } from 'svelte/store';
 	import type { Daemon } from '../types/base';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import { RotateCcwKey, SatelliteDish } from 'lucide-svelte';
@@ -15,30 +14,46 @@
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import CreateDaemonForm from './CreateDaemonForm.svelte';
 
-	export let isOpen = false;
-	export let onClose: () => void;
-	export let daemon: Daemon | null = null;
-
-	// Onboarding mode props
-	export let onboardingMode = false;
-	export let onSkip: (() => void) | null = null;
-	export let onContinue: (() => void) | null = null;
-	export let provisionalApiKey: string | null = null;
-	export let provisionalNetworkId: string | null = null;
-
-	let keyStore: Writable<string | null> = writable(null);
-	// In onboarding mode, use the provisionalApiKey; otherwise use keyStore
-	$: key = onboardingMode ? provisionalApiKey : $keyStore;
-	// In onboarding mode, use the provisionalNetworkId; otherwise use first network or daemon's network
-	let selectedNetworkId = '';
-
-	$: if (daemon) {
-		selectedNetworkId = daemon.network_id;
-	} else if (onboardingMode && provisionalNetworkId) {
-		selectedNetworkId = provisionalNetworkId;
-	} else if (!selectedNetworkId && $networks[0]?.id) {
-		selectedNetworkId = $networks[0].id;
+	interface Props {
+		isOpen?: boolean;
+		onClose: () => void;
+		daemon?: Daemon | null;
+		onboardingMode?: boolean;
+		onSkip?: (() => void) | null;
+		onContinue?: (() => void) | null;
+		provisionalApiKey?: string | null;
+		provisionalNetworkId?: string | null;
 	}
+
+	let {
+		isOpen = false,
+		onClose,
+		daemon = null,
+		onboardingMode = false,
+		onSkip = null,
+		onContinue = null,
+		provisionalApiKey = null,
+		provisionalNetworkId = null
+	}: Props = $props();
+
+	const networksQuery = useNetworksQuery();
+	let networksData = $derived(networksQuery.data ?? []);
+
+	let keyState = $state<string | null>(null);
+	// In onboarding mode, use the provisionalApiKey; otherwise use keyState
+	let key = $derived(onboardingMode ? provisionalApiKey : keyState);
+	// In onboarding mode, use the provisionalNetworkId; otherwise use first network or daemon's network
+	let selectedNetworkId = $state('');
+
+	$effect(() => {
+		if (daemon) {
+			selectedNetworkId = daemon.network_id;
+		} else if (onboardingMode && provisionalNetworkId) {
+			selectedNetworkId = provisionalNetworkId;
+		} else if (!selectedNetworkId && networksData[0]?.id) {
+			selectedNetworkId = networksData[0].id;
+		}
+	});
 
 	let serverUrl = $config.public_url;
 
@@ -46,7 +61,7 @@
 	let daemonFormRef: CreateDaemonForm;
 
 	function handleOnClose() {
-		keyStore.set(null);
+		keyState = null;
 		onClose();
 	}
 
@@ -58,15 +73,16 @@
 
 		const generatedKey = await createNewApiKey(newApiKey);
 		if (generatedKey) {
-			keyStore.set(generatedKey);
+			keyState = generatedKey;
 		} else {
 			pushError('Failed to generate API key');
 		}
 	}
 
 	// For existing daemon with new key - simple run command
-	$: existingDaemonRunCommand =
-		daemon && key ? `sudo scanopy-daemon --server-url ${serverUrl} --daemon-api-key ${key}` : '';
+	let existingDaemonRunCommand = $derived(
+		daemon && key ? `sudo scanopy-daemon --server-url ${serverUrl} --daemon-api-key ${key}` : ''
+	);
 
 	let colorHelper = entities.getColorHelper('Daemon');
 </script>
@@ -83,9 +99,9 @@
 >
 	<svelte:fragment slot="header-icon">
 		{#if onboardingMode}
-			<ModalHeaderIcon Icon={SatelliteDish} color="#10b981" />
+			<ModalHeaderIcon Icon={SatelliteDish} color="Green" />
 		{:else}
-			<ModalHeaderIcon Icon={entities.getIconComponent('Daemon')} color={colorHelper.string} />
+			<ModalHeaderIcon Icon={entities.getIconComponent('Daemon')} color={colorHelper.color} />
 		{/if}
 	</svelte:fragment>
 
@@ -118,7 +134,7 @@
 						class="btn-primary m-1 flex-shrink-0 self-stretch"
 						disabled={!!key}
 						type="button"
-						on:click={handleCreateNewApiKey}
+						onclick={handleCreateNewApiKey}
 					>
 						<RotateCcwKey />
 						<span>Generate Key</span>
@@ -166,11 +182,9 @@
 		{#if onboardingMode}
 			<div class="flex w-full items-center justify-between gap-4">
 				{#if onSkip}
-					<button type="button" class="btn-secondary" on:click={onSkip}>
-						I'll do this later
-					</button>
+					<button type="button" class="btn-secondary" onclick={onSkip}> I'll do this later </button>
 				{/if}
-				<button type="button" class="btn-primary ml-auto" on:click={onContinue ?? handleOnClose}>
+				<button type="button" class="btn-primary ml-auto" onclick={onContinue ?? handleOnClose}>
 					Continue
 				</button>
 			</div>

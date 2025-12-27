@@ -1,9 +1,10 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
-	import { subnets } from '$lib/features/subnets/store';
+	import { useSubnetsQuery } from '$lib/features/subnets/queries';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import type { DockerDiscovery, NetworkDiscovery, SelfReportDiscovery } from '../../types/api';
@@ -13,16 +14,31 @@
 	import type { Daemon } from '$lib/features/daemons/types/base';
 	import { generateCronSchedule, parseCronToHours } from '../../store';
 
-	export let formApi: FormApi;
-	export let formData: Discovery;
-	export let readOnly: boolean = false;
-	export let daemonHostId: string | null;
-	export let daemon: Daemon;
+	// Props
+	let {
+		formApi,
+		formData = $bindable(),
+		readOnly = false,
+		daemonHostId,
+		daemon
+	}: {
+		formApi: FormApi;
+		formData: Discovery;
+		readOnly?: boolean;
+		daemonHostId: string | null;
+		daemon: Daemon;
+	} = $props();
+
+	// Queries
+	const subnetsQuery = useSubnetsQuery();
+
+	// Derived data
+	let subnetsData = $derived(subnetsQuery.data ?? []);
 
 	// Discovery type options
 	const discoveryTypeField = field('discovery_type', formData.discovery_type.type, [required()]);
 
-	$: discoveryTypeOptions = [
+	let discoveryTypeOptions = $derived([
 		{ value: 'Network', label: 'Network Scan', disabled: false },
 		{
 			value: 'Docker',
@@ -30,7 +46,7 @@
 			disabled: daemonHostId == null || !daemon.capabilities.has_docker_socket
 		},
 		{ value: 'SelfReport', label: 'Self Report', disabled: daemonHostId == null }
-	];
+	]);
 
 	const hostNameFallbackField = field('host_name_fallback', 'BestService', [required()]);
 
@@ -48,7 +64,7 @@
 	];
 
 	// Handle run type changes
-	$: {
+	$effect(() => {
 		const type = $runTypeField.value;
 		if (type === 'AdHoc' && formData.run_type.type !== 'AdHoc') {
 			formData.run_type = {
@@ -63,10 +79,10 @@
 				enabled: true
 			};
 		}
-	}
+	});
 
 	// Handle discovery type changes
-	$: {
+	$effect(() => {
 		const type = $discoveryTypeField.value;
 		if (type === 'Network' && formData.discovery_type.type !== 'Network') {
 			formData.discovery_type = {
@@ -88,10 +104,10 @@
 				host_id: daemonHostId
 			} as SelfReportDiscovery;
 		}
-	}
+	});
 
 	// Handle host naming fallback changes
-	$: {
+	$effect(() => {
 		const fallbackValue = $hostNameFallbackField.value;
 		if (formData.discovery_type.type == 'Docker' || formData.discovery_type.type == 'Network') {
 			formData.discovery_type = {
@@ -99,34 +115,38 @@
 				host_naming_fallback: fallbackValue as 'BestService' | 'Ip'
 			};
 		}
-	}
+	});
 
 	// Subnet management for Network
-	$: availableSubnets = $subnets.filter(
-		(s) =>
-			formData.discovery_type.type === 'Network' &&
-			s.network_id == formData.network_id &&
-			!formData.discovery_type.subnet_ids?.includes(s.id) &&
-			subnetTypes.getMetadata(s.subnet_type).network_scan_discovery_eligible
+	let availableSubnets = $derived(
+		subnetsData.filter(
+			(s) =>
+				formData.discovery_type.type === 'Network' &&
+				s.network_id == formData.network_id &&
+				!formData.discovery_type.subnet_ids?.includes(s.id) &&
+				subnetTypes.getMetadata(s.subnet_type).network_scan_discovery_eligible
+		)
 	);
 
-	$: selectedSubnets =
+	let selectedSubnets = $derived(
 		formData.discovery_type.type === 'Network' && formData.discovery_type.subnet_ids
 			? formData.discovery_type.subnet_ids
-					.map((id) => $subnets.find((s) => s.id === id))
+					.map((id) => subnetsData.find((s) => s.id === id))
 					.filter(Boolean)
-			: [];
+			: []
+	);
 
-	$: nonInterfacedSubnets =
+	let nonInterfacedSubnets = $derived(
 		formData.discovery_type.type == 'Network' &&
-		formData.discovery_type.subnet_ids &&
-		formData.discovery_type.subnet_ids.length > 0
+			formData.discovery_type.subnet_ids &&
+			formData.discovery_type.subnet_ids.length > 0
 			? formData.discovery_type.subnet_ids
 					.filter((s) => !daemon.capabilities.interfaced_subnet_ids.includes(s))
-					.map((s) => $subnets.find((subnet) => subnet.id == s))
+					.map((s) => subnetsData.find((subnet) => subnet.id == s))
 					.filter((s) => s != undefined)
 					.map((s) => s.name + ` (${s.cidr})`)
-			: [];
+			: []
+	);
 
 	function handleAddSubnet(subnetId: string) {
 		if (formData.discovery_type.type === 'Network') {
@@ -148,26 +168,33 @@
 	}
 
 	// Frequency configuration - convert between hours and cron
-	let selectedDays = 1;
-	let selectedHours = 0;
+	// These are bidirectional: updated from cron_schedule AND used to generate it
+	// eslint-disable-next-line svelte/prefer-writable-derived
+	let selectedDays = $state(1);
+	// eslint-disable-next-line svelte/prefer-writable-derived
+	let selectedHours = $state(0);
 
 	// Parse existing cron schedule on mount/update
-	$: if (formData.run_type.type === 'Scheduled' && formData.run_type.cron_schedule) {
-		const totalHours = parseCronToHours(formData.run_type.cron_schedule);
-		if (totalHours !== null) {
-			selectedDays = Math.floor(totalHours / 24);
-			selectedHours = totalHours % 24;
+	$effect(() => {
+		if (formData.run_type.type === 'Scheduled' && formData.run_type.cron_schedule) {
+			const totalHours = parseCronToHours(formData.run_type.cron_schedule);
+			if (totalHours !== null) {
+				selectedDays = Math.floor(totalHours / 24);
+				selectedHours = totalHours % 24;
+			}
 		}
-	}
+	});
 
 	// Generate cron schedule from selected hours
-	$: if (formData.run_type.type === 'Scheduled') {
-		const totalHours = selectedDays * 24 + selectedHours;
-		formData.run_type = {
-			...formData.run_type,
-			cron_schedule: generateCronSchedule(totalHours)
-		};
-	}
+	$effect(() => {
+		if (formData.run_type.type === 'Scheduled') {
+			const totalHours = selectedDays * 24 + selectedHours;
+			formData.run_type = {
+				...formData.run_type,
+				cron_schedule: generateCronSchedule(totalHours)
+			};
+		}
+	});
 
 	// Day and hour options
 	const dayOptions = Array.from({ length: 31 }, (_, i) => ({
@@ -180,11 +207,25 @@
 		label: i === 0 ? 'No hours' : i === 1 ? '1 hour' : `${i} hours`
 	}));
 
-	const daysField = field('frequency_days', String(selectedDays), []);
-	const hoursField = field('frequency_hours', String(selectedHours), []);
+	// untrack since we sync via $effect and don't need reactive field recreation
+	const daysField = field(
+		'frequency_days',
+		untrack(() => String(selectedDays)),
+		[]
+	);
+	const hoursField = field(
+		'frequency_hours',
+		untrack(() => String(selectedHours)),
+		[]
+	);
 
-	$: selectedDays = parseInt($daysField.value) || 0;
-	$: selectedHours = parseInt($hoursField.value) || 0;
+	$effect(() => {
+		selectedDays = parseInt($daysField.value) || 0;
+	});
+
+	$effect(() => {
+		selectedHours = parseInt($hoursField.value) || 0;
+	});
 </script>
 
 <div class="space-y-6">

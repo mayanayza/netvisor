@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::server::{
     hosts::r#impl::{
@@ -57,13 +58,15 @@ pub struct DiscoveryHostRequest {
 ///
 /// Note: Services are created separately via `POST /api/services` after the host exists,
 /// as service bindings require the real IDs of the interfaces/ports to reference.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 #[schema(example = crate::server::shared::types::examples::create_host_request)]
 pub struct CreateHostRequest {
     // Host fields
+    #[validate(length(max = 100, message = "Name must be 100 characters or less"))]
     pub name: String,
     pub network_id: Uuid,
     pub hostname: Option<String>,
+    #[validate(length(max = 500, message = "Description must be 500 characters or less"))]
     pub description: Option<String>,
     // Note: source is auto-set by server (Manual for UI, Api for API calls)
     pub virtualization: Option<HostVirtualization>,
@@ -145,12 +148,14 @@ impl CreatePortInput {
 // =============================================================================
 
 /// Request type for updating a host.
-/// Children (interfaces, ports, services) are managed via their own endpoints.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+/// Optionally includes interfaces and ports to sync (create/update/delete).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
 pub struct UpdateHostRequest {
     pub id: Uuid,
+    #[validate(length(max = 100, message = "Name must be 100 characters or less"))]
     pub name: String,
     pub hostname: Option<String>,
+    #[validate(length(max = 500, message = "Description must be 500 characters or less"))]
     pub description: Option<String>,
     pub virtualization: Option<HostVirtualization>,
     pub hidden: bool,
@@ -159,6 +164,122 @@ pub struct UpdateHostRequest {
     pub tags: Vec<Uuid>,
     // Note: source is not updatable via API
     // Note: network_id is not updatable (would require moving children)
+    /// Optional: expected updated_at timestamp for optimistic locking.
+    /// If provided, the update will fail with a conflict error if the host
+    /// has been modified since this timestamp (e.g., by discovery running
+    /// while the user was editing).
+    #[serde(default)]
+    pub expected_updated_at: Option<DateTime<Utc>>,
+
+    /// Optional: interfaces to sync with this host.
+    /// If provided, the server will:
+    /// - Create interfaces without an `id` (or with nil UUID)
+    /// - Keep/update interfaces with matching `id`
+    /// - Delete existing interfaces not in this list
+    ///
+    /// If not provided (None), interfaces are left unchanged.
+    #[serde(default)]
+    pub interfaces: Option<Vec<UpdateInterfaceInput>>,
+
+    /// Optional: ports to sync with this host.
+    /// If provided, the server will:
+    /// - Create ports without an `id` (or with nil UUID)
+    /// - Keep/update ports with matching `id`
+    /// - Delete existing ports not in this list
+    ///
+    /// If not provided (None), ports are left unchanged.
+    #[serde(default)]
+    pub ports: Option<Vec<UpdatePortInput>>,
+}
+
+/// Input for syncing an interface during host update.
+/// If `id` is None or nil UUID, a new interface is created.
+/// If `id` matches an existing interface, it is updated.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateInterfaceInput {
+    /// ID of existing interface to update, or None/nil for new interface
+    pub id: Option<Uuid>,
+    pub subnet_id: Uuid,
+    #[schema(value_type = String)]
+    pub ip_address: IpAddr,
+    #[schema(value_type = Option<String>)]
+    pub mac_address: Option<MacAddress>,
+    pub name: Option<String>,
+}
+
+impl UpdateInterfaceInput {
+    /// Check if this represents a new interface (no ID or nil UUID)
+    pub fn is_new(&self) -> bool {
+        self.id.is_none() || self.id == Some(Uuid::nil())
+    }
+
+    /// Convert to Interface entity with the given host_id and network_id.
+    pub fn into_interface(self, host_id: Uuid, network_id: Uuid) -> Interface {
+        let id = if self.is_new() {
+            Uuid::new_v4()
+        } else {
+            self.id.unwrap()
+        };
+
+        let now = chrono::Utc::now();
+        Interface {
+            id,
+            created_at: now,
+            updated_at: now,
+            base: InterfaceBase {
+                network_id,
+                host_id,
+                subnet_id: self.subnet_id,
+                ip_address: self.ip_address,
+                mac_address: self.mac_address,
+                name: self.name,
+            },
+        }
+    }
+}
+
+/// Input for syncing a port during host update.
+/// If `id` is None or nil UUID, a new port is created.
+/// If `id` matches an existing port, it is kept.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdatePortInput {
+    /// ID of existing port to keep, or None/nil for new port
+    pub id: Option<Uuid>,
+    /// Port number (1-65535)
+    pub number: u16,
+    /// Transport protocol (Tcp or Udp)
+    pub protocol: TransportProtocol,
+}
+
+impl UpdatePortInput {
+    /// Check if this represents a new port (no ID or nil UUID)
+    pub fn is_new(&self) -> bool {
+        self.id.is_none() || self.id == Some(Uuid::nil())
+    }
+
+    /// Convert to Port entity with the given host_id and network_id.
+    pub fn into_port(self, host_id: Uuid, network_id: Uuid) -> Port {
+        let id = if self.is_new() {
+            Uuid::new_v4()
+        } else {
+            self.id.unwrap()
+        };
+
+        let now = chrono::Utc::now();
+        Port {
+            id,
+            created_at: now,
+            updated_at: now,
+            base: PortBase {
+                host_id,
+                network_id,
+                port_type: PortType::Custom(PortConfig {
+                    number: self.number,
+                    protocol: self.protocol,
+                }),
+            },
+        }
+    }
 }
 
 // =============================================================================

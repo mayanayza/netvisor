@@ -7,7 +7,10 @@ use validator::Validate;
 
 use crate::server::shared::{
     concepts::Concept,
-    types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    types::{
+        Color, Icon,
+        metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+    },
 };
 
 #[derive(
@@ -43,10 +46,10 @@ impl HasId for ServiceVirtualization {
 }
 
 impl EntityMetadataProvider for ServiceVirtualization {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         Concept::Virtualization.color()
     }
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         Concept::Virtualization.icon()
     }
 }

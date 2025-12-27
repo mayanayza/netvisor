@@ -1,12 +1,15 @@
-use crate::server::auth::middleware::auth::AuthenticatedDaemon;
+use crate::server::auth::middleware::auth::{AuthenticatedDaemon, AuthenticatedEntity};
 use crate::server::auth::middleware::permissions::{MemberOrDaemon, RequireMember};
+use crate::server::shared::handlers::query::FilterQueryExtractor;
 use crate::server::shared::handlers::traits::{
-    BulkDeleteResponse, bulk_delete_handler, delete_handler,
+    BulkDeleteResponse, CrudHandlers, bulk_delete_handler, delete_handler,
 };
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::EntityFilter;
 use crate::server::shared::types::api::{ApiErrorResponse, EmptyApiResponse};
-use crate::server::shared::validation::{validate_network_access, validate_read_access};
+use crate::server::shared::validation::{
+    validate_and_dedupe_tags, validate_network_access, validate_read_access,
+};
 use crate::server::{
     config::AppState,
     hosts::r#impl::{
@@ -15,11 +18,12 @@ use crate::server::{
     },
     shared::types::api::{ApiError, ApiResponse, ApiResult},
 };
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::response::Json;
 use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
+use validator::Validate;
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
@@ -45,9 +49,13 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
 )]
 async fn get_all_hosts(
     State(state): State<Arc<AppState>>,
-    MemberOrDaemon { network_ids, .. }: MemberOrDaemon,
+    RequireMember(user): RequireMember,
+    Query(query): Query<<Host as CrudHandlers>::FilterQuery>,
 ) -> ApiResult<Json<ApiResponse<Vec<HostResponse>>>> {
-    let filter = EntityFilter::unfiltered().network_ids(&network_ids);
+    let base_filter = EntityFilter::unfiltered().network_ids(&user.network_ids);
+
+    let filter = query.apply_to_filter(base_filter, &user.network_ids, user.organization_id);
+
     let hosts = state
         .services
         .host_service
@@ -72,7 +80,7 @@ async fn get_all_hosts(
 )]
 async fn get_host_by_id(
     State(state): State<Arc<AppState>>,
-    MemberOrDaemon { network_ids, .. }: MemberOrDaemon,
+    RequireMember(user): RequireMember,
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<HostResponse>>> {
     let host = state
@@ -82,10 +90,12 @@ async fn get_host_by_id(
         .await?
         .ok_or_else(|| ApiError::not_found(format!("Host {} not found", id)))?;
 
-    // Verify network access
-    if !network_ids.contains(&host.network_id) {
-        return Err(ApiError::not_found(format!("Host {} not found", id)));
-    }
+    validate_read_access(
+        Some(host.network_id),
+        None,
+        &user.network_ids,
+        user.organization_id,
+    )?;
 
     Ok(Json(ApiResponse::success(host)))
 }
@@ -113,8 +123,13 @@ async fn create_host(
         network_ids,
         ..
     }: MemberOrDaemon,
-    Json(request): Json<CreateHostRequest>,
+    Json(mut request): Json<CreateHostRequest>,
 ) -> ApiResult<Json<ApiResponse<HostResponse>>> {
+    // Validate request (name length, etc.)
+    request
+        .validate()
+        .map_err(|e| ApiError::bad_request(&e.to_string()))?;
+
     let host_service = &state.services.host_service;
 
     // Validate user has access to the network
@@ -146,6 +161,16 @@ async fn create_host(
         }
     }
 
+    // Validate and dedupe tags (only for users, daemons don't use tags)
+    if let AuthenticatedEntity::User {
+        organization_id, ..
+    } = &entity
+    {
+        request.tags =
+            validate_and_dedupe_tags(request.tags, *organization_id, &state.services.tag_service)
+                .await?;
+    }
+
     let host_response = host_service.create_from_request(request, entity).await?;
 
     Ok(Json(ApiResponse::success(host_response)))
@@ -170,15 +195,24 @@ async fn create_host(
 async fn update_host(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Json(request): Json<UpdateHostRequest>,
+    Path(id): Path<Uuid>,
+    Json(mut request): Json<UpdateHostRequest>,
 ) -> ApiResult<Json<ApiResponse<HostResponse>>> {
+    // Validate request (name length, etc.)
+    request
+        .validate()
+        .map_err(|e| ApiError::bad_request(&e.to_string()))?;
+
     let host_service = &state.services.host_service;
+
+    // Path ID is canonical - override any ID in the body
+    request.id = id;
 
     // Fetch existing host to validate network access
     let existing_host = host_service
-        .get_by_id(&request.id)
+        .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found(format!("Host {} not found", request.id)))?;
+        .ok_or_else(|| ApiError::not_found(format!("Host {} not found", id)))?;
 
     validate_read_access(
         Some(existing_host.base.network_id),
@@ -186,6 +220,14 @@ async fn update_host(
         &user.network_ids,
         user.organization_id,
     )?;
+
+    // Validate and dedupe tags
+    request.tags = validate_and_dedupe_tags(
+        request.tags,
+        user.organization_id,
+        &state.services.tag_service,
+    )
+    .await?;
 
     let host_response = host_service
         .update_from_request(request, user.into())
@@ -244,6 +286,20 @@ async fn create_host_discovery(
 /// Merges all interfaces, ports, and services from `other_host` into
 /// `destination_host`, then deletes `other_host`. Both hosts must be
 /// on the same network.
+///
+/// ### Merge Behavior
+///
+/// - **Interfaces**: Transferred to destination. If an interface with matching subnet+IP or MAC
+///   already exists on destination, bindings are remapped to use the existing interface.
+/// - **Ports**: Transferred to destination. If a port with the same number and protocol already
+///   exists, bindings are remapped to use the existing port.
+/// - **Services**: Transferred to destination with deduplication.
+///   See [upsert behavior](https://scanopy.net/docs/discovery/#upsert-behavior) for details.
+///
+/// ### Restrictions
+///
+/// - Cannot consolidate a host with itself.
+/// - Cannot consolidate a host that has a daemon - consolidate into it instead.
 #[utoipa::path(
     put,
     path = "/{destination_host}/consolidate/{other_host}",
@@ -255,7 +311,7 @@ async fn create_host_discovery(
     responses(
         (status = 200, description = "Hosts consolidated successfully", body = ApiResponse<HostResponse>),
         (status = 404, description = "One or both hosts not found", body = ApiErrorResponse),
-        (status = 400, description = "Hosts are on different networks", body = ApiErrorResponse),
+        (status = 400, description = "Validation error: same host, has daemon, or different networks", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]

@@ -35,7 +35,7 @@ use crate::server::{
     ports::r#impl::base::{Port, PortBase, PortType, TransportProtocol},
     services::definitions::ServiceDefinitionRegistry,
     services::r#impl::base::{Service, ServiceBase},
-    shared::types::entities::EntitySource,
+    shared::types::{Color, entities::EntitySource},
     subnets::r#impl::{
         base::{Subnet, SubnetBase},
         types::SubnetType,
@@ -174,7 +174,7 @@ pub fn group() -> Group {
             name: "Web Services".to_string(),
             description: Some("HTTP/HTTPS services group".to_string()),
             network_id: ids::NETWORK,
-            color: "#3B82F6".to_string(),
+            color: Color::Blue,
             group_type: GroupType::RequestPath,
             binding_ids: vec![],
             source: EntitySource::Manual,
@@ -220,7 +220,7 @@ pub fn tag() -> Tag {
         base: TagBase {
             name: "production".to_string(),
             description: Some("Production environment resources".to_string()),
-            color: "#22C55E".to_string(),
+            color: Color::Green,
             organization_id: ids::ORGANIZATION,
         },
     }

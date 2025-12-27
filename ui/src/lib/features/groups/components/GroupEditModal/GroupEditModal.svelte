@@ -4,46 +4,67 @@
 	import type { Group } from '../../types/base';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
-	import { services } from '$lib/features/services/store';
+	import { useServicesQuery } from '$lib/features/services/queries';
 	import { BindingWithServiceDisplay } from '$lib/shared/components/forms/selection/display/BindingWithServiceDisplay.svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import GroupDetailsForm from './GroupDetailsForm.svelte';
 	import EntityMetadataSection from '$lib/shared/components/forms/EntityMetadataSection.svelte';
 	import EdgeStyleForm from './EdgeStyleForm.svelte';
 
-	export let group: Group | null = null;
-	export let isOpen = false;
-	export let onCreate: (data: Group) => Promise<void> | void;
-	export let onUpdate: (id: string, data: Group) => Promise<void> | void;
-	export let onClose: () => void;
-	export let onDelete: ((id: string) => Promise<void> | void) | null = null;
+	interface Props {
+		group?: Group | null;
+		isOpen?: boolean;
+		onCreate: (data: Group) => Promise<void> | void;
+		onUpdate: (id: string, data: Group) => Promise<void> | void;
+		onClose: () => void;
+		onDelete?: ((id: string) => Promise<void> | void) | null;
+	}
 
-	let loading = false;
-	let deleting = false;
+	let {
+		group = null,
+		isOpen = false,
+		onCreate,
+		onUpdate,
+		onClose,
+		onDelete = null
+	}: Props = $props();
 
-	$: isEditing = group !== null;
-	$: title = isEditing ? `Edit ${group?.name}` : 'Create Group';
+	// TanStack Query hooks
+	const servicesQuery = useServicesQuery();
+	let servicesData = $derived(servicesQuery.data ?? []);
 
-	let formData: Group = createEmptyGroupFormData();
+	let loading = $state(false);
+	let deleting = $state(false);
+
+	let isEditing = $derived(group !== null);
+	let title = $derived(isEditing ? `Edit ${group?.name}` : 'Create Group');
+
+	let formData: Group = $state(createEmptyGroupFormData());
 
 	// Initialize form data when group changes or modal opens
-	$: if (isOpen) {
-		resetForm();
-	}
+	$effect(() => {
+		if (isOpen) {
+			resetForm();
+		}
+	});
 
 	function resetForm() {
 		formData = group ? { ...group } : createEmptyGroupFormData();
 	}
 
 	// Available service bindings (exclude already selected ones)
-	$: availableServiceBindings = $services
-		.filter((s) => s.network_id == formData.network_id)
-		.flatMap((s) => s.bindings)
-		.filter((sb) => !(formData.binding_ids ?? []).some((binding) => binding === sb.id));
+	let availableServiceBindings = $derived(
+		servicesData
+			.filter((s) => s.network_id == formData.network_id)
+			.flatMap((s) => s.bindings)
+			.filter((sb) => !(formData.binding_ids ?? []).some((binding) => binding === sb.id))
+	);
 
-	$: selectedServiceBindings = (formData.binding_ids ?? [])
-		.map((bindingId) => $services.flatMap((s) => s.bindings).find((sb) => sb.id === bindingId))
-		.filter(Boolean);
+	let selectedServiceBindings = $derived(
+		(formData.binding_ids ?? [])
+			.map((bindingId) => servicesData.flatMap((s) => s.bindings).find((sb) => sb.id === bindingId))
+			.filter(Boolean)
+	);
 
 	// Handlers for service bindings
 	function handleAdd(bindingId: string) {
@@ -100,7 +121,7 @@
 	}
 
 	// Dynamic labels based on create/edit mode
-	$: saveLabel = isEditing ? 'Update Group' : 'Create Group';
+	let saveLabel = $derived(isEditing ? 'Update Group' : 'Create Group');
 
 	let colorHelper = entities.getColorHelper('Group');
 </script>
@@ -120,7 +141,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Group')} color={colorHelper.string} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('Group')} color={colorHelper.color} />
 	</svelte:fragment>
 
 	<!-- Content -->

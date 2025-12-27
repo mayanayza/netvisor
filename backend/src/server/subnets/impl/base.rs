@@ -41,7 +41,7 @@ pub struct SubnetBase {
 impl Default for SubnetBase {
     fn default() -> Self {
         Self {
-            cidr: IpCidr::V4(Ipv4Cidr::new(Ipv4Addr::new(127, 0, 0, 1), 24).unwrap()),
+            cidr: IpCidr::V4(Ipv4Cidr::new(Ipv4Addr::new(192, 168, 4, 0), 24).unwrap()),
             name: "New Subnet".to_string(),
             network_id: Uuid::new_v4(),
             description: None,
@@ -52,7 +52,7 @@ impl Default for SubnetBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Default, ToSchema, Validate)]
 #[schema(example = crate::server::shared::types::examples::subnet)]
 pub struct Subnet {
     #[serde(default)]
@@ -65,6 +65,7 @@ pub struct Subnet {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: SubnetBase,
 }
 

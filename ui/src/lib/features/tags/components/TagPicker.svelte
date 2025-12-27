@@ -1,68 +1,88 @@
 <script lang="ts">
 	import { X, Plus } from 'lucide-svelte';
-	import { tags, createTag } from '$lib/features/tags/store';
+	import { useTagsQuery, useCreateTagMutation } from '$lib/features/tags/queries';
 	import { createDefaultTag } from '$lib/features/tags/types/base';
-	import { createColorHelper, AVAILABLE_COLORS } from '$lib/shared/utils/styling';
-	import { currentUser } from '$lib/features/auth/store';
+	import { createColorHelper, AVAILABLE_COLORS, type Color } from '$lib/shared/utils/styling';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { permissions } from '$lib/shared/stores/metadata';
-	import { organization } from '$lib/features/organizations/store';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 
-	export let selectedTagIds: string[] = [];
-	export let label: string = 'Tags';
-	export let placeholder: string = 'Type to add tags...';
-	export let disabled: boolean = false;
+	let {
+		selectedTagIds = $bindable([]),
+		label = 'Tags',
+		placeholder = 'Type to add tags...',
+		disabled = false
+	}: {
+		selectedTagIds?: string[];
+		label?: string;
+		placeholder?: string;
+		disabled?: boolean;
+	} = $props();
 
-	let inputValue = '';
-	let isFocused = false;
-	let inputElement: HTMLInputElement;
-	let isCreating = false;
+	let inputValue = $state('');
+	let isFocused = $state(false);
+	let inputElement: HTMLInputElement | undefined = $state();
+
+	// Query and mutation
+	const tagsQuery = useTagsQuery();
+	const createTagMutation = useCreateTagMutation();
+	const organizationQuery = useOrganizationQuery();
+	const currentUserQuery = useCurrentUserQuery();
+
+	// Derived state
+	let tags = $derived(tagsQuery.data ?? []);
+	let isCreating = $derived(createTagMutation.isPending);
+	let organization = $derived(organizationQuery.data);
+	let currentUser = $derived(currentUserQuery.data);
 
 	// Check if user can create tags
-	$: canCreateTags =
-		$currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities;
+	let canCreateTags = $derived(
+		currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities
+	);
 
 	// Check if typed value matches an existing tag name exactly
-	$: exactMatch = $tags.some((t) => t.name.toLowerCase() === inputValue.trim().toLowerCase());
+	let exactMatch = $derived(
+		tags.some((t) => t.name.toLowerCase() === inputValue.trim().toLowerCase())
+	);
 
 	// Show create option if user typed something, can create, and no exact match exists
-	$: showCreateOption = inputValue.trim().length > 0 && canCreateTags && !exactMatch;
+	let showCreateOption = $derived(inputValue.trim().length > 0 && canCreateTags && !exactMatch);
 
 	// Get tag by ID, returns null if not found
 	function getTag(id: string) {
-		return $tags.find((t) => t.id === id) ?? null;
+		return tags.find((t) => t.id === id) ?? null;
 	}
 
 	// Filter available tags based on input and exclude already selected
-	$: availableTags = $tags.filter(
-		(tag) =>
-			!selectedTagIds.includes(tag.id) && tag.name.toLowerCase().includes(inputValue.toLowerCase())
+	let availableTags = $derived(
+		tags.filter(
+			(tag) =>
+				!selectedTagIds.includes(tag.id) &&
+				tag.name.toLowerCase().includes(inputValue.toLowerCase())
+		)
 	);
 
-	$: showDropdown = isFocused && (availableTags.length > 0 || showCreateOption);
+	let showDropdown = $derived(isFocused && (availableTags.length > 0 || showCreateOption));
 
-	function getRandomColor(): string {
+	function getRandomColor(): Color {
 		return AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)];
 	}
 
 	async function handleCreateTag() {
-		if (!$organization || isCreating) return;
+		if (!organization || isCreating) return;
 
 		const name = inputValue.trim();
 		if (!name) return;
 
-		isCreating = true;
 		try {
-			const newTag = createDefaultTag($organization.id);
+			const newTag = createDefaultTag(organization.id);
 			newTag.name = name;
 			newTag.color = getRandomColor();
 
-			const result = await createTag(newTag);
-			if (result?.success && result.data) {
-				selectedTagIds = [...selectedTagIds, result.data.id];
-				inputValue = '';
-			}
+			const result = await createTagMutation.mutateAsync(newTag);
+			selectedTagIds = [...selectedTagIds, result.id];
+			inputValue = '';
 		} finally {
-			isCreating = false;
 			inputElement?.focus();
 		}
 	}

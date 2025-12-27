@@ -120,14 +120,33 @@ async fn validate_no_binding_type_conflict(
 }
 
 /// Create a new binding
+///
+/// Creates a binding that associates a service with a port or interface.
+///
+/// ### Binding Types
+///
+/// - **Interface binding**: Service is present at an interface (IP address) without a specific port.
+///   Used for non-port-bound services like gateways.
+/// - **Port binding (specific interface)**: Service listens on a specific port on a specific interface.
+/// - **Port binding (all interfaces)**: Service listens on a specific port on all interfaces
+///   (`interface_id: null`).
+///
+/// ### Validation and Deduplication Rules
+///
+/// - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
+///   A port binding on all interfaces conflicts with any interface binding for the same service.
+/// - **All-interfaces precedence**: When creating a port binding with `interface_id: null`,
+///   any existing specific-interface bindings for the same port are automatically removed,
+///   as they are superseded by the all-interfaces binding.
 #[utoipa::path(
     post,
     path = "",
     tag = "bindings",
     request_body = Binding,
     responses(
-        (status = 200, description = "Binding created", body = ApiResponse<Binding>),
-        (status = 409, description = "Conflict with existing binding", body = ApiErrorResponse),
+        (status = 200, description = "Binding created (superseded bindings may be removed)", body = ApiResponse<Binding>),
+        (status = 400, description = "Referenced port or interface does not exist", body = ApiErrorResponse),
+        (status = 409, description = "Conflict with existing binding type", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]
@@ -137,10 +156,51 @@ async fn create_binding(
     Json(binding): Json<Binding>,
 ) -> ApiResult<Json<ApiResponse<Binding>>> {
     validate_no_binding_type_conflict(&state, &binding, None).await?;
+
+    // If creating an all-interfaces port binding, remove any specific-interface bindings for the same port
+    // (the all-interfaces binding supersedes them)
+    if let BindingType::Port {
+        port_id,
+        interface_id: None,
+    } = &binding.base.binding_type
+    {
+        let service_id = binding.service_id();
+        let filter = EntityFilter::unfiltered().service_id(&service_id);
+        let existing = state.services.binding_service.get_all(filter).await?;
+
+        for existing_binding in existing {
+            if let BindingType::Port {
+                port_id: existing_port_id,
+                interface_id: Some(_),
+            } = &existing_binding.base.binding_type
+                && existing_port_id == port_id
+            {
+                // Delete the specific-interface binding that's being superseded
+                tracing::info!(
+                    binding_id = %existing_binding.id,
+                    port_id = %existing_port_id,
+                    "Removing specific-interface binding superseded by all-interfaces binding"
+                );
+                state
+                    .services
+                    .binding_service
+                    .delete(&existing_binding.id, user.0.clone().into())
+                    .await?;
+            }
+        }
+    }
+
     create_handler::<Binding>(State(state), user, Json(binding)).await
 }
 
 /// Update a binding
+///
+/// Updates an existing binding. The same conflict detection rules from binding creation apply.
+///
+/// ## Validation Rules
+///
+/// - **Conflict detection**: The updated binding must not conflict with other bindings on the
+///   same service. Interface bindings conflict with port bindings on the same interface.
 #[utoipa::path(
     put,
     path = "/{id}",
@@ -149,7 +209,8 @@ async fn create_binding(
     request_body = Binding,
     responses(
         (status = 200, description = "Binding updated", body = ApiResponse<Binding>),
-        (status = 409, description = "Conflict with existing binding", body = ApiErrorResponse),
+        (status = 400, description = "Referenced port or interface does not exist", body = ApiErrorResponse),
+        (status = 409, description = "Conflict with existing binding type", body = ApiErrorResponse),
     ),
     security(("session" = []))
 )]

@@ -9,6 +9,7 @@ use sqlx::Row;
 use sqlx::postgres::PgRow;
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::server::{
     shared::{
@@ -18,7 +19,9 @@ use crate::server::{
     users::r#impl::permissions::UserOrgPermissions,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct InviteBase {
     pub organization_id: Uuid,
     pub permissions: UserOrgPermissions,
@@ -31,7 +34,9 @@ pub struct InviteBase {
     pub send_to: Option<EmailAddress>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct Invite {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -43,6 +48,7 @@ pub struct Invite {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: InviteBase,
 }
 

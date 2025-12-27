@@ -7,9 +7,9 @@
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
 	import { entities, permissions, metadata } from '$lib/shared/stores/metadata';
-	import { currentUser } from '$lib/features/auth/store';
-	import { networks } from '$lib/features/networks/store';
-	import { updateUserAsAdmin } from '../store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
+	import { useUpdateUserAsAdminMutation } from '$lib/features/users/queries';
 	import { pushSuccess, pushError } from '$lib/shared/stores/feedback';
 	import type { User, UserOrgPermissions } from '../types';
 	import type { Network } from '$lib/features/networks/types';
@@ -24,14 +24,23 @@
 		onClose: () => void;
 	} = $props();
 
+	// TanStack Query for current user
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	const networksQuery = useNetworksQuery();
+	let networksData = $derived(networksQuery.data ?? []);
+
+	// TanStack Query mutation for updating user
+	const updateUserMutation = useUpdateUserAsAdminMutation();
+
 	// Force Svelte to track reactivity
 	$effect(() => {
 		void $metadata;
-		void $currentUser;
-		void $networks;
+		void currentUser;
 	});
 
-	let loading = $state(false);
+	let loading = $derived(updateUserMutation.isPending);
 
 	// Permission levels that don't need network assignment
 	const networksNotNeeded: string[] = permissions
@@ -50,9 +59,9 @@
 		permissions
 			.getItems()
 			.filter((p) => {
-				if (!$currentUser) return false;
+				if (!currentUser) return false;
 				const canManage = permissions
-					.getMetadata($currentUser.permissions)
+					.getMetadata(currentUser.permissions)
 					.can_manage_user_permissions.includes(p.id);
 				return canManage;
 			})
@@ -61,7 +70,7 @@
 
 	// Available networks for selection
 	let networkOptions = $derived(
-		$networks.filter((n) => !selectedNetworks.some((sn) => sn.id === n.id))
+		networksData.filter((n) => !selectedNetworks.some((sn) => sn.id === n.id))
 	);
 
 	// Reset form when modal opens or user changes
@@ -69,13 +78,13 @@
 		if (isOpen && user) {
 			permissionsField.set(user.permissions);
 			selectedNetworks = user.network_ids
-				.map((id) => $networks.find((n) => n.id === id))
+				.map((id) => networksData.find((n) => n.id === id))
 				.filter((n): n is Network => n !== undefined);
 		}
 	});
 
 	function handleAddNetwork(id: string) {
-		const network = $networks.find((n) => n.id === id);
+		const network = networksData.find((n) => n.id === id);
 		if (network) {
 			selectedNetworks = [...selectedNetworks, network];
 		}
@@ -88,7 +97,6 @@
 	async function handleSubmit() {
 		if (!user) return;
 
-		loading = true;
 		try {
 			const updatedUser: User = {
 				...user,
@@ -98,17 +106,11 @@
 					: selectedNetworks.map((n) => n.id)
 			};
 
-			const result = await updateUserAsAdmin(updatedUser);
-			if (result?.success) {
-				pushSuccess(`User ${user.email} updated successfully`);
-				onClose();
-			} else {
-				pushError(result?.error || 'Failed to update user');
-			}
+			await updateUserMutation.mutateAsync(updatedUser);
+			pushSuccess(`User ${user.email} updated successfully`);
+			onClose();
 		} catch (err) {
 			pushError(`Failed to update user: ${err}`);
-		} finally {
-			loading = false;
 		}
 	}
 
@@ -135,7 +137,7 @@
 	<svelte:fragment slot="header-icon">
 		<ModalHeaderIcon
 			Icon={entities.getIconComponent('User')}
-			color={entities.getColorHelper('User').icon}
+			color={entities.getColorHelper('User').color}
 		/>
 	</svelte:fragment>
 

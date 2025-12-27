@@ -10,6 +10,7 @@ use scanopy::server::hosts::r#impl::api::{CreateHostRequest, HostResponse, Updat
 use scanopy::server::services::definitions::ServiceDefinitionRegistry;
 use scanopy::server::services::r#impl::base::{Service, ServiceBase};
 use scanopy::server::shared::storage::traits::StorableEntity;
+use scanopy::server::shared::types::Color;
 use scanopy::server::shared::types::entities::EntitySource;
 use scanopy::server::subnets::r#impl::base::{Subnet, SubnetBase};
 use scanopy::server::subnets::r#impl::types::SubnetType;
@@ -124,6 +125,9 @@ async fn test_host_crud(ctx: &TestContext) -> Result<(), String> {
         virtualization: fetched.virtualization.clone(),
         hidden: fetched.hidden,
         tags: fetched.tags.clone(),
+        expected_updated_at: None, // No optimistic locking for this test
+        interfaces: None,          // Don't sync interfaces
+        ports: None,               // Don't sync ports
     };
     let updated: HostResponse = ctx
         .client
@@ -220,7 +224,7 @@ async fn test_group_crud(ctx: &TestContext) -> Result<(), String> {
         name: "Test Group".to_string(),
         description: Some("Test description".to_string()),
         network_id: ctx.network_id,
-        color: "#FF0000".to_string(),
+        color: Color::Red,
         group_type: GroupType::RequestPath,
         binding_ids: vec![],
         source: EntitySource::System,

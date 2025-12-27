@@ -9,77 +9,6 @@
     "version": "0.12.5"
   },
   "paths": {
-    "/api/auth/daemon-setup": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Store pre-registration daemon setup data in session and generate provisional API key\nSupports multiple calls to configure daemons for different networks",
-        "operationId": "daemon_setup",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DaemonSetupRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Daemon setup data stored",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_DaemonSetupResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/forgot-password": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "forgot_password",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForgotPasswordRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Password reset email sent",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/auth/keys": {
       "get": {
         "tags": [
@@ -424,358 +353,6 @@
         ]
       }
     },
-    "/api/auth/login": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Login successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_User"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Login forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/logout": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "logout",
-        "responses": {
-          "200": {
-            "description": "Logout successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/me": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "get_current_user",
-        "responses": {
-          "200": {
-            "description": "Current user",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_User"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not authenticated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/oidc/{slug}/unlink": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "unlink_oidc_account",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "description": "OIDC provider slug",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OIDC account unlinked",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_User"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not authenticated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Blocked in demo mode",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Provider not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/register": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "register",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "User registered successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_User"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Registration disabled",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Email already exists",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/reset-password": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "reset_password",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResetPasswordRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Password reset successful",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_User"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid or expired token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/setup": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "summary": "Store pre-registration setup data (org name, networks, seed preference) in session",
-        "operationId": "setup",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetupRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Setup data stored",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_SetupResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/auth/update": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "update_password_auth",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateEmailPasswordRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Password updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_User"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not authenticated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Blocked in demo mode",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/bindings": {
       "get": {
         "tags": [
@@ -860,6 +437,7 @@
           "bindings"
         ],
         "summary": "Create a new binding",
+        "description": "Creates a binding that associates a service with a port or interface.\n\n### Binding Types\n\n- **Interface binding**: Service is present at an interface (IP address) without a specific port.\n  Used for non-port-bound services like gateways.\n- **Port binding (specific interface)**: Service listens on a specific port on a specific interface.\n- **Port binding (all interfaces)**: Service listens on a specific port on all interfaces\n  (`interface_id: null`).\n\n### Validation and Deduplication Rules\n\n- **Conflict detection**: Interface bindings conflict with port bindings on the same interface.\n  A port binding on all interfaces conflicts with any interface binding for the same service.\n- **All-interfaces precedence**: When creating a port binding with `interface_id: null`,\n  any existing specific-interface bindings for the same port are automatically removed,\n  as they are superseded by the all-interfaces binding.",
         "operationId": "create_binding",
         "requestBody": {
           "content": {
@@ -873,7 +451,7 @@
         },
         "responses": {
           "200": {
-            "description": "Binding created",
+            "description": "Binding created (superseded bindings may be removed)",
             "content": {
               "application/json": {
                 "schema": {
@@ -882,8 +460,18 @@
               }
             }
           },
+          "400": {
+            "description": "Referenced port or interface does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
-            "description": "Conflict with existing binding",
+            "description": "Conflict with existing binding type",
             "content": {
               "application/json": {
                 "schema": {
@@ -993,6 +581,7 @@
           "bindings"
         ],
         "summary": "Update a binding",
+        "description": "Updates an existing binding. The same conflict detection rules from binding creation apply.\n\n## Validation Rules\n\n- **Conflict detection**: The updated binding must not conflict with other bindings on the\n  same service. Interface bindings conflict with port bindings on the same interface.",
         "operationId": "update_binding",
         "parameters": [
           {
@@ -1027,8 +616,18 @@
               }
             }
           },
+          "400": {
+            "description": "Referenced port or interface does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
           "409": {
-            "description": "Conflict with existing binding",
+            "description": "Conflict with existing binding type",
             "content": {
               "application/json": {
                 "schema": {
@@ -1469,7 +1068,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DiscoveryUpdatePayload"
+                  "$ref": "#/components/schemas/ApiResponse_DiscoveryUpdatePayload"
                 }
               }
             }
@@ -2096,7 +1695,7 @@
           "hosts"
         ],
         "summary": "Consolidate hosts",
-        "description": "Merges all interfaces, ports, and services from `other_host` into\n`destination_host`, then deletes `other_host`. Both hosts must be\non the same network.",
+        "description": "Merges all interfaces, ports, and services from `other_host` into\n`destination_host`, then deletes `other_host`. Both hosts must be\non the same network.\n\n### Merge Behavior\n\n- **Interfaces**: Transferred to destination. If an interface with matching subnet+IP or MAC\n  already exists on destination, bindings are remapped to use the existing interface.\n- **Ports**: Transferred to destination. If a port with the same number and protocol already\n  exists, bindings are remapped to use the existing port.\n- **Services**: Transferred to destination with deduplication.\n  See [upsert behavior](https://scanopy.net/docs/discovery/#upsert-behavior) for details.\n\n### Restrictions\n\n- Cannot consolidate a host with itself.\n- Cannot consolidate a host that has a daemon - consolidate into it instead.",
         "operationId": "consolidate_hosts",
         "parameters": [
           {
@@ -2132,7 +1731,7 @@
             }
           },
           "400": {
-            "description": "Hosts are on different networks",
+            "description": "Validation error: same host, has daemon, or different networks",
             "content": {
               "application/json": {
                 "schema": {
@@ -3253,7 +2852,7 @@
         "tags": [
           "ports"
         ],
-        "summary": "Create new port",
+        "summary": "Create a new port",
         "operationId": "create_port",
         "requestBody": {
           "content": {
@@ -3267,7 +2866,7 @@
         },
         "responses": {
           "200": {
-            "description": "Port created",
+            "description": "Port created successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -3277,7 +2876,7 @@
             }
           },
           "400": {
-            "description": "Invalid request",
+            "description": "Network mismatch or duplicate port",
             "content": {
               "application/json": {
                 "schema": {
@@ -3386,7 +2985,7 @@
         "tags": [
           "ports"
         ],
-        "summary": "Update port",
+        "summary": "Update a port",
         "operationId": "update_port",
         "parameters": [
           {
@@ -3412,11 +3011,21 @@
         },
         "responses": {
           "200": {
-            "description": "Port updated",
+            "description": "Port updated successfully",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_Port"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Network mismatch or invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
                 }
               }
             }
@@ -3543,7 +3152,7 @@
           "services"
         ],
         "summary": "Create a new service",
-        "description": "Creates a service with optional bindings to interfaces or ports.\nThe `id`, `created_at`, `updated_at`, and `source` fields are generated server-side.\nBindings are specified without `service_id` or `network_id` - these are assigned automatically.",
+        "description": "Creates a service with optional bindings to interfaces or ports.\nThe `id`, `created_at`, `updated_at`, and `source` fields are generated server-side.\nBindings are specified without `service_id` or `network_id` - these are assigned automatically.\n\n### Binding Validation Rules\n\n- **Cross-host validation**: All bindings must reference ports/interfaces that belong to the\n  service's host. Bindings referencing entities from other hosts will be rejected.\n- **Deduplication**: Duplicate bindings in the same request are automatically deduplicated.\n- **All-interfaces precedence**: If a port binding with `interface_id: null` (all interfaces)\n  is included, any specific-interface bindings for the same port are automatically removed.\n- **Conflict detection**: Interface bindings conflict with port bindings on the same interface.\n  A port binding on all interfaces conflicts with any interface binding.",
         "operationId": "create_service",
         "requestBody": {
           "content": {
@@ -3567,7 +3176,7 @@
             }
           },
           "400": {
-            "description": "Host network mismatch or invalid request",
+            "description": "Validation error: host network mismatch, cross-host binding, or binding conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -3677,6 +3286,7 @@
           "services"
         ],
         "summary": "Update a service",
+        "description": "Updates an existing service. All binding validation rules from service creation apply here as well.\n\n## Binding Validation Rules\n\n- **Cross-host validation**: All bindings must reference ports/interfaces that belong to the\n  service's host. Bindings referencing entities from other hosts will be rejected.\n- **Deduplication**: Duplicate bindings are automatically deduplicated.\n- **All-interfaces precedence**: If a port binding with `interface_id: null` (all interfaces)\n  is included, any specific-interface bindings for the same port are automatically removed.\n- **Conflict detection**: Interface bindings conflict with port bindings on the same interface.",
         "operationId": "update_service",
         "parameters": [
           {
@@ -3712,7 +3322,7 @@
             }
           },
           "400": {
-            "description": "Host network mismatch",
+            "description": "Validation error: host network mismatch, cross-host binding, or binding conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -4295,7 +3905,8 @@
         "tags": [
           "subnets"
         ],
-        "summary": "Update subnet",
+        "summary": "Update a subnet",
+        "description": "Updates subnet properties. If the CIDR is being changed, validates that\nall existing interfaces on this subnet have IPs within the new CIDR range.",
         "operationId": "update_subnet",
         "parameters": [
           {
@@ -4326,6 +3937,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_Subnet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CIDR change would orphan existing interfaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
                 }
               }
             }
@@ -4401,21 +4022,7 @@
         ],
         "summary": "List all tags",
         "operationId": "list_tags",
-        "parameters": [
-          {
-            "name": "network_id",
-            "in": "query",
-            "description": "Filter by network ID",
-            "required": false,
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "uuid"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "List of tags",
@@ -4670,59 +4277,13 @@
         ]
       }
     },
-    "/api/topology/{id}": {
-      "get": {
+    "/api/topology/{id}/lock": {
+      "post": {
         "tags": [
           "topology"
         ],
-        "summary": "Get topology by ID",
-        "operationId": "get_topology_by_id",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Topology ID",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Topology found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_Topology"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Topology not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "session": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "topology"
-        ],
-        "summary": "Update topology",
-        "operationId": "update_topology",
+        "summary": "Lock a topology",
+        "operationId": "lock",
         "parameters": [
           {
             "name": "id",
@@ -4747,21 +4308,11 @@
         },
         "responses": {
           "200": {
-            "description": "Topology updated",
+            "description": "Topology locked",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_Topology"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Topology not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
                 }
               }
             }
@@ -4772,13 +4323,15 @@
             "session": []
           }
         ]
-      },
-      "delete": {
+      }
+    },
+    "/api/topology/{id}/unlock": {
+      "post": {
         "tags": [
           "topology"
         ],
-        "summary": "Delete topology",
-        "operationId": "delete_topology",
+        "summary": "Unlock a topology",
+        "operationId": "unlock",
         "parameters": [
           {
             "name": "id",
@@ -4791,23 +4344,23 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Topology deleted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse"
-                }
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Topology"
               }
             }
           },
-          "404": {
-            "description": "Topology not found",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Topology unlocked",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiErrorResponse"
+                  "$ref": "#/components/schemas/ApiResponse_Topology"
                 }
               }
             }
@@ -4826,7 +4379,6 @@
           "users"
         ],
         "summary": "List all users",
-        "description": "Returns a list of users with permissions below the permissions of the user making the request.",
         "operationId": "get_all_users",
         "responses": {
           "200": {
@@ -5161,14 +4713,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2025-12-25T05:22:04.959528Z",
-              "id": "2c3db01e-dd97-4338-a2ec-4901d4b412a6",
+              "created_at": "2025-12-27T04:06:57.113250Z",
+              "id": "d8fe7bcb-f218-4755-b675-eb215904960e",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2025-12-25T05:22:04.959528Z"
+              "updated_at": "2025-12-27T04:06:57.113250Z"
             }
           },
           "error": {
@@ -5377,6 +4929,80 @@
           }
         }
       },
+      "ApiResponse_DiscoveryUpdatePayload": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Progress update from daemon to server during discovery",
+            "required": [
+              "session_id",
+              "daemon_id",
+              "network_id",
+              "phase",
+              "discovery_type",
+              "progress"
+            ],
+            "properties": {
+              "daemon_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "discovery_type": {
+                "$ref": "#/components/schemas/DiscoveryType"
+              },
+              "error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "finished_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "network_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "phase": {
+                "$ref": "#/components/schemas/DiscoveryPhase"
+              },
+              "progress": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              },
+              "session_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "started_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
       "ApiResponse_Group": {
         "type": "object",
         "required": [
@@ -5416,7 +5042,7 @@
             ],
             "example": {
               "binding_ids": [],
-              "color": "#3B82F6",
+              "color": "Blue",
               "created_at": "2026-01-15T10:30:00Z",
               "description": "HTTP/HTTPS services group",
               "edge_style": "Bezier",
@@ -6130,14 +5756,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2025-12-25T05:22:04.955975Z",
-                  "id": "361bf185-7894-488a-8a9b-128b867e3c8c",
+                  "created_at": "2025-12-27T04:06:57.109379Z",
+                  "id": "fa737543-275e-49b0-869f-47f1f2dc050a",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2025-12-25T05:22:04.955975Z"
+                  "updated_at": "2025-12-27T04:06:57.109379Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -6145,7 +5771,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
-              "service_definition": "Roku Media Player",
+              "service_definition": "Bitwarden",
               "source": {
                 "type": "Manual"
               },
@@ -6368,7 +5994,7 @@
               }
             ],
             "example": {
-              "color": "#22C55E",
+              "color": "Green",
               "created_at": "2026-01-15T10:30:00Z",
               "description": "Production environment resources",
               "id": "550e8400-e29b-41d4-a716-44665544000a",
@@ -6771,14 +6397,14 @@
               ],
               "description": "Association between a service and a port / interface that the service is listening on",
               "example": {
-                "created_at": "2025-12-25T05:22:04.959217Z",
-                "id": "1c74909f-7303-426c-b19d-aaccfbdcbbb7",
+                "created_at": "2025-12-27T04:06:57.112944Z",
+                "id": "5d65af51-3df7-445b-92cf-a81a6420dfbd",
                 "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "port_id": "550e8400-e29b-41d4-a716-446655440006",
                 "service_id": "550e8400-e29b-41d4-a716-446655440007",
                 "type": "Port",
-                "updated_at": "2025-12-25T05:22:04.959217Z"
+                "updated_at": "2025-12-27T04:06:57.112944Z"
               }
             }
           },
@@ -7015,7 +6641,7 @@
               ],
               "example": {
                 "binding_ids": [],
-                "color": "#3B82F6",
+                "color": "Blue",
                 "created_at": "2026-01-15T10:30:00Z",
                 "description": "HTTP/HTTPS services group",
                 "edge_style": "Bezier",
@@ -7474,14 +7100,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2025-12-25T05:22:04.954855Z",
-                    "id": "10e282be-3cd1-41e6-9ac1-6ddeacce138b",
+                    "created_at": "2025-12-27T04:06:57.108137Z",
+                    "id": "56d5471b-3f26-4007-b1c4-75b0c70b5625",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2025-12-25T05:22:04.954855Z"
+                    "updated_at": "2025-12-27T04:06:57.108137Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -7489,7 +7115,7 @@
                 "id": "550e8400-e29b-41d4-a716-446655440007",
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
-                "service_definition": "Roku Media Player",
+                "service_definition": "Bitwarden",
                 "source": {
                   "type": "Manual"
                 },
@@ -7668,7 +7294,7 @@
                 }
               ],
               "example": {
-                "color": "#22C55E",
+                "color": "Green",
                 "created_at": "2026-01-15T10:30:00Z",
                 "description": "Production environment resources",
                 "id": "550e8400-e29b-41d4-a716-44665544000a",
@@ -8047,14 +7673,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2025-12-25T05:22:04.947732Z",
-          "id": "215a4a49-a959-4925-b3ff-61959b1d8f5b",
+          "created_at": "2025-12-27T04:06:57.099946Z",
+          "id": "54270574-c52d-4f09-8195-2bf8c68d8634",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2025-12-25T05:22:04.947732Z"
+          "updated_at": "2025-12-27T04:06:57.099946Z"
         }
       },
       "BindingBase": {
@@ -8087,7 +7713,7 @@
           {
             "type": "object",
             "title": "Interface",
-            "description": "Interface bindings are used when a service is present on a given interface, but not listening on any particular port",
+            "description": "Interface binding: Service is present at an interface (IP address) without a specific port.\nUsed for non-port-bound services like gateways. Conflicts with port bindings on the same interface.",
             "required": [
               "interface_id",
               "type"
@@ -8108,7 +7734,7 @@
           {
             "type": "object",
             "title": "Port",
-            "description": "Port bindings are used when a service is present on a given interface, and listening on one, many, or all ports",
+            "description": "Port binding: Service listens on a specific port, optionally on a specific interface.\nIf `interface_id` is `null`, the service listens on this port across all interfaces,\nwhich supersedes any specific-interface bindings for the same port.",
             "required": [
               "port_id",
               "interface_id",
@@ -8121,7 +7747,7 @@
                   "null"
                 ],
                 "format": "uuid",
-                "description": "null = service is listening on this port on all interfaces"
+                "description": "The interface this port binding applies to. If `null`, the binding applies to all\ninterfaces on the host (and supersedes specific-interface bindings for this port)."
               },
               "port_id": {
                 "type": "string",
@@ -8136,7 +7762,7 @@
             }
           }
         ],
-        "description": "The type of binding - either to an interface or to a port"
+        "description": "The type of binding - either to an interface or to a port.\n\nBindings associate a service with network resources (interfaces/ports) on a host.\n\n## Validation Rules\n\n- All bindings must reference ports/interfaces that belong to the same host as the service.\n- Interface bindings conflict with port bindings on the same interface.\n- A port binding on all interfaces (`interface_id: null`) conflicts with any interface binding.\n- When a port binding with `interface_id: null` is created, it supersedes (removes) any\n  existing specific-interface bindings for the same port."
       },
       "BulkDeleteResponse": {
         "type": "object",
@@ -8154,6 +7780,24 @@
             "minimum": 0
           }
         }
+      },
+      "Color": {
+        "type": "string",
+        "enum": [
+          "Pink",
+          "Rose",
+          "Red",
+          "Orange",
+          "Yellow",
+          "Green",
+          "Emerald",
+          "Teal",
+          "Cyan",
+          "Blue",
+          "Indigo",
+          "Purple",
+          "Gray"
+        ]
       },
       "CreateBindingInput": {
         "oneOf": [
@@ -9181,7 +8825,7 @@
         ],
         "properties": {
           "color": {
-            "type": "string"
+            "$ref": "#/components/schemas/Color"
           },
           "icon": {
             "type": "string"
@@ -9333,7 +8977,7 @@
         ],
         "example": {
           "binding_ids": [],
-          "color": "#3B82F6",
+          "color": "Blue",
           "created_at": "2026-01-15T10:30:00Z",
           "description": "HTTP/HTTPS services group",
           "edge_style": "Bezier",
@@ -9369,7 +9013,7 @@
             "description": "Ordered list of binding IDs for this group."
           },
           "color": {
-            "type": "string"
+            "$ref": "#/components/schemas/Color"
           },
           "description": {
             "type": [
@@ -10685,14 +10329,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2025-12-25T05:22:04.947650Z",
-              "id": "35be48fd-aef7-46b8-bd10-3e9dbc141053",
+              "created_at": "2025-12-27T04:06:57.099852Z",
+              "id": "8bd6721c-609d-4dd3-a093-8901564d014a",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2025-12-25T05:22:04.947650Z"
+              "updated_at": "2025-12-27T04:06:57.099852Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -10700,7 +10344,7 @@
           "id": "550e8400-e29b-41d4-a716-446655440007",
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
-          "service_definition": "Roku Media Player",
+          "service_definition": "Bitwarden",
           "source": {
             "type": "Manual"
           },
@@ -11105,7 +10749,7 @@
           }
         ],
         "example": {
-          "color": "#22C55E",
+          "color": "Green",
           "created_at": "2026-01-15T10:30:00Z",
           "description": "Production environment resources",
           "id": "550e8400-e29b-41d4-a716-44665544000a",
@@ -11123,7 +10767,7 @@
         ],
         "properties": {
           "color": {
-            "type": "string"
+            "$ref": "#/components/schemas/Color"
           },
           "description": {
             "type": [
@@ -11453,7 +11097,8 @@
       "TypeMetadata": {
         "type": "object",
         "required": [
-          "id"
+          "id",
+          "color"
         ],
         "properties": {
           "category": {
@@ -11463,10 +11108,7 @@
             ]
           },
           "color": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "$ref": "#/components/schemas/Color"
           },
           "description": {
             "type": [
@@ -11512,7 +11154,7 @@
       },
       "UpdateHostRequest": {
         "type": "object",
-        "description": "Request type for updating a host.\nChildren (interfaces, ports, services) are managed via their own endpoints.",
+        "description": "Request type for updating a host.\nOptionally includes interfaces and ports to sync (create/update/delete).",
         "required": [
           "id",
           "name",
@@ -11525,6 +11167,14 @@
               "string",
               "null"
             ]
+          },
+          "expected_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Optional: expected updated_at timestamp for optimistic locking.\nIf provided, the update will fail with a conflict error if the host\nhas been modified since this timestamp (e.g., by discovery running\nwhile the user was editing)."
           },
           "hidden": {
             "type": "boolean"
@@ -11539,8 +11189,28 @@
             "type": "string",
             "format": "uuid"
           },
+          "interfaces": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/UpdateInterfaceInput"
+            },
+            "description": "Optional: interfaces to sync with this host.\nIf provided, the server will:\n- Create interfaces without an `id` (or with nil UUID)\n- Keep/update interfaces with matching `id`\n- Delete existing interfaces not in this list\nIf not provided (None), interfaces are left unchanged."
+          },
           "name": {
             "type": "string"
+          },
+          "ports": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/UpdatePortInput"
+            },
+            "description": "Optional: ports to sync with this host.\nIf provided, the server will:\n- Create ports without an `id` (or with nil UUID)\n- Keep/update ports with matching `id`\n- Delete existing ports not in this list\nIf not provided (None), ports are left unchanged."
           },
           "tags": {
             "type": "array",
@@ -11558,6 +11228,71 @@
                 "$ref": "#/components/schemas/HostVirtualization"
               }
             ]
+          }
+        }
+      },
+      "UpdateInterfaceInput": {
+        "type": "object",
+        "description": "Input for syncing an interface during host update.\nIf `id` is None or nil UUID, a new interface is created.\nIf `id` matches an existing interface, it is updated.",
+        "required": [
+          "subnet_id",
+          "ip_address"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "ID of existing interface to update, or None/nil for new interface"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "mac_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subnet_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UpdatePortInput": {
+        "type": "object",
+        "description": "Input for syncing a port during host update.\nIf `id` is None or nil UUID, a new port is created.\nIf `id` matches an existing port, it is kept.",
+        "required": [
+          "number",
+          "protocol"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "ID of existing port to keep, or None/nil for new port"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Port number (1-65535)",
+            "minimum": 0
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/TransportProtocol",
+            "description": "Transport protocol (Tcp or Udp)"
           }
         }
       },
@@ -11679,13 +11414,13 @@
       "api_key": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-API-Key",
+        "name": "Authorization: Bearer",
         "description": "API key for daemon authentication. Generate keys in the web UI under Settings > API Keys."
       },
-      "session": {
+      "session_id": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "session"
+        "name": "session_id"
       }
     }
   },
@@ -11709,6 +11444,14 @@
     {
       "name": "github",
       "description": "GitHub integration endpoints."
+    },
+    {
+      "name": "ports",
+      "description": "Ports that have been scanned and found open on a host"
+    },
+    {
+      "name": "bindings",
+      "description": "\n            ## Binding Types\n            - **Interface binding**: Service is present at an interface (IP address) without a specific port.\n              Used for non-port-bound services like gateways.\n            - **Port binding (specific interface)**: Service listens on a specific port on a specific interface.\n            - **Port binding (all interfaces)**: Service listens on a specific port on all interfaces\n              (`interface_id: null`).\n\n            ## Validation and Deduplication Rules\n            - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.\n              A port binding on all interfaces conflicts with any interface binding for the same service.\n            - **All-interfaces precedence**: When creating a port binding with `interface_id: null`,\n              any existing specific-interface bindings for the same port are automatically removed,\n              as they are superseded by the all-interfaces binding.\n        "
     },
     {
       "name": "groups",
@@ -11736,7 +11479,7 @@
     },
     {
       "name": "organizations",
-      "description": "Organizations and team management. Manage organization settings and members."
+      "description": "Manage organization settings."
     },
     {
       "name": "services",
@@ -11752,7 +11495,7 @@
     },
     {
       "name": "tags",
-      "description": "Custom tags for categorization. Apply labels to hosts and services for filtering and organization."
+      "description": "Custom tags for categorization. Apply labels to entities for filtering and organization."
     },
     {
       "name": "users",

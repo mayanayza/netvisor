@@ -34,3 +34,7 @@ CREATE INDEX idx_ports_number ON ports(port_number);
 
 -- Drop ports JSONB column from hosts
 ALTER TABLE hosts DROP COLUMN ports;
+
+-- Add ports column to topology snapshots
+ALTER TABLE topologies ADD COLUMN ports JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE topologies ADD COLUMN removed_ports UUID[] DEFAULT '{}';

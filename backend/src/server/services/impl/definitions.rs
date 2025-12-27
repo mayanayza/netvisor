@@ -5,6 +5,7 @@ use crate::server::services::r#impl::categories::ServiceCategory;
 use crate::server::services::r#impl::patterns::Pattern;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
 use crate::server::shared::types::metadata::{EntityMetadataProvider, HasId};
+use crate::server::shared::types::{Color, Icon};
 use dyn_clone::DynClone;
 use dyn_eq::DynEq;
 use dyn_hash::DynHash;
@@ -134,13 +135,11 @@ impl ServiceDefinitionExt for Box<dyn ServiceDefinition> {
 }
 
 impl EntityMetadataProvider for Box<dyn ServiceDefinition> {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         ServiceDefinition::category(self).color()
     }
-    fn icon(&self) -> &'static str {
-        if !self.logo_url().is_empty() {
-            return self.logo_url();
-        }
+    fn icon(&self) -> Icon {
+        // Note: logo_url is available in metadata for services with custom logos
         ServiceDefinition::category(self).icon()
     }
 }

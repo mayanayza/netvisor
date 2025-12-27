@@ -2,15 +2,10 @@
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import TopologyViewer from './visualization/TopologyViewer.svelte';
 	import TopologyOptionsPanel from './panel/TopologyOptionsPanel.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import { Edit, Globe, Lock, Plus, Radio, RefreshCcw, Share2, Trash2 } from 'lucide-svelte';
-	import { getHosts } from '$lib/features/hosts/store';
-	import { getServices } from '$lib/features/services/store';
-	import { getSubnets } from '$lib/features/subnets/store';
 	import ExportButton from './ExportButton.svelte';
 	import ShareModal from '$lib/features/shares/components/ShareModal.svelte';
 	import { SvelteFlowProvider } from '@xyflow/svelte';
-	import { getGroups } from '$lib/features/groups/store';
 	import {
 		topologies,
 		topology,
@@ -23,7 +18,6 @@
 	} from '../store';
 	import type { Topology } from '../types/base';
 	import TopologyModal from './TopologyModal.svelte';
-	import { users } from '$lib/features/users/store';
 	import { getTopologyState } from '../state';
 	import StateBadge from './StateBadge.svelte';
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
@@ -33,8 +27,26 @@
 	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useSubnetsQuery } from '$lib/features/subnets/queries';
+	import { useGroupsQuery } from '$lib/features/groups/queries';
+	import { useUsersQuery } from '$lib/features/users/queries';
+	import { onMount } from 'svelte';
 
-	const loading = loadData([getHosts, getServices, getSubnets, getGroups, getTopologies]);
+	// Queries - TanStack Query handles deduplication
+	const hostsQuery = useHostsQuery();
+	const subnetsQuery = useSubnetsQuery();
+	const groupsQuery = useGroupsQuery();
+	const usersQuery = useUsersQuery();
+
+	// Derived data
+	let usersData = $derived(usersQuery.data ?? []);
+	let isLoading = $derived(hostsQuery.isPending || subnetsQuery.isPending || groupsQuery.isPending);
+
+	// Load topologies (still uses old store)
+	onMount(() => {
+		getTopologies();
+	});
 
 	let isCreateEditOpen = $state(false);
 	let editingTopology: Topology | null = $state(null);
@@ -150,7 +162,7 @@
 	);
 
 	let lockedByUser = $derived(
-		$topology?.locked_by ? $users.find((u) => u.id === $topology.locked_by) : null
+		$topology?.locked_by ? usersData.find((u) => u.id === $topology.locked_by) : null
 	);
 </script>
 
@@ -205,7 +217,7 @@
 						</div>
 						{#if $topology.is_locked && $topology.locked_at}
 							<span class="text-tertiary whitespace-nowrap text-[10px]"
-								>Locked: {formatTimestamp($topology.locked_at)} by {$users.find(
+								>Locked: {formatTimestamp($topology.locked_at)} by {usersData.find(
 									(u) => u.id == $topology.locked_by
 								)?.email}</span
 							>
@@ -291,7 +303,7 @@
 			{/if}
 		{/if}
 
-		{#if $loading}
+		{#if isLoading}
 			<Loading />
 		{:else if $topology}
 			<div class="relative">

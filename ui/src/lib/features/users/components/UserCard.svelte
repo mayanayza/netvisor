@@ -3,10 +3,11 @@
 	import type { User } from '../types';
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
+	import { toColor } from '$lib/shared/utils/styling';
 	import { entities, permissions, metadata } from '$lib/shared/stores/metadata';
-	import { currentUser } from '$lib/features/auth/store';
-	import { deleteUser } from '../store';
-	import { networks } from '$lib/features/networks/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import { useDeleteUserMutation } from '$lib/features/users/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
 	let {
 		user,
@@ -22,15 +23,25 @@
 		onEdit?: (user: User) => void;
 	} = $props();
 
+	// TanStack Query for current user
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	const networksQuery = useNetworksQuery();
+	let networksData = $derived(networksQuery.data ?? []);
+
+	// TanStack Query mutation for deleting user
+	const deleteUserMutation = useDeleteUserMutation();
+
 	// Force Svelte to track metadata reactivity
 	$effect(() => {
 		void $metadata;
-		void $currentUser;
+		void currentUser;
 	});
 
 	function handleDeleteUser() {
 		if (confirm(`Are you sure you want to delete this user?`)) {
-			deleteUser(user.id);
+			deleteUserMutation.mutate(user.id);
 		}
 	}
 	function handleEditUser() {
@@ -38,9 +49,9 @@
 	}
 
 	let canManage = $derived(
-		$currentUser
+		currentUser
 			? permissions
-					.getMetadata($currentUser.permissions)
+					.getMetadata(currentUser.permissions)
 					.can_manage_user_permissions.includes(user.permissions)
 			: false
 	);
@@ -51,10 +62,10 @@
 		iconColor: entities.getColorHelper('User').icon,
 		Icon: entities.getIconComponent('User'),
 		status:
-			user.id == $currentUser?.id
+			user.id == currentUser?.id
 				? {
 						label: 'You',
-						color: 'yellow'
+						color: toColor('yellow')
 					}
 				: null,
 		fields: [
@@ -64,7 +75,7 @@
 					{
 						id: user.id,
 						label: permissions.getName(user.permissions),
-						color: permissions.getColorHelper(user.permissions).string
+						color: permissions.getColorHelper(user.permissions).color
 					}
 				]
 			},
@@ -84,13 +95,13 @@
 								{
 									id: user.id,
 									label: 'All',
-									color: entities.getColorHelper('Network').string
+									color: entities.getColorHelper('Network').color
 								}
 							]
 						: user.network_ids.map((n) => ({
 								id: n,
-								label: $networks.find((net) => net.id == n)?.name ?? 'Unknown Network',
-								color: entities.getColorHelper('Network').string
+								label: networksData.find((net) => net.id == n)?.name ?? 'Unknown Network',
+								color: entities.getColorHelper('Network').color
 							}))
 			}
 			// {
@@ -102,7 +113,7 @@
 			// },
 		],
 		actions:
-			canManage && user.id != $currentUser?.id
+			canManage && user.id != currentUser?.id
 				? [
 						{
 							label: 'Delete',
@@ -126,5 +137,5 @@
 	{viewMode}
 	{selected}
 	{onSelectionChange}
-	selectable={user.id != $currentUser?.id}
+	selectable={user.id != currentUser?.id}
 />

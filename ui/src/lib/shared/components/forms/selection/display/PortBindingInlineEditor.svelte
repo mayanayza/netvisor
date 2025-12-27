@@ -1,20 +1,57 @@
 <script lang="ts">
-	import { formatInterface } from '$lib/features/hosts/store';
+	import { formatInterface } from '$lib/features/hosts/queries';
 	import { ALL_INTERFACES, type HostFormData } from '$lib/features/hosts/types/base';
-	import { getServicesForPort } from '$lib/features/services/store';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { usePortsQuery } from '$lib/features/ports/queries';
+	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import type { PortBinding, Service } from '$lib/features/services/types/base';
 	import { formatPort } from '$lib/shared/utils/formatting';
-	import { get } from 'svelte/store';
 	import { field } from 'svelte-forms';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 
-	export let binding: PortBinding;
-	export let onUpdate: (updates: Partial<PortBinding>) => void = () => {};
-	export let formApi: FormApi;
-	export let service: Service | undefined = undefined;
-	// Form data with interfaces/ports for binding selection
-	export let host: HostFormData | undefined = undefined;
+	// TanStack Query hooks
+	const servicesQuery = useServicesQuery();
+	const interfacesQuery = useInterfacesQuery();
+	const portsQuery = usePortsQuery();
+	const subnetsQuery = useSubnetsQuery();
+	let servicesData = $derived(servicesQuery.data ?? []);
+	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let portsData = $derived(portsQuery.data ?? []);
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+
+	// Helper to check if subnet is a container subnet
+	let isContainerSubnetFn = $derived((subnetId: string) => {
+		const subnet = subnetsData.find((s) => s.id === subnetId);
+		return subnet ? isContainerSubnet(subnet) : false;
+	});
+
+	// Check if an interface is unsaved (not yet in the query cache)
+	function isInterfaceUnsaved(id: string): boolean {
+		return !interfacesData.some((i) => i.id === id);
+	}
+
+	// Check if a port is unsaved (not yet in the query cache)
+	function isPortUnsaved(id: string): boolean {
+		return !portsData.some((p) => p.id === id);
+	}
+
+	interface Props {
+		binding: PortBinding;
+		onUpdate?: (updates: Partial<PortBinding>) => void;
+		formApi: FormApi;
+		service?: Service;
+		host?: HostFormData;
+	}
+
+	let {
+		binding,
+		onUpdate = () => {},
+		formApi,
+		service = undefined,
+		host = undefined
+	}: Props = $props();
 
 	// Type guard for services with Port bindings
 	function isServiceWithPortBindings(svc: Service): svc is Service {
@@ -23,8 +60,13 @@
 
 	// Check if this port+interface combination conflicts with existing bindings
 	function getConflictingService(portId: string, interfaceId: string | null): Service | null {
+		// Get services that have a binding on this port
+		const servicesForPort = servicesData.filter((s) =>
+			s.bindings.some((b) => b.type === 'Port' && b.port_id === portId)
+		);
+
 		// Check OTHER services
-		const otherServices = get(getServicesForPort(portId))
+		const otherServices = servicesForPort
 			.filter((s) => s.id !== service?.id)
 			.filter(isServiceWithPortBindings);
 
@@ -60,8 +102,18 @@
 	}
 
 	// Create interface options with disabled state
-	$: interfaceOptions =
+	let interfaceOptions = $derived(
 		host?.interfaces.map((iface) => {
+			// Check if interface is unsaved (not in query cache) - can't bind until host is saved
+			if (isInterfaceUnsaved(iface.id)) {
+				return {
+					iface,
+					disabled: true,
+					reason: 'Save host first',
+					boundService: null
+				};
+			}
+
 			// Check for Interface binding conflict - can't add Port binding if THIS service has Interface binding here
 			const thisServiceHasInterfaceBinding = service?.bindings.some(
 				(b) => b.type === 'Interface' && b.interface_id === iface.id && b.id !== binding.id
@@ -85,22 +137,35 @@
 				reason: boundService ? `Port bound by ${boundService.name}` : null,
 				boundService
 			};
-		}) || [];
+		}) || []
+	);
 
 	// Check ALL_INTERFACES option
-	$: allInterfacesOption = (() => {
-		const boundService = binding.port_id ? getConflictingService(binding.port_id, null) : null;
-		return {
-			iface: ALL_INTERFACES,
-			disabled: boundService !== null && binding.interface_id !== null,
-			reason: boundService ? `Port bound by ${boundService.name}` : null,
-			boundService
-		};
-	})();
+	let allInterfacesOption = $derived(
+		(() => {
+			const boundService = binding.port_id ? getConflictingService(binding.port_id, null) : null;
+			return {
+				iface: ALL_INTERFACES,
+				disabled: boundService !== null && binding.interface_id !== null,
+				reason: boundService ? `Port bound by ${boundService.name}` : null,
+				boundService
+			};
+		})()
+	);
 
 	// Create port options with disabled state
-	$: portOptions =
+	let portOptions = $derived(
 		host?.ports.map((p) => {
+			// Check if port is unsaved (not in query cache) - can't bind until host is saved
+			if (isPortUnsaved(p.id)) {
+				return {
+					port: p,
+					disabled: true,
+					reason: 'Save host first',
+					boundService: null
+				};
+			}
+
 			const boundService = getConflictingService(p.id, binding.interface_id);
 			return {
 				port: p,
@@ -108,11 +173,13 @@
 				reason: boundService ? `Bound by ${boundService.name}` : null,
 				boundService
 			};
-		}) || [];
+		}) || []
+	);
 
 	// Convert binding.interface_id to select value (null -> sentinel string)
-	$: selectInterfaceValue =
-		binding.interface_id === null ? ALL_INTERFACES.name : binding.interface_id;
+	let selectInterfaceValue = $derived(
+		binding.interface_id === null ? ALL_INTERFACES.name : binding.interface_id
+	);
 
 	// Create svelte-forms fields
 	const getInterfaceField = () => {
@@ -128,61 +195,68 @@
 		});
 	};
 
-	let currentBindingId: string = binding.id;
-	let interfaceField = getInterfaceField();
-	let portField = getPortField();
+	let currentBindingId = $state(binding.id);
+	let interfaceField = $state(getInterfaceField());
+	let portField = $state(getPortField());
 
 	// Reinitialize fields when binding changes
-	$: if (binding.id !== currentBindingId) {
-		currentBindingId = binding.id;
-		interfaceField = getInterfaceField();
-		portField = getPortField();
-	}
+	$effect(() => {
+		if (binding.id !== currentBindingId) {
+			currentBindingId = binding.id;
+			interfaceField = getInterfaceField();
+			portField = getPortField();
+		}
+	});
 
 	// Update binding when field values change
-	$: if ($interfaceField && $portField) {
-		// Convert sentinel string back to null for interface
-		const interfaceId: string | null =
-			$interfaceField.value === ALL_INTERFACES.name ? null : $interfaceField.value;
+	$effect(() => {
+		if ($interfaceField && $portField) {
+			// Convert sentinel string back to null for interface
+			const interfaceId: string | null =
+				$interfaceField.value === ALL_INTERFACES.name ? null : $interfaceField.value;
 
-		const portId = $portField.value;
+			const portId = $portField.value;
 
-		// Only trigger onUpdate if values actually changed
-		if (interfaceId !== binding.interface_id || portId !== binding.port_id) {
-			onUpdate({
-				interface_id: interfaceId,
-				port_id: portId
-			});
+			// Only trigger onUpdate if values actually changed
+			if (interfaceId !== binding.interface_id || portId !== binding.port_id) {
+				onUpdate({
+					interface_id: interfaceId,
+					port_id: portId
+				});
+			}
 		}
-	}
+	});
 
 	// Build select options for interfaces
-	$: interfaceSelectOptions = [
+	let interfaceSelectOptions = $derived([
 		...interfaceOptions.map(({ iface, disabled, reason }) => ({
 			value: iface.id,
-			label: formatInterface(iface) + (disabled && reason ? ` - ${reason}` : ''),
+			label:
+				formatInterface(iface, isContainerSubnetFn) + (disabled && reason ? ` - ${reason}` : ''),
 			id: iface.id,
 			disabled
 		})),
 		{
 			value: ALL_INTERFACES.name,
 			label:
-				formatInterface(ALL_INTERFACES) +
+				formatInterface(ALL_INTERFACES, isContainerSubnetFn) +
 				(allInterfacesOption.disabled && allInterfacesOption.reason
 					? ` - ${allInterfacesOption.reason}`
 					: ''),
 			id: ALL_INTERFACES.name,
 			disabled: allInterfacesOption.disabled
 		}
-	];
+	]);
 
 	// Build select options for ports
-	$: portSelectOptions = portOptions.map(({ port, disabled, reason }) => ({
-		value: port.id,
-		label: formatPort(port) + (disabled && reason ? ` - ${reason}` : ''),
-		id: port.id,
-		disabled
-	}));
+	let portSelectOptions = $derived(
+		portOptions.map(({ port, disabled, reason }) => ({
+			value: port.id,
+			label: formatPort(port) + (disabled && reason ? ` - ${reason}` : ''),
+			id: port.id,
+			disabled
+		}))
+	);
 </script>
 
 <div class="flex-1">

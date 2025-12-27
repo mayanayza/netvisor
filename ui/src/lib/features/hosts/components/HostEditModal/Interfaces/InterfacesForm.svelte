@@ -2,26 +2,72 @@
 	import ListConfigEditor from '$lib/shared/components/forms/selection/ListConfigEditor.svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import InterfaceConfigPanel from './InterfaceConfigPanel.svelte';
-	import { subnets } from '$lib/features/subnets/store';
+	import { useSubnetsQuery } from '$lib/features/subnets/queries';
 	import { type HostFormData, type Interface } from '$lib/features/hosts/types/base';
-	import { v4 as uuidv4 } from 'uuid';
 	import { SubnetDisplay } from '$lib/shared/components/forms/selection/display/SubnetDisplay.svelte';
 	import { InterfaceDisplay } from '$lib/shared/components/forms/selection/display/InterfaceDisplay.svelte';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 	import EntityConfigEmpty from '$lib/shared/components/forms/EntityConfigEmpty.svelte';
 	import InternetInterfaceConfigPanel from './InternetInterfaceConfigPanel.svelte';
+	import { v4 as uuidv4 } from 'uuid';
+	import type { Service } from '$lib/features/services/types/base';
+	import ConfirmationDialog from '$lib/shared/components/feedback/ConfirmationDialog.svelte';
 
-	export let formApi: FormApi;
-	export let formData: HostFormData;
+	interface Props {
+		formApi: FormApi;
+		formData: HostFormData;
+		currentServices?: Service[];
+		onServicesChange?: (services: Service[]) => void;
+	}
+
+	let {
+		formApi,
+		formData = $bindable(),
+		currentServices = [],
+		onServicesChange = () => {}
+	}: Props = $props();
+
+	// TanStack Query for subnets
+	const subnetsQuery = useSubnetsQuery();
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+
+	// Confirmation dialog state
+	let showDeleteConfirmation = $state(false);
+	let pendingDeleteIndex: number | null = $state(null);
+	let affectedServiceNames: string[] = $state([]);
+
+	// Find services that have bindings to a specific interface
+	function getServicesWithBindingsToInterface(interfaceId: string): Service[] {
+		return currentServices.filter((service) =>
+			service.bindings.some(
+				(b) =>
+					(b.type === 'Interface' && b.interface_id === interfaceId) ||
+					(b.type === 'Port' && b.interface_id === interfaceId)
+			)
+		);
+	}
+
+	// Remove bindings to an interface from all services
+	function removeBindingsToInterface(interfaceId: string) {
+		const updatedServices = currentServices.map((service) => ({
+			...service,
+			bindings: service.bindings.filter(
+				(b) =>
+					!(b.type === 'Interface' && b.interface_id === interfaceId) &&
+					!(b.type === 'Port' && b.interface_id === interfaceId)
+			)
+		}));
+		onServicesChange(updatedServices);
+	}
 
 	// Computed values
-	$: interfaces = formData.interfaces || [];
+	let interfaces = $derived(formData.interfaces || []);
 
-	$: availableSubnets = $subnets.filter((s) => s.network_id == formData.network_id);
+	let availableSubnets = $derived(subnetsData.filter((s) => s.network_id == formData.network_id));
 
 	// Helper function to find subnet by ID
 	function findSubnetById(subnetId: string) {
-		return $subnets.find((s) => s.id === subnetId) || null;
+		return subnetsData.find((s) => s.id === subnetId) || null;
 	}
 
 	// Event handlers
@@ -31,7 +77,7 @@
 
 		if (subnet.cidr == '0.0.0.0/0') {
 			const newInterface: Interface = {
-				id: uuidv4(),
+				id: uuidv4(), // Temp ID for form - store will detect as new since it's not in interfaces store
 				host_id: formData.id,
 				network_id: formData.network_id,
 				name: subnet.name,
@@ -45,7 +91,7 @@
 			formData.interfaces = [...interfaces, newInterface];
 		} else {
 			const newInterface: Interface = {
-				id: uuidv4(),
+				id: uuidv4(), // Temp ID for form - store will detect as new since it's not in interfaces store
 				host_id: formData.id,
 				network_id: formData.network_id,
 				name: null,
@@ -61,7 +107,38 @@
 	}
 
 	function handleRemoveInterface(index: number) {
-		formData.interfaces = interfaces.filter((_, i) => i !== index);
+		const iface = interfaces[index];
+		const affectedServices = getServicesWithBindingsToInterface(iface.id);
+
+		if (affectedServices.length > 0) {
+			// Show confirmation dialog
+			pendingDeleteIndex = index;
+			affectedServiceNames = affectedServices.map((s) => s.name);
+			showDeleteConfirmation = true;
+		} else {
+			// No bindings, delete immediately
+			formData.interfaces = interfaces.filter((_, i) => i !== index);
+		}
+	}
+
+	function confirmDelete() {
+		if (pendingDeleteIndex !== null) {
+			const iface = interfaces[pendingDeleteIndex];
+			// Remove bindings from services first
+			removeBindingsToInterface(iface.id);
+			// Then remove the interface
+			formData.interfaces = interfaces.filter((_, i) => i !== pendingDeleteIndex);
+		}
+		// Reset dialog state
+		showDeleteConfirmation = false;
+		pendingDeleteIndex = null;
+		affectedServiceNames = [];
+	}
+
+	function cancelDelete() {
+		showDeleteConfirmation = false;
+		pendingDeleteIndex = null;
+		affectedServiceNames = [];
 	}
 </script>
 
@@ -79,6 +156,7 @@
 			{items}
 			optionDisplayComponent={SubnetDisplay}
 			itemDisplayComponent={InterfaceDisplay}
+			getItemContext={() => ({ subnets: subnetsData })}
 			onAdd={handleAddInterface}
 			onRemove={handleRemoveInterface}
 			{onEdit}
@@ -110,3 +188,15 @@
 		{/if}
 	</svelte:fragment>
 </ListConfigEditor>
+
+<ConfirmationDialog
+	isOpen={showDeleteConfirmation}
+	title="Delete Interface"
+	message="This interface has bindings from the following services. Deleting it will remove those bindings."
+	details={affectedServiceNames}
+	confirmLabel="Delete Interface"
+	cancelLabel="Cancel"
+	variant="warning"
+	onConfirm={confirmDelete}
+	onCancel={cancelDelete}
+/>

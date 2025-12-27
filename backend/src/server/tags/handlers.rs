@@ -51,7 +51,7 @@ pub async fn create_tag(
     Json(tag): Json<Tag>,
 ) -> ApiResult<Json<ApiResponse<Tag>>> {
     let name_filter = EntityFilter::unfiltered()
-        .network_ids(&user.network_ids)
+        .organization_id(&user.organization_id)
         .name(tag.base.name.clone());
 
     if let Some(existing_with_name) = state.services.tag_service.get_one(name_filter).await? {

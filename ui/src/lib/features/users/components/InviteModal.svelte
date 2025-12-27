@@ -14,15 +14,15 @@
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import type { OrganizationInvite } from '$lib/features/organizations/types';
-	import { createInvite, formatInviteUrl } from '$lib/features/organizations/store';
+	import { formatInviteUrl, useCreateInviteMutation } from '$lib/features/organizations/queries';
 	import type { UserOrgPermissions } from '../types';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { field } from 'svelte-forms';
 	import { email, required } from 'svelte-forms/validators';
 	import { permissions, metadata, entities } from '$lib/shared/stores/metadata';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
-	import { networks } from '$lib/features/networks/store';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { NetworkDisplay } from '$lib/shared/components/forms/selection/display/NetworkDisplay.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { config } from '$lib/shared/stores/config';
@@ -30,17 +30,27 @@
 
 	let { isOpen = $bindable(false), onClose }: { isOpen: boolean; onClose: () => void } = $props();
 
+	// TanStack Query for current user
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	const networksQuery = useNetworksQuery();
+	let networksData = $derived(networksQuery.data ?? []);
+
+	// Mutation for creating invite
+	const createInviteMutation = useCreateInviteMutation();
+
 	let enableEmail = $derived($config?.has_email_service ?? false);
 
 	// Force Svelte to track reactivity
 	$effect(() => {
 		void $metadata;
-		void $currentUser;
+		void currentUser;
 	});
 
 	let copied = $state(false);
 	let copyTimeoutId = $state<ReturnType<typeof setTimeout> | null>(null);
-	let generatingInvite = $state(false);
+	let generatingInvite = $derived(createInviteMutation.isPending);
 	let invite = $state<OrganizationInvite | null>(null);
 
 	const networksNotNeeded: string[] = permissions
@@ -53,9 +63,9 @@
 		permissions
 			.getItems()
 			.filter((p) =>
-				$currentUser
+				currentUser
 					? permissions
-							.getMetadata($currentUser.permissions)
+							.getMetadata(currentUser.permissions)
 							.can_manage_user_permissions.includes(p.id)
 					: false
 			)
@@ -74,12 +84,12 @@
 	let selectedNetworks: Network[] = $state([]);
 
 	let networkOptions = $derived(
-		$networks
+		networksData
 			.filter((n) => {
-				if ($currentUser) {
-					return networksNotNeeded.includes($currentUser.permissions)
+				if (currentUser) {
+					return networksNotNeeded.includes(currentUser.permissions)
 						? true
-						: $currentUser.network_ids.includes(n.id);
+						: currentUser.network_ids.includes(n.id);
 				}
 				return false;
 			})
@@ -87,7 +97,7 @@
 	);
 
 	function handleAddNetwork(id: string) {
-		const network = $networks.find((n) => n.id == id);
+		const network = networksData.find((n) => n.id == id);
 		if (network) {
 			selectedNetworks.push(network);
 			selectedNetworks = [...selectedNetworks];
@@ -113,20 +123,16 @@
 	}
 
 	async function handleGenerateInvite() {
-		generatingInvite = true;
 		try {
-			invite = await createInvite(
-				$permissionsField.value as UserOrgPermissions,
-				selectedNetworks.map((n) => n.id),
-				$emailField.value
-			);
-			if (invite) {
-				pushSuccess(`Invite ${usingEmail ? 'sent' : 'generated'} successfully`);
-			}
+			const result = await createInviteMutation.mutateAsync({
+				permissions: $permissionsField.value as UserOrgPermissions,
+				network_ids: selectedNetworks.map((n) => n.id),
+				email: $emailField.value
+			});
+			invite = result;
+			pushSuccess(`Invite ${usingEmail ? 'sent' : 'generated'} successfully`);
 		} catch (err) {
 			pushError(`Failed to ${usingEmail ? 'send' : 'generate'} invite: ${err}`);
-		} finally {
-			generatingInvite = false;
 		}
 	}
 
@@ -177,7 +183,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={UserPlus} color={entities.getColorHelper('User').icon} />
+		<ModalHeaderIcon Icon={UserPlus} color={entities.getColorHelper('User').color} />
 	</svelte:fragment>
 
 	<div class="space-y-6">

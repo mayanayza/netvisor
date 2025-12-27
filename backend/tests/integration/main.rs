@@ -16,6 +16,7 @@ mod discovery;
 mod fixtures;
 mod infra;
 mod openapi_gen;
+mod permissions;
 mod validations;
 
 use infra::{
@@ -130,12 +131,23 @@ async fn integration_tests() {
         .expect("Validation tests failed");
 
     // =========================================================================
-    // Phase 5: Generate Fixtures (optional)
+    // Phase 5: Permission & Access Control Tests
+    // =========================================================================
+    println!("\n============================================================");
+    println!("Phase 5: Permission & Access Control Tests");
+    println!("============================================================");
+
+    permissions::run_permission_tests(&ctx)
+        .await
+        .expect("Permission tests failed");
+
+    // =========================================================================
+    // Phase 6: Generate Fixtures (optional)
     // =========================================================================
     #[cfg(feature = "generate-fixtures")]
     {
         println!("\n============================================================");
-        println!("Phase 5: Generating Fixtures");
+        println!("Phase 6: Generating Fixtures");
         println!("============================================================");
 
         fixtures::generate_fixtures().await;
@@ -151,6 +163,7 @@ async fn integration_tests() {
     println!("   - CRUD endpoint tests");
     println!("   - Billing middleware tests");
     println!("   - Handler validation tests");
+    println!("   - Permission & access control tests");
     #[cfg(feature = "generate-fixtures")]
     println!("   - Fixture generation");
 }

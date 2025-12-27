@@ -66,6 +66,8 @@
 			formData.network_id
 		);
 
+		console.log(newService);
+
 		currentServices = [...currentServices, newService];
 	}
 
@@ -174,7 +176,7 @@
 				{#if selectedItem}
 					<ServiceConfigPanel
 						{formApi}
-						bind:host={formData}
+						host={formData}
 						index={selectedIndex}
 						service={selectedItem}
 						onChange={(updatedService) => onChange(updatedService)}

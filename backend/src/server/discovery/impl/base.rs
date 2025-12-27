@@ -4,13 +4,16 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::server::{
     discovery::r#impl::types::{DiscoveryType, RunType},
     shared::entities::ChangeTriggersTopologyStaleness,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq, Default, ToSchema, Validate,
+)]
 pub struct DiscoveryBase {
     pub discovery_type: DiscoveryType,
     pub run_type: RunType,
@@ -22,7 +25,9 @@ pub struct DiscoveryBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 pub struct Discovery {
     #[serde(default)]
     #[schema(read_only, required)]
@@ -34,6 +39,7 @@ pub struct Discovery {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: DiscoveryBase,
 }
 

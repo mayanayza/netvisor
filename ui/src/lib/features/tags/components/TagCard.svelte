@@ -4,23 +4,35 @@
 	import type { Tag } from '../types/base';
 	import { createColorHelper } from '$lib/shared/utils/styling';
 	import { TagIcon } from 'lucide-svelte';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { permissions } from '$lib/shared/stores/metadata';
 
-	export let tag: Tag;
-	export let onEdit: (tag: Tag) => void = () => {};
-	export let onDelete: (tag: Tag) => void = () => {};
-	export let viewMode: 'card' | 'list';
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	let {
+		tag,
+		onEdit = () => {},
+		onDelete = () => {},
+		viewMode,
+		selected,
+		onSelectionChange = () => {}
+	}: {
+		tag: Tag;
+		onEdit?: (tag: Tag) => void;
+		onDelete?: (tag: Tag) => void;
+		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	} = $props();
 
-	$: colorHelper = createColorHelper(tag.color);
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
 
-	$: canManageNetworks =
-		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
-		false;
+	let colorHelper = $derived(createColorHelper(tag.color));
 
-	$: cardData = {
+	let canManageNetworks = $derived(
+		(currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities) || false
+	);
+
+	let cardData = $derived({
 		title: tag.name,
 		iconColor: colorHelper.icon,
 		Icon: TagIcon,
@@ -57,7 +69,7 @@
 					]
 				: [])
 		]
-	};
+	});
 </script>
 
 <GenericCard

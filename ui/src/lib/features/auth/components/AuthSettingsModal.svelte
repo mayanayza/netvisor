@@ -1,8 +1,12 @@
 <script lang="ts">
-	import { currentUser, logout } from '$lib/features/auth/store';
+	import { useCurrentUserQuery, useLogoutMutation } from '$lib/features/auth/queries';
+	import { useQueryClient } from '@tanstack/svelte-query';
+	import { queryKeys } from '$lib/api/query-client';
 	import { apiClient } from '$lib/api/client';
+	import type { User } from '$lib/features/users/types';
 	import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
-	import { Link, Key, LogOut, User } from 'lucide-svelte';
+	import { Link, Key, LogOut, User as UserIcon } from 'lucide-svelte';
+	import { untrack } from 'svelte';
 	import { field } from 'svelte-forms';
 	import { required } from 'svelte-forms/validators';
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
@@ -10,46 +14,63 @@
 	import InfoCard from '$lib/shared/components/data/InfoCard.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
-	import { config, getConfig } from '$lib/shared/stores/config';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { organization } from '$lib/features/organizations/store';
+	import { config } from '$lib/shared/stores/config';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import InfoRow from '$lib/shared/components/data/InfoRow.svelte';
 	import { emailValidator } from '$lib/shared/components/forms/validators';
 
-	export let isOpen = false;
-	export let onClose: () => void;
+	let {
+		isOpen = false,
+		onClose
+	}: {
+		isOpen?: boolean;
+		onClose: () => void;
+	} = $props();
 
-	const loading = loadData([getConfig]);
+	// TanStack Query for current user and organization
+	const currentUserQuery = useCurrentUserQuery();
+	const logoutMutation = useLogoutMutation();
+	const queryClient = useQueryClient();
+	const organizationQuery = useOrganizationQuery();
 
-	$: user = $currentUser;
-	$: oidcProviders = $loading ? [] : ($config?.oidc_providers ?? []);
-	$: hasOidcProviders = oidcProviders.length > 0;
+	let user = $derived(currentUserQuery.data);
+	let organization = $derived(organizationQuery.data);
+	let oidcProviders = $derived($config?.oidc_providers ?? []);
+	let hasOidcProviders = $derived(oidcProviders.length > 0);
 
-	let activeSection: 'main' | 'credentials' = 'main';
-	let linkingProviderSlug: string | null = null;
-	let savingCredentials = false;
+	let activeSection = $state<'main' | 'credentials'>('main');
+	let linkingProviderSlug: string | null = $state(null);
+	let savingCredentials = $state(false);
 
-	let formData: { email: string; password: string; confirmPassword: string } = {
+	let formData: { email: string; password: string; confirmPassword: string } = $state({
 		email: '',
 		password: '',
 		confirmPassword: ''
-	};
+	});
 
-	// Email field with validation
-	const email = field('email', formData.email, [required(), emailValidator()]);
+	// Email field with validation (untrack since we set the value explicitly via email.set())
+	const email = field(
+		'email',
+		untrack(() => formData.email),
+		[required(), emailValidator()]
+	);
 
 	// Update formData when field value changes
-	$: formData.email = $email.value;
+	$effect(() => {
+		formData.email = $email.value;
+	});
 
 	// Reset to main view when modal opens
-	$: if (isOpen) {
-		resetModal();
-	}
+	$effect(() => {
+		if (isOpen) {
+			resetModal();
+		}
+	});
 
 	// Find which provider (if any) is linked to this user
-	$: linkedProvider = user?.oidc_provider
-		? oidcProviders.find((p) => p.slug === user.oidc_provider)
-		: null;
+	let linkedProvider = $derived(
+		user?.oidc_provider ? oidcProviders.find((p) => p.slug === user.oidc_provider) : null
+	);
 
 	function resetModal() {
 		activeSection = 'main';
@@ -70,7 +91,7 @@
 		});
 
 		if (data?.success && data.data) {
-			currentUser.set(data.data);
+			queryClient.setQueryData<User>(queryKeys.auth.currentUser(), data.data);
 			pushSuccess('OIDC account unlinked successfully');
 		} else {
 			pushError(data?.error || 'Failed to unlink OIDC account');
@@ -104,7 +125,7 @@
 			});
 
 			if (data?.success && data.data) {
-				currentUser.set(data.data);
+				queryClient.setQueryData<User>(queryKeys.auth.currentUser(), data.data);
 				pushSuccess('Credentials updated successfully');
 				activeSection = 'main';
 				formData = { email: '', password: '', confirmPassword: '' };
@@ -127,15 +148,19 @@
 	}
 
 	async function handleLogout() {
-		await logout();
-		window.location.reload();
-		onClose();
+		try {
+			await logoutMutation.mutateAsync();
+			window.location.reload();
+			onClose();
+		} catch {
+			// Error handled by mutation
+		}
 	}
 
-	$: hasLinkedOidc = !!user?.oidc_provider;
-	$: modalTitle = activeSection === 'main' ? 'Account Settings' : 'Update Credentials';
-	$: showSave = activeSection === 'credentials';
-	$: cancelLabel = activeSection === 'main' ? 'Close' : 'Back';
+	let hasLinkedOidc = $derived(!!user?.oidc_provider);
+	let modalTitle = $derived(activeSection === 'main' ? 'Account Settings' : 'Update Credentials');
+	let showSave = $derived(activeSection === 'credentials');
+	let cancelLabel = $derived(activeSection === 'main' ? 'Close' : 'Back');
 </script>
 
 <EditModal
@@ -152,7 +177,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={activeSection === 'main' ? User : Key} color="#3b82f6" />
+		<ModalHeaderIcon Icon={activeSection === 'main' ? UserIcon : Key} color="Blue" />
 	</svelte:fragment>
 
 	{#if activeSection === 'main'}
@@ -160,7 +185,7 @@
 			<div class="space-y-6">
 				<!-- User Info -->
 				<InfoCard title="User Information">
-					<InfoRow label="Organization">{$organization?.name}</InfoRow>
+					<InfoRow label="Organization">{organization?.name}</InfoRow>
 					<InfoRow label="Email">{user.email}</InfoRow>
 					<InfoRow label="Permissions" mono={true}>{user.permissions}</InfoRow>
 					<InfoRow label="User ID" mono={true}>{user.id}</InfoRow>
@@ -181,7 +206,7 @@
 									</div>
 								</div>
 								<button
-									on:click={() => {
+									onclick={() => {
 										activeSection = 'credentials';
 										email.set(user.email);
 									}}
@@ -227,15 +252,12 @@
 												</div>
 											</div>
 											{#if isLinked}
-												<button
-													on:click={() => unlinkOidcAccount(provider.slug)}
-													class="btn-danger"
-												>
+												<button onclick={() => unlinkOidcAccount(provider.slug)} class="btn-danger">
 													Unlink
 												</button>
 											{:else if !hasLinkedOidc}
 												<button
-													on:click={() => linkOidcAccount(provider.slug)}
+													onclick={() => linkOidcAccount(provider.slug)}
 													disabled={(linkingProviderSlug && linkingProviderSlug != provider.slug) ||
 														isDisabled}
 													class={isDisabled ? 'btn-disabled' : 'btn-primary'}
@@ -260,7 +282,7 @@
 							<LogOut class="text-secondary h-5 w-5" />
 							<span class="text-primary text-sm">Sign out of your account</span>
 						</div>
-						<button on:click={handleLogout} class="btn-secondary"> Logout </button>
+						<button onclick={handleLogout} class="btn-secondary"> Logout </button>
 					</div>
 				</InfoCard>
 			</div>

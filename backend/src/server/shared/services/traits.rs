@@ -29,14 +29,6 @@ pub trait EventBusService<T: Into<Entity> + Default> {
 
     fn get_network_id(&self, entity: &T) -> Option<Uuid>;
     fn get_organization_id(&self, entity: &T) -> Option<Uuid>;
-
-    fn is_network_keyed(&self) -> bool {
-        self.get_network_id(&T::default()).is_some()
-    }
-
-    fn is_organization_keyed(&self) -> bool {
-        self.get_organization_id(&T::default()).is_some()
-    }
 }
 
 /// Helper trait for services that use generic storage
@@ -214,7 +206,7 @@ where
         network_ids: &[Uuid],
         authentication: AuthenticatedEntity,
     ) -> Result<usize, anyhow::Error> {
-        let filter = if self.is_network_keyed() {
+        let filter = if T::is_network_keyed() {
             EntityFilter::unfiltered().network_ids(network_ids)
         } else {
             EntityFilter::unfiltered().organization_id(organization_id)

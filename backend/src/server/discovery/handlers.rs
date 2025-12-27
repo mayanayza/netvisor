@@ -168,7 +168,7 @@ async fn receive_discovery_update(
     tag = "discoveries",
     request_body = Uuid,
     responses(
-        (status = 200, description = "Discovery session started", body = DiscoveryUpdatePayload),
+        (status = 200, description = "Discovery session started", body = ApiResponse<DiscoveryUpdatePayload>),
         (status = 404, description = "Discovery not found", body = ApiErrorResponse),
     ),
     security(("session" = []))

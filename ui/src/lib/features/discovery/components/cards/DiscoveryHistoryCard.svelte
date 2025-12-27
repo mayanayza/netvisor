@@ -3,25 +3,41 @@
 	import { entities } from '$lib/shared/stores/metadata';
 	import { Info } from 'lucide-svelte';
 	import type { Discovery } from '../../types/base';
-	import { daemons } from '$lib/features/daemons/store';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { formatDuration, formatTimestamp } from '$lib/shared/utils/formatting';
 
-	export let viewMode: 'card' | 'list';
-	export let discovery: Discovery;
-	export let onView: (discovery: Discovery) => void = () => {};
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	// Queries
+	const daemonsQuery = useDaemonsQuery();
 
-	$: results = discovery.run_type.type == 'Historical' ? discovery.run_type.results : null;
+	// Derived data
+	let daemonsData = $derived(daemonsQuery.data ?? []);
 
-	$: cardData = {
+	let {
+		viewMode,
+		discovery,
+		onView = () => {},
+		selected,
+		onSelectionChange = () => {}
+	}: {
+		viewMode: 'card' | 'list';
+		discovery: Discovery;
+		onView?: (discovery: Discovery) => void;
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	} = $props();
+
+	let results = $derived(
+		discovery.run_type.type == 'Historical' ? discovery.run_type.results : null
+	);
+
+	let cardData = $derived({
 		title: discovery.name,
 		iconColor: entities.getColorHelper('Discovery').icon,
 		Icon: entities.getIconComponent('Discovery'),
 		fields: [
 			{
 				label: 'Daemon',
-				value: $daemons.find((d) => d.id == discovery.daemon_id)?.name || 'Unknown Daemon'
+				value: daemonsData.find((d) => d.id == discovery.daemon_id)?.name || 'Unknown Daemon'
 			},
 			{
 				label: 'Type',
@@ -55,7 +71,7 @@
 				onClick: () => onView(discovery)
 			}
 		]
-	};
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

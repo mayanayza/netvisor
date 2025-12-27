@@ -109,7 +109,7 @@
 	let:formApi
 >
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={entities.getIconComponent('Discovery')} color={colorHelper.string} />
+		<ModalHeaderIcon Icon={entities.getIconComponent('Discovery')} color={colorHelper.color} />
 	</svelte:fragment>
 
 	<div class="flex h-full flex-col overflow-hidden">

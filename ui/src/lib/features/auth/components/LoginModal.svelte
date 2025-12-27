@@ -1,9 +1,8 @@
 <script lang="ts">
 	import EditModal from '$lib/shared/components/forms/EditModal.svelte';
 	import type { LoginRequest } from '../types/base';
-	import { config, getConfig } from '$lib/shared/stores/config';
+	import { config } from '$lib/shared/stores/config';
 	import { required } from 'svelte-forms/validators';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { field } from 'svelte-forms';
@@ -29,13 +28,12 @@
 		onSwitchToForgot?: (() => void) | null;
 	} = $props();
 
-	const loading = loadData([getConfig]);
 	let signingIn = $state(false);
 
-	let disableRegistration = $derived($loading ? false : ($config?.disable_registration ?? false));
-	let oidcProviders = $derived($loading ? [] : ($config?.oidc_providers ?? []));
+	let disableRegistration = $derived($config?.disable_registration ?? false);
+	let oidcProviders = $derived($config?.oidc_providers ?? []);
 	let hasOidcProviders = $derived(oidcProviders.length > 0);
-	let enablePasswordReset = $derived($loading ? false : ($config?.has_email_service ?? false));
+	let enablePasswordReset = $derived($config?.has_email_service ?? false);
 
 	let formData: LoginRequest = {
 		email: '',
@@ -87,7 +85,7 @@
 <EditModal
 	{isOpen}
 	title="Sign in to Scanopy"
-	loading={$loading}
+	loading={signingIn}
 	centerTitle={true}
 	saveLabel="Sign In"
 	cancelLabel="Cancel"

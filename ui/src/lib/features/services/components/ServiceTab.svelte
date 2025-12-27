@@ -2,28 +2,42 @@
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import {
-		bulkDeleteServices,
-		deleteService,
-		getServices,
-		services,
-		updateService
-	} from '$lib/features/services/store';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
-	import { networks } from '$lib/features/networks/store';
 	import type { Service } from '../types/base';
-	import { getHosts, hosts } from '$lib/features/hosts/store';
 	import ServiceCard from './ServiceCard.svelte';
 	import { matchConfidenceLabel } from '$lib/shared/types';
 	import ServiceEditModal from './ServiceEditModal.svelte';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import {
+		useServicesQuery,
+		useUpdateServiceMutation,
+		useDeleteServiceMutation,
+		useBulkDeleteServicesMutation
+	} from '../queries';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
-	const loading = loadData([getServices, getHosts]);
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const servicesQuery = useServicesQuery();
+	const hostsQuery = useHostsQuery();
+	const networksQuery = useNetworksQuery();
 
-	let showServiceEditor = false;
-	let editingService: Service | null = null;
+	// Mutations
+	const updateServiceMutation = useUpdateServiceMutation();
+	const deleteServiceMutation = useDeleteServiceMutation();
+	const bulkDeleteServicesMutation = useBulkDeleteServicesMutation();
+
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let isLoading = $derived(hostsQuery.isPending);
+
+	let showServiceEditor = $state(false);
+	let editingService = $state<Service | null>(null);
 
 	function handleEditService(service: Service) {
 		editingService = service;
@@ -34,33 +48,37 @@
 		editingService = null;
 	}
 
-	$: serviceHosts = new Map(
-		$services.map((service) => {
-			const foundHost = $hosts.find((h) => {
-				return h.id == service.host_id;
-			});
+	let serviceHosts = $derived(
+		new Map(
+			servicesData.map((service) => {
+				const foundHost = hostsData.find((h) => {
+					return h.id == service.host_id;
+				});
 
-			return [service.id, foundHost];
-		})
+				return [service.id, foundHost];
+			})
+		)
 	);
 
 	function handleDeleteService(service: Service) {
 		if (confirm(`Are you sure you want to delete "${service.name}"?`)) {
-			deleteService(service.id);
+			deleteServiceMutation.mutate(service.id);
 		}
 	}
 
 	async function handleServiceUpdate(id: string, data: Service) {
-		const result = await updateService(data);
-		if (result?.success) {
+		try {
+			await updateServiceMutation.mutateAsync(data);
 			showServiceEditor = false;
 			editingService = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Services?`)) {
-			await bulkDeleteServices(ids);
+			await bulkDeleteServicesMutation.mutateAsync(ids);
 		}
 	}
 
@@ -99,7 +117,7 @@
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
 			}
 		},
 		{
@@ -111,7 +129,7 @@
 			sortable: true,
 			getValue(item) {
 				return (
-					$services.find((s) => s.id == item.virtualization?.details.service_id)?.name ||
+					servicesData.find((s) => s.id == item.virtualization?.details.service_id)?.name ||
 					'Not Containerized'
 				);
 			}
@@ -139,7 +157,7 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
@@ -154,14 +172,14 @@
 	/>
 
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $hosts.length === 0}
+	{:else if hostsData.length === 0}
 		<!-- Empty state -->
 		<EmptyState title="No services configured yet" subtitle="" />
 	{:else}
 		<DataControls
-			items={$services}
+			items={servicesData}
 			fields={serviceFields}
 			storageKey="scanopy-services-table-state"
 			onBulkDelete={handleBulkDelete}

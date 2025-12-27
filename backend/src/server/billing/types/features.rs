@@ -1,6 +1,7 @@
 use crate::server::shared::types::metadata::EntityMetadataProvider;
 use crate::server::shared::types::metadata::HasId;
 use crate::server::shared::types::metadata::TypeMetadataProvider;
+use crate::server::shared::types::{Color, Icon};
 use serde::Deserialize;
 use serde::Serialize;
 use strum::Display;
@@ -54,12 +55,12 @@ impl Feature {
 }
 
 impl EntityMetadataProvider for Feature {
-    fn color(&self) -> &'static str {
-        ""
+    fn color(&self) -> Color {
+        Color::Gray
     }
 
-    fn icon(&self) -> &'static str {
-        ""
+    fn icon(&self) -> Icon {
+        Icon::Sparkle
     }
 }
 

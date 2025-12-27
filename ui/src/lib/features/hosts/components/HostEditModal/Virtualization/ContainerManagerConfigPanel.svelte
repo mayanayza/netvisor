@@ -1,55 +1,73 @@
 <script lang="ts">
 	import type { Service } from '$lib/features/services/types/base';
-	import { getServicesForHost, services } from '$lib/features/services/store';
+	import { useServicesQuery } from '$lib/features/services/queries';
 	import { ServiceDisplay } from '$lib/shared/components/forms/selection/display/ServiceDisplay.svelte';
 	import ListManager from '$lib/shared/components/forms/selection/ListManager.svelte';
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
-	import { get } from 'svelte/store';
 	import type { FormApi } from '$lib/shared/components/forms/types';
 
-	export let service: Service;
-	export let onChange: (updatedService: Service) => void;
-	export let formApi: FormApi;
+	interface Props {
+		service: Service;
+		onChange: (updatedService: Service) => void;
+		formApi: FormApi;
+	}
 
-	$: serviceMetadata = serviceDefinitions.getItem(service.service_definition);
+	let { service, onChange, formApi }: Props = $props();
 
-	$: managedContainers = $services.filter(
-		(s) =>
-			s.virtualization &&
-			s.virtualization?.type == 'Docker' &&
-			s.virtualization.details.service_id == service.id
+	// TanStack Query hooks
+	const servicesQuery = useServicesQuery();
+	let servicesData = $derived(servicesQuery.data ?? []);
+
+	let serviceMetadata = $derived(serviceDefinitions.getItem(service.service_definition));
+
+	let managedContainers = $derived(
+		servicesData.filter(
+			(s) =>
+				s.virtualization &&
+				s.virtualization?.type == 'Docker' &&
+				s.virtualization.details.service_id == service.id
+		)
 	);
-	$: containerIds = managedContainers.map((s) => s.id);
+
+	let containerIds = $derived(managedContainers.map((s) => s.id));
 
 	// Filter out services on other hosts and already managed containers
-	$: selectableContainers = $services.filter(
-		(s) => s.host_id === service.host_id && s.id !== service.id && !containerIds.includes(s.id)
+	let selectableContainers = $derived(
+		servicesData.filter(
+			(s) => s.host_id === service.host_id && s.id !== service.id && !containerIds.includes(s.id)
+		)
 	);
 
 	function handleAddContainer(serviceId: string) {
-		let services = getServicesForHost(service.host_id);
-		let containerizedService = get(services).find((s) => s.id == serviceId);
+		const servicesForHost = servicesData.filter((s) => s.host_id === service.host_id);
+		const containerizedService = servicesForHost.find((s) => s.id == serviceId);
 
 		if (containerizedService) {
-			containerizedService.virtualization = {
-				type: 'Docker',
-				details: {
-					container_id: null,
-					container_name: null,
-					service_id: service.id
+			const updatedService = {
+				...containerizedService,
+				virtualization: {
+					type: 'Docker' as const,
+					details: {
+						container_id: null,
+						container_name: null,
+						service_id: service.id
+					}
 				}
 			};
 
-			onChange(containerizedService);
+			onChange(updatedService);
 		}
 	}
 
 	function handleRemoveContainer(index: number) {
-		let removedContainer = managedContainers.at(index);
+		const removedContainer = managedContainers.at(index);
 
 		if (removedContainer) {
-			removedContainer.virtualization = null;
-			onChange(removedContainer);
+			const updatedService = {
+				...removedContainer,
+				virtualization: null
+			};
+			onChange(updatedService);
 		}
 	}
 </script>

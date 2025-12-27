@@ -10,10 +10,10 @@
 	} from '@xyflow/svelte';
 	import { createColorHelper, twColorToRgba } from '$lib/shared/utils/styling';
 	import { subnetTypes } from '$lib/shared/stores/metadata';
-	import { isContainerSubnet } from '$lib/features/subnets/store';
+	import { isContainerSubnet } from '$lib/features/subnets/queries';
 	import { topology as globalTopology, topologyOptions, updateTopology } from '../../store';
 	import type { SubnetRenderData, Topology } from '../../types/base';
-	import { get, type Writable } from 'svelte/store';
+	import { type Writable } from 'svelte/store';
 	import { getContext } from 'svelte';
 
 	let { id, data, selected, width, height }: NodeProps = $props();
@@ -32,7 +32,7 @@
 	const viewport = useViewport();
 	let resizeHandleZoomLevel = $derived(viewport.current.zoom > 0.5);
 
-	const grayColorHelper = createColorHelper('gray');
+	const grayColorHelper = createColorHelper('Gray');
 
 	let subnetRenderData: SubnetRenderData | null = $derived(
 		subnet
@@ -44,7 +44,7 @@
 					let label = data.header
 						? (data.header as string)
 						: (subnet.name != subnet.cidr ? subnet.name : subnetTypes.getName(subnet.subnet_type)) +
-							(get(isContainerSubnet(subnet.id)) ? '' : ': ' + subnet.cidr);
+							(isContainerSubnet(subnet) ? '' : ': ' + subnet.cidr);
 
 					return {
 						headerText: label,

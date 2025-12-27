@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::server::shared::entities::ChangeTriggersTopologyStaleness;
+use crate::server::shared::types::Color;
 use crate::server::shared::types::entities::EntitySource;
 use crate::server::topology::types::edges::EdgeStyle;
 use crate::server::{
@@ -31,7 +32,7 @@ pub struct GroupBase {
     #[schema(read_only)]
     /// Will be automatically set to Manual for creation through API
     pub source: EntitySource,
-    pub color: String,
+    pub color: Color,
     #[serde(default)]
     #[schema(required)]
     pub edge_style: EdgeStyle,
@@ -40,7 +41,9 @@ pub struct GroupBase {
     pub tags: Vec<Uuid>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 #[schema(example = crate::server::shared::types::examples::group)]
 pub struct Group {
     #[serde(default)]
@@ -53,6 +56,7 @@ pub struct Group {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: GroupBase,
 }
 

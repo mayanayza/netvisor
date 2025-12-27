@@ -18,6 +18,8 @@ export type CreateHostRequest = components['schemas']['CreateHostRequest'];
 export type CreateInterfaceInput = components['schemas']['CreateInterfaceInput'];
 export type CreatePortInput = components['schemas']['CreatePortInput'];
 export type UpdateHostRequest = components['schemas']['UpdateHostRequest'];
+export type UpdateInterfaceInput = components['schemas']['UpdateInterfaceInput'];
+export type UpdatePortInput = components['schemas']['UpdatePortInput'];
 
 // Form state type for creating/editing hosts
 // Includes children arrays for form editing - distinct from HostResponse (API response type)
@@ -46,9 +48,14 @@ export interface CreateHostWithServicesRequest {
 	services: Service[] | null;
 }
 
-// Request type for updating a host (only needs primitive fields)
+// Request type for updating a host with children
 export interface UpdateHostWithServicesRequest {
 	host: Host;
+	/** Interfaces to sync - if provided, will create/update/delete to match */
+	interfaces: Interface[] | null;
+	/** Ports to sync - if provided, will create/update/delete to match */
+	ports: Port[] | null;
+	/** Services to sync - if provided, will create/update/delete to match */
 	services: Service[] | null;
 }
 

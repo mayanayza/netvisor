@@ -2,12 +2,8 @@ import { get, writable } from 'svelte/store';
 import { apiClient } from '$lib/api/client';
 import type { DiscoveryUpdatePayload } from './types/api';
 import { pushError, pushSuccess, pushWarning } from '$lib/shared/stores/feedback';
-import { getHosts } from '../hosts/store';
-import { getSubnets } from '../subnets/store';
-import { getServices } from '../services/store';
+import { queryClient, queryKeys } from '$lib/api/query-client';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
-import { getDaemons } from '../daemons/store';
-import { getDiscoveries } from './store';
 
 // session_id to latest update
 export const sessions = writable<DiscoveryUpdatePayload[]>([]);
@@ -34,24 +30,24 @@ class DiscoverySSEManager extends BaseSSEManager<DiscoveryUpdatePayload> {
 				const current = update.progress || 0;
 
 				if (current > last) {
-					// Refresh data
-					getHosts();
-					getServices();
-					getSubnets();
-					getDaemons();
+					// Invalidate queries to refresh data
+					queryClient.invalidateQueries({ queryKey: queryKeys.hosts.all });
+					queryClient.invalidateQueries({ queryKey: queryKeys.services.all });
+					queryClient.invalidateQueries({ queryKey: queryKeys.subnets.all });
+					queryClient.invalidateQueries({ queryKey: queryKeys.daemons.all });
 					lastProgress.set(update.session_id, current);
 				}
 
 				// Handle terminal phases
 				if (update.phase === 'Complete') {
 					pushSuccess(`${update.discovery_type.type} discovery completed`);
-					// Final refresh on completion
+					// Final refresh on completion - invalidate all relevant queries
 					await Promise.all([
-						getHosts(),
-						getServices(),
-						getSubnets(),
-						getDaemons(),
-						getDiscoveries()
+						queryClient.invalidateQueries({ queryKey: queryKeys.hosts.all }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.services.all }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.subnets.all }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.daemons.all }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.discovery.all })
 					]);
 				} else if (update.phase === 'Cancelled') {
 					pushWarning(`Discovery cancelled`);
@@ -111,26 +107,27 @@ export async function initiateDiscovery(discovery_id: string) {
 		body: discovery_id
 	});
 
-	if (result) {
+	const session = result?.data;
+	if (session) {
 		// Add the session immediately to the store (only if it doesn't exist)
 		sessions.update((current) => {
 			// Check if session already exists
-			const existingIndex = current.findIndex((s) => s.session_id === result.session_id);
+			const existingIndex = current.findIndex((s) => s.session_id === session.session_id);
 
 			if (existingIndex >= 0) {
 				// Update existing (shouldn't happen, but defensive)
 				const updated = [...current];
-				updated[existingIndex] = result;
+				updated[existingIndex] = session;
 				return updated;
 			} else {
 				// Add new session
-				return [...current, result];
+				return [...current, session];
 			}
 		});
 
 		discoverySSEManager.connect(); // Start SSE to receive updates
 		pushSuccess(
-			`${result.discovery_type.type} discovery session created with session ID ${result.session_id}`
+			`${session.discovery_type.type} discovery session created with session ID ${session.session_id}`
 		);
 	}
 }

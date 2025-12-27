@@ -2,64 +2,67 @@
 	import { CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-svelte';
 	import type { DiscoveryUpdatePayload } from '../../types/api';
 	import { formatDuration, formatTimestamp } from '$lib/shared/utils/formatting';
-	import { getSubnetFromId } from '$lib/features/subnets/store';
-	import { get } from 'svelte/store';
+	import { useSubnetsQuery, getSubnetById } from '$lib/features/subnets/queries';
 
-	export let payload: DiscoveryUpdatePayload;
+	interface Props {
+		payload: DiscoveryUpdatePayload;
+	}
 
-	$: phaseIcon = (() => {
+	let { payload }: Props = $props();
+
+	// TanStack Query for subnets
+	const subnetsQuery = useSubnetsQuery();
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+
+	let phaseStyles = $derived.by(() => {
 		switch (payload.phase) {
 			case 'Complete':
-				return CheckCircle;
+				return {
+					icon: CheckCircle,
+					color: 'text-green-400',
+					bg: 'bg-green-900/20 border-green-800'
+				};
 			case 'Failed':
-				return XCircle;
+				return {
+					icon: XCircle,
+					color: 'text-red-400',
+					bg: 'bg-red-900/20 border-red-800'
+				};
 			case 'Cancelled':
-				return AlertCircle;
+				return {
+					icon: AlertCircle,
+					color: 'text-yellow-400',
+					bg: 'bg-yellow-900/20 border-yellow-800'
+				};
 			default:
-				return Clock;
+				return {
+					icon: Clock,
+					color: 'text-blue-400',
+					bg: 'bg-blue-900/20 border-blue-800'
+				};
 		}
-	})();
+	});
 
-	$: phaseColor = (() => {
-		switch (payload.phase) {
-			case 'Complete':
-				return 'text-green-400';
-			case 'Failed':
-				return 'text-red-400';
-			case 'Cancelled':
-				return 'text-yellow-400';
-			default:
-				return 'text-blue-400';
-		}
-	})();
+	let duration = $derived(
+		payload.started_at && payload.finished_at
+			? formatDuration(payload.started_at, payload.finished_at)
+			: null
+	);
 
-	$: phaseBg = (() => {
-		switch (payload.phase) {
-			case 'Complete':
-				return 'bg-green-900/20 border-green-800';
-			case 'Failed':
-				return 'bg-red-900/20 border-red-800';
-			case 'Cancelled':
-				return 'bg-yellow-900/20 border-yellow-800';
-			default:
-				return 'bg-blue-900/20 border-blue-800';
-		}
-	})();
-
-	$: duration = (() => {
-		if (!payload.started_at || !payload.finished_at) return null;
-
-		return formatDuration(payload.started_at, payload.finished_at);
-	})();
+	// Helper to get subnet name by ID
+	function getSubnetName(subnetId: string): string {
+		const subnet = getSubnetById(subnetsData, subnetId);
+		return subnet?.name || 'Unknown Subnet';
+	}
 </script>
 
 <div class="space-y-4 border-t border-gray-700 pt-6">
 	<h3 class="text-primary text-lg font-medium">Discovery Run Summary</h3>
 
 	<!-- Status Banner -->
-	<div class="rounded-lg border {phaseBg} p-4">
+	<div class="rounded-lg border {phaseStyles.bg} p-4">
 		<div class="flex items-center gap-3">
-			<svelte:component this={phaseIcon} class="h-6 w-6 {phaseColor}" />
+			<phaseStyles.icon class="h-6 w-6 {phaseStyles.color}"></phaseStyles.icon>
 			<div class="flex-1">
 				<div class="flex items-center gap-2">
 					<span class="text-primary text-lg font-semibold">{payload.phase}</span>
@@ -137,9 +140,7 @@
 				{#if payload.discovery_type.subnet_ids === null}
 					Scanned all subnets that daemon had an interface with at time of scan
 				{:else}
-					Scanned {payload.discovery_type.subnet_ids
-						.map((s) => get(getSubnetFromId(s))?.name || 'Unknown Subnet')
-						.join(', ')}
+					Scanned {payload.discovery_type.subnet_ids.map((s) => getSubnetName(s)).join(', ')}
 				{/if}
 			</div>
 		</div>

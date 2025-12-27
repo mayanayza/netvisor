@@ -4,22 +4,34 @@
 	import { entities } from '$lib/shared/stores/metadata';
 	import { Loader2, X } from 'lucide-svelte';
 	import type { DiscoveryUpdatePayload } from '../../types/api';
-	import { daemons } from '../../../daemons/store';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { formatTimestamp } from '$lib/shared/utils/formatting';
 
-	export let viewMode: 'card' | 'list';
-	export let session: DiscoveryUpdatePayload;
+	// Props
+	let {
+		viewMode,
+		session
+	}: {
+		viewMode: 'card' | 'list';
+		session: DiscoveryUpdatePayload;
+	} = $props();
 
-	$: daemon = $daemons.find((d) => d.id == session.daemon_id);
+	// Queries
+	const daemonsQuery = useDaemonsQuery();
 
-	$: isCancelling = session?.session_id ? $cancelling.get(session.session_id) === true : false;
+	// Derived data
+	let daemonsData = $derived(daemonsQuery.data ?? []);
+	let daemon = $derived(daemonsData.find((d) => d.id == session.daemon_id));
+	let isCancelling = $derived(
+		session?.session_id ? $cancelling.get(session.session_id) === true : false
+	);
 
 	async function handleCancelDiscovery() {
 		await cancelDiscovery(session.session_id);
 	}
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: session.discovery_type.type + ' Discovery',
 		iconColor: entities.getColorHelper('Discovery').icon,
 		Icon: entities.getIconComponent('Discovery'),
@@ -49,7 +61,7 @@
 				onClick: isCancelling ? () => {} : () => handleCancelDiscovery()
 			}
 		]
-	};
+	});
 </script>
 
 {#snippet progressSnippet()}

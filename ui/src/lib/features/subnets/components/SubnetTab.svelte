@@ -1,31 +1,46 @@
 <script lang="ts">
-	import {
-		bulkDeleteSubnets,
-		createSubnet,
-		deleteSubnet,
-		getSubnets,
-		subnets,
-		updateSubnet
-	} from '../store';
 	import SubnetCard from './SubnetCard.svelte';
 	import SubnetEditModal from './SubnetEditModal/SubnetEditModal.svelte';
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
-	import { getHosts } from '$lib/features/hosts/store';
-	import { getServices } from '$lib/features/services/store';
 	import type { Subnet } from '../types/base';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
-	import { networks } from '$lib/features/networks/store';
 	import { Plus } from 'lucide-svelte';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import {
+		useSubnetsQuery,
+		useCreateSubnetMutation,
+		useUpdateSubnetMutation,
+		useDeleteSubnetMutation,
+		useBulkDeleteSubnetsMutation
+	} from '../queries';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useNetworksQuery } from '$lib/features/networks/queries';
 
-	let showSubnetEditor = false;
-	let editingSubnet: Subnet | null = null;
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const subnetsQuery = useSubnetsQuery();
+	const networksQuery = useNetworksQuery();
+	useHostsQuery();
+	useServicesQuery();
 
-	const loading = loadData([getSubnets, getHosts, getServices]);
+	// Mutations
+	const createSubnetMutation = useCreateSubnetMutation();
+	const updateSubnetMutation = useUpdateSubnetMutation();
+	const deleteSubnetMutation = useDeleteSubnetMutation();
+	const bulkDeleteSubnetsMutation = useBulkDeleteSubnetsMutation();
+
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+	let networksData = $derived(networksQuery.data ?? []);
+	let isLoading = $derived(subnetsQuery.isPending);
+
+	let showSubnetEditor = $state(false);
+	let editingSubnet = $state<Subnet | null>(null);
 
 	function handleCreateSubnet() {
 		editingSubnet = null;
@@ -39,23 +54,27 @@
 
 	function handleDeleteSubnet(subnet: Subnet) {
 		if (confirm(`Are you sure you want to delete "${subnet.name}"?`)) {
-			deleteSubnet(subnet.id);
+			deleteSubnetMutation.mutate(subnet.id);
 		}
 	}
 
 	async function handleSubnetCreate(data: Subnet) {
-		const result = await createSubnet(data);
-		if (result?.success) {
+		try {
+			await createSubnetMutation.mutateAsync(data);
 			showSubnetEditor = false;
 			editingSubnet = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
 	async function handleSubnetUpdate(_id: string, data: Subnet) {
-		const result = await updateSubnet(data);
-		if (result?.success) {
+		try {
+			await updateSubnetMutation.mutateAsync(data);
 			showSubnetEditor = false;
 			editingSubnet = null;
+		} catch {
+			// Error handled by mutation
 		}
 	}
 
@@ -66,7 +85,7 @@
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Subnets?`)) {
-			await bulkDeleteSubnets(ids);
+			await bulkDeleteSubnetsMutation.mutateAsync(ids);
 		}
 	}
 
@@ -112,7 +131,7 @@
 			filterable: true,
 			sortable: false,
 			getValue(item) {
-				return $networks.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
 			}
 		},
 		{
@@ -125,7 +144,7 @@
 			getValue: (entity) => {
 				// Return tag names for search/filter display
 				return entity.tags
-					.map((id) => $tags.find((t) => t.id === id)?.name)
+					.map((id) => tagsData.find((t) => t.id === id)?.name)
 					.filter((name): name is string => !!name);
 			}
 		}
@@ -136,16 +155,16 @@
 	<!-- Header -->
 	<TabHeader title="Subnets" subtitle="Manage network subnets and IP ranges">
 		<svelte:fragment slot="actions">
-			<button class="btn-primary flex items-center" on:click={handleCreateSubnet}
+			<button class="btn-primary flex items-center" onclick={handleCreateSubnet}
 				><Plus class="h-5 w-5" />Create Subnet</button
 			>
 		</svelte:fragment>
 	</TabHeader>
 
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
-	{:else if $subnets.length === 0}
+	{:else if subnetsData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
 			title="No subnets configured yet"
@@ -155,7 +174,7 @@
 		/>
 	{:else}
 		<DataControls
-			items={$subnets}
+			items={subnetsData}
 			fields={subnetFields}
 			storageKey="scanopy-subnets-table-state"
 			onBulkDelete={handleBulkDelete}

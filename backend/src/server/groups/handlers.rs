@@ -51,7 +51,7 @@ async fn create_group(
 ) -> ApiResult<Json<ApiResponse<Group>>> {
     // Custom validation: Check for service bindings on different networks
     for binding_id in &group.base.binding_ids {
-        let binding_id_filter = EntityFilter::unfiltered().service_binding_id(binding_id);
+        let binding_id_filter = EntityFilter::unfiltered().entity_id(binding_id);
 
         if let Some(binding) = state
             .services
@@ -93,18 +93,18 @@ async fn update_group(
 ) -> ApiResult<Json<ApiResponse<Group>>> {
     // Custom validation: Check for service bindings on different networks
     for binding_id in &group.base.binding_ids {
-        let binding_id_filter = EntityFilter::unfiltered().service_binding_id(binding_id);
+        let binding_id_filter = EntityFilter::unfiltered().entity_id(binding_id);
 
-        if let Some(service) = state
+        if let Some(binding) = state
             .services
-            .service_service
+            .binding_service
             .get_one(binding_id_filter)
             .await?
-            && service.base.network_id != group.base.network_id
+            && binding.base.network_id != group.base.network_id
         {
             return Err(ApiError::bad_request(&format!(
-                "Group is on network {}, can't add Service \"{}\" which is on network {}",
-                group.base.network_id, service.base.name, service.base.network_id
+                "Group is on network {}, can't add binding which is on network {}",
+                group.base.network_id, binding.base.network_id
             )));
         }
     }

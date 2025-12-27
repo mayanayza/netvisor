@@ -1,33 +1,37 @@
 <script lang="ts">
-	import { users, getUsers, bulkDeleteUsers } from '../store';
 	import TabHeader from '$lib/shared/components/layout/TabHeader.svelte';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import EmptyState from '$lib/shared/components/layout/EmptyState.svelte';
-	import { loadData } from '$lib/shared/utils/dataLoader';
 	import DataControls from '$lib/shared/components/data/DataControls.svelte';
 	import type { FieldConfig } from '$lib/shared/components/data/types';
 	import UserCard from './UserCard.svelte';
 	import InviteCard from './InviteCard.svelte';
-	import {
-		getInvites,
-		getOrganization,
-		invites,
-		organization
-	} from '$lib/features/organizations/store';
+	import { useInvitesQuery } from '$lib/features/organizations/queries';
 	import { UserPlus } from 'lucide-svelte';
 	import { isUser, type User, type UserOrInvite } from '../types';
 	import InviteModal from './InviteModal.svelte';
 	import { metadata, permissions } from '$lib/shared/stores/metadata';
 	import UserEditModal from './UserEditModal.svelte';
-	import { currentUser } from '$lib/features/auth/store';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import { useUsersQuery, useBulkDeleteUsersMutation } from '../queries';
+
+	// Query
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	const usersQuery = useUsersQuery();
+	const bulkDeleteUsersMutation = useBulkDeleteUsersMutation();
+	const invitesQuery = useInvitesQuery();
+
+	// Derived data
+	let usersData = $derived(usersQuery.data ?? []);
+	let invitesData = $derived(invitesQuery.data ?? []);
+	let isLoading = $derived(usersQuery.isPending);
 
 	// Force Svelte to track metadata reactivity
 	$effect(() => {
 		void $metadata;
-		void $organization;
 	});
-
-	const loading = loadData([getUsers, getInvites, getOrganization]);
 
 	let showInviteModal = $state(false);
 	let showEditModal = $state(false);
@@ -35,8 +39,8 @@
 
 	// Combine users and invites into single array
 	let combinedItems = $derived([
-		...$users.map((user) => ({ type: 'user' as const, data: user, id: user.id })),
-		...$invites.map((invite) => ({ type: 'invite' as const, data: invite, id: invite.id }))
+		...usersData.map((user) => ({ type: 'user' as const, data: user, id: user.id })),
+		...invitesData.map((invite) => ({ type: 'invite' as const, data: invite, id: invite.id }))
 	] as UserOrInvite[]);
 
 	async function handleCreateInvite() {
@@ -49,14 +53,14 @@
 
 	// Check if user can invite
 	let canInviteUsers = $derived(
-		$currentUser
-			? permissions.getMetadata($currentUser.permissions).can_manage_user_permissions.length > 0
+		currentUser
+			? permissions.getMetadata(currentUser.permissions).can_manage_user_permissions.length > 0
 			: false
 	);
 
 	async function handleBulkDelete(ids: string[]) {
 		if (confirm(`Are you sure you want to delete ${ids.length} Users?`)) {
-			await bulkDeleteUsers(ids);
+			await bulkDeleteUsersMutation.mutateAsync(ids);
 		}
 	}
 
@@ -122,7 +126,7 @@
 	</TabHeader>
 
 	<!-- Loading state -->
-	{#if $loading}
+	{#if isLoading}
 		<Loading />
 	{:else if combinedItems.length === 0}
 		<!-- Empty state -->

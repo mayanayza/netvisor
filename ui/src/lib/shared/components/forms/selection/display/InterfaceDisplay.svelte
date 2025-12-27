@@ -1,8 +1,13 @@
-<script lang="ts" context="module">
-	import { getSubnetFromId, isContainerSubnet } from '$lib/features/subnets/store';
-	import { get } from 'svelte/store';
+<script lang="ts" module>
+	import { isContainerSubnet, getSubnetById } from '$lib/features/subnets/queries';
+	import type { Subnet } from '$lib/features/subnets/types/base';
 
-	export const InterfaceDisplay: EntityDisplayComponent<Interface, object> = {
+	// Context for interface display - needs access to subnets for lookups
+	export interface InterfaceDisplayContext {
+		subnets: Subnet[];
+	}
+
+	export const InterfaceDisplay: EntityDisplayComponent<Interface, InterfaceDisplayContext> = {
 		getId: (iface: Interface) => iface.id,
 		getLabel: (iface: Interface) => (iface.name ? iface.name : 'Unnamed Interface'),
 		getDescription: (iface: Interface) => {
@@ -16,13 +21,14 @@
 		},
 		getIcon: () => entities.getIconComponent('Interface'),
 		getIconColor: () => entities.getColorHelper('Interface').icon,
-		getTags: (iface: Interface) => {
-			const subnet = get(getSubnetFromId(iface.subnet_id));
+		getTags: (iface: Interface, context: InterfaceDisplayContext) => {
+			const subnetsData = context?.subnets ?? [];
+			const subnet = getSubnetById(subnetsData, iface.subnet_id);
 			const tags = [];
-			if (subnet && !get(isContainerSubnet(subnet.id))) {
+			if (subnet && !isContainerSubnet(subnet)) {
 				tags.push({
 					label: subnet.cidr,
-					color: entities.getColorHelper('Subnet').string
+					color: entities.getColorHelper('Subnet').color
 				});
 			}
 			return tags;
@@ -37,8 +43,12 @@
 	import type { EntityDisplayComponent } from '../types';
 	import { entities } from '$lib/shared/stores/metadata';
 
-	export let item: Interface;
-	export let context = {};
+	interface Props {
+		item: Interface;
+		context?: InterfaceDisplayContext;
+	}
+
+	let { item, context = { subnets: [] } }: Props = $props();
 </script>
 
 <ListSelectItem {item} {context} displayComponent={InterfaceDisplay} />

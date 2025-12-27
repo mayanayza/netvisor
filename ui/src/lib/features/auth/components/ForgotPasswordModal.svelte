@@ -66,7 +66,7 @@
 >
 	<!-- Header icon -->
 	<svelte:fragment slot="header-icon">
-		<ModalHeaderIcon Icon={Mail} color="#3b82f6" />
+		<ModalHeaderIcon Icon={Mail} color="Blue" />
 	</svelte:fragment>
 
 	{#if emailSent}

@@ -316,7 +316,26 @@ export interface paths {
 		/** List all bindings */
 		get: operations['list_bindings'];
 		put?: never;
-		/** Create a new binding */
+		/**
+		 * Create a new binding
+		 * @description Creates a binding that associates a service with a port or interface.
+		 *
+		 *     ### Binding Types
+		 *
+		 *     - **Interface binding**: Service is present at an interface (IP address) without a specific port.
+		 *       Used for non-port-bound services like gateways.
+		 *     - **Port binding (specific interface)**: Service listens on a specific port on a specific interface.
+		 *     - **Port binding (all interfaces)**: Service listens on a specific port on all interfaces
+		 *       (`interface_id: null`).
+		 *
+		 *     ### Validation and Deduplication Rules
+		 *
+		 *     - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
+		 *       A port binding on all interfaces conflicts with any interface binding for the same service.
+		 *     - **All-interfaces precedence**: When creating a port binding with `interface_id: null`,
+		 *       any existing specific-interface bindings for the same port are automatically removed,
+		 *       as they are superseded by the all-interfaces binding.
+		 */
 		post: operations['create_binding'];
 		delete?: never;
 		options?: never;
@@ -350,7 +369,15 @@ export interface paths {
 		};
 		/** Get binding by ID */
 		get: operations['get_binding_by_id'];
-		/** Update a binding */
+		/**
+		 * Update a binding
+		 * @description Updates an existing binding. The same conflict detection rules from binding creation apply.
+		 *
+		 *     ## Validation Rules
+		 *
+		 *     - **Conflict detection**: The updated binding must not conflict with other bindings on the
+		 *       same service. Interface bindings conflict with port bindings on the same interface.
+		 */
 		put: operations['update_binding'];
 		post?: never;
 		/** Delete binding */
@@ -800,6 +827,20 @@ export interface paths {
 		 * @description Merges all interfaces, ports, and services from `other_host` into
 		 *     `destination_host`, then deletes `other_host`. Both hosts must be
 		 *     on the same network.
+		 *
+		 *     ### Merge Behavior
+		 *
+		 *     - **Interfaces**: Transferred to destination. If an interface with matching subnet+IP or MAC
+		 *       already exists on destination, bindings are remapped to use the existing interface.
+		 *     - **Ports**: Transferred to destination. If a port with the same number and protocol already
+		 *       exists, bindings are remapped to use the existing port.
+		 *     - **Services**: Transferred to destination with deduplication.
+		 *       See [upsert behavior](https://scanopy.net/docs/discovery/#upsert-behavior) for details.
+		 *
+		 *     ### Restrictions
+		 *
+		 *     - Cannot consolidate a host with itself.
+		 *     - Cannot consolidate a host that has a daemon - consolidate into it instead.
 		 */
 		put: operations['consolidate_hosts'];
 		post?: never;
@@ -1096,7 +1137,7 @@ export interface paths {
 		/** List all ports */
 		get: operations['list_ports'];
 		put?: never;
-		/** Create new port */
+		/** Create a new port */
 		post: operations['create_port'];
 		delete?: never;
 		options?: never;
@@ -1130,7 +1171,7 @@ export interface paths {
 		};
 		/** Get port by ID */
 		get: operations['get_port_by_id'];
-		/** Update port */
+		/** Update a port */
 		put: operations['update_port'];
 		post?: never;
 		/** Delete port */
@@ -1155,6 +1196,16 @@ export interface paths {
 		 * @description Creates a service with optional bindings to interfaces or ports.
 		 *     The `id`, `created_at`, `updated_at`, and `source` fields are generated server-side.
 		 *     Bindings are specified without `service_id` or `network_id` - these are assigned automatically.
+		 *
+		 *     ### Binding Validation Rules
+		 *
+		 *     - **Cross-host validation**: All bindings must reference ports/interfaces that belong to the
+		 *       service's host. Bindings referencing entities from other hosts will be rejected.
+		 *     - **Deduplication**: Duplicate bindings in the same request are automatically deduplicated.
+		 *     - **All-interfaces precedence**: If a port binding with `interface_id: null` (all interfaces)
+		 *       is included, any specific-interface bindings for the same port are automatically removed.
+		 *     - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
+		 *       A port binding on all interfaces conflicts with any interface binding.
 		 */
 		post: operations['create_service'];
 		delete?: never;
@@ -1189,7 +1240,19 @@ export interface paths {
 		};
 		/** Get service by ID */
 		get: operations['get_service_by_id'];
-		/** Update a service */
+		/**
+		 * Update a service
+		 * @description Updates an existing service. All binding validation rules from service creation apply here as well.
+		 *
+		 *     ## Binding Validation Rules
+		 *
+		 *     - **Cross-host validation**: All bindings must reference ports/interfaces that belong to the
+		 *       service's host. Bindings referencing entities from other hosts will be rejected.
+		 *     - **Deduplication**: Duplicate bindings are automatically deduplicated.
+		 *     - **All-interfaces precedence**: If a port binding with `interface_id: null` (all interfaces)
+		 *       is included, any specific-interface bindings for the same port are automatically removed.
+		 *     - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
+		 */
 		put: operations['update_service'];
 		post?: never;
 		/** Delete service */
@@ -1334,7 +1397,11 @@ export interface paths {
 		};
 		/** Get subnet by ID */
 		get: operations['get_subnet_by_id'];
-		/** Update subnet */
+		/**
+		 * Update a subnet
+		 * @description Updates subnet properties. If the CIDR is being changed, validates that
+		 *     all existing interfaces on this subnet have IPs within the new CIDR range.
+		 */
 		put: operations['update_subnet'];
 		post?: never;
 		/** Delete subnet */
@@ -1425,7 +1492,6 @@ export interface paths {
 		};
 		/** Get topology by ID */
 		get: operations['get_topology_by_id'];
-		/** Update topology */
 		put: operations['update_topology'];
 		post?: never;
 		/** Delete topology */
@@ -1444,7 +1510,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Lock a topology for editing */
+		/** Lock a topology */
 		post: operations['lock'];
 		delete?: never;
 		options?: never;
@@ -1510,10 +1576,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * List all users
-		 * @description Returns a list of users with permissions below the permissions of the user making the request.
-		 */
+		/** List all users */
 		get: operations['get_all_users'];
 		put?: never;
 		post?: never;
@@ -1638,14 +1701,14 @@ export interface components {
 			/**
 			 * @description Association between a service and a port / interface that the service is listening on
 			 * @example {
-			 *       "created_at": "2025-12-25T05:22:04.959529Z",
-			 *       "id": "69511ecd-891e-4d6b-a42b-f54ef333ae88",
+			 *       "created_at": "2025-12-27T04:06:57.113246Z",
+			 *       "id": "853312ae-886d-4620-b30a-fb4605df7b7d",
 			 *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 			 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
 			 *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
 			 *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
 			 *       "type": "Port",
-			 *       "updated_at": "2025-12-25T05:22:04.959529Z"
+			 *       "updated_at": "2025-12-27T04:06:57.113246Z"
 			 *     }
 			 */
 			data?: components['schemas']['BindingBase'] & {
@@ -1709,11 +1772,33 @@ export interface components {
 			error?: string | null;
 			success: boolean;
 		};
+		ApiResponse_DiscoveryUpdatePayload: {
+			/** @description Progress update from daemon to server during discovery */
+			data?: {
+				/** Format: uuid */
+				daemon_id: string;
+				discovery_type: components['schemas']['DiscoveryType'];
+				error?: string | null;
+				/** Format: date-time */
+				finished_at?: string | null;
+				/** Format: uuid */
+				network_id: string;
+				phase: components['schemas']['DiscoveryPhase'];
+				/** Format: int32 */
+				progress: number;
+				/** Format: uuid */
+				session_id: string;
+				/** Format: date-time */
+				started_at?: string | null;
+			};
+			error?: string | null;
+			success: boolean;
+		};
 		ApiResponse_Group: {
 			/**
 			 * @example {
 			 *       "binding_ids": [],
-			 *       "color": "#3B82F6",
+			 *       "color": "Blue",
 			 *       "created_at": "2026-01-15T10:30:00Z",
 			 *       "description": "HTTP/HTTPS services group",
 			 *       "edge_style": "Bezier",
@@ -1957,14 +2042,14 @@ export interface components {
 			 * @example {
 			 *       "bindings": [
 			 *         {
-			 *           "created_at": "2025-12-25T05:22:04.956008Z",
-			 *           "id": "2c6f32e3-9c05-4869-bb45-e353e8ca3c07",
+			 *           "created_at": "2025-12-27T04:06:57.109411Z",
+			 *           "id": "68096bd4-c1d2-45cd-9310-bbf4f87ab826",
 			 *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 			 *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
 			 *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
 			 *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
 			 *           "type": "Port",
-			 *           "updated_at": "2025-12-25T05:22:04.956008Z"
+			 *           "updated_at": "2025-12-27T04:06:57.109411Z"
 			 *         }
 			 *       ],
 			 *       "created_at": "2026-01-15T10:30:00Z",
@@ -1972,7 +2057,7 @@ export interface components {
 			 *       "id": "550e8400-e29b-41d4-a716-446655440007",
 			 *       "name": "nginx",
 			 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
-			 *       "service_definition": "Roku Media Player",
+			 *       "service_definition": "Bitwarden",
 			 *       "source": {
 			 *         "type": "Manual"
 			 *       },
@@ -2048,7 +2133,7 @@ export interface components {
 		ApiResponse_Tag: {
 			/**
 			 * @example {
-			 *       "color": "#22C55E",
+			 *       "color": "Green",
 			 *       "created_at": "2026-01-15T10:30:00Z",
 			 *       "description": "Production environment resources",
 			 *       "id": "550e8400-e29b-41d4-a716-44665544000a",
@@ -2404,14 +2489,14 @@ export interface components {
 		/**
 		 * @description Association between a service and a port / interface that the service is listening on
 		 * @example {
-		 *       "created_at": "2025-12-25T05:22:04.947726Z",
-		 *       "id": "901b15cd-bf0d-4c8c-ad45-bad4239af9c6",
+		 *       "created_at": "2025-12-27T04:06:57.099953Z",
+		 *       "id": "c28cef63-dce4-4a93-bb96-4a5d2a655059",
 		 *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 		 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
 		 *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
 		 *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
 		 *       "type": "Port",
-		 *       "updated_at": "2025-12-25T05:22:04.947726Z"
+		 *       "updated_at": "2025-12-27T04:06:57.099953Z"
 		 *     }
 		 */
 		Binding: components['schemas']['BindingBase'] & {
@@ -2429,7 +2514,19 @@ export interface components {
 			/** Format: uuid */
 			service_id: string;
 		};
-		/** @description The type of binding - either to an interface or to a port */
+		/**
+		 * @description The type of binding - either to an interface or to a port.
+		 *
+		 *     Bindings associate a service with network resources (interfaces/ports) on a host.
+		 *
+		 *     ## Validation Rules
+		 *
+		 *     - All bindings must reference ports/interfaces that belong to the same host as the service.
+		 *     - Interface bindings conflict with port bindings on the same interface.
+		 *     - A port binding on all interfaces (`interface_id: null`) conflicts with any interface binding.
+		 *     - When a port binding with `interface_id: null` is created, it supersedes (removes) any
+		 *       existing specific-interface bindings for the same port.
+		 */
 		BindingType:
 			| {
 					/** Format: uuid */
@@ -2440,7 +2537,8 @@ export interface components {
 			| {
 					/**
 					 * Format: uuid
-					 * @description null = service is listening on this port on all interfaces
+					 * @description The interface this port binding applies to. If `null`, the binding applies to all
+					 *     interfaces on the host (and supersedes specific-interface bindings for this port).
 					 */
 					interface_id: string | null;
 					/** Format: uuid */
@@ -2452,6 +2550,21 @@ export interface components {
 			deleted_count: number;
 			requested_count: number;
 		};
+		/** @enum {string} */
+		Color:
+			| 'Pink'
+			| 'Rose'
+			| 'Red'
+			| 'Orange'
+			| 'Yellow'
+			| 'Green'
+			| 'Emerald'
+			| 'Teal'
+			| 'Cyan'
+			| 'Blue'
+			| 'Indigo'
+			| 'Purple'
+			| 'Gray';
 		/**
 		 * @description Input for creating a binding with a service.
 		 *     `service_id` and `network_id` are assigned by the server after the service is created.
@@ -2790,7 +2903,7 @@ export interface components {
 			| 'RequestPath'
 			| 'HubAndSpoke';
 		EntityMetadata: {
-			color: string;
+			color: components['schemas']['Color'];
 			icon: string;
 			id: string;
 		};
@@ -2825,7 +2938,7 @@ export interface components {
 		/**
 		 * @example {
 		 *       "binding_ids": [],
-		 *       "color": "#3B82F6",
+		 *       "color": "Blue",
 		 *       "created_at": "2026-01-15T10:30:00Z",
 		 *       "description": "HTTP/HTTPS services group",
 		 *       "edge_style": "Bezier",
@@ -2851,7 +2964,7 @@ export interface components {
 		GroupBase: {
 			/** @description Ordered list of binding IDs for this group. */
 			binding_ids: string[];
-			color: string;
+			color: components['schemas']['Color'];
 			description?: string | null;
 			edge_style: components['schemas']['EdgeStyle'];
 			group_type: components['schemas']['GroupType'];
@@ -3259,14 +3372,14 @@ export interface components {
 		 * @example {
 		 *       "bindings": [
 		 *         {
-		 *           "created_at": "2025-12-25T05:22:04.947642Z",
-		 *           "id": "1538a71b-4802-4e97-a785-8169a99897c9",
+		 *           "created_at": "2025-12-27T04:06:57.099859Z",
+		 *           "id": "8575863f-6058-4824-a668-4e5f741e7ddf",
 		 *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
 		 *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
 		 *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
 		 *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
 		 *           "type": "Port",
-		 *           "updated_at": "2025-12-25T05:22:04.947642Z"
+		 *           "updated_at": "2025-12-27T04:06:57.099859Z"
 		 *         }
 		 *       ],
 		 *       "created_at": "2026-01-15T10:30:00Z",
@@ -3274,7 +3387,7 @@ export interface components {
 		 *       "id": "550e8400-e29b-41d4-a716-446655440007",
 		 *       "name": "nginx",
 		 *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
-		 *       "service_definition": "Roku Media Player",
+		 *       "service_definition": "Bitwarden",
 		 *       "source": {
 		 *         "type": "Manual"
 		 *       },
@@ -3435,7 +3548,7 @@ export interface components {
 			| 'None';
 		/**
 		 * @example {
-		 *       "color": "#22C55E",
+		 *       "color": "Green",
 		 *       "created_at": "2026-01-15T10:30:00Z",
 		 *       "description": "Production environment resources",
 		 *       "id": "550e8400-e29b-41d4-a716-44665544000a",
@@ -3453,7 +3566,7 @@ export interface components {
 			readonly updated_at: string;
 		};
 		TagBase: {
-			color: string;
+			color: components['schemas']['Color'];
 			description?: string | null;
 			name: string;
 			/** Format: uuid */
@@ -3531,7 +3644,7 @@ export interface components {
 		TransportProtocol: 'Udp' | 'Tcp';
 		TypeMetadata: {
 			category?: string | null;
-			color?: string | null;
+			color: components['schemas']['Color'];
 			description?: string | null;
 			icon?: string | null;
 			id: string;
@@ -3545,17 +3658,79 @@ export interface components {
 		};
 		/**
 		 * @description Request type for updating a host.
-		 *     Children (interfaces, ports, services) are managed via their own endpoints.
+		 *     Optionally includes interfaces and ports to sync (create/update/delete).
 		 */
 		UpdateHostRequest: {
 			description?: string | null;
+			/**
+			 * Format: date-time
+			 * @description Optional: expected updated_at timestamp for optimistic locking.
+			 *     If provided, the update will fail with a conflict error if the host
+			 *     has been modified since this timestamp (e.g., by discovery running
+			 *     while the user was editing).
+			 */
+			expected_updated_at?: string | null;
 			hidden: boolean;
 			hostname?: string | null;
 			/** Format: uuid */
 			id: string;
+			/**
+			 * @description Optional: interfaces to sync with this host.
+			 *     If provided, the server will:
+			 *     - Create interfaces without an `id` (or with nil UUID)
+			 *     - Keep/update interfaces with matching `id`
+			 *     - Delete existing interfaces not in this list
+			 *     If not provided (None), interfaces are left unchanged.
+			 */
+			interfaces?: components['schemas']['UpdateInterfaceInput'][] | null;
 			name: string;
+			/**
+			 * @description Optional: ports to sync with this host.
+			 *     If provided, the server will:
+			 *     - Create ports without an `id` (or with nil UUID)
+			 *     - Keep/update ports with matching `id`
+			 *     - Delete existing ports not in this list
+			 *     If not provided (None), ports are left unchanged.
+			 */
+			ports?: components['schemas']['UpdatePortInput'][] | null;
 			tags: string[];
 			virtualization?: null | components['schemas']['HostVirtualization'];
+		};
+		/**
+		 * @description Input for syncing an interface during host update.
+		 *     If `id` is None or nil UUID, a new interface is created.
+		 *     If `id` matches an existing interface, it is updated.
+		 */
+		UpdateInterfaceInput: {
+			/**
+			 * Format: uuid
+			 * @description ID of existing interface to update, or None/nil for new interface
+			 */
+			id?: string | null;
+			ip_address: string;
+			mac_address?: string | null;
+			name?: string | null;
+			/** Format: uuid */
+			subnet_id: string;
+		};
+		/**
+		 * @description Input for syncing a port during host update.
+		 *     If `id` is None or nil UUID, a new port is created.
+		 *     If `id` matches an existing port, it is kept.
+		 */
+		UpdatePortInput: {
+			/**
+			 * Format: uuid
+			 * @description ID of existing port to keep, or None/nil for new port
+			 */
+			id?: string | null;
+			/**
+			 * Format: int32
+			 * @description Port number (1-65535)
+			 */
+			number: number;
+			/** @description Transport protocol (Tcp or Udp) */
+			protocol: components['schemas']['TransportProtocol'];
 		};
 		User: components['schemas']['UserBase'] & {
 			/** Format: date-time */
@@ -4347,7 +4522,7 @@ export interface operations {
 			};
 		};
 		responses: {
-			/** @description Binding created */
+			/** @description Binding created (superseded bindings may be removed) */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -4356,7 +4531,16 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_Binding'];
 				};
 			};
-			/** @description Conflict with existing binding */
+			/** @description Referenced port or interface does not exist */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ApiErrorResponse'];
+				};
+			};
+			/** @description Conflict with existing binding type */
 			409: {
 				headers: {
 					[name: string]: unknown;
@@ -4449,7 +4633,16 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_Binding'];
 				};
 			};
-			/** @description Conflict with existing binding */
+			/** @description Referenced port or interface does not exist */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ApiErrorResponse'];
+				};
+			};
+			/** @description Conflict with existing binding type */
 			409: {
 				headers: {
 					[name: string]: unknown;
@@ -4887,7 +5080,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['DiscoveryUpdatePayload'];
+					'application/json': components['schemas']['ApiResponse_DiscoveryUpdatePayload'];
 				};
 			};
 			/** @description Discovery not found */
@@ -5404,7 +5597,7 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_HostResponse'];
 				};
 			};
-			/** @description Hosts are on different networks */
+			/** @description Validation error: same host, has daemon, or different networks */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -6263,7 +6456,7 @@ export interface operations {
 			};
 		};
 		responses: {
-			/** @description Port created */
+			/** @description Port created successfully */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -6272,7 +6465,7 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_Port'];
 				};
 			};
-			/** @description Invalid request */
+			/** @description Network mismatch or duplicate port */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -6356,13 +6549,22 @@ export interface operations {
 			};
 		};
 		responses: {
-			/** @description Port updated */
+			/** @description Port updated successfully */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
 					'application/json': components['schemas']['ApiResponse_Port'];
+				};
+			};
+			/** @description Network mismatch or invalid request */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ApiErrorResponse'];
 				};
 			};
 			/** @description Port not found */
@@ -6455,7 +6657,7 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_Service'];
 				};
 			};
-			/** @description Host network mismatch or invalid request */
+			/** @description Validation error: host network mismatch, cross-host binding, or binding conflict */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -6548,7 +6750,7 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_Service'];
 				};
 			};
-			/** @description Host network mismatch */
+			/** @description Validation error: host network mismatch, cross-host binding, or binding conflict */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -6998,6 +7200,15 @@ export interface operations {
 					'application/json': components['schemas']['ApiResponse_Subnet'];
 				};
 			};
+			/** @description CIDR change would orphan existing interfaces */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ApiErrorResponse'];
+				};
+			};
 			/** @description Subnet not found */
 			404: {
 				headers: {
@@ -7043,10 +7254,7 @@ export interface operations {
 	};
 	list_tags: {
 		parameters: {
-			query?: {
-				/** @description Filter by network ID */
-				network_id?: string | null;
-			};
+			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;

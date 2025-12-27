@@ -62,3 +62,7 @@ ALTER TABLE services DROP COLUMN bindings;
 -- Drop services column from hosts (services are queried via services.host_id)
 -- The save-topology migration converted this to UUID[], but it's not used
 ALTER TABLE hosts DROP COLUMN IF EXISTS services;
+
+-- Add bindings column to topology snapshots
+ALTER TABLE topologies ADD COLUMN bindings JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE topologies ADD COLUMN removed_bindings UUID[] DEFAULT '{}';

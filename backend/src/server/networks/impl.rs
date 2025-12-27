@@ -40,7 +40,9 @@ impl NetworkBase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default, ToSchema, Validate,
+)]
 #[schema(example = crate::server::shared::types::examples::network)]
 pub struct Network {
     #[serde(default)]
@@ -53,6 +55,7 @@ pub struct Network {
     #[schema(read_only, required)]
     pub updated_at: DateTime<Utc>,
     #[serde(flatten)]
+    #[validate(nested)]
     pub base: NetworkBase,
 }
 
@@ -68,6 +71,14 @@ impl CrudHandlers for Network {
 
     fn get_service(state: &AppState) -> &Self::Service {
         &state.services.network_service
+    }
+
+    fn get_tags(&self) -> Option<&Vec<uuid::Uuid>> {
+        Some(&self.base.tags)
+    }
+
+    fn set_tags(&mut self, tags: Vec<uuid::Uuid>) {
+        self.base.tags = tags;
     }
 }
 

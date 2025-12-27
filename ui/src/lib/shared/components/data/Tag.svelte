@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { createColorHelper } from '$lib/shared/utils/styling';
+	import { createColorHelper, type Color } from '$lib/shared/utils/styling';
 	import type { Component } from 'svelte';
 
 	let {
 		icon = null,
-		color = 'gray',
+		color = 'Gray',
 		disabled = false,
 		label,
 		badge = ''
 	}: {
 		icon?: Component | null;
-		color?: string;
+		color?: Color;
 		disabled?: boolean;
 		label: string;
 		badge?: string;

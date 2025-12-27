@@ -3,7 +3,10 @@ use crate::server::{
     shared::{
         concepts::Concept,
         entities::EntityDiscriminants,
-        types::metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+        types::{
+            Color, Icon,
+            metadata::{EntityMetadataProvider, HasId, TypeMetadataProvider},
+        },
     },
     subnets::r#impl::base::Subnet,
     topology::types::layout::Ixy,
@@ -288,7 +291,7 @@ impl HasId for EdgeType {
 }
 
 impl EntityMetadataProvider for EdgeType {
-    fn color(&self) -> &'static str {
+    fn color(&self) -> Color {
         match self {
             EdgeType::RequestPath { .. } => EntityDiscriminants::Group.color(),
             EdgeType::HubAndSpoke { .. } => EntityDiscriminants::Group.color(),
@@ -298,7 +301,7 @@ impl EntityMetadataProvider for EdgeType {
         }
     }
 
-    fn icon(&self) -> &'static str {
+    fn icon(&self) -> Icon {
         match self {
             EdgeType::RequestPath { .. } => GroupTypeDiscriminants::RequestPath.icon(),
             EdgeType::HubAndSpoke { .. } => GroupTypeDiscriminants::HubAndSpoke.icon(),

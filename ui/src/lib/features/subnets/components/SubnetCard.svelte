@@ -1,28 +1,72 @@
 <script lang="ts">
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
-	import { entities, subnetTypes } from '$lib/shared/stores/metadata';
-	import { formatServiceLabels, getServicesForSubnet } from '$lib/features/services/store';
-	import { isContainerSubnet } from '../store';
+	import { entities, subnetTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
+	import { isContainerSubnet } from '../queries';
 	import type { Subnet } from '../types/base';
-	import { get } from 'svelte/store';
-	import { tags } from '$lib/features/tags/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { toColor } from '$lib/shared/utils/styling';
 
-	export let subnet: Subnet;
-	export let onEdit: (subnet: Subnet) => void = () => {};
-	export let onDelete: (subnet: Subnet) => void = () => {};
-	export let viewMode: 'card' | 'list';
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const servicesQuery = useServicesQuery();
+	const interfacesQuery = useInterfacesQuery();
 
-	$: allServices = getServicesForSubnet(subnet);
-	$: serviceLabelsStore = formatServiceLabels($allServices.map((s) => s.id));
-	$: serviceLabels = $serviceLabelsStore;
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+	let interfacesData = $derived(interfacesQuery.data ?? []);
+
+	let {
+		subnet,
+		onEdit = () => {},
+		onDelete = () => {},
+		viewMode,
+		selected,
+		onSelectionChange = () => {}
+	}: {
+		subnet: Subnet;
+		onEdit?: (subnet: Subnet) => void;
+		onDelete?: (subnet: Subnet) => void;
+		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	} = $props();
+
+	// Get services for this subnet via interfaces
+	let subnetServices = $derived(
+		(() => {
+			// Get all interfaces on this subnet
+			const subnetInterfaces = interfacesData.filter((i) => i.subnet_id === subnet.id);
+			const interfaceIds = new Set(subnetInterfaces.map((i) => i.id));
+			const hostIds = new Set(subnetInterfaces.map((i) => i.host_id));
+
+			return servicesData.filter((s) =>
+				s.bindings.some(
+					(b) =>
+						(b.interface_id && interfaceIds.has(b.interface_id)) ||
+						(hostIds.has(s.host_id) && b.interface_id == null)
+				)
+			);
+		})()
+	);
+
+	let serviceLabels = $derived(
+		subnetServices.map((s) => {
+			const def = serviceDefinitions.getItem(s.service_definition);
+			return {
+				id: s.id,
+				label: def ? `${s.name} (${def.name})` : s.name
+			};
+		})
+	);
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: subnet.name,
-		subtitle: get(isContainerSubnet(subnet.id)) ? '' : subnet.cidr,
+		subtitle: isContainerSubnet(subnet) ? '' : subnet.cidr,
 		iconColor: subnetTypes.getColorHelper(subnet.subnet_type).icon,
 		Icon: subnetTypes.getIconComponent(subnet.subnet_type),
 		fields: [
@@ -53,10 +97,10 @@
 			{
 				label: 'Tags',
 				value: subnet.tags.map((t) => {
-					const tag = $tags.find((tag) => tag.id == t);
+					const tag = tagsData.find((tag) => tag.id == t);
 					return tag
 						? { id: tag.id, color: tag.color, label: tag.name }
-						: { id: t, color: 'gray', label: 'Unknown Tag' };
+						: { id: t, color: toColor('gray'), label: 'Unknown Tag' };
 				})
 			}
 		],
@@ -74,7 +118,7 @@
 				onClick: () => onEdit(subnet)
 			}
 		]
-	};
+	});
 </script>
 
 <GenericCard {...cardData} {viewMode} {selected} {onSelectionChange} />

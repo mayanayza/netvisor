@@ -204,3 +204,372 @@ async fn test_service_deletion_cleans_up_relationships() {
 
     assert!(group_after.base.binding_ids.is_empty());
 }
+
+// =============================================================================
+// BINDING CONFLICT TESTS
+// =============================================================================
+
+/// Test that interface binding + port binding on same interface causes conflict
+#[tokio::test]
+#[serial]
+async fn test_binding_conflict_interface_and_port_same_interface() {
+    let (_, services, _container) = test_services().await;
+
+    let organization = services
+        .organization_service
+        .create(organization(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    let subnet_obj = subnet(&network.id);
+    services
+        .subnet_service
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    // Create host with interface and port
+    let host_obj = host(&network.id);
+    let iface = interface(&network.id, &subnet_obj.id);
+    let port_obj = port(&network.id, &host_obj.id);
+
+    let created_host = services
+        .host_service
+        .discover_host(
+            host_obj.clone(),
+            vec![iface],
+            vec![port_obj],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    let created_iface = &created_host.interfaces[0];
+    let created_port = &created_host.ports[0];
+
+    // Try to create service with conflicting bindings:
+    // Interface binding + Port binding on same interface
+    let mut svc = service(&network.id, &created_host.id);
+    svc.base.bindings = vec![
+        Binding::new_interface_serviceless(created_iface.id),
+        Binding::new_port_serviceless(created_port.id, Some(created_iface.id)),
+    ];
+
+    let result = services
+        .service_service
+        .create(svc, AuthenticatedEntity::System)
+        .await;
+
+    assert!(result.is_err(), "Should reject conflicting bindings");
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("conflict") || err.contains("interface binding"),
+        "Error should mention conflict: {}",
+        err
+    );
+}
+
+/// Test that interface binding + port binding on different interfaces is OK
+#[tokio::test]
+#[serial]
+async fn test_binding_no_conflict_different_interfaces() {
+    let (_, services, _container) = test_services().await;
+
+    let organization = services
+        .organization_service
+        .create(organization(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    let subnet_obj = subnet(&network.id);
+    services
+        .subnet_service
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    // Create host with two interfaces and a port
+    let host_obj = host(&network.id);
+    let mut iface1 = interface(&network.id, &subnet_obj.id);
+    iface1.base.ip_address = "192.168.1.100".parse().unwrap();
+    let mut iface2 = interface(&network.id, &subnet_obj.id);
+    iface2.base.ip_address = "192.168.1.101".parse().unwrap();
+    let port_obj = port(&network.id, &host_obj.id);
+
+    let created_host = services
+        .host_service
+        .discover_host(
+            host_obj.clone(),
+            vec![iface1, iface2],
+            vec![port_obj],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    let created_iface1 = &created_host.interfaces[0];
+    let created_iface2 = &created_host.interfaces[1];
+    let created_port = &created_host.ports[0];
+
+    // Interface binding on iface1 + Port binding on iface2 should be OK
+    let mut svc = service(&network.id, &created_host.id);
+    svc.base.bindings = vec![
+        Binding::new_interface_serviceless(created_iface1.id),
+        Binding::new_port_serviceless(created_port.id, Some(created_iface2.id)),
+    ];
+
+    let result = services
+        .service_service
+        .create(svc, AuthenticatedEntity::System)
+        .await;
+
+    assert!(
+        result.is_ok(),
+        "Should allow non-conflicting bindings: {:?}",
+        result.err()
+    );
+}
+
+/// Test that interface binding + all-interfaces port binding causes conflict
+#[tokio::test]
+#[serial]
+async fn test_binding_conflict_interface_and_all_interfaces_port() {
+    let (_, services, _container) = test_services().await;
+
+    let organization = services
+        .organization_service
+        .create(organization(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    let subnet_obj = subnet(&network.id);
+    services
+        .subnet_service
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    let host_obj = host(&network.id);
+    let iface = interface(&network.id, &subnet_obj.id);
+    let port_obj = port(&network.id, &host_obj.id);
+
+    let created_host = services
+        .host_service
+        .discover_host(
+            host_obj.clone(),
+            vec![iface],
+            vec![port_obj],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    let created_iface = &created_host.interfaces[0];
+    let created_port = &created_host.ports[0];
+
+    // Interface binding + Port binding on ALL interfaces (interface_id: None) should conflict
+    let mut svc = service(&network.id, &created_host.id);
+    svc.base.bindings = vec![
+        Binding::new_interface_serviceless(created_iface.id),
+        Binding::new_port_serviceless(created_port.id, None), // all interfaces
+    ];
+
+    let result = services
+        .service_service
+        .create(svc, AuthenticatedEntity::System)
+        .await;
+
+    assert!(result.is_err(), "Should reject conflicting bindings");
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("conflict") || err.contains("interface"),
+        "Error should mention conflict: {}",
+        err
+    );
+}
+
+// =============================================================================
+// BINDING OWNERSHIP TESTS
+// =============================================================================
+
+/// Test that port binding referencing port from different host is rejected
+#[tokio::test]
+#[serial]
+async fn test_binding_port_from_different_host_rejected() {
+    let (_, services, _container) = test_services().await;
+
+    let organization = services
+        .organization_service
+        .create(organization(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    let subnet_obj = subnet(&network.id);
+    services
+        .subnet_service
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    // Create host1 with a port
+    let host1 = host(&network.id);
+    let port1 = port(&network.id, &host1.id);
+    let iface1 = interface(&network.id, &subnet_obj.id);
+
+    let created_host1 = services
+        .host_service
+        .discover_host(
+            host1.clone(),
+            vec![iface1],
+            vec![port1],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    // Create host2 (different host)
+    let mut host2 = host(&network.id);
+    host2.base.name = "Host 2".to_string();
+    let mut iface2 = interface(&network.id, &subnet_obj.id);
+    iface2.base.ip_address = "192.168.1.200".parse().unwrap();
+
+    let created_host2 = services
+        .host_service
+        .discover_host(
+            host2.clone(),
+            vec![iface2],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    // Try to create service on host2 with binding to host1's port
+    let mut svc = service(&network.id, &created_host2.id);
+    svc.base.bindings = vec![Binding::new_port_serviceless(
+        created_host1.ports[0].id,
+        None,
+    )];
+
+    let result = services
+        .service_service
+        .create(svc, AuthenticatedEntity::System)
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Should reject binding to port from different host"
+    );
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("does not belong") || err.contains("host"),
+        "Error should mention port doesn't belong to host: {}",
+        err
+    );
+}
+
+/// Test that interface binding referencing interface from different host is rejected
+#[tokio::test]
+#[serial]
+async fn test_binding_interface_from_different_host_rejected() {
+    let (_, services, _container) = test_services().await;
+
+    let organization = services
+        .organization_service
+        .create(organization(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+    let network = services
+        .network_service
+        .create(network(&organization.id), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    let subnet_obj = subnet(&network.id);
+    services
+        .subnet_service
+        .create(subnet_obj.clone(), AuthenticatedEntity::System)
+        .await
+        .unwrap();
+
+    // Create host1 with an interface
+    let host1 = host(&network.id);
+    let iface1 = interface(&network.id, &subnet_obj.id);
+
+    let created_host1 = services
+        .host_service
+        .discover_host(
+            host1.clone(),
+            vec![iface1],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    // Create host2 (different host)
+    let mut host2 = host(&network.id);
+    host2.base.name = "Host 2".to_string();
+    let mut iface2 = interface(&network.id, &subnet_obj.id);
+    iface2.base.ip_address = "192.168.1.200".parse().unwrap();
+
+    let created_host2 = services
+        .host_service
+        .discover_host(
+            host2.clone(),
+            vec![iface2],
+            vec![],
+            vec![],
+            AuthenticatedEntity::System,
+        )
+        .await
+        .unwrap();
+
+    // Try to create service on host2 with binding to host1's interface
+    let mut svc = service(&network.id, &created_host2.id);
+    svc.base.bindings = vec![Binding::new_interface_serviceless(
+        created_host1.interfaces[0].id,
+    )];
+
+    let result = services
+        .service_service
+        .create(svc, AuthenticatedEntity::System)
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Should reject binding to interface from different host"
+    );
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("does not belong") || err.contains("host"),
+        "Error should mention interface doesn't belong to host: {}",
+        err
+    );
+}

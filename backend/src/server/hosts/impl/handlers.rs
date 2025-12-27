@@ -6,6 +6,7 @@ use crate::server::{
         types::entities::EntitySource,
     },
 };
+use uuid::Uuid;
 
 impl CrudHandlers for Host {
     type Service = HostService;
@@ -22,5 +23,13 @@ impl CrudHandlers for Host {
     fn preserve_immutable_fields(&mut self, existing: &Self) {
         // source is set at creation time (Manual or Discovery), cannot be changed
         self.base.source = existing.base.source.clone();
+    }
+
+    fn get_tags(&self) -> Option<&Vec<Uuid>> {
+        Some(&self.base.tags)
+    }
+
+    fn set_tags(&mut self, tags: Vec<Uuid>) {
+        self.base.tags = tags;
     }
 }

@@ -3,7 +3,7 @@ use crate::server::{
     config::AppState,
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
-        handlers::traits::CrudHandlers,
+        handlers::traits::{CrudHandlers, update_handler},
         services::traits::CrudService,
         storage::{filter::EntityFilter, traits::StorableEntity},
         types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
@@ -14,7 +14,7 @@ use crate::server::{
     },
 };
 use axum::{
-    extract::State,
+    extract::{Path, State},
     response::{
         Json, Sse,
         sse::{Event, KeepAlive},
@@ -31,7 +31,6 @@ use uuid::Uuid;
 mod generated {
     use super::*;
     crate::crud_get_by_id_handler!(Topology, "topology", "topology");
-    crate::crud_update_handler!(Topology, "topology", "topology");
     crate::crud_delete_handler!(Topology, "topology", "topology");
 }
 
@@ -41,7 +40,7 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(get_all_topologies, create_topology))
         .routes(routes!(
             generated::get_by_id,
-            generated::update,
+            update_topology,
             generated::delete
         ))
         .routes(routes!(refresh))
@@ -50,6 +49,26 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(unlock))
         // SSE endpoint (not well-supported by OpenAPI)
         .route("/stream", get(staleness_stream))
+}
+
+#[utoipa::path(
+    put,
+    path = "/{id}",
+    tags = ["topology", "internal"],
+    params(("id" = Uuid, Path, description = "Topology ID")),
+    responses(
+        (status = 200, description = "Topology updated", body = ApiResponse<Topology>),
+        (status = 404, description = "Topology not found", body = ApiErrorResponse),
+    ),
+    security(("session" = []))
+)]
+async fn update_topology(
+    state: State<Arc<AppState>>,
+    user: RequireMember,
+    id: Path<Uuid>,
+    topology: Json<Topology>,
+) -> ApiResult<Json<ApiResponse<Topology>>> {
+    update_handler::<Topology>(state, user, id, topology).await
 }
 
 /// Get all topologies
@@ -314,15 +333,22 @@ async fn rebuild(
 async fn lock(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Json(mut topology): Json<Topology>,
+    Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<Topology>>> {
     let service = Topology::get_service(&state);
 
-    topology.lock(user.user_id);
+    if let Some(mut topology) = service.get_by_id(&id).await? {
+        topology.lock(user.user_id);
 
-    let updated = service.update(&mut topology, user.into()).await?;
+        let updated = service.update(&mut topology, user.into()).await?;
 
-    Ok(Json(ApiResponse::success(updated)))
+        Ok(Json(ApiResponse::success(updated)))
+    } else {
+        Err(ApiError::not_found(format!(
+            "Could not find topology {}",
+            id
+        )))
+    }
 }
 
 /// Unlock a topology
@@ -340,15 +366,22 @@ async fn lock(
 async fn unlock(
     State(state): State<Arc<AppState>>,
     RequireMember(user): RequireMember,
-    Json(mut topology): Json<Topology>,
+    Path(id): Path<Uuid>,
 ) -> ApiResult<Json<ApiResponse<Topology>>> {
     let service = Topology::get_service(&state);
 
-    topology.unlock();
+    if let Some(mut topology) = service.get_by_id(&id).await? {
+        topology.unlock();
 
-    let updated = service.update(&mut topology, user.into()).await?;
+        let updated = service.update(&mut topology, user.into()).await?;
 
-    Ok(Json(ApiResponse::success(updated)))
+        Ok(Json(ApiResponse::success(updated)))
+    } else {
+        Err(ApiError::not_found(format!(
+            "Could not find topology {}",
+            id
+        )))
+    }
 }
 
 async fn staleness_stream(

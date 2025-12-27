@@ -37,6 +37,22 @@ const INTERNAL_TAG: &str = "internal";
         (name = "config", description = "Server configuration. Public configuration settings for client applications."),
         (name = "discoveries", description = "Network discovery operations. Trigger and monitor scans that detect hosts, services, and network topology."),
         (name = "github", description = "GitHub integration endpoints."),
+        (name = "ports", description = "Ports that have been scanned and found open on a host"),
+        (name = "bindings", description = "
+            ## Binding Types
+            - **Interface binding**: Service is present at an interface (IP address) without a specific port.
+              Used for non-port-bound services like gateways.
+            - **Port binding (specific interface)**: Service listens on a specific port on a specific interface.
+            - **Port binding (all interfaces)**: Service listens on a specific port on all interfaces
+              (`interface_id: null`).
+
+            ## Validation and Deduplication Rules
+            - **Conflict detection**: Interface bindings conflict with port bindings on the same interface.
+              A port binding on all interfaces conflicts with any interface binding for the same service.
+            - **All-interfaces precedence**: When creating a port binding with `interface_id: null`,
+              any existing specific-interface bindings for the same port are automatically removed,
+              as they are superseded by the all-interfaces binding.
+        "),
         (name = "groups", description = "Logical groupings of hosts. Organize hosts into groups for easier management and visualization."),
         (name = "hosts", description = "Network hosts (devices). Manage discovered or manually created hosts on your network."),
         (name = "interfaces", description = "Network interfaces on hosts. Each host can have multiple interfaces with different IP addresses."),
@@ -44,11 +60,11 @@ const INTERNAL_TAG: &str = "internal";
         (name = "invites", description = "Organization invitations. Invite users to join your organization."),
         (name = "metadata", description = "Entity metadata registry. Schema information for all entity types in the system."),
         (name = "networks", description = "Network containers. Top-level organizational unit that contains subnets, hosts, and other entities."),
-        (name = "organizations", description = "Organizations and team management. Manage organization settings and members."),
+        (name = "organizations", description = "Manage organization settings."),
         (name = "services", description = "Services running on hosts. Detected or manually added services like databases, web servers, etc."),
         (name = "shares", description = "Shared network views. Create read-only shareable links to your network topology."),
         (name = "subnets", description = "IP subnets within networks. Define address ranges and organize hosts by subnet."),
-        (name = "tags", description = "Custom tags for categorization. Apply labels to hosts and services for filtering and organization."),
+        (name = "tags", description = "Custom tags for categorization. Apply labels to entities for filtering and organization."),
         (name = "users", description = "User account management. Manage user profiles and permissions within organizations."),
     )
 )]
@@ -91,15 +107,15 @@ fn add_security_schemes(spec: &mut OpenApi) {
 
     // Session cookie authentication (used by web UI)
     components.security_schemes.insert(
-        "session".to_string(),
-        SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::new("session"))),
+        "session_id".to_string(),
+        SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::new("session_id"))),
     );
 
     // API key authentication (used by daemons)
     components.security_schemes.insert(
         "api_key".to_string(),
         SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::with_description(
-            "X-API-Key",
+            "Authorization: Bearer",
             "API key for daemon authentication. Generate keys in the web UI under Settings > API Keys.",
         ))),
     );

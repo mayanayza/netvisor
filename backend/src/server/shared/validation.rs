@@ -1,4 +1,7 @@
+use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::types::api::ApiError;
+use crate::server::tags::service::TagService;
+use std::collections::HashSet;
 use uuid::Uuid;
 
 /// Validates that a user has access to a network.
@@ -167,4 +170,51 @@ pub fn validate_bulk_delete_access(
         ));
     }
     Ok(())
+}
+
+/// Validates and deduplicates a list of tag UUIDs.
+/// - Removes duplicate UUIDs
+/// - Validates all tags exist and belong to the specified organization
+///
+/// Returns the deduplicated list of valid tag UUIDs, or an error if any tag is invalid.
+pub async fn validate_and_dedupe_tags(
+    tags: Vec<Uuid>,
+    organization_id: Uuid,
+    tag_service: &TagService,
+) -> Result<Vec<Uuid>, ApiError> {
+    // Deduplicate
+    let unique_tags: Vec<Uuid> = tags
+        .into_iter()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+
+    if unique_tags.is_empty() {
+        return Ok(unique_tags);
+    }
+
+    // Validate all tags exist and belong to the organization
+    for tag_id in &unique_tags {
+        match tag_service.get_by_id(tag_id).await {
+            Ok(Some(tag)) => {
+                if tag.base.organization_id != organization_id {
+                    return Err(ApiError::bad_request(&format!(
+                        "Tag {} does not belong to this organization",
+                        tag_id
+                    )));
+                }
+            }
+            Ok(None) => {
+                return Err(ApiError::bad_request(&format!("Tag {} not found", tag_id)));
+            }
+            Err(e) => {
+                return Err(ApiError::internal_error(&format!(
+                    "Failed to validate tag {}: {}",
+                    tag_id, e
+                )));
+            }
+        }
+    }
+
+    Ok(unique_tags)
 }

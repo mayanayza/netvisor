@@ -1,14 +1,30 @@
 <script lang="ts">
 	import { Edit, Eye, Replace, Trash2 } from 'lucide-svelte';
-	import { formatInterface, hosts } from '../store';
+	import { formatInterface } from '../store';
 	import type { Host } from '../types/base';
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { concepts, entities, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import type { Group } from '$lib/features/groups/types/base';
-	import { getServiceById, getServicesForHost } from '$lib/features/services/store';
-	import { daemons } from '$lib/features/daemons/store';
-	import { tags } from '$lib/features/tags/store';
-	import { getInterfacesForHost } from '$lib/features/interfaces/store';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { toColor } from '$lib/shared/utils/styling';
+	import { useHostsQuery } from '../queries';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+
+	// Queries
+	const tagsQuery = useTagsQuery();
+	const hostsQuery = useHostsQuery();
+	const servicesQuery = useServicesQuery();
+	const interfacesQuery = useInterfacesQuery();
+	const daemonsQuery = useDaemonsQuery();
+
+	// Derived data
+	let tagsData = $derived(tagsQuery.data ?? []);
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let daemonsData = $derived(daemonsQuery.data ?? []);
 
 	let {
 		host,
@@ -32,21 +48,19 @@
 		onSelectionChange?: (selected: boolean) => void;
 	} = $props();
 
-	let hasDaemon = $derived($daemons.some((d) => d.host_id == host.id));
+	let hasDaemon = $derived(daemonsData.some((d) => d.host_id == host.id));
 
-	// Get stores at top level
-	let hostServicesStore = $derived(getServicesForHost(host.id));
-	let hostInterfacesStore = $derived(getInterfacesForHost(host.id));
-	let virtualizationServiceStore = $derived(
-		host.virtualization ? getServiceById(host.virtualization.details.service_id) : null
+	// Get filtered data for this host
+	let hostServices = $derived(servicesData.filter((s) => s.host_id === host.id));
+	let hostInterfaces = $derived(interfacesData.filter((i) => i.host_id === host.id));
+	let virtualizationService = $derived(
+		host.virtualization
+			? servicesData.find((s) => s.id === host.virtualization?.details.service_id)
+			: null
 	);
 
 	// Consolidate all reactive computations into a single derived to prevent cascading updates
 	let cardData = $derived.by(() => {
-		const hostServices = $hostServicesStore;
-		const hostInterfaces = $hostInterfacesStore;
-		const virtualizationService = virtualizationServiceStore ? $virtualizationServiceStore : null;
-
 		const servicesThatManageVmsIds = hostServices
 			.filter(
 				(sv) =>
@@ -63,7 +77,7 @@
 			)
 			.map((sv) => sv.id);
 
-		const vms = $hosts.filter(
+		const vms = hostsData.filter(
 			(h) =>
 				h.virtualization &&
 				h.virtualization?.type == 'Proxmox' &&
@@ -101,7 +115,7 @@
 					value: hostGroups.map((group: Group) => ({
 						id: group.id,
 						label: group.name,
-						color: entities.getColorHelper('Group').string
+						color: entities.getColorHelper('Group').color
 					})),
 					emptyText: 'No groups assigned'
 				},
@@ -111,7 +125,7 @@
 						return {
 							id: h.id,
 							label: h.name,
-							color: concepts.getColorHelper('Virtualization').string
+							color: concepts.getColorHelper('Virtualization').color
 						};
 					}),
 					emptyText: 'No VMs assigned'
@@ -124,7 +138,7 @@
 							return {
 								id: sv.id,
 								label: sv.name,
-								color: entities.getColorHelper('Service').string
+								color: entities.getColorHelper('Service').color
 							};
 						})
 						.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
@@ -137,7 +151,7 @@
 							return {
 								id: c.id,
 								label: c.name,
-								color: concepts.getColorHelper('Virtualization').string
+								color: concepts.getColorHelper('Virtualization').color
 							};
 						})
 						.sort((a) => (containerIds.includes(a.id) ? 1 : -1)),
@@ -149,7 +163,7 @@
 						return {
 							id: i.id,
 							label: formatInterface(i),
-							color: entities.getColorHelper('Interface').string
+							color: entities.getColorHelper('Interface').color
 						};
 					}),
 					emptyText: 'No interfaces'
@@ -157,10 +171,10 @@
 				{
 					label: 'Tags',
 					value: host.tags.map((t) => {
-						const tag = $tags.find((tag) => tag.id == t);
+						const tag = tagsData.find((tag) => tag.id == t);
 						return tag
 							? { id: tag.id, color: tag.color, label: tag.name }
-							: { id: t, color: 'gray', label: 'Unknown Tag' };
+							: { id: t, color: toColor('gray'), label: 'Unknown Tag' };
 					})
 				}
 			],

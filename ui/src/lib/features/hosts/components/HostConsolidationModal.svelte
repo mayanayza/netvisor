@@ -1,7 +1,7 @@
 <script lang="ts">
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import type { Host } from '../types/base';
-	import { hosts } from '../store';
+	import { useHostsQuery } from '../queries';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import EntityDisplay from '$lib/shared/components/forms/selection/display/EntityDisplayWrapper.svelte';
 	import { HostDisplay } from '$lib/shared/components/forms/selection/display/HostDisplay.svelte';
@@ -9,81 +9,99 @@
 	import EntityList from '$lib/shared/components/data/EntityList.svelte';
 	import { entities } from '$lib/shared/stores/metadata';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
-	import { getServicesForHost } from '$lib/features/services/store';
-	import { getInterfacesForHost } from '$lib/features/interfaces/store';
-	import { getPortsForHost } from '$lib/features/ports/store';
-	import { get } from 'svelte/store';
+	import { useServicesQuery } from '$lib/features/services/queries';
+	import { useInterfacesQuery } from '$lib/features/interfaces/queries';
+	import { usePortsQuery } from '$lib/features/ports/queries';
 
-	export let otherHost: Host | null = null;
-	export let isOpen = false;
-	export let onConsolidate: (
-		otherHostId: string,
-		destinationHostId: string
-	) => Promise<void> | void;
-	export let onClose: () => void;
+	interface Props {
+		otherHost?: Host | null;
+		isOpen?: boolean;
+		onConsolidate: (otherHostId: string, destinationHostId: string) => Promise<void> | void;
+		onClose: () => void;
+	}
 
-	let selectedDestinationHostId = '';
-	let loading = false;
-	let showPreview = false;
+	let { otherHost = null, isOpen = false, onConsolidate, onClose }: Props = $props();
+
+	// TanStack Query hooks
+	const hostsQuery = useHostsQuery();
+	const servicesQuery = useServicesQuery();
+	const interfacesQuery = useInterfacesQuery();
+	const portsQuery = usePortsQuery();
+
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let servicesData = $derived(servicesQuery.data ?? []);
+	let interfacesData = $derived(interfacesQuery.data ?? []);
+	let portsData = $derived(portsQuery.data ?? []);
+
+	let selectedDestinationHostId = $state('');
+	let loading = $state(false);
+	let showPreview = $state(false);
 
 	// Get available hosts (excluding the host being consolidated away)
-	$: availableHosts = (
-		otherHost
-			? $hosts
+	let availableHosts = $derived(
+		(otherHost
+			? hostsData
 					.filter((host) => host.id !== otherHost.id)
 					.filter((host) => host.network_id == otherHost.network_id)
 			: []
-	).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+		).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+	);
 
 	// Get the selected target host
-	$: selectedTargetHost = selectedDestinationHostId
-		? $hosts.find((host) => host.id === selectedDestinationHostId)
-		: null;
+	let selectedTargetHost = $derived(
+		selectedDestinationHostId
+			? hostsData.find((host) => host.id === selectedDestinationHostId)
+			: null
+	);
 
 	// Build consolidation actions list
-	$: consolidationActions = (() => {
-		if (!otherHost || !selectedTargetHost) return [];
+	let consolidationActions = $derived(
+		(() => {
+			if (!otherHost || !selectedTargetHost) return [];
 
-		// Get children counts from their respective stores
-		const services = get(getServicesForHost(otherHost.id));
-		const interfaces = get(getInterfacesForHost(otherHost.id));
-		const ports = get(getPortsForHost(otherHost.id));
+			// Get children counts from query data
+			const services = servicesData.filter((s) => s.host_id === otherHost.id);
+			const interfaces = interfacesData.filter((i) => i.host_id === otherHost.id);
+			const ports = portsData.filter((p) => p.host_id === otherHost.id);
 
-		const actions = [
-			{
-				id: 'delete',
-				name: `Host "${otherHost.name}" will be deleted`
+			const actions = [
+				{
+					id: 'delete',
+					name: `Host "${otherHost.name}" will be deleted`
+				}
+			];
+
+			if (services.length > 0) {
+				actions.push({
+					id: 'services',
+					name: `${services.length} service${services.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+				});
 			}
-		];
 
-		if (services.length > 0) {
-			actions.push({
-				id: 'services',
-				name: `${services.length} service${services.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
-			});
-		}
+			if (interfaces.length > 0) {
+				actions.push({
+					id: 'interfaces',
+					name: `${interfaces.length} interface${interfaces.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+				});
+			}
 
-		if (interfaces.length > 0) {
-			actions.push({
-				id: 'interfaces',
-				name: `${interfaces.length} interface${interfaces.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
-			});
-		}
+			if (ports.length > 0) {
+				actions.push({
+					id: 'ports',
+					name: `${ports.length} port${ports.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
+				});
+			}
 
-		if (ports.length > 0) {
-			actions.push({
-				id: 'ports',
-				name: `${ports.length} port${ports.length !== 1 ? 's' : ''} from "${otherHost.name}" will be migrated to "${selectedTargetHost.name}"`
-			});
-		}
-
-		return actions;
-	})();
+			return actions;
+		})()
+	);
 
 	// Reset when modal opens/closes
-	$: if (isOpen && otherHost) {
-		resetForm();
-	}
+	$effect(() => {
+		if (isOpen && otherHost) {
+			resetForm();
+		}
+	});
 
 	function resetForm() {
 		selectedDestinationHostId = '';
@@ -135,7 +153,7 @@
 	<svelte:fragment slot="header-icon">
 		<ModalHeaderIcon
 			Icon={entities.getIconComponent('Host')}
-			color={entities.getColorString('Host')}
+			color={entities.getColorHelper('Host').color}
 		/>
 	</svelte:fragment>
 
@@ -195,12 +213,12 @@
 
 			<div class="flex items-center gap-3">
 				{#if showPreview}
-					<button type="button" disabled={loading} on:click={handleBack} class="btn-secondary">
+					<button type="button" disabled={loading} onclick={handleBack} class="btn-secondary">
 						Back
 					</button>
 				{/if}
 
-				<button type="button" disabled={loading} on:click={handleClose} class="btn-secondary">
+				<button type="button" disabled={loading} onclick={handleClose} class="btn-secondary">
 					Cancel
 				</button>
 
@@ -208,7 +226,7 @@
 					<button
 						type="button"
 						disabled={!selectedDestinationHostId}
-						on:click={handleTargetSelection}
+						onclick={handleTargetSelection}
 						class="btn-primary"
 					>
 						Next
@@ -217,7 +235,7 @@
 					<button
 						type="button"
 						disabled={loading || !selectedDestinationHostId}
-						on:click={handleConsolidate}
+						onclick={handleConsolidate}
 						class="btn-danger"
 					>
 						{loading ? 'Consolidating...' : 'Consolidate Hosts'}

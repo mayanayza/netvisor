@@ -3,31 +3,60 @@
 	import GenericCard from '$lib/shared/components/data/GenericCard.svelte';
 	import { entities, permissions } from '$lib/shared/stores/metadata';
 	import type { Network } from '../types';
-	import { hosts } from '$lib/features/hosts/store';
-	import { daemons } from '$lib/features/daemons/store';
-	import { subnets } from '$lib/features/subnets/store';
-	import { groups } from '$lib/features/groups/store';
-	import { currentUser } from '$lib/features/auth/store';
-	import { tags } from '$lib/features/tags/store';
+	import { useHostsQuery } from '$lib/features/hosts/queries';
+	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import { useSubnetsQuery } from '$lib/features/subnets/queries';
+	import { useGroupsQuery } from '$lib/features/groups/queries';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import { useTagsQuery } from '$lib/features/tags/queries';
+	import { toColor } from '$lib/shared/utils/styling';
 
-	export let network: Network;
-	export let onDelete: (network: Network) => void = () => {};
-	export let onEdit: (network: Network) => void = () => {};
-	export let viewMode: 'card' | 'list';
-	export let selected: boolean;
-	export let onSelectionChange: (selected: boolean) => void = () => {};
+	interface Props {
+		network: Network;
+		onDelete?: (network: Network) => void;
+		onEdit?: (network: Network) => void;
+		viewMode: 'card' | 'list';
+		selected: boolean;
+		onSelectionChange?: (selected: boolean) => void;
+	}
 
-	$: networkHosts = $hosts.filter((h) => h.network_id == network.id);
-	$: networkDaemons = $daemons.filter((d) => d.network_id == network.id);
-	$: networkSubnets = $subnets.filter((s) => s.network_id == network.id);
-	$: networkGroups = $groups.filter((g) => g.network_id == network.id);
+	let {
+		network,
+		onDelete = () => {},
+		onEdit = () => {},
+		viewMode,
+		selected,
+		onSelectionChange = () => {}
+	}: Props = $props();
 
-	$: canManageNetworks =
-		($currentUser && permissions.getMetadata($currentUser.permissions).manage_org_entities) ||
-		false;
+	// TanStack Query hooks
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	const hostsQuery = useHostsQuery();
+	const daemonsQuery = useDaemonsQuery();
+	const subnetsQuery = useSubnetsQuery();
+	const groupsQuery = useGroupsQuery();
+	const tagsQuery = useTagsQuery();
+
+	// Derived data from queries
+	let hostsData = $derived(hostsQuery.data ?? []);
+	let daemonsData = $derived(daemonsQuery.data ?? []);
+	let subnetsData = $derived(subnetsQuery.data ?? []);
+	let groupsData = $derived(groupsQuery.data ?? []);
+	let tagsData = $derived(tagsQuery.data ?? []);
+
+	let networkHosts = $derived(hostsData.filter((h) => h.network_id == network.id));
+	let networkDaemons = $derived(daemonsData.filter((d) => d.network_id == network.id));
+	let networkSubnets = $derived(subnetsData.filter((s) => s.network_id == network.id));
+	let networkGroups = $derived(groupsData.filter((g) => g.network_id == network.id));
+
+	let canManageNetworks = $derived(
+		(currentUser && permissions.getMetadata(currentUser.permissions).manage_org_entities) || false
+	);
 
 	// Build card data
-	$: cardData = {
+	let cardData = $derived({
 		title: network.name,
 		iconColor: entities.getColorHelper('Network').icon,
 		Icon: entities.getIconComponent('Network'),
@@ -38,7 +67,7 @@
 					return {
 						id: d.id,
 						label: d.name,
-						color: entities.getColorHelper('Daemon').string
+						color: entities.getColorHelper('Daemon').color
 					};
 				})
 			},
@@ -48,7 +77,7 @@
 					return {
 						id: h.id,
 						label: h.name,
-						color: entities.getColorHelper('Host').string
+						color: entities.getColorHelper('Host').color
 					};
 				})
 			},
@@ -58,7 +87,7 @@
 					return {
 						id: s.id,
 						label: s.name,
-						color: entities.getColorHelper('Subnet').string
+						color: entities.getColorHelper('Subnet').color
 					};
 				})
 			},
@@ -68,17 +97,17 @@
 					return {
 						id: g.id,
 						label: g.name,
-						color: entities.getColorHelper('Group').string
+						color: entities.getColorHelper('Group').color
 					};
 				})
 			},
 			{
 				label: 'Tags',
 				value: network.tags.map((t) => {
-					const tag = $tags.find((tag) => tag.id == t);
+					const tag = tagsData.find((tag) => tag.id == t);
 					return tag
 						? { id: tag.id, color: tag.color, label: tag.name }
-						: { id: t, color: 'gray', label: 'Unknown Tag' };
+						: { id: t, color: toColor('gray'), label: 'Unknown Tag' };
 				})
 			}
 		],
@@ -100,7 +129,7 @@
 					]
 				: [])
 		]
-	};
+	});
 </script>
 
 <GenericCard
